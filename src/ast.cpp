@@ -124,7 +124,9 @@ void AST::AddFunction(Symbol *sym, Stmt *code) {
     if (sym == nullptr) {
         return;
     }
-    functions.push_back(new Function(sym, code));
+    Function *fn = new Function(sym, code);
+    sym->parentFunction = fn;
+    functions.push_back(fn);
 }
 
 void AST::AddFunctionTemplate(TemplateSymbol *templSym, Stmt *code) {

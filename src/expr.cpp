@@ -11,6 +11,7 @@
 #include "expr.h"
 #include "ast.h"
 #include "builtins-decl.h"
+#include "constexpr.h"
 #include "ctx.h"
 #include "func.h"
 #include "llvmutil.h"
@@ -37,6 +38,7 @@
 #include <utility>
 
 #include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -1408,6 +1410,9 @@ Expr *UnaryExpr::Optimize() {
     if (constExpr == nullptr) {
         return this;
     }
+    if (constExpr->IsAggregate()) {
+        return this;
+    }
 
     const Type *type = constExpr->GetType();
     bool isEnumType = CastType<EnumType>(type) != nullptr;
@@ -2709,6 +2714,9 @@ Expr *BinaryExpr::Optimize() {
 
     ConstExpr *constArg0 = llvm::dyn_cast<ConstExpr>(arg0);
     ConstExpr *constArg1 = llvm::dyn_cast<ConstExpr>(arg1);
+    if ((constArg0 != nullptr && constArg0->IsAggregate()) || (constArg1 != nullptr && constArg1->IsAggregate())) {
+        return this;
+    }
 
     if (g->opt.fastMath) {
         // TODO: consider moving fast-math optimizations to backend
@@ -2776,7 +2784,9 @@ Expr *BinaryExpr::Optimize() {
         return this;
     }
 
-    AssertPos(pos, Type::EqualIgnoringConst(arg0->GetType(), arg1->GetType()));
+    if (!Type::EqualIgnoringConst(arg0->GetType(), arg1->GetType())) {
+        return this;
+    }
     const Type *type = arg0->GetType()->GetAsNonConstType();
     if (Type::Equal(type, AtomicType::UniformFloat16) || Type::Equal(type, AtomicType::VaryingFloat16)) {
         return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, LLVMTypes::Float16Type, pos);
@@ -3968,6 +3978,9 @@ Expr *SelectExpr::Optimize() {
     if (constTest == nullptr) {
         return this;
     }
+    if (constTest->IsAggregate()) {
+        return this;
+    }
 
     // The test is a constant; see if we can resolve to one of the
     // expressions..
@@ -3997,6 +4010,9 @@ Expr *SelectExpr::Optimize() {
         ConstExpr *constExpr1 = llvm::dyn_cast<ConstExpr>(expr1);
         ConstExpr *constExpr2 = llvm::dyn_cast<ConstExpr>(expr2);
         if (constExpr1 == nullptr || constExpr2 == nullptr) {
+            return this;
+        }
+        if (constExpr1->IsAggregate() || constExpr2->IsAggregate()) {
             return this;
         }
 
@@ -4551,6 +4567,39 @@ Expr *FunctionCallExpr::TypeCheck() {
 
     if (!isInvoke && funcType->IsExternSYCL()) {
         Error(pos, "Illegal to call \'extern \"SYCL\"\'-qualified function without \"invoke_sycl\" expression.");
+        return nullptr;
+    }
+
+    bool immArgError = false;
+    if (funcType != nullptr && args != nullptr) {
+        int argCount = (int)args->exprs.size();
+        int paramCount = funcType->GetNumParameters();
+        int checkCount = (argCount < paramCount) ? argCount : paramCount;
+        Symbol *funcSym = (fse != nullptr) ? fse->GetBaseSymbol() : nullptr;
+        const std::string funcName = funcSym ? funcSym->name : "";
+        for (int i = 0; i < checkCount; ++i) {
+            if (!funcType->IsParameterImmArg(i)) {
+                continue;
+            }
+            Expr *argExpr = args->exprs[i];
+            if (argExpr == nullptr) {
+                continue;
+            }
+            ConstExpr *ce = ConstexprEvaluate(argExpr, funcType->GetParameterType(i));
+            if (ce == nullptr) {
+                if (!funcName.empty()) {
+                    Error(argExpr->pos, "Immediate argument %d to \"%s\" must be a compile-time constant.", i + 1,
+                          funcName.c_str());
+                } else {
+                    Error(argExpr->pos, "Immediate argument %d must be a compile-time constant.", i + 1);
+                }
+                immArgError = true;
+                continue;
+            }
+            args->exprs[i] = new ConstExpr(ce, argExpr->pos);
+        }
+    }
+    if (immArgError) {
         return nullptr;
     }
 
@@ -6243,17 +6292,20 @@ ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p) : Expr(p, ConstExpr
 ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p) : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
+    const Type *baseType = type->GetAsNonConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
-                       (CastType<EnumType>(type) != nullptr && type->IsUniformType()));
+                       (CastType<EnumType>(type) != nullptr && type->IsUniformType()) ||
+                       CastType<PointerType>(baseType) != nullptr);
     uint32Val[0] = u;
 }
 
 ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p) : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
+    const Type *baseType = type->GetAsNonConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingUInt32->GetAsConstType()) ||
-                       (CastType<EnumType>(type) != nullptr));
+                       (CastType<EnumType>(type) != nullptr) || CastType<PointerType>(baseType) != nullptr);
     for (int j = 0; j < Count(); ++j) {
         uint32Val[j] = u[j];
     }
@@ -6302,15 +6354,19 @@ ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p) : Expr(p, ConstExpr
 ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p) : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
-    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()));
+    const Type *baseType = type->GetAsNonConstType();
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()) ||
+                       CastType<PointerType>(baseType) != nullptr);
     uint64Val[0] = u;
 }
 
 ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p) : Expr(p, ConstExprID) {
     type = t;
     type = type->GetAsConstType();
+    const Type *baseType = type->GetAsNonConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()) ||
-                       Type::Equal(type, AtomicType::VaryingUInt64->GetAsConstType()));
+                       Type::Equal(type, AtomicType::VaryingUInt64->GetAsConstType()) ||
+                       CastType<PointerType>(baseType) != nullptr);
     for (int j = 0; j < Count(); ++j) {
         uint64Val[j] = u[j];
     }
@@ -6333,8 +6389,39 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p) : Expr(p, ConstExprID)
     }
 }
 
+ConstExpr::ConstExpr(const Type *t, llvm::Constant *ptr, SourcePos p) : Expr(p, ConstExprID) {
+    type = t;
+    type = type ? type->GetAsConstType() : type;
+    const Type *baseType = type ? type->GetAsNonConstType() : nullptr;
+    AssertPos(pos, CastType<PointerType>(baseType) != nullptr);
+    isPointer = true;
+    ptrConst = ptr;
+}
+
+ConstExpr::ConstExpr(const Type *t, const std::vector<ConstExpr *> &values, SourcePos p) : Expr(p, ConstExprID) {
+    type = t;
+    type = type ? type->GetAsConstType() : type;
+    isAggregate = true;
+    aggregateValues = values;
+    const CollectionType *ct = CastType<CollectionType>(type ? type->GetAsNonConstType() : nullptr);
+    AssertPos(pos, ct != nullptr);
+    if (ct != nullptr) {
+        AssertPos(pos, ct->GetElementCount() == (int)aggregateValues.size());
+    }
+}
+
 ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p, unsigned scid) : Expr(p, scid) {
     type = old->type;
+    isAggregate = old->isAggregate;
+    if (isAggregate) {
+        aggregateValues = old->aggregateValues;
+        return;
+    }
+    isPointer = old->isPointer;
+    if (isPointer) {
+        ptrConst = old->ptrConst;
+        return;
+    }
 
     AtomicType::BasicType basicType = getBasicType();
 
@@ -6382,19 +6469,32 @@ ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : ConstExpr(old, p, Cons
 ConstExpr::ConstExpr(const Symbol *s, SourcePos p) : ConstExpr(s->constValue, p, ConstSymbolExprID) {}
 
 AtomicType::BasicType ConstExpr::getBasicType() const {
-    const AtomicType *at = CastType<AtomicType>(type);
+    AssertPos(pos, !isAggregate);
+    AssertPos(pos, !isPointer);
+    const Type *baseType = type ? type->GetAsNonConstType() : nullptr;
+    const AtomicType *at = CastType<AtomicType>(baseType);
     if (at != nullptr) {
         return at->basicType;
-    } else {
-        AssertPos(pos, CastType<EnumType>(type) != nullptr);
-        return AtomicType::TYPE_UINT32;
     }
+    if (CastType<PointerType>(baseType) != nullptr) {
+        return g->target->is32Bit() ? AtomicType::TYPE_UINT32 : AtomicType::TYPE_UINT64;
+    }
+    AssertPos(pos, CastType<EnumType>(baseType) != nullptr);
+    return AtomicType::TYPE_UINT32;
 }
 
 const Type *ConstExpr::GetTypeImpl() const { return type; }
 
 llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
+    if (isAggregate || isPointer) {
+        std::pair<llvm::Constant *, bool> cpair = GetConstant(type);
+        return cpair.first;
+    }
+    if (CastType<PointerType>(type->GetAsNonConstType()) != nullptr) {
+        std::pair<llvm::Constant *, bool> cpair = GetConstant(type);
+        return cpair.first;
+    }
     bool isVarying = type->IsVaryingType();
 
     AtomicType::BasicType basicType = getBasicType();
@@ -6443,6 +6543,42 @@ bool ConstExpr::IsEqual(const ConstExpr *ce) const {
 
     if (!Type::EqualIgnoringConst(type, ce->type)) {
         return false;
+    }
+    if (isAggregate || ce->isAggregate) {
+        if (isAggregate != ce->isAggregate) {
+            return false;
+        }
+        if (aggregateValues.size() != ce->aggregateValues.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < aggregateValues.size(); ++i) {
+            if (!aggregateValues[i]->IsEqual(ce->aggregateValues[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (isPointer || ce->isPointer) {
+        if (isPointer && ce->isPointer) {
+            return ptrConst == ce->ptrConst;
+        }
+        const ConstExpr *ptrExpr = isPointer ? this : ce;
+        const ConstExpr *numExpr = isPointer ? ce : this;
+        const Type *numBase = numExpr->type ? numExpr->type->GetAsNonConstType() : nullptr;
+        if (CastType<PointerType>(numBase) == nullptr) {
+            return false;
+        }
+        int64_t vals[ISPC_MAX_NVEC] = {};
+        numExpr->GetValues(vals, numExpr->type->IsVaryingType());
+        bool allZero = true;
+        for (int i = 0; i < numExpr->Count(); ++i) {
+            if (vals[i] != 0) {
+                allZero = false;
+                break;
+            }
+        }
+        bool isNull = (ptrExpr->ptrConst != nullptr) ? ptrExpr->ptrConst->isNullValue() : false;
+        return allZero && isNull;
     }
 
     for (int i = 0; i < Count(); ++i) {
@@ -6585,6 +6721,7 @@ static void lConvert(const From *from, std::vector<llvm::APFloat> &to, llvm::Typ
 }
 
 int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt) const {
+    AssertPos(pos, !isAggregate);
     AtomicType::BasicType bType = getBasicType();
     AssertPos(pos, (bType == AtomicType::TYPE_FLOAT16) || (bType == AtomicType::TYPE_FLOAT) ||
                        (bType == AtomicType::TYPE_DOUBLE));
@@ -6593,6 +6730,7 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt) const {
 }
 
 int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool forceVarying) const {
+    AssertPos(pos, !isAggregate);
     switch (getBasicType()) {
     case AtomicType::TYPE_INT1:
     case AtomicType::TYPE_BOOL:
@@ -6634,6 +6772,8 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool
 }
 
 #define CONVERT_SWITCH                                                                                                 \
+    AssertPos(pos, !isAggregate);                                                                                      \
+    AssertPos(pos, !isPointer);                                                                                        \
     switch (getBasicType()) {                                                                                          \
     case AtomicType::TYPE_INT1:                                                                                        \
     case AtomicType::TYPE_BOOL:                                                                                        \
@@ -6673,7 +6813,23 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool
     }                                                                                                                  \
     return Count();
 
-int ConstExpr::GetValues(bool *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
+int ConstExpr::GetValues(bool *toPtr, bool forceVarying) const {
+    if (isPointer) {
+        bool isNull = (ptrConst != nullptr) ? ptrConst->isNullValue() : false;
+        bool value = !isNull;
+        int count = Count();
+        for (int i = 0; i < count; ++i) {
+            toPtr[i] = value;
+        }
+        if (forceVarying && count == 1) {
+            for (int i = 1; i < g->target->getVectorWidth(); ++i) {
+                toPtr[i] = toPtr[0];
+            }
+        }
+        return count;
+    }
+    CONVERT_SWITCH;
+}
 
 int ConstExpr::GetValues(int8_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
 
@@ -6691,7 +6847,92 @@ int ConstExpr::GetValues(int64_t *toPtr, bool forceVarying) const { CONVERT_SWIT
 
 int ConstExpr::GetValues(uint64_t *toPtr, bool forceVarying) const { CONVERT_SWITCH; }
 
-int ConstExpr::Count() const { return GetType()->IsVaryingType() ? g->target->getVectorWidth() : 1; }
+int ConstExpr::Count() const {
+    if (isAggregate) {
+        return (int)aggregateValues.size();
+    }
+    if (isPointer) {
+        return GetType()->IsVaryingType() ? g->target->getVectorWidth() : 1;
+    }
+    return GetType()->IsVaryingType() ? g->target->getVectorWidth() : 1;
+}
+
+static llvm::Constant *lConvertPointerConstant(llvm::Constant *c, const Type *constType);
+
+static std::pair<llvm::Constant *, bool> lGetAggregateConstExprConstant(const Type *constType, const ConstExpr *cExpr,
+                                                                        bool isStorageType) {
+    if (constType == nullptr || cExpr == nullptr) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
+
+    const Type *baseType = constType->GetAsNonConstType();
+    const CollectionType *collectionType = CastType<CollectionType>(baseType);
+    if (collectionType == nullptr) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
+
+    bool isNotValidForMultiTargetGlobal = false;
+    const std::vector<ConstExpr *> &values = cExpr->GetAggregateValues();
+    int elementCount = collectionType->GetElementCount();
+    if ((int)values.size() > elementCount) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
+
+    std::vector<llvm::Constant *> cv;
+    cv.reserve(elementCount);
+    for (int i = 0; i < elementCount; ++i) {
+        const Type *elementType = collectionType->GetElementType(i);
+        if (elementType == nullptr) {
+            return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
+        if (i < (int)values.size()) {
+            std::pair<llvm::Constant *, bool> cPair =
+                isStorageType ? values[i]->GetStorageConstant(elementType) : values[i]->GetConstant(elementType);
+            if (cPair.first == nullptr) {
+                return std::pair<llvm::Constant *, bool>(nullptr, false);
+            }
+            isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || cPair.second;
+            cv.push_back(cPair.first);
+        } else {
+            llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+            if (llvmType == nullptr) {
+                return std::pair<llvm::Constant *, bool>(nullptr, false);
+            }
+            cv.push_back(llvm::Constant::getNullValue(llvmType));
+        }
+    }
+
+    if (CastType<StructType>(baseType) != nullptr) {
+        llvm::StructType *llvmStructType = llvm::dyn_cast<llvm::StructType>(baseType->LLVMType(g->ctx));
+        if (llvmStructType == nullptr) {
+            return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
+        return std::pair<llvm::Constant *, bool>(llvm::ConstantStruct::get(llvmStructType, cv),
+                                                 isNotValidForMultiTargetGlobal);
+    }
+
+    llvm::Type *lt = baseType->LLVMType(g->ctx);
+    if (lt == nullptr) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
+    llvm::ArrayType *lat = llvm::dyn_cast<llvm::ArrayType>(lt);
+    if (lat != nullptr) {
+        return std::pair<llvm::Constant *, bool>(llvm::ConstantArray::get(lat, cv), isNotValidForMultiTargetGlobal);
+    }
+
+    const VectorType *vt = CastType<VectorType>(baseType);
+    llvm::VectorType *lvt = llvm::dyn_cast<llvm::VectorType>(lt);
+    if (vt == nullptr || lvt == nullptr) {
+        return std::pair<llvm::Constant *, bool>(nullptr, isNotValidForMultiTargetGlobal);
+    }
+
+    int vectorWidth = vt->getVectorMemoryCount();
+    while ((int)cv.size() < vectorWidth) {
+        cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
+    }
+
+    return std::pair<llvm::Constant *, bool>(llvm::ConstantVector::get(cv), isNotValidForMultiTargetGlobal);
+}
 
 static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *constType, const ConstExpr *cExpr,
                                                                bool isStorageType) {
@@ -6699,6 +6940,9 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
     // constant type.
     SourcePos pos = cExpr->pos;
     bool isNotValidForMultiTargetGlobal = false;
+    if (cExpr->IsAggregate()) {
+        return lGetAggregateConstExprConstant(constType, cExpr, isStorageType);
+    }
     if (constType->IsUniformType()) {
         AssertPos(pos, cExpr->Count() == 1);
     }
@@ -6812,6 +7056,24 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
             return std::pair<llvm::Constant *, bool>(LLVMDoubleVector(dv), isNotValidForMultiTargetGlobal);
         }
     } else if (CastType<PointerType>(constType) != nullptr) {
+        if (cExpr->IsPointerConst()) {
+            llvm::Constant *c = cExpr->GetPointerConstant();
+            if (c == nullptr) {
+                return std::pair<llvm::Constant *, bool>(nullptr, false);
+            }
+            llvm::Type *llvmType = constType->LLVMType(g->ctx);
+            if (llvmType == nullptr) {
+                return std::pair<llvm::Constant *, bool>(nullptr, false);
+            }
+            if (c->getType() != llvmType) {
+                if (llvmType->isPointerTy() && c->getType()->isPointerTy()) {
+                    c = llvm::ConstantExpr::getBitCast(c, llvmType);
+                } else {
+                    c = lConvertPointerConstant(c, constType);
+                }
+            }
+            return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
+        }
         // The only time we should get here is if we have an integer '0'
         // constant that should be turned into a nullptr pointer of the
         // appropriate type.
@@ -6856,6 +7118,26 @@ ConstExpr *ConstExpr::Instantiate(TemplateInstantiation &templInst) const { retu
 
 std::string ConstExpr::GetValuesAsStr(const std::string &separator) const {
     std::stringstream result;
+    if (isAggregate) {
+        result << "{";
+        for (size_t i = 0; i < aggregateValues.size(); ++i) {
+            if (i != 0) {
+                result << separator;
+            }
+            result << aggregateValues[i]->GetString();
+        }
+        result << "}";
+        return result.str();
+    }
+    if (isPointer) {
+        if (ptrConst == nullptr) {
+            return "<null ptr>";
+        }
+        std::string s;
+        llvm::raw_string_ostream os(s);
+        ptrConst->print(os);
+        return os.str();
+    }
     for (int i = 0; i < Count(); ++i) {
         if (i != 0) {
             result << separator;
@@ -8862,7 +9144,7 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         const Type *eTYPE = GetType();
         if (type->LLVMType(g->ctx) == eTYPE->LLVMType(g->ctx)) {
-            if (llvm::dyn_cast<SymbolExpr>(expr) != nullptr) {
+            if (llvm::dyn_cast<SymbolExpr>(expr) != nullptr || llvm::dyn_cast<ConstSymbolExpr>(expr) != nullptr) {
                 return std::pair<llvm::Constant *, bool>(llvm::cast<llvm::Constant>(ptr),
                                                          isNotValidForMultiTargetGlobal);
 
@@ -8882,7 +9164,8 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
                 }
                 // The base expression needs to be a global symbol so that the
                 // address is a constant.
-                if (llvm::dyn_cast<SymbolExpr>(mBaseExpr) == nullptr) {
+                if (llvm::dyn_cast<SymbolExpr>(mBaseExpr) == nullptr &&
+                    llvm::dyn_cast<ConstSymbolExpr>(mBaseExpr) == nullptr) {
                     return std::pair<llvm::Constant *, bool>(nullptr, false);
                 }
                 gepIndex.insert(gepIndex.begin(), LLVMInt64(0));

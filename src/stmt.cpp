@@ -9,6 +9,7 @@
 */
 
 #include "stmt.h"
+#include "constexpr.h"
 #include "builtins-decl.h"
 #include "builtins-info.h"
 #include "ctx.h"
@@ -261,10 +262,17 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // this before the initializer stuff.
             ctx->EmitVariableDebugInfo(sym);
             if (initExpr == 0 && sym->type->IsConstType()) {
-                Error(sym->pos,
-                      "Missing initializer for const variable "
-                      "\"%s\".",
-                      sym->name.c_str());
+                if (sym->isConstexpr) {
+                    Error(sym->pos,
+                          "Missing initializer for constexpr variable "
+                          "\"%s\".",
+                          sym->name.c_str());
+                } else {
+                    Error(sym->pos,
+                          "Missing initializer for const variable "
+                          "\"%s\".",
+                          sym->name.c_str());
+                }
             }
 
             // And then get it initialized...
@@ -296,6 +304,12 @@ Stmt *DeclStmt::Optimize() {
             Symbol *sym = vars[i].sym;
             if (sym->type && sym->type->IsConstType() && Type::Equal(init->GetType(), sym->type)) {
                 sym->constValue = llvm::dyn_cast<ConstExpr>(init);
+            }
+            if (sym->type && sym->type->IsConstType() && sym->constValue == nullptr) {
+                ConstExpr *ce = ConstexprEvaluate(init, sym->type);
+                if (ce != nullptr) {
+                    sym->constValue = ce;
+                }
             }
         }
     }
@@ -391,11 +405,49 @@ Stmt *DeclStmt::TypeCheck() {
                 Error(pos, "variable '%s' has incomplete struct type '%s' and cannot be defined", name.c_str(),
                       type->GetString().c_str());
             }
+            if (vars[i].sym->isConstexpr) {
+                Error(vars[i].sym->pos, "Missing initializer for constexpr variable \"%s\".", name.c_str());
+                encounteredError = true;
+            }
             continue;
         }
 
         // Check an init.
         encounteredError |= lCheckInit(type, &(vars[i].init), name);
+
+        if (vars[i].sym->isConstexpr) {
+            if (!IsConstexprTypeAllowed(type)) {
+                Error(vars[i].sym->pos,
+                      "constexpr variable \"%s\" must have an atomic, enum, pointer, short vector, array, or struct "
+                      "type",
+                      name.c_str());
+                encounteredError = true;
+                continue;
+            }
+            if (type && type->IsDependent()) {
+                continue;
+            }
+            ConstExpr *ce = ConstexprEvaluate(vars[i].init, type);
+            if (ce == nullptr) {
+                Error(vars[i].sym->pos,
+                      "Initializer for constexpr variable \"%s\" must be a compile-time constant.",
+                      name.c_str());
+                encounteredError = true;
+            } else {
+                vars[i].init = ce;
+                vars[i].sym->constValue = ce;
+            }
+        }
+        if (vars[i].sym->type && vars[i].sym->type->IsConstType() && vars[i].init != nullptr &&
+            llvm::dyn_cast<ExprList>(vars[i].init) == nullptr && vars[i].sym->constValue == nullptr) {
+            ConstExpr *ce = llvm::dyn_cast<ConstExpr>(vars[i].init);
+            if (ce == nullptr) {
+                ce = ConstexprEvaluate(vars[i].init, vars[i].sym->type);
+            }
+            if (ce != nullptr) {
+                vars[i].sym->constValue = ce;
+            }
+        }
     }
     return encounteredError ? nullptr : this;
 }

@@ -994,7 +994,8 @@ class FunctionType : public Type {
         FUNC_VECTOR_CALL = 1 << 7,   // 0x0080
         FUNC_REG_CALL = 1 << 8,      // 0x0100
         FUNC_CDECL = 1 << 9,         // 0x0200
-        FUNC_SAFE = 1 << 10          // 0x0400
+        FUNC_SAFE = 1 << 10,         // 0x0400
+        FUNC_CONSTEXPR = 1 << 11     // 0x0800
     };
 
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
@@ -1068,8 +1069,11 @@ class FunctionType : public Type {
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
     Expr *GetParameterDefault(int i) const;
+    void SetParameterDefault(int i, Expr *expr);
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
+    bool IsParameterImmArg(int i) const;
+    void SetParameterImmArg(int i, bool immarg);
 
     int GetCostOverride() const { return costOverride; }
 
@@ -1099,6 +1103,10 @@ class FunctionType : public Type {
         mask). */
     bool IsUnmasked() const { return flags & FUNC_UNMASKED; }
 
+    /** Return true if the function had a 'constexpr' qualifier in the
+        source program. */
+    bool IsConstexpr() const { return flags & FUNC_CONSTEXPR; }
+
     /** Indicates whether the function name should be mangled. */
     bool IsUnmangled() const { return flags & FUNC_UNMANGLED; }
 
@@ -1126,6 +1134,7 @@ class FunctionType : public Type {
     // in turn the length returned by GetNumParameters()).
     llvm::SmallVector<const Type *, 8> paramTypes;
     const llvm::SmallVector<std::string, 8> paramNames;
+    llvm::SmallVector<bool, 8> paramImmArgs;
     /** Default values of the function's arguments.  For arguments without
         default values provided, nullptr is stored. */
     llvm::SmallVector<Expr *, 8> paramDefaults;
