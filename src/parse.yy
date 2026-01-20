@@ -99,6 +99,7 @@ typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 %{
 
 #include "decl.h"
+#include "constexpr.h"
 #include "expr.h"
 #include "func.h"
 #include "ispc.h"
@@ -143,7 +144,8 @@ static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
-static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
+static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos,
+                                    const char *usage, bool requireUniform);
 static StructType *lCreateStructType(const std::string &name, const std::vector<StructDeclaration *> *decl,
                                      AttributeList *attrs, SourcePos pos);
 
@@ -157,7 +159,7 @@ static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
 
 static const char *lBuiltinTokens[] = {
     "assert", "alloca", "bool", "break", "case", "cdo",
-    "cfor", "cif", "cwhile", "const", "continue", "default",
+    "cfor", "cif", "cwhile", "const", "constexpr", "continue", "default",
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
     "float16", "float", "for", "foreach", "foreach_active", "foreach_tiled",
     "foreach_unique", "goto", "if", "in", "inline",
@@ -168,7 +170,7 @@ static const char *lBuiltinTokens[] = {
 };
 
 static const char *lParamListTokens[] = {
-    "bool", "const", "double", "enum", "false", "float16", "float", "int",
+    "bool", "const", "constexpr", "double", "enum", "false", "float16", "float", "int",
     "int8", "int16", "int32", "int64", "signed", "struct", "true",
     "uniform", "unsigned", "varying", "void", "__attribute__", NULL
 };
@@ -251,7 +253,7 @@ struct ForeachDimension {
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_VECTORCALL TOKEN_REGCALL TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
 %token TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT16 TOKEN_FLOAT TOKEN_DOUBLE
-%token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
+%token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_CONSTEXPR TOKEN_VOID TOKEN_BOOL
 %token TOKEN_UINT8 TOKEN_UINT16 TOKEN_UINT TOKEN_UINT64
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
@@ -270,6 +272,10 @@ struct ForeachDimension {
 %type <expr> exclusive_or_expression inclusive_or_expression
 %type <expr> invoke_sycl_expression
 %type <expr> logical_and_expression logical_or_expression new_expression
+%type <expr> relational_expression_no_gt equality_expression_no_gt and_expression_no_gt
+%type <expr> exclusive_or_expression_no_gt inclusive_or_expression_no_gt
+%type <expr> logical_and_expression_no_gt logical_or_expression_no_gt
+%type <expr> conditional_expression_no_gt constant_expression_no_gt
 %type <expr> conditional_expression assignment_expression expression
 %type <expr> initializer constant_expression for_test
 %type <exprList> argument_expression_list initializer_list
@@ -987,6 +993,62 @@ logical_or_expression
       { $$ = new BinaryExpr(BinaryExpr::LogicalOr, $1, $3, Union(@1, @3)); }
     ;
 
+relational_expression_no_gt
+    : shift_expression
+    | relational_expression_no_gt '<' shift_expression
+      { $$ = new BinaryExpr(BinaryExpr::Lt, $1, $3, Union(@1, @3)); }
+    | relational_expression_no_gt TOKEN_LE_OP shift_expression
+      { $$ = new BinaryExpr(BinaryExpr::Le, $1, $3, Union(@1, @3)); }
+    ;
+
+equality_expression_no_gt
+    : relational_expression_no_gt
+    | equality_expression_no_gt TOKEN_EQ_OP relational_expression_no_gt
+      { $$ = new BinaryExpr(BinaryExpr::Equal, $1, $3, Union(@1,@3)); }
+    | equality_expression_no_gt TOKEN_NE_OP relational_expression_no_gt
+      { $$ = new BinaryExpr(BinaryExpr::NotEqual, $1, $3, Union(@1,@3)); }
+    ;
+
+and_expression_no_gt
+    : equality_expression_no_gt
+    | and_expression_no_gt '&' equality_expression_no_gt
+      { $$ = new BinaryExpr(BinaryExpr::BitAnd, $1, $3, Union(@1, @3)); }
+    ;
+
+exclusive_or_expression_no_gt
+    : and_expression_no_gt
+    | exclusive_or_expression_no_gt '^' and_expression_no_gt
+      { $$ = new BinaryExpr(BinaryExpr::BitXor, $1, $3, Union(@1, @3)); }
+    ;
+
+inclusive_or_expression_no_gt
+    : exclusive_or_expression_no_gt
+    | inclusive_or_expression_no_gt '|' exclusive_or_expression_no_gt
+      { $$ = new BinaryExpr(BinaryExpr::BitOr, $1, $3, Union(@1, @3)); }
+    ;
+
+logical_and_expression_no_gt
+    : inclusive_or_expression_no_gt
+    | logical_and_expression_no_gt TOKEN_AND_OP inclusive_or_expression_no_gt
+      { $$ = new BinaryExpr(BinaryExpr::LogicalAnd, $1, $3, Union(@1, @3)); }
+    ;
+
+logical_or_expression_no_gt
+    : logical_and_expression_no_gt
+    | logical_or_expression_no_gt TOKEN_OR_OP logical_and_expression_no_gt
+      { $$ = new BinaryExpr(BinaryExpr::LogicalOr, $1, $3, Union(@1, @3)); }
+    ;
+
+conditional_expression_no_gt
+    : logical_or_expression_no_gt
+    | logical_or_expression_no_gt '?' expression ':' conditional_expression_no_gt
+      { $$ = new SelectExpr($1, $3, $5, Union(@1,@5)); }
+    ;
+
+constant_expression_no_gt
+    : conditional_expression_no_gt
+    ;
+
 conditional_expression
     : logical_or_expression
     | logical_or_expression '?' expression ':' conditional_expression
@@ -1247,24 +1309,18 @@ declaration_specifiers
       {
           $$ = new DeclSpecs($1);
       }
-    | type_specifier '<' int_constant '>'
+    | type_specifier '<' constant_expression_no_gt '>'
     {
           DeclSpecs *ds = new DeclSpecs($1);
-          ds->vectorSize = (int32_t)$3;
-          $$ = ds;
-    }
-    | type_specifier '<' TOKEN_IDENTIFIER '>'
-    {
-          DeclSpecs *ds = new DeclSpecs($1);
-          const char *name = $3->c_str();
-          Symbol *s = m->symbolTable->LookupVariable(name);
-          if (s) {
-            ds->vectorSize = s;
-          } else {
-            Error(@3, "Unknown identifier \"%s\" is used to specify the size of a vector type.", name);
+          std::variant<std::monostate, int, Symbol*> size;
+          if ($3 != nullptr && lGetConstantIntOrSymbol($3, &size, @3, "Vector size", true)) {
+            if (std::holds_alternative<int>(size)) {
+              ds->vectorSize = std::get<int>(size);
+            } else if (std::holds_alternative<Symbol*>(size)) {
+              ds->vectorSize = std::get<Symbol*>(size);
+            }
           }
           $$ = ds;
-          lCleanUpString($3);
     }
     | type_specifier declaration_specifiers
       {
@@ -1654,6 +1710,10 @@ specifier_qualifier_list
             }
             else if ($1 == TYPEQUAL_CONST)
                 $$ = $2->GetAsConstType();
+            else if ($1 == TYPEQUAL_CONSTEXPR) {
+                Error(@1, "\"constexpr\" qualifier is illegal in struct member declarations.");
+                $$ = $2;
+            }
             else if ($1 == TYPEQUAL_SIGNED) {
                 const Type *t = $2->GetAsSignedType();
                 if (t)
@@ -1869,7 +1929,7 @@ enumerator
       {
           std::variant<std::monostate, int, Symbol*> value;
           if ($1 != nullptr && $3 != nullptr &&
-              lGetConstantIntOrSymbol($3, &value, @3, "Enumerator value")) {
+              lGetConstantIntOrSymbol($3, &value, @3, "Enumerator value", true)) {
               Symbol *sym = new Symbol($1, @1, Symbol::SymbolKind::Enumerator);
 
               // Check if value holds an int
@@ -1894,6 +1954,7 @@ enumerator
 
 type_qualifier
     : TOKEN_CONST         { $$ = TYPEQUAL_CONST; }
+    | TOKEN_CONSTEXPR     { $$ = TYPEQUAL_CONSTEXPR; }
     | TOKEN_UNIFORM       { $$ = TYPEQUAL_UNIFORM; }
     | TOKEN_VARYING       { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK          { $$ = TYPEQUAL_TASK; }
@@ -1981,7 +2042,7 @@ direct_declarator
     | direct_declarator '[' constant_expression ']'
     {
         std::variant<std::monostate, int, Symbol*> size;
-        if ($1 != nullptr && lGetConstantIntOrSymbol($3, &size, @3, "Array dimension")) {
+        if ($1 != nullptr && lGetConstantIntOrSymbol($3, &size, @3, "Array size", true)) {
             // Check if size holds an int
             if (std::holds_alternative<int>(size)) {
                 int intValue = std::get<int>(size);
@@ -2213,7 +2274,7 @@ direct_abstract_declarator
     | '[' constant_expression ']'
       {
         std::variant<std::monostate, int, Symbol*> size;
-        if ($2 != nullptr && lGetConstantIntOrSymbol($2, &size, @2, "Array dimension")) {
+        if ($2 != nullptr && lGetConstantIntOrSymbol($2, &size, @2, "Array size", true)) {
             // Check if size holds an int
             if (std::holds_alternative<int>(size)) {
                 int intValue = std::get<int>(size);
@@ -2253,7 +2314,7 @@ direct_abstract_declarator
     | direct_abstract_declarator '[' constant_expression ']'
       {
           std::variant<std::monostate, int, Symbol*> size;
-          if ($1 != nullptr && $3 != nullptr && lGetConstantIntOrSymbol($3, &size, @3, "Array dimension")) {
+          if ($1 != nullptr && $3 != nullptr && lGetConstantIntOrSymbol($3, &size, @3, "Array size", true)) {
               // Check if size holds an int
               if (std::holds_alternative<int>(size)) {
                   int intValue = std::get<int>(size);
@@ -2394,7 +2455,7 @@ labeled_statement
       {
           std::variant<std::monostate, int, Symbol*> value;
           if ($2 != nullptr &&
-              lGetConstantIntOrSymbol($2, &value, @2, "Case statement value")) {
+              lGetConstantIntOrSymbol($2, &value, @2, "Case statement value", true)) {
               // Check if value holds an int
               if (std::holds_alternative<int>(value)) {
                   int intValue = std::get<int>(value);
@@ -3061,65 +3122,32 @@ template_argument
     {
         $$ = new TemplateArg($1, @1);
     }
-    // Ideally we should use here constant_expression, however, there is grammar ambiguitiy between
-    // template_identifier '<' template_argument_list '>' in simple_template_id and
-    // relational_expression '<' shift_expression in relational_expression (part of constant_expression).
-    | TOKEN_INT8_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
-                           (int8_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_UINT8_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt8->GetAsConstType(),
-                           (uint8_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_INT16_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt16->GetAsConstType(),
-                           (int16_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_UINT16_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt16->GetAsConstType(),
-                           (uint16_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_INT32_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
-                           (int32_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_UINT32_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
-                           (uint32_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_INT64_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
-                           (int64_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_UINT64_CONSTANT {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
-                           (uint64_t)yylval.intVal, @1), @1);
-    }
-    | TOKEN_TRUE {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1), @1);
-    }
-    | TOKEN_FALSE {
-        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformBool->GetAsConstType(), false, @1), @1);
-    }
-    // Enums and nested templates case:
-    | TOKEN_IDENTIFIER
+    | constant_expression_no_gt
     {
-        const char *name = $1->c_str();
-        Symbol *s = m->symbolTable->LookupVariable(name);
-        if (s) {
-            if (s->GetSymbolKind() == Symbol::SymbolKind::Enumerator ||
-                s->GetSymbolKind() == Symbol::SymbolKind::TemplateNonTypeParm) {
-                $$ = new TemplateArg(new SymbolExpr(s, @1), @1);
-            } else {
-                Error(@1, "Only integral, enum types and non-type template parameters are allowed as template arguments.");
-                $$ = nullptr;
-            }
-        } else {
-            Error(@1, "Unknown identifier");
-            $$ = nullptr;
+        Expr *expr = $1;
+        if (expr != nullptr) {
+            expr = TypeCheckAndOptimize(expr);
         }
-        lCleanUpString($1);
+        if (expr == nullptr) {
+            $$ = nullptr;
+        } else {
+            SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(expr);
+            if (se && se->GetBaseSymbol()->GetSymbolKind() == Symbol::SymbolKind::TemplateNonTypeParm) {
+                $$ = new TemplateArg(se, @1);
+            } else {
+            ConstExpr *ce = ConstexprEvaluate(expr, expr->GetType());
+            const Type *ceType = ce ? ce->GetType() : nullptr;
+            if (ce == nullptr || ceType->IsVaryingType() ||
+                !(ceType->IsIntType() || ceType->IsBoolType())) {
+                Error(@1,
+                      "Only integral, bool, enum types and non-type template parameters are allowed as template "
+                      "arguments.");
+                $$ = nullptr;
+            } else {
+                $$ = new TemplateArg(ce, @1);
+            }
+            }
+        }
     }
     ;
 
@@ -3476,8 +3504,9 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
                                       isInline, isNoInline, isVectorCall, isRegCall, decl->pos);
         }
         else {
-            bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
-            m->AddGlobalVariable(decl, isConst);
+            bool isConstexpr = (ds->typeQualifiers & TYPEQUAL_CONSTEXPR) != 0;
+            bool isConst = (ds->typeQualifiers & (TYPEQUAL_CONST | TYPEQUAL_CONSTEXPR)) != 0;
+            m->AddGlobalVariable(decl, isConst, isConstexpr);
         }
     }
 }
@@ -3722,7 +3751,8 @@ static std::string lGetAlternates(std::vector<std::string> &alternates) {
     type, return false.
 */
 static bool
-lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage) {
+lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos,
+                        const char *usage, bool requireUniform) {
     if (expr == nullptr)
         return false;
     expr = TypeCheckAndOptimize(expr);
@@ -3736,27 +3766,36 @@ lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *
             return true;
         }
     }
-    std::pair<llvm::Constant *, bool> cValPair = expr->GetConstant(expr->GetType());
-    llvm::Constant *cval = cValPair.first;
-    if (cval == nullptr) {
+    ConstExpr *ce = ConstexprEvaluate(expr, expr->GetType());
+    if (ce == nullptr) {
         Error(pos, "%s must be a compile-time constant or template non-type parameter.", usage);
         return false;
     }
-    else {
-        llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(cval);
-        if (ci == nullptr) {
-            Error(pos, "%s must be a compile-time integer constant.", usage);
-            return false;
-        }
-        if ((int64_t)((int32_t)ci->getSExtValue()) != ci->getSExtValue()) {
-            Error(pos, "%s must be representable with a 32-bit integer.", usage);
-            return false;
-        }
-        const Type *type = expr->GetType();
-        int resultValue = type->IsUnsignedType() ? (int)ci->getZExtValue() : (int)ci->getSExtValue();
-        value->emplace<int>(resultValue);
-        return true;
+
+    const Type *type = ce->GetType();
+    if (requireUniform && type->IsVaryingType()) {
+        Error(pos, "%s must be a uniform compile-time constant.", usage);
+        return false;
     }
+    if (type->IsIntType() == false) {
+        Error(pos, "%s must be a compile-time integer constant.", usage);
+        return false;
+    }
+
+    int64_t iv[ISPC_MAX_NVEC];
+    int count = ce->GetValues(iv);
+    if (count < 1) {
+        Error(pos, "%s must be a compile-time integer constant.", usage);
+        return false;
+    }
+    if ((int64_t)((int32_t)iv[0]) != iv[0]) {
+        Error(pos, "%s must be representable with a 32-bit integer.", usage);
+        return false;
+    }
+
+    int resultValue = type->IsUnsignedType() ? (int)(uint64_t)iv[0] : (int)iv[0];
+    value->emplace<int>(resultValue);
+    return true;
 }
 
 

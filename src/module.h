@@ -84,7 +84,11 @@ class Module {
     void AddTypeDef(const std::string &name, const Type *type, SourcePos pos);
 
     /** Add a new global variable corresponding to the decl. */
-    void AddGlobalVariable(Declarator *decl, bool isConst);
+    void AddGlobalVariable(Declarator *decl, bool isConst, bool isConstexpr);
+
+    /** Record a deferred constexpr default parameter for later evaluation. */
+    void AddDeferredConstexprParam(FunctionType *funcType, int index, Expr *expr, SourcePos pos,
+                                   const std::string &paramName);
 
     /** Add a declaration of the function defined by the given function
         symbol to the module. */
@@ -399,6 +403,23 @@ class Module {
     std::map<std::string, llvm::StructType *> structTypeMap;
 
   private:
+    struct DeferredConstexprGlobal {
+        Symbol *sym;
+        Expr *initExpr;
+        const Type *type;
+        SourcePos pos;
+        bool isConst;
+        bool isConstexpr;
+    };
+
+    struct DeferredConstexprParam {
+        FunctionType *funcType;
+        int index;
+        Expr *expr;
+        SourcePos pos;
+        std::string paramName;
+    };
+
     const char *srcFile{nullptr};
     AST *ast{nullptr};
 
@@ -434,6 +455,11 @@ class Module {
     /* This set is used to store strings that is referenced in yylloc (SourcePos)
        in lexer once and not to lost memory via just strduping them. */
     std::set<std::string> pseudoDependencies;
+
+    std::vector<DeferredConstexprGlobal> deferredConstexprGlobals;
+    std::vector<DeferredConstexprParam> deferredConstexprParams;
+
+    void ResolveDeferredConstexpr();
 
     /**
      * Compiles the module for a single target architecture.

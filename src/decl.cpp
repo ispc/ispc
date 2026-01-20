@@ -10,6 +10,7 @@
 */
 
 #include "decl.h"
+#include "constexpr.h"
 #include "expr.h"
 #include "module.h"
 #include "stmt.h"
@@ -102,6 +103,9 @@ std::string DeclSpecs::GetTypeQualifiersString(int typeQualifiers) {
 
     if (typeQualifiers & TYPEQUAL_INLINE) {
         result += "inline ";
+    }
+    if (typeQualifiers & TYPEQUAL_CONSTEXPR) {
+        result += "constexpr ";
     }
     if (typeQualifiers & TYPEQUAL_CONST) {
         result += "const ";
@@ -584,6 +588,9 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
             lCheckAddressSpace(addrSpace, name, pos);
             type = lGetTypeWithAddressSpace(type, addrSpace, name, pos);
         }
+        if (ds->typeQualifiers & TYPEQUAL_CONSTEXPR) {
+            type = type->GetAsConstType();
+        }
     }
 
     storageClass = ds->storageClass;
@@ -735,6 +742,7 @@ unsigned int lCreateFunctionFlagsAndCostOverride(int &costOverride, DeclSpecs *d
     bool isUnmasked = typeQualifiers & TYPEQUAL_UNMASKED;
     bool isVectorCall = typeQualifiers & TYPEQUAL_VECTORCALL;
     bool isRegCall = typeQualifiers & TYPEQUAL_REGCALL;
+    bool isConstexpr = typeQualifiers & TYPEQUAL_CONSTEXPR;
     bool isUnmangled = attributeList && attributeList->HasAttribute("unmangled");
     bool isCdecl = attributeList && attributeList->HasAttribute("cdecl");
 
@@ -770,6 +778,10 @@ unsigned int lCreateFunctionFlagsAndCostOverride(int &costOverride, DeclSpecs *d
         flags |= FunctionType::FUNC_REG_CALL;
     }
 
+    if (isConstexpr) {
+        flags |= FunctionType::FUNC_CONSTEXPR;
+    }
+
     if (isUnmangled) {
         flags |= FunctionType::FUNC_UNMANGLED;
     }
@@ -780,6 +792,23 @@ unsigned int lCreateFunctionFlagsAndCostOverride(int &costOverride, DeclSpecs *d
 
     if (!isExported && isExternalOnly) {
         Error(pos, "\"external_only\" attribute is only valid for exported functions.");
+        return 0;
+    }
+
+    if (isConstexpr && isTask) {
+        Error(pos, "Function can't have both \"constexpr\" and \"task\" qualifiers");
+        return 0;
+    }
+    if (isConstexpr && isExported) {
+        Error(pos, "Function can't have both \"constexpr\" and \"export\" qualifiers");
+        return 0;
+    }
+    if (isConstexpr && isExternC) {
+        Error(pos, "Function can't have both \"constexpr\" and \"extern \\\"C\\\"\" qualifiers");
+        return 0;
+    }
+    if (isConstexpr && isExternSYCL) {
+        Error(pos, "Function can't have both \"constexpr\" and \"extern \\\"SYCL\\\"\" qualifiers");
         return 0;
     }
 
@@ -834,7 +863,7 @@ unsigned int lCreateFunctionFlagsAndCostOverride(int &costOverride, DeclSpecs *d
 void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     bool hasUniformQual = ((typeQualifiers & TYPEQUAL_UNIFORM) != 0);
     bool hasVaryingQual = ((typeQualifiers & TYPEQUAL_VARYING) != 0);
-    bool isConst = ((typeQualifiers & TYPEQUAL_CONST) != 0);
+    bool isConst = ((typeQualifiers & (TYPEQUAL_CONST | TYPEQUAL_CONSTEXPR)) != 0);
 
     if (hasUniformQual && hasVaryingQual) {
         Error(pos, "Can't provide both \"uniform\" and \"varying\" qualifiers.");
@@ -930,6 +959,13 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         llvm::SmallVector<std::string, 8> argNames;
         llvm::SmallVector<Expr *, 8> argDefaults;
         llvm::SmallVector<SourcePos, 8> argPos;
+        struct DeferredParamDefault {
+            int index;
+            Expr *expr;
+            SourcePos pos;
+            std::string name;
+        };
+        std::vector<DeferredParamDefault> deferredDefaults;
 
         // Loop over the function arguments and store the names, types,
         // default values (if any), and source file positions each one in
@@ -1026,15 +1062,20 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 if (decl->initExpr != nullptr) {
                     decl->initExpr = TypeCheckAndOptimize(decl->initExpr);
                     if (decl->initExpr != nullptr) {
-                        init = llvm::dyn_cast<ConstExpr>(decl->initExpr);
-                        if (init == nullptr) {
+                        ConstexprEvalResult evalResult = ConstexprEvaluateDetailed(decl->initExpr, decl->type, true);
+                        if (evalResult.value != nullptr) {
+                            init = evalResult.value;
+                        } else if (evalResult.deferred) {
+                            init = decl->initExpr;
+                            deferredDefaults.push_back({(int)i, init, decl->initExpr->pos, decl->name});
+                        } else {
                             init = llvm::dyn_cast<NullPointerExpr>(decl->initExpr);
-                        }
-                        if (init == nullptr) {
-                            Error(decl->initExpr->pos,
-                                  "Default value for parameter "
-                                  "\"%s\" must be a compile-time constant.",
-                                  decl->name.c_str());
+                            if (init == nullptr) {
+                                Error(decl->initExpr->pos,
+                                      "Default value for parameter "
+                                      "\"%s\" must be a compile-time constant.",
+                                      decl->name.c_str());
+                            }
                         }
                     }
                     break;
@@ -1073,6 +1114,12 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
         const FunctionType *functionType =
             new FunctionType(returnType, args, argNames, argDefaults, argPos, costOverride, functionFlags, pos);
+        if (!deferredDefaults.empty()) {
+            for (const auto &entry : deferredDefaults) {
+                m->AddDeferredConstexprParam(const_cast<FunctionType *>(functionType), entry.index, entry.expr,
+                                             entry.pos, entry.name);
+            }
+        }
 
         child->InitFromType(functionType, ds);
         type = child->type;
@@ -1136,6 +1183,8 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 
             Symbol *sym =
                 new Symbol(decl->name, decl->pos, Symbol::SymbolKind::Variable, decl->type, decl->storageClass, AL);
+            sym->isConstexpr =
+                ((declSpecs->typeQualifiers | decl->typeQualifiers) & TYPEQUAL_CONSTEXPR) != 0;
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
         } else {
