@@ -40,7 +40,7 @@
 
 #define alloca(x) __alloca(x)
 
-static const uniform int32 programCount = TARGET_WIDTH;
+static constexpr uniform int32 programCount = TARGET_WIDTH;
 
 #if TARGET_WIDTH == 2
 #define ISPC_PROGRAM_INDEX_INITIALIZER 0, 1
@@ -62,7 +62,7 @@ static const uniform int32 programCount = TARGET_WIDTH;
 #error Unknown value of TARGET_WIDTH
 #endif
 
-static const int32 programIndex = {ISPC_PROGRAM_INDEX_INITIALIZER};
+static constexpr int32 programIndex = {ISPC_PROGRAM_INDEX_INITIALIZER};
 
 #ifdef ISPC_FAST_MASKED_VLOAD
 #define ISPC_FAST_MASKED_VLOAD_VAL 1
