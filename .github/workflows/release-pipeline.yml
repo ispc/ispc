@@ -16,6 +16,8 @@ on:
 
 jobs:
   define-params:
+    # Only run in the main ispc/ispc repo for release builds.
+    if: github.repository == 'ispc/ispc'
     runs-on: ubuntu-22.04
     outputs:
       ispc_version: ${{ steps.define.outputs.ispc_version }}

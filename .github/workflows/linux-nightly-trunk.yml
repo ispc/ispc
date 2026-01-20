@@ -27,6 +27,8 @@ concurrency:
 
 jobs:
   define-targets:
+    # Only run in the main ispc/ispc repo to avoid unnecessary scheduled runs on forks.
+    if: github.repository == 'ispc/ispc'
     runs-on: ubuntu-latest
     outputs:
       # TODO: restore avx2vnni targets when SDE problem is fixed

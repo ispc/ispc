@@ -23,6 +23,8 @@ concurrency:
 jobs:
   analysis:
     name: Scorecard analysis
+    # Only run in the main ispc/ispc repo for publishing results to OpenSSF.
+    if: github.repository == 'ispc/ispc'
     runs-on: ubuntu-latest
     permissions:
       # Needed to upload the results to code-scanning dashboard.
