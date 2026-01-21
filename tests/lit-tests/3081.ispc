@@ -1,5 +1,5 @@
 // RUN: %{ispc} --emit-llvm-text -O2 --opt=disable-loop-unroll --target=sse4 %s -o - | FileCheck %s -check-prefix=CHECK_SSE4
-// REQUIRE: X86_ENABLED
+// REQUIRE: X86_ENABLED && LLVM_20_0+
 
 extern "C" void use(uniform int);
 
