@@ -260,6 +260,11 @@ endif()
 if (DEFINED LLVM_SHA AND NOT "${LLVM_SHA}" STREQUAL "")
     message(STATUS "Overriding LLVM_TAG with LLVM_SHA: ${LLVM_SHA}")
     set(LLVM_TAG ${LLVM_SHA})
+    # Disable shallow clone when a specific SHA is provided to avoid race conditions
+    # where the SHA may not be available in a shallow clone if LLVM main has moved forward
+    set(LLVM_GIT_SHALLOW OFF)
+else()
+    set(LLVM_GIT_SHALLOW ON)
 endif()
 
 if (${LLVM_VERSION} STREQUAL trunk)
@@ -357,6 +362,7 @@ message(STATUS "INSTALL_WITH_XE_DEPS is ${INSTALL_WITH_XE_DEPS}")
 message(STATUS "XE_DEPS is ${XE_DEPS}")
 message(STATUS "SKIP_FETCHING_XE_DEPS is ${SKIP_FETCHING_XE_DEPS}")
 message(STATUS "LLVM_TAG is ${LLVM_TAG}")
+message(STATUS "LLVM_GIT_SHALLOW is ${LLVM_GIT_SHALLOW}")
 message(STATUS "LLVM_VERSION_DOTTED is ${LLVM_VERSION_DOTTED}")
 message(STATUS "LLVM_VERSION_MAJOR is ${LLVM_VERSION_MAJOR}")
 message(STATUS "LLVM_VERSION_MINOR is ${LLVM_VERSION_MINOR}")
@@ -1156,7 +1162,7 @@ if (PGO OR NOT SKIP_STAGE2)
             ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
-            GIT_SHALLOW ON
+            GIT_SHALLOW ${LLVM_GIT_SHALLOW}
             GIT_PROGRESS ON
             UPDATE_COMMAND git checkout .
             PATCH_COMMAND git apply ${LLVM_PATCHES_VER}
@@ -1167,7 +1173,7 @@ if (PGO OR NOT SKIP_STAGE2)
             ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
-            GIT_SHALLOW ON
+            GIT_SHALLOW ${LLVM_GIT_SHALLOW}
             GIT_PROGRESS ON
             UPDATE_COMMAND git checkout .
             SOURCE_DIR llvm-source
