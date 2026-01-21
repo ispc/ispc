@@ -142,13 +142,26 @@ jobs:
       matrix:
         project:
           - name: Leela Chess lc0
-            extra_packages: gtest
+            extra_packages: gtest wget
             build_cmd: |
-              su - builder -c "
+              su - builder -c '
                 git clone --branch lc0 --single-branch https://github.com/archlinux/aur.git lc0
                 cd lc0
+                # Temporary fix to use unofficial download location for weights
+                export SRCDEST=$HOME/pkg_src
+
+                # Make the directory if needed
+                mkdir -p "$SRCDEST"
+
+                # Download the weights file to SRCDEST if not present
+                # Filename must match _weights variable in PKGBUILD (weights_hanse-69722-vf2.gz)
+                weights="weights_hanse-69722-vf2.gz"
+                url="https://derr.pro/lc0/hanse-69722-vf2.gz"
+                if [ ! -f "$SRCDEST/$weights" ]; then
+                  wget -O "$SRCDEST/$weights" "$url"
+                fi
                 makepkg -s --noconfirm
-              "
+              '
 
           # Open3D disabled because open-source default runners don't have enough disk space
           # - name: Open3D
