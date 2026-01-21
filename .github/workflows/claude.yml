@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     permissions:
-      contents: read
+      contents: write # Required to push branches and create commits
       pull-requests: write
       issues: write
       id-token: write
@@ -64,5 +64,6 @@ jobs:
         uses: anthropics/claude-code-action@8a1c4371755898f67cd97006ba7c97702d5fc4bf # v1.0.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           track_progress: true
 
