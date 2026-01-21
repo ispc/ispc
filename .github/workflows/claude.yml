@@ -14,6 +14,11 @@ on:
 
 permissions: {}
 
+env:
+  LLVM_VERSION: "21.1"
+  LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
 jobs:
   claude:
     # Only run in the main ispc/ispc repo where the secret is available.
@@ -23,8 +28,8 @@ jobs:
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))))
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: write
@@ -35,7 +40,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build bison flex m4 \
+            libc6-dev libc6-dev-i386 g++-multilib \
+            libtbb-dev libstdc++6
+
+      - name: Download LLVM
+        run: |
+          wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 \
+            "$LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR"
+          tar xf "$LLVM_TAR"
+          rm -f "$LLVM_TAR"
+          echo "$GITHUB_WORKSPACE/bin-$LLVM_VERSION/bin" >> "$GITHUB_PATH"
 
       - name: Run Claude Code
         id: claude
