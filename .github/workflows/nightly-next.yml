@@ -49,7 +49,7 @@ jobs:
       artifact_name: ispc_llvm_linux
       runner: ubuntu-22.04
       llvm_version: "21.1"
-      llvm_tar: llvm-21.1.3-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-test:
     needs: [define-targets, linux-build-ispc-llvm]
@@ -72,7 +72,7 @@ jobs:
       artifact_name: ispc_llvm_win
       runner: windows-2022
       llvm_version: "21.1"
-      llvm_tar: llvm-21.1.3-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-21.1.8-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-test:
     needs: [define-targets, win-build-ispc-llvm]
