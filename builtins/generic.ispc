@@ -1061,13 +1061,27 @@ EXT READNONE varying double __shift_double(varying double v, uniform int32 i) { 
 
 // prefetching
 // Use constexpr immarg constants; prefetch arguments require immediate values.
-EXT void __prefetch_read_uniform_1(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, kImmArgZero, kImmArgThree, kImmArgOne); }
-EXT void __prefetch_read_uniform_2(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, kImmArgZero, kImmArgTwo, kImmArgOne); }
-EXT void __prefetch_read_uniform_3(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, kImmArgZero, kImmArgOne, kImmArgOne); }
-EXT void __prefetch_read_uniform_nt(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, kImmArgZero, kImmArgZero, kImmArgOne); }
-EXT void __prefetch_write_uniform_1(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, kImmArgOne, kImmArgThree, kImmArgOne); }
-EXT void __prefetch_write_uniform_2(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, kImmArgOne, kImmArgTwo, kImmArgOne); }
-EXT void __prefetch_write_uniform_3(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, kImmArgOne, kImmArgOne, kImmArgOne); }
+EXT void __prefetch_read_uniform_1(uniform int8 *uniform ptr) {
+    @llvm.prefetch(ptr, kImmArgZero, kImmArgThree, kImmArgOne);
+}
+EXT void __prefetch_read_uniform_2(uniform int8 *uniform ptr) {
+    @llvm.prefetch(ptr, kImmArgZero, kImmArgTwo, kImmArgOne);
+}
+EXT void __prefetch_read_uniform_3(uniform int8 *uniform ptr) {
+    @llvm.prefetch(ptr, kImmArgZero, kImmArgOne, kImmArgOne);
+}
+EXT void __prefetch_read_uniform_nt(uniform int8 *uniform ptr) {
+    @llvm.prefetch(ptr, kImmArgZero, kImmArgZero, kImmArgOne);
+}
+EXT void __prefetch_write_uniform_1(uniform int8 *uniform ptr) {
+    @llvm.prefetch(ptr, kImmArgOne, kImmArgThree, kImmArgOne);
+}
+EXT void __prefetch_write_uniform_2(uniform int8 *uniform ptr) {
+    @llvm.prefetch(ptr, kImmArgOne, kImmArgTwo, kImmArgOne);
+}
+EXT void __prefetch_write_uniform_3(uniform int8 *uniform ptr) {
+    @llvm.prefetch(ptr, kImmArgOne, kImmArgOne, kImmArgOne);
+}
 UNMANGLED CDECL void __prefetch_read_varying_1(varying int64 addr) {
     foreach_active(i) {
         uniform int64 p_lane = __extract(addr, i);
