@@ -436,8 +436,7 @@ static ConstExpr *lMakeZeroConstExpr(const Type *type, SourcePos pos) {
 class ConstexprEvaluator {
   public:
     explicit ConstexprEvaluator(int callDepth = 0, bool allowDeferredEval = false)
-        : depth(callDepth), steps(0), hasError(false), allowDeferred(allowDeferredEval), deferred(false),
-          targetDependent(false) {}
+        : depth(callDepth), allowDeferred(allowDeferredEval) {}
 
     ConstExpr *EvalExpr(const Expr *expr);
     ConstExpr *EvalExprList(const ExprList *exprList, const Type *expectedType);
@@ -452,12 +451,12 @@ class ConstexprEvaluator {
     };
 
     std::vector<Scope> scopes;
-    int depth;
-    int steps;
-    bool hasError;
-    bool allowDeferred;
-    bool deferred;
-    bool targetDependent;
+    int depth = 0;
+    int steps = 0;
+    bool hasError = false;
+    bool allowDeferred = false;
+    bool deferred = false;
+    bool targetDependent = false;
 
     void SetError() { hasError = true; }
     void SetDeferred() { deferred = true; }
@@ -560,10 +559,10 @@ class ConstexprEvaluator {
         if (lhs == nullptr || rhs == nullptr) {
             return nullptr;
         }
-        const VectorType *lhsVec = lhs->IsAggregate() ? CastType<VectorType>(lhs->GetType()->GetAsNonConstType())
-                                                      : nullptr;
-        const VectorType *rhsVec = rhs->IsAggregate() ? CastType<VectorType>(rhs->GetType()->GetAsNonConstType())
-                                                      : nullptr;
+        const VectorType *lhsVec =
+            lhs->IsAggregate() ? CastType<VectorType>(lhs->GetType()->GetAsNonConstType()) : nullptr;
+        const VectorType *rhsVec =
+            rhs->IsAggregate() ? CastType<VectorType>(rhs->GetType()->GetAsNonConstType()) : nullptr;
         if (!lhs->IsAggregate() && !rhs->IsAggregate()) {
             BinaryExpr *expr = new BinaryExpr(op, lhs, rhs, pos);
             return FoldExpr(expr);
@@ -636,10 +635,10 @@ class ConstexprEvaluator {
             }
         }
         if (tExpr->IsAggregate() || fExpr->IsAggregate()) {
-            const VectorType *tVec = tExpr->IsAggregate() ? CastType<VectorType>(tExpr->GetType()->GetAsNonConstType())
-                                                          : nullptr;
-            const VectorType *fVec = fExpr->IsAggregate() ? CastType<VectorType>(fExpr->GetType()->GetAsNonConstType())
-                                                          : nullptr;
+            const VectorType *tVec =
+                tExpr->IsAggregate() ? CastType<VectorType>(tExpr->GetType()->GetAsNonConstType()) : nullptr;
+            const VectorType *fVec =
+                fExpr->IsAggregate() ? CastType<VectorType>(fExpr->GetType()->GetAsNonConstType()) : nullptr;
             if (tVec == nullptr || fVec == nullptr || tVec->GetElementCount() != fVec->GetElementCount()) {
                 return nullptr;
             }
@@ -790,8 +789,8 @@ ConstExpr *ConstexprEvaluator::EvalIncDec(const UnaryExpr *expr) {
         return nullptr;
     }
     ConstExpr *one = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(), 1, expr->pos);
-    BinaryExpr::Op op = (expr->op == UnaryExpr::PreDec || expr->op == UnaryExpr::PostDec) ? BinaryExpr::Sub
-                                                                                           : BinaryExpr::Add;
+    BinaryExpr::Op op =
+        (expr->op == UnaryExpr::PreDec || expr->op == UnaryExpr::PostDec) ? BinaryExpr::Sub : BinaryExpr::Add;
     ConstExpr *updated = FoldBinary(op, current, one, expr->pos);
     if (updated == nullptr) {
         SetError();
@@ -835,8 +834,8 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
         return nullptr;
     }
     if (auto *ue = llvm::dyn_cast<UnaryExpr>(expr)) {
-        if (ue->op == UnaryExpr::PreInc || ue->op == UnaryExpr::PreDec ||
-            ue->op == UnaryExpr::PostInc || ue->op == UnaryExpr::PostDec) {
+        if (ue->op == UnaryExpr::PreInc || ue->op == UnaryExpr::PreDec || ue->op == UnaryExpr::PostInc ||
+            ue->op == UnaryExpr::PostDec) {
             return EvalIncDec(ue);
         }
         ConstExpr *arg = EvalExpr(ue->expr);
@@ -1173,9 +1172,8 @@ ConstExpr *ConstexprEvaluator::EvalExprList(const ExprList *exprList, const Type
             } else if (CastType<VectorType>(baseType) != nullptr) {
                 name = "vector";
             }
-            Error(exprList->pos,
-                  "Initializer for %s type \"%s\" requires no more than %d values; %d provided.", name.c_str(),
-                  expectedType->GetString().c_str(), elementCount, nInits);
+            Error(exprList->pos, "Initializer for %s type \"%s\" requires no more than %d values; %d provided.",
+                  name.c_str(), expectedType->GetString().c_str(), elementCount, nInits);
             SetError();
             return nullptr;
         }
@@ -1218,15 +1216,13 @@ ConstExpr *ConstexprEvaluator::EvalExprList(const ExprList *exprList, const Type
     if (baseType->IsVaryingType() && (atomic != nullptr || enumType != nullptr)) {
         const int width = g->target->getVectorWidth();
         if (nInits > width) {
-            Error(exprList->pos,
-                  "Initializer for varying type \"%s\" requires no more than %d values; %d provided.",
+            Error(exprList->pos, "Initializer for varying type \"%s\" requires no more than %d values; %d provided.",
                   expectedType->GetString().c_str(), width, nInits);
             SetError();
             return nullptr;
         }
         if (nInits < width && nInits != 1) {
-            Error(exprList->pos,
-                  "Initializer for varying type \"%s\" requires %d values; %d provided.",
+            Error(exprList->pos, "Initializer for varying type \"%s\" requires %d values; %d provided.",
                   expectedType->GetString().c_str(), width, nInits);
             SetError();
             return nullptr;
@@ -1846,7 +1842,7 @@ namespace {
 
 class ConstexprValidator {
   public:
-    explicit ConstexprValidator(const Function *f) : func(f), ok(true) {
+    explicit ConstexprValidator(const Function *f) : func(f) {
         if (func) {
             funcName = func->GetName();
         }
@@ -1855,9 +1851,9 @@ class ConstexprValidator {
     bool Validate();
 
   private:
-    const Function *func;
+    const Function *func = nullptr;
     std::string funcName;
-    bool ok;
+    bool ok = true;
     std::unordered_set<const Symbol *> locals;
 
     void GatherLocals(const Stmt *stmt);
@@ -1969,8 +1965,8 @@ void ConstexprValidator::VisitExpr(const Expr *expr) {
         }
     }
     if (auto *ue = llvm::dyn_cast<UnaryExpr>(expr)) {
-        if (ue->op == UnaryExpr::PreInc || ue->op == UnaryExpr::PreDec ||
-            ue->op == UnaryExpr::PostInc || ue->op == UnaryExpr::PostDec) {
+        if (ue->op == UnaryExpr::PreInc || ue->op == UnaryExpr::PreDec || ue->op == UnaryExpr::PostInc ||
+            ue->op == UnaryExpr::PostDec) {
             const SymbolExpr *lhs = llvm::dyn_cast<SymbolExpr>(ue->expr);
             Symbol *sym = lhs ? lhs->GetBaseSymbol() : nullptr;
             if (lhs == nullptr || sym == nullptr || !IsLocalOrParam(sym) || sym->storageClass.IsStatic()) {
@@ -2022,7 +2018,8 @@ void ConstexprValidator::VisitExpr(const Expr *expr) {
         VisitExpr(rd->expr);
     } else if (auto *ao = llvm::dyn_cast<AddressOfExpr>(expr)) {
         Symbol *sym = ao->GetBaseSymbol();
-        if (sym == nullptr || (sym->parentFunction != nullptr && sym->GetSymbolKind() != Symbol::SymbolKind::Function)) {
+        if (sym == nullptr ||
+            (sym->parentFunction != nullptr && sym->GetSymbolKind() != Symbol::SymbolKind::Function)) {
             DisallowedExpr(expr, "address-of");
             return;
         }
