@@ -17,11 +17,13 @@ constexpr uniform int<2> bad_swizzle_oob = v2.zw;
 // CHECK: Initializer list for array
 // CHECK: "const uniform int32[2]"
 // CHECK: must have
-// CHECK: no more than 2 elements (has 3).
+// CHECK: no more
+// CHECK: than 2 elements (has 3).
 // CHECK: Error:
 // CHECK: Initializer list for struct
 // CHECK: "const uniform struct Pair"
 // CHECK: must
-// CHECK: have no more than 2 elements (has 3).
+// CHECK: have no
+// CHECK: more than 2 elements (has 3).
 // CHECK: identifier "qy" unknown.
 // CHECK: character 'z' for constexpr vector.

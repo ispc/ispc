@@ -14,15 +14,16 @@ constexpr uniform int badstmt(uniform int x) {
 }
 
 // CHECK: Error:
-// CHECK: Initializer for
-// CHECK: global
-// CHECK: variable "badinit" must be a constant.
+// CHECK: Initializer
+// CHECK: for global variable "badinit" must be a constant.
 // CHECK: Error:
-// CHECK: Missing initializer for
-// CHECK: constexpr variable "noinit".
+// CHECK: Missing
+// CHECK: initializer for constexpr variable "noinit".
 // CHECK: Error:
-// CHECK: constexpr function
-// CHECK: "badcall" calls non-constexpr function "nonconstexpr".
+// CHECK: constexpr
+// CHECK: function "badcall" calls non-constexpr function
+// CHECK: "nonconstexpr".
 // CHECK: Error:
-// CHECK: constexpr function
-// CHECK: "badstmt" contains disallowed statement "print".
+// CHECK: constexpr
+// CHECK: function "badstmt" contains disallowed statement
+// CHECK: "print".
