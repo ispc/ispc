@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2024-2025, Intel Corporation
+#  Copyright (c) 2024-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -32,8 +32,17 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     apt-get -y update && apt-get --no-install-recommends install -y "$CROSS_LIBS" && \
     rm -rf /var/lib/apt/lists/*
 
-# Install TBB (required for ISPCRT).
-RUN if [ "$XE_DEPS" == "ON" ]; then apt-get -y update && apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
+# Install TBB from Intel oneAPI (required for ISPCRT).
+# Use oneAPI TBB instead of system TBB to avoid enum-constexpr-conversion errors with LLVM 21+
+RUN if [ "$XE_DEPS" == "ON" ]; then \
+        wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor -o /usr/share/keyrings/intel-oneapi-archive-keyring.gpg && \
+        echo "deb [signed-by=/usr/share/keyrings/intel-oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | tee /etc/apt/sources.list.d/oneAPI.list && \
+        apt-get -y update && apt-get --no-install-recommends install -y intel-oneapi-tbb-devel && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Set TBB_ROOT to point to oneAPI TBB installation
+ENV TBB_ROOT=/opt/intel/oneapi/tbb/latest
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \

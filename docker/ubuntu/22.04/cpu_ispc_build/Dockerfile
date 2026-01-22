@@ -26,7 +26,7 @@ RUN uname -a
 RUN apt-get -y update && \
     DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y \
         wget ninja-build build-essential gcc g++ git python3-dev \
-        ca-certificates libtbb2-dev && \
+        ca-certificates libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt

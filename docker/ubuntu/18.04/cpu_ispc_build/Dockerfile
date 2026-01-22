@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2025, Intel Corporation
+#  Copyright (c) 2017-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -19,8 +19,18 @@ ARG LLVM_DISABLE_ASSERTIONS
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates libtbb-dev ninja-build && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates ninja-build gnupg && \
     rm -rf /var/lib/apt/lists/*
+
+# Install TBB from Intel oneAPI.
+# Use oneAPI TBB instead of system TBB to avoid enum-constexpr-conversion errors with LLVM 21+
+RUN wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor -o /usr/share/keyrings/intel-oneapi-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/intel-oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | tee /etc/apt/sources.list.d/oneAPI.list && \
+    apt-get -y update && apt-get --no-install-recommends install -y intel-oneapi-tbb-devel && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set TBB_ROOT to point to oneAPI TBB installation
+ENV TBB_ROOT=/opt/intel/oneapi/tbb/latest
 
 # Install multilib libc needed to build clang_rt
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
