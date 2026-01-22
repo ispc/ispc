@@ -1,4 +1,4 @@
-// RUN: not %{ispc} %s --target=host --nostdlib -o /dev/null 2>&1 | FileCheck %s
+// RUN: not %{ispc} %s --target=host --nostdlib --nowrap -o /dev/null 2>&1 | FileCheck %s
 
 constexpr uniform int bad(varying int x) {
     if (x > 0) {
@@ -7,6 +7,4 @@ constexpr uniform int bad(varying int x) {
     return 2;
 }
 
-// CHECK: Error:
-// CHECK: constexpr function
-// CHECK: "bad" requires a uniform condition in "if".
+// CHECK: Error: constexpr function "bad" requires a uniform condition in "if".
