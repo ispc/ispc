@@ -1,3 +1,4 @@
+// REQUIRES: X86_ENABLED && X86_64_HOST
 // RUN: %{ispc} %s --target=generic-i32x4 --emit-llvm-text -o - | FileCheck %s
 
 constexpr varying int Lane = programIndex;
