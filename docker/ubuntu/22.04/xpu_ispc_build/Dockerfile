@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2024, Intel Corporation
+#  Copyright (c) 2017-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -18,8 +18,9 @@ ARG LTO
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages
+# Ubuntu 22.04 provides TBB 2021.x (libtbb.so.12) which is compatible with LLVM 21+
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-12 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick \
-    m4 bison flex libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb2-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates ninja-build && \
+    m4 bison flex libc6-dev-i386 cpio lsb-core wget netcat-openbsd libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates ninja-build libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.

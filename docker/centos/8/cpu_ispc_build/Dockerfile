@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2025, Intel Corporation
+#  Copyright (c) 2017-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -14,8 +14,18 @@ ARG SHA=main
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages required to build ISPC and Clang.
-RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git make xz tbb-devel python38 python38-devel && \
+RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git make xz python38 python38-devel && \
     dnf clean -y all
+
+# Install TBB from Intel oneAPI.
+# Use oneAPI TBB instead of system TBB to avoid enum-constexpr-conversion errors with LLVM 21+
+RUN rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
+    yum-config-manager --add-repo https://yum.repos.intel.com/oneapi && \
+    dnf install -y intel-oneapi-tbb-devel && \
+    dnf clean -y all
+
+# Set TBB_ROOT to point to oneAPI TBB installation
+ENV TBB_ROOT=/opt/intel/oneapi/tbb/latest
 
 # These packages are required if you need to link ISPC with -static.
 # Ninja is required for superbuild
