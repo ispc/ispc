@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -624,10 +624,10 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
     if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
         if (auto *castInst = llvm::dyn_cast<llvm::CastInst>(variableOffset)) {
             auto opcode = castInst->getOpcode();
-            if (opcode == llvm::Instruction::SExt && castInst->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
-                // sext of a 32-bit vector -> the 32-bit vector is good.
-                // Don't allow zext as they are used by ispc frontend to denote offsets based on unsigned loop counter
-                // variable.
+            if ((opcode == llvm::Instruction::ZExt || opcode == llvm::Instruction::SExt) &&
+                castInst->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
+
+                // zext or sext of a 32-bit vector -> the 32-bit vector is good
                 variableOffset = castInst->getOperand(0);
             } else {
                 return false;
@@ -701,14 +701,10 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
     }
 
     llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(offset);
-    llvm::ZExtInst *zext = llvm::dyn_cast<llvm::ZExtInst>(offset);
     if (sext != nullptr && sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
         // sext of a 32-bit vector -> the 32-bit vector is good
         *offsetPtr = sext->getOperand(0);
         return true;
-    } else if (zext != nullptr && zext->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
-        // Don't allow zext as they are used by ispc frontend to denote offsets based on unsigned loop counter variable.
-        return false;
     } else if (lIs32BitSafeHelper(offset)) {
         // The only constant vector we should have here is a vector of
         // all zeros (i.e. a ConstantAggregateZero, but just in case,

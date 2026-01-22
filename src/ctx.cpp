@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -2165,8 +2165,6 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
 
     bool indexIsVarying = llvm::isa<llvm::VectorType>(index->getType());
     llvm::Value *offset = nullptr;
-    // Determine wrap semantics based on index type.
-    WrapSemantics ws = (indexType && indexType->IsSignedType()) ? WrapSemantics::NSW : WrapSemantics::None;
     if (indexIsVarying == false) {
         // Truncate or sign extend the index as appropriate to a 32 or
         // 64-bit type.
@@ -2181,7 +2179,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
         // smear the result out to be a vector; this is more efficient than
         // first promoting both the scale and the index to vectors and then
         // multiplying.
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, ws);
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, WrapSemantics::NSW);
         offset = SmearUniform(offset);
     } else {
         // Similarly, truncate or sign extend the index to be a 32 or 64
@@ -2196,7 +2194,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
         scale = SmearUniform(scale);
         Assert(index != nullptr);
         // offset = index * scale
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, ws,
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, WrapSemantics::NSW,
                                 ((llvm::Twine("mul_") + scale->getName()) + "_") + index->getName());
     }
 
