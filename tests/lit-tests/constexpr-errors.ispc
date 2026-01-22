@@ -1,4 +1,4 @@
-// RUN: not %{ispc} %s --target=host --nostdlib -o /dev/null 2>&1 | FileCheck %s
+// RUN: not %{ispc} %s --target=host --nostdlib --nowrap -o /dev/null 2>&1 | FileCheck %s
 
 uniform int g = 1;
 constexpr uniform int badinit = g;
@@ -13,21 +13,7 @@ constexpr uniform int badstmt(uniform int x) {
     return x;
 }
 
-// CHECK: Error:
-// CHECK: Initializer
-// CHECK: for global
-// CHECK: variable "badinit" must be a constant.
-// CHECK: Error:
-// CHECK: Missing
-// CHECK: initializer for
-// CHECK: constexpr variable "noinit".
-// CHECK: Error:
-// CHECK: constexpr
-// CHECK: function
-// CHECK: "badcall" calls non-constexpr function
-// CHECK: "nonconstexpr".
-// CHECK: Error:
-// CHECK: constexpr
-// CHECK: function
-// CHECK: "badstmt" contains disallowed statement
-// CHECK: "print".
+// CHECK: Error: Initializer for global variable "badinit" must be a constant.
+// CHECK: Error: Missing initializer for constexpr variable "noinit".
+// CHECK: Error: constexpr function "badcall" calls non-constexpr function "nonconstexpr".
+// CHECK: Error: constexpr function "badstmt" contains disallowed statement "print".
