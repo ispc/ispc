@@ -1,7 +1,7 @@
 ;;
 ;; target-neon-32-x2.ll
 ;;
-;;  Copyright(c) 2019-2025 Intel
+;;  Copyright(c) 2019-2026 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 

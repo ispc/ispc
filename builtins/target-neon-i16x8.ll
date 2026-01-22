@@ -2,7 +2,7 @@
 ;; target-neon-16.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019-2025 Intel
+;;  Copyright(c) 2019-2026 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -17,7 +17,8 @@ include(`target-neon-common.ll')
 ;; mask operations
 
 declare <2 x i32> @NEON_PREFIX_PADDLU.v2i32.v4i16(<4 x i16>) nounwind readnone
-declare <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<WIDTH x i16>)
+declare <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<WIDTH x i16>) nounwind readnone
+declare <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32>) nounwind readnone
 
 define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
   %and_mask = and <WIDTH x i16> %0,
