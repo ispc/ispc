@@ -1,4 +1,4 @@
-// RUN: %ispc %s -o %t.o --target=host
+// RUN: %{ispc} %s -o %t.o --target=host
 
 // Regression test for allowing 32-bit enum values with the high bit set.
 
