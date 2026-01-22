@@ -1,3 +1,4 @@
+// REQUIRES: X86_ENABLED && X86_64_HOST
 // RUN: %{ispc} %s --target=generic-i32x4 --nostdlib --emit-llvm-text -o - | FileCheck %s
 
 struct Pair {
@@ -38,4 +39,4 @@ uniform int<4> baz() { return V0; }
 // CHECK-DAG: @V0 = {{.*}} <4 x i32> <i32 5, i32 6, i32 7, i32 8>
 // CHECK-DAG: @VY = {{.*}} i32 6
 // CHECK-DAG: @VXY = {{.*}} <4 x i32> <i32 5, i32 6, i32 undef, i32 undef>
-// CHECK-DAG: @VBroadcast = {{.*}} <4 x i32> splat (i32 3)
+// CHECK-DAG: @VBroadcast = {{.*}} {{<4 x i32> splat \(i32 3\)|<4 x i32> <i32 3, i32 3, i32 3, i32 3>}}

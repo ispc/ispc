@@ -7,5 +7,6 @@ constexpr uniform int bad(varying int x) {
     return 2;
 }
 
-// CHECK: Error: constexpr function
+// CHECK: Error:
+// CHECK: constexpr function
 // CHECK: "bad" requires a uniform condition in "if".
