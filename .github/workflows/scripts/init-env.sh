@@ -10,9 +10,14 @@ LLVM_VERSION=${LLVM_VERSION:-"21.1"}
 echo "LLVM_VERSION=${LLVM_VERSION}" >> "${GITHUB_ENV}"
 
 OS=$(uname -s)
+ARCH=$(uname -m)
 case "$OS" in
     Linux*)
-      LLVM_TAR=${LLVM_TAR:-"llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz"}
+      if [ "$ARCH" == "aarch64" ]; then
+        LLVM_TAR=${LLVM_TAR:-"llvm-21.1.8-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz"}
+      else
+        LLVM_TAR=${LLVM_TAR:-"llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz"}
+      fi
       ;;
     Darwin*)
       LLVM_TAR=${LLVM_TAR:-"llvm-21.1.8-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz"}
