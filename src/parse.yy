@@ -3782,18 +3782,32 @@ lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *
         return false;
     }
 
-    int64_t iv[ISPC_MAX_NVEC];
-    int count = ce->GetValues(iv);
-    if (count < 1) {
-        Error(pos, "%s must be a compile-time integer constant.", usage);
-        return false;
+    int resultValue = 0;
+    if (type->IsUnsignedType()) {
+        uint64_t uv[ISPC_MAX_NVEC];
+        int count = ce->GetValues(uv);
+        if (count < 1) {
+            Error(pos, "%s must be a compile-time integer constant.", usage);
+            return false;
+        }
+        if ((uint64_t)((uint32_t)uv[0]) != uv[0]) {
+            Error(pos, "%s must be representable with a 32-bit integer.", usage);
+            return false;
+        }
+        resultValue = (int)(uint32_t)uv[0];
+    } else {
+        int64_t iv[ISPC_MAX_NVEC];
+        int count = ce->GetValues(iv);
+        if (count < 1) {
+            Error(pos, "%s must be a compile-time integer constant.", usage);
+            return false;
+        }
+        if ((int64_t)((int32_t)iv[0]) != iv[0]) {
+            Error(pos, "%s must be representable with a 32-bit integer.", usage);
+            return false;
+        }
+        resultValue = (int)(int32_t)iv[0];
     }
-    if ((int64_t)((int32_t)iv[0]) != iv[0]) {
-        Error(pos, "%s must be representable with a 32-bit integer.", usage);
-        return false;
-    }
-
-    int resultValue = type->IsUnsignedType() ? (int)(uint64_t)iv[0] : (int)iv[0];
     value->emplace<int>(resultValue);
     return true;
 }

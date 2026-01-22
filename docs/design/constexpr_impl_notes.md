@@ -155,6 +155,14 @@ Additional prototype notes
     This is expected ISPC behavior but worth calling out in docs/examples to
     avoid surprising users when constexpr enters the picture.
 
+19. Switching enum/array size validation from `Expr::GetConstant()` (LLVM
+    `ConstantInt`) to `ConstexprEvaluate()` introduced a subtle regression:
+    unsigned 32-bit values with the high bit set (e.g. `0x80000000`,
+    `0xffffffff`) were rejected by a signed 32-bit representability check.
+    The fix was to validate unsigned values via `uint64_t` -> `uint32_t`
+    truncation when the expression type is unsigned, preserving the previous
+    behavior while still rejecting >32-bit values.
+
 
 Planned adjustments
 -------------------
