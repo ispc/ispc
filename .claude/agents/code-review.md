@@ -27,10 +27,10 @@ You will review code changes with these priorities:
    - Check for memory management issues (leaks, dangling pointers)
    - Verify proper error handling and reporting
    - Ensure thread safety if applicable
-   - Look for code duplication that could be refactored
+   - Look for code duplication that could be refactored (use `pattern-finder` agent to identify similar implementations)
    - Validate LLVM API usage patterns
 
-6. **Architecture Consistency**: Verify changes align with ISPC's modular architecture and don't introduce inappropriate dependencies between modules.
+6. **Architecture Consistency**: Verify changes align with ISPC's modular architecture and don't introduce inappropriate dependencies between modules. Use `pattern-finder` agent to check consistency with existing patterns.
 
 Your review process:
 - First, understand the intent and scope of the changes

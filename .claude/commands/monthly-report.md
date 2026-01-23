@@ -1,8 +1,9 @@
+---
+description: Generate a monthly report based on all PRs merged to https://github.com/ispc/ispc during the previous month
+allowed-tools: Bash(gh pr *), Bash(gh issue *), Bash(gh release *)
+---
+
 # Monthly Report Generator
-
-Generate a monthly report based on all PRs merged to https://github.com/ispc/ispc during the previous month.
-
-allowed-tools: Bash(gh pr *), Bash(gh issue *)
 
 ## Instructions
 
