@@ -24,8 +24,21 @@ concurrency:
 
 jobs:
   build-ispc:
-    name: Build ISPC
-    runs-on: ubuntu-22.04
+    name: Build ISPC (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            install_deps_args: ""
+            artifact_name: ispc-archive
+            artifact_path: build/ispc-trunk-linux.tar.gz
+          - os: macos-14
+            install_deps_args: macos-14
+            artifact_name: ispc-macos-arm
+            artifact_path: build/ispc-trunk-macos.tar.gz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -33,7 +46,7 @@ jobs:
         submodules: true
 
     - name: Install ISPC build dependencies
-      run: .github/workflows/scripts/install-build-deps.sh
+      run: .github/workflows/scripts/install-build-deps.sh ${{ matrix.install_deps_args }}
 
     - name: Build ISPC
       run: .github/workflows/scripts/build-ispc.sh
@@ -41,8 +54,8 @@ jobs:
     - name: Upload ISPC artifact
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: ispc-archive
-        path: build/ispc-trunk-linux.tar.gz
+        name: ${{ matrix.artifact_name }}
+        path: ${{ matrix.artifact_path }}
 
   build-projects:
     name: Build ${{ matrix.project.name }}
@@ -214,3 +227,46 @@ jobs:
 
     - name: Build ${{ matrix.project.name }}
       run: ${{ matrix.project.build_cmd }}
+
+  build-ispc-downsampler:
+    name: Build ispc-downsampler on macOS ARM
+    needs: build-ispc
+    runs-on: macos-14
+
+    steps:
+    - name: Install dependencies
+      run: |
+        # Install Rust
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source "$HOME/.cargo/env"
+        rustc --version
+        cargo --version
+
+    - name: Download ISPC artifact
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: ispc-macos-arm
+        path: /tmp/ispc-build
+
+    - name: Install ISPC
+      run: |
+        cd /tmp/ispc-build
+        tar -xzf ispc-trunk-macos.tar.gz
+        sudo cp -r ispc-trunk-macos/* /usr/local/
+        sudo chmod +x /usr/local/bin/ispc
+        ispc --version
+        echo "ISPC_EXECUTABLE=/usr/local/bin/ispc" >> "$GITHUB_ENV"
+
+    - name: Checkout ispc-downsampler
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        repository: Traverse-Research/ispc-downsampler
+        path: ispc-downsampler
+
+    - name: Build and benchmark ispc-downsampler
+      run: |
+        source "$HOME/.cargo/env"
+        cd ispc-downsampler
+        cargo clean
+        cargo build --features ispc
+        cargo bench
