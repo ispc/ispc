@@ -8,7 +8,7 @@ vectorized parallel programming.
 ## Build System
 
 **CMake-based** (Unix Makefiles/Ninja)
-- Build directory: `build/` (ask user permission before creating if missing)
+- Build directory: `build/`
 - Generated compiler: `build/bin/ispc`
 
 **Build commands:**
@@ -60,13 +60,17 @@ functional tests for runtime behavior changes.
 
 ## Common Workflows
 
-**Implementing a new feature or fixing a bug:**
-1. Explain the given problem
-2. Search codebase for relevant files
-3. **Create fix plan and get user approval**
-4. Write regression tests in `tests/lit-tests/` (use `ispc-lit-tests` skill) and/or function tests in `tests/func-tests`
-5. Verify the fix
-6. Run `agent-code-review` when you've completed implementing a feature or bug fix and address its feedback
+**Implementing a feature or fixing a bug:**
+1. If GitHub issue: use `gh issue view <number>` to get details
+2. Explain the problem and reproduce it (use reproducer from issue if available)
+3. Search codebase for relevant files (use `pattern-finder` agent to discover existing patterns and similar implementations)
+4. Create a fix plan
+5. Implement the fix
+6. Write regression tests in `tests/lit-tests/` (use `ispc-lit-tests` skill) and/or functional tests in `tests/func-tests/`
+7. Verify the fix
+8. Run `code-review` agent to review the changes and address its feedback
+9. Run precommit checks (see Precommit Rules below)
+10. Commit with message: `Fix #<issue_number>: <summary>` (for issues) or descriptive summary
 
 **Debugging a test failure:**
 1. Run the specific test: `TEST=/full/path/test.ispc cmake --build build --target check-one -j $(nproc)`
@@ -76,10 +80,16 @@ functional tests for runtime behavior changes.
 **Investigating codegen/optimization issues:**
 - Use `--debug-phase=first:last --dump-file=dbg` to dump IR after each phase to `dbg` folder
 
-## Precommit Rules
-- Check that the year is up-to-date in copyright string
-- Run `clang-format -i` on modified C/C++/header files
-- Make sure that lit and functional tests are passing
+## Precommit Rules (MANDATORY)
+
+**Before every commit, you MUST complete ALL of these checks:**
+
+1. **Copyright year**: Verify the year is 2026 in copyright strings of modified files
+2. **Code formatting**: Run `clang-format -i` on ALL modified C/C++/header files
+3. **Lit tests**: Run `cmake --build build --target check-all -j $(nproc)` and verify tests pass
+4. **Functional tests** (if runtime behavior changed): Run `PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --target=avx2-i32x8`
+
+**Do not commit until all checks pass. Do not skip any of these steps.**
 
 ## Important Instructions
 - Do only what is asked; nothing more, nothing less
@@ -87,3 +97,5 @@ functional tests for runtime behavior changes.
 - NEVER proactively create documentation (*.md) or README files unless explicitly requested
 - NEVER leave trailing spaces in files
 - Only use emojis if explicitly requested
+- Use GitHub CLI (`gh`) for all GitHub-related tasks (issues, PRs, etc.)
+- Stop and ask if anything is unclear or a step fails

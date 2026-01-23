@@ -186,6 +186,20 @@ Structure your analysis as:
 [How to verify the fix works]
 ```
 
+## Bisection (When Needed)
+
+If you need to bisect LLVM to find a guilty commit, use the `llvm-codegen-analyzer` agent which has detailed bisection workflows:
+
+```
+Task(llvm-codegen-analyzer): Bisect LLVM to find the commit causing [describe the issue]
+```
+
+**Quick bisect tips:**
+- Use `git bisect skip` for unbuildable commits
+- For faster iteration: X86-only builds, slim ISPC binary
+- Automate with `git bisect run ./test-script.sh`
+- If purely LLVM issue: test with `opt`/`llc` to avoid rebuilding ISPC
+
 ## Constraints
 
 - Always check ISPC commits first before blaming LLVM
