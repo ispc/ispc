@@ -38,7 +38,7 @@ USER ispc_user
 # Some check-all tests may fail because we use system LLVM here
 RUN git clone https://github.com/$REPO.git ispc && \
     git -C ispc checkout $SHA && \
-    cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr && \
+    cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr/local && \
     cmake --build build-ispc -v -j "$(nproc)" && \
     (cmake --build build-ispc --target check-all || true) && \
     (echo "shared libs deps of ispc" && ldd ./build-ispc/bin/ispc) && \
