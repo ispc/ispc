@@ -201,6 +201,7 @@ jobs:
             echo "Generated with [Claude Code](https://claude.com/claude-code)"
           } > issue_body.md
           gh issue comment "$EXISTING_ISSUE" --body-file issue_body.md
+          echo "issue_number=$EXISTING_ISSUE" >> "$GITHUB_OUTPUT"
         else
           echo "Creating new issue"
           {
@@ -222,8 +223,6 @@ jobs:
             --body-file issue_body.md | grep -oE '[0-9]+$')
           echo "Created issue #$ISSUE_NUMBER"
           echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
-        else
-          echo "issue_number=$EXISTING_ISSUE" >> "$GITHUB_OUTPUT"
         fi
 
   attempt-fix:
