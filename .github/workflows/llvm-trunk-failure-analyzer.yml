@@ -225,76 +225,16 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
         fi
 
-  attempt-fix:
-    # Attempt to automatically fix LLVM trunk failures that are fixable on ISPC side
+  request-fix:
+    # Request Claude to fix LLVM trunk failures via reusable workflow
     needs: analyze-failure
-    if: success()
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    if: success() && needs.analyze-failure.outputs.issue_number != ''
     permissions:
       contents: write
       pull-requests: write
       issues: write
-
-    env:
-      LLVM_VERSION: "21.1"
-      LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-      LLVM_REPO: https://github.com/ispc/ispc.dependencies
-
-    steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-      with:
-        fetch-depth: 0
-
-    - name: Setup Node.js
-      uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-      with:
-        node-version: '20'
-
-    - name: Install build dependencies
-      run: |
-        echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          cmake ninja-build bison flex m4 \
-          libc6-dev libc6-dev-i386 g++-multilib \
-          libtbb-dev libstdc++6
-
-    - name: Download LLVM
-      run: |
-        wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 \
-          "$LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR"
-        tar xf "$LLVM_TAR"
-        rm -f "$LLVM_TAR"
-        echo "$GITHUB_WORKSPACE/bin-$LLVM_VERSION/bin" >> "$GITHUB_PATH"
-
-    - name: Configure Git
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-
-    - name: Attempt to fix issue
-      id: fix-attempt
-      env:
-        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        GH_TOKEN: ${{ github.token }}
-        ISSUE_NUMBER: ${{ needs.analyze-failure.outputs.issue_number }}
-      run: |
-        if [ -z "$ISSUE_NUMBER" ]; then
-          echo "No issue number available, skipping fix attempt"
-          exit 0
-        fi
-
-        echo "=== Attempting to fix issue #$ISSUE_NUMBER ==="
-
-        # Run Claude Code with the fix-gh-issue command
-        if npx @anthropic-ai/claude-code --print \
-          "/fix-gh-issue $ISSUE_NUMBER" \
-          > fix_output.txt 2>&1; then
-          echo "Fix attempt completed"
-          cat fix_output.txt
-        else
-          echo "Fix attempt failed or issue is not fixable on ISPC side"
-          cat fix_output.txt
-          exit 0
-        fi
+      actions: read
+    uses: ./.github/workflows/claude.yml
+    with:
+      prompt: "Fix issue #${{ needs.analyze-failure.outputs.issue_number }} and create a PR"
+    secrets: inherit
