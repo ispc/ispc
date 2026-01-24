@@ -85,7 +85,8 @@ jobs:
         echo "=== Attempting to fix issue #$ISSUE_NUMBER ==="
 
         # Run Claude Code with the fix-gh-issue command
-        if npx @anthropic-ai/claude-code --print \
+        # Use --dangerously-skip-permissions to allow non-interactive execution in CI
+        if npx @anthropic-ai/claude-code --print --dangerously-skip-permissions \
           "/fix-gh-issue $ISSUE_NUMBER" \
           > fix_output.txt 2>&1; then
           echo "Fix attempt completed"

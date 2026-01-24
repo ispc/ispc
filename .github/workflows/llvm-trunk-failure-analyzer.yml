@@ -160,7 +160,8 @@ jobs:
         echo "=================================="
 
         # Run Claude Code with the analyzer skill and capture output
-        if ! npx @anthropic-ai/claude-code --print \
+        # Use --dangerously-skip-permissions to allow non-interactive execution in CI
+        if ! npx @anthropic-ai/claude-code --print --dangerously-skip-permissions \
           "/analyze-llvm-trunk --run-id $RUN_ID --current-sha $CURRENT_SHA --previous-sha $PREVIOUS_SHA" \
           > analysis_output.txt 2>&1; then
           echo "::error::Claude Code analysis failed"
