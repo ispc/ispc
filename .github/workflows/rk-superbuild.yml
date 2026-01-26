@@ -40,7 +40,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ispc_linux_package
-        path: build/ispc-trunk-linux.tar.gz
+        path: build/ispc-*-linux.tar.gz
 
   win-build-ispc:
     runs-on: windows-2022
@@ -108,9 +108,10 @@ jobs:
       env:
         ISPC_VERSION: 1.25.0dev # the exact version is not important but suffix "dev" is required
       run: |
+        ISPC_PACKAGE=$(ls ${GITHUB_WORKSPACE}/ispc-*-linux.tar.gz)
         mkdir build
         cd build
-        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-trunk-linux.tar.gz" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
+        cmake -DISPC_URL="${ISPC_PACKAGE}" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
         cmake --build .
 
   build-ospray-superbuild-windows:

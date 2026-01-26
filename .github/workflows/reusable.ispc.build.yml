@@ -278,13 +278,13 @@ jobs:
         name: ${{ inputs.artifact_name }}
         path: |
           # Linux artifacts
-          ${{ inputs.platform == 'linux' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-trunk-linux.tar.gz' || '' }}
-          ${{ inputs.platform == 'linux' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz' || '' }}
+          ${{ inputs.platform == 'linux' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-*-linux.tar.gz' || '' }}
+          ${{ inputs.platform == 'linux' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-*-linux.tar.gz' || '' }}
 
           # macOS artifacts
-          ${{ inputs.platform == 'macos' && !inputs.enable_lto && 'build/ispc-trunk-macos.tar.gz' || '' }}
-          ${{ inputs.platform == 'macos' && inputs.enable_lto && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz' || '' }}
+          ${{ inputs.platform == 'macos' && !inputs.enable_lto && 'build/ispc-*-macos.tar.gz' || '' }}
+          ${{ inputs.platform == 'macos' && inputs.enable_lto && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-*-macOS.universal.tar.gz' || '' }}
 
           # Windows artifacts
-          ${{ inputs.platform == 'windows' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-trunk-windows.zip' || '' }}
-          ${{ inputs.platform == 'windows' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip' || '' }}
+          ${{ inputs.platform == 'windows' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-*-windows.zip' || '' }}
+          ${{ inputs.platform == 'windows' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-*-windows.zip' || '' }}

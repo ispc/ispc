@@ -42,7 +42,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ispc-archive
-        path: build/ispc-trunk-linux.tar.gz
+        path: build/ispc-*-linux.tar.gz
 
   build-projects:
     name: Build ${{ matrix.project.name }}
@@ -119,8 +119,10 @@ jobs:
     - name: Install ISPC
       run: |
         cd /tmp/ispc-build
-        tar -xzf ispc-trunk-linux.tar.gz
-        cp -r ispc-trunk-linux/* /usr/local/
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar -xzf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        cp -r "$ISPC_DIR"/* /usr/local/
         chmod +x /usr/local/bin/ispc
         ispc --version
 
@@ -188,8 +190,10 @@ jobs:
     - name: Install ISPC
       run: |
         cd /tmp/ispc-build
-        tar -xzf ispc-trunk-linux.tar.gz
-        cp -r ispc-trunk-linux/* /usr/local/
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar -xzf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        cp -r "$ISPC_DIR"/* /usr/local/
         chmod +x /usr/local/bin/ispc
         ispc --version
 

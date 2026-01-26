@@ -693,7 +693,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: examples_zip
-        path: build/ispc-examples-trunk.zip
+        path: build/ispc-examples-*.zip
 
   linux-package-examples:
     needs: [define-flow]
@@ -716,7 +716,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: examples_tgz
-        path: build/ispc-examples-trunk.tar.gz
+        path: build/ispc-examples-*.tar.gz
 
   win-examples:
     needs: [win-package-examples, win-build-ispc]
@@ -745,7 +745,7 @@ jobs:
 
     - name: Unpack examples
       run: |
-        unzip ispc-examples-trunk.zip
+        for %%f in (ispc-examples-*.zip) do unzip "%%f"
       working-directory: examples-package
       shell: cmd
 
@@ -754,7 +754,7 @@ jobs:
       run: |
         set VSVARS="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
-        set PATH=%GITHUB_WORKSPACE%\ispc-trunk-windows\bin;%PATH%
+        for /d %%d in (%GITHUB_WORKSPACE%\ispc-*-windows) do set PATH=%%d\bin;%PATH%
         python scripts\perf.py -n 1 -g "Visual Studio 17 2022"
 
     - name: Build examples
@@ -793,7 +793,7 @@ jobs:
 
     - name: Unpack examples
       run: |
-        tar xf ispc-examples-trunk.tar.gz
+        tar xf ispc-examples-*.tar.gz
       working-directory: examples-package
 
     - name: Run performance tests
@@ -832,14 +832,16 @@ jobs:
 
     - name: Install dependencies and unpack artifacts
       run: |
-        tar xf ispc-trunk-macos.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
+        ISPC_TAR=$(ls ispc-*-macos.tar.gz)
+        tar xf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        echo "$GITHUB_WORKSPACE/$ISPC_DIR/bin" >> "$GITHUB_PATH"
         echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
         pip install nanobind
 
     - name: Unpack examples
       run: |
-        tar xf ispc-examples-trunk.tar.gz
+        tar xf ispc-examples-*.tar.gz
       working-directory: examples-package
 
     - name: Build examples

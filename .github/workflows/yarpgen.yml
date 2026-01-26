@@ -55,7 +55,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ispc_linux_package
-        path: build/ispc-trunk-linux.tar.gz
+        path: build/ispc-*-linux.tar.gz
 
   yarpgen-build-and-run:
       runs-on: ubuntu-22.04

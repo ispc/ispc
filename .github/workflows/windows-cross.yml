@@ -45,7 +45,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: build-ispc-linux-wincross
-        path: build/ispc-trunk-linux-wincross.tar.gz
+        path: build/ispc-*-linux-wincross.tar.gz
 
     - name: Sanity testing (make check-all, make test)
       run: .github/workflows/scripts/check-ispc.sh
@@ -72,7 +72,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: build-ispc-macos-wincross
-        path: build/ispc-trunk-macos-wincross.tar.gz
+        path: build/ispc-*-macos-wincross.tar.gz
 
     - name: Sanity testing (make check-all, make test)
       run: .github/workflows/scripts/check-ispc.sh

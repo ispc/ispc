@@ -10,9 +10,11 @@ pip install nanobind
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # Install ISPC package
-Expand-Archive $pwd\ispc-trunk-windows.zip -DestinationPath $pwd
+$zip = Get-ChildItem -Filter "ispc-*-windows.zip" | Select-Object -First 1
+Expand-Archive $zip.FullName -DestinationPath $pwd
 ls
-echo "$pwd\ispc-trunk-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+$ispcDir = Get-ChildItem -Directory -Filter "ispc-*-windows" | Select-Object -First 1
+echo "$pwd\$($ispcDir.Name)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
 # Download and unpack SDE
 if (-not $env:USER_AGENT -or -not $env:SDE_MIRROR_ID) {
