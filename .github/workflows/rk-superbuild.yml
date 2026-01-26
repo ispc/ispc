@@ -78,7 +78,7 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ispc_win_package
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-*-windows.zip
 
   build-rk-superbuild-ubuntu-2204:
     needs: linux-build-ispc
@@ -130,8 +130,10 @@ jobs:
 
     - name: Add ISPC to the PATH
       run: |
-        Expand-Archive $pwd\ispc-trunk-windows.zip -DestinationPath $pwd
-        echo "$pwd\ispc-trunk-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $zip = Get-ChildItem -Filter "ispc-*-windows.zip" | Select-Object -First 1
+        Expand-Archive $zip.FullName -DestinationPath $pwd
+        $ispcDir = Get-ChildItem -Directory -Filter "ispc-*-windows" | Select-Object -First 1
+        echo "$pwd\$($ispcDir.Name)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     - name: Build ospray superbuild
       run: |
