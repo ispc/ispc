@@ -45,6 +45,10 @@ jobs:
   win-build-ispc:
     runs-on: windows-2022
 
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+      LLVM_VERSION: "20.1"
+
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
