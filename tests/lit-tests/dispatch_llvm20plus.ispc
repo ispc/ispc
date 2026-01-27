@@ -1,6 +1,6 @@
 // RUN: %{ispc} --pic --target=sse2-i32x4,avx10.2dmr-x4 -h %t.h %s -o %t.o -g
 // RUN: %{cc} -x c -c %s -o %t.c.o --include %t.h -g
-// RUN: %{cc} %t.c.o -o %t.c.bin -g -rdynamic %t.o %t_sse2.o %t_avx10.2dmr.o
+// RUN: %{cc} %t.c.o -o %t.c.bin -g -rdynamic %t.o %t_sse2.o %t_avx10_2dmr.o
 
 // RUN: sde -mrm -- %t.c.bin | FileCheck %s --check-prefix=CHECK-SSE2
 // RUN: sde -dmr -- %t.c.bin | FileCheck %s --check-prefix=CHECK-DMR
@@ -8,7 +8,7 @@
 // REQUIRES: LINUX_HOST && X86_ENABLED && SDE_INSTALLED && LLVM_20_0+
 
 // CHECK-SSE2: ispc_foo_sse2
-// CHECK-DMR: ispc_foo_avx10.2dmr
+// CHECK-DMR: ispc_foo_avx10_2dmr
 
 #ifdef ISPC
 extern "C" void print_stack_trace();
