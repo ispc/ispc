@@ -57,8 +57,10 @@ jobs:
       run: |
         pacman-key --init
         pacman-key --populate archlinux
+        # Update keyring first, then re-populate to trust new signing keys
         pacman -Sy --noconfirm archlinux-keyring
-        pacman -Syu --noconfirm
+        pacman-key --populate archlinux
+        pacman -Su --noconfirm
         pacman -S --needed --noconfirm base-devel git sudo
 
     - name: Create build user

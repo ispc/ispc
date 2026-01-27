@@ -49,8 +49,10 @@ jobs:
       run: |
         pacman-key --init
         pacman-key --populate archlinux
+        # Update keyring first, then re-populate to trust new signing keys
         pacman -Sy --noconfirm archlinux-keyring
-        pacman -Syu --noconfirm
+        pacman-key --populate archlinux
+        pacman -Su --noconfirm
         pacman -S --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
 
     - name: Build ISPC
