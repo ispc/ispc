@@ -41,8 +41,10 @@ jobs:
 
     - name: Install dependencies and unpack artifacts
       run: |
-        tar xf ispc-trunk-linux.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin" >> "$GITHUB_PATH"
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar xf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        echo "$GITHUB_WORKSPACE/$ISPC_DIR/bin" >> "$GITHUB_PATH"
 
     - name: Check tools
       run: |

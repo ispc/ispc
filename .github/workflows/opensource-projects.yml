@@ -34,11 +34,11 @@ jobs:
           - os: ubuntu-22.04
             install_deps_args: ""
             artifact_name: ispc-archive
-            artifact_path: build/ispc-trunk-linux.tar.gz
+            artifact_path: build/ispc-*-linux.tar.gz
           - os: macos-14
             install_deps_args: macos-14
             artifact_name: ispc-macos-arm
-            artifact_path: build/ispc-trunk-macos.tar.gz
+            artifact_path: build/ispc-*-macos.tar.gz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -135,8 +135,10 @@ jobs:
     - name: Install ISPC
       run: |
         cd /tmp/ispc-build
-        tar -xzf ispc-trunk-linux.tar.gz
-        cp -r ispc-trunk-linux/* /usr/local/
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar -xzf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        cp -r "$ISPC_DIR"/* /usr/local/
         chmod +x /usr/local/bin/ispc
         ispc --version
 
@@ -220,8 +222,10 @@ jobs:
     - name: Install ISPC
       run: |
         cd /tmp/ispc-build
-        tar -xzf ispc-trunk-linux.tar.gz
-        cp -r ispc-trunk-linux/* /usr/local/
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar -xzf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        cp -r "$ISPC_DIR"/* /usr/local/
         chmod +x /usr/local/bin/ispc
         ispc --version
 
@@ -246,8 +250,10 @@ jobs:
     - name: Install ISPC
       run: |
         cd /tmp/ispc-build
-        tar -xzf ispc-trunk-macos.tar.gz
-        sudo cp -r ispc-trunk-macos/* /usr/local/
+        ISPC_TAR=$(ls ispc-*-macos.tar.gz)
+        tar -xzf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        sudo cp -r "$ISPC_DIR"/* /usr/local/
         sudo chmod +x /usr/local/bin/ispc
         ispc --version
         echo "ISPC_EXECUTABLE=/usr/local/bin/ispc" >> "$GITHUB_ENV"

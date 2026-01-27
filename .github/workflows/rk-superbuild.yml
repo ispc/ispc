@@ -40,7 +40,7 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ispc_linux_package
-        path: build/ispc-trunk-linux.tar.gz
+        path: build/ispc-*-linux.tar.gz
 
   win-build-ispc:
     runs-on: windows-2022
@@ -78,7 +78,7 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ispc_win_package
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-*-windows.zip
 
   build-rk-superbuild-ubuntu-2204:
     needs: linux-build-ispc
@@ -108,9 +108,10 @@ jobs:
       env:
         ISPC_VERSION: 1.25.0dev # the exact version is not important but suffix "dev" is required
       run: |
+        ISPC_PACKAGE=$(ls ${GITHUB_WORKSPACE}/ispc-*-linux.tar.gz)
         mkdir build
         cd build
-        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-trunk-linux.tar.gz" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
+        cmake -DISPC_URL="${ISPC_PACKAGE}" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
         cmake --build .
 
   build-ospray-superbuild-windows:
@@ -130,8 +131,10 @@ jobs:
 
     - name: Add ISPC to the PATH
       run: |
-        Expand-Archive $pwd\ispc-trunk-windows.zip -DestinationPath $pwd
-        echo "$pwd\ispc-trunk-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $zip = Get-ChildItem -Filter "ispc-*-windows.zip" | Select-Object -First 1
+        Expand-Archive $zip.FullName -DestinationPath $pwd
+        $ispcDir = Get-ChildItem -Directory -Filter "ispc-*-windows" | Select-Object -First 1
+        echo "$pwd\$($ispcDir.Name)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     - name: Build ospray superbuild
       run: |
