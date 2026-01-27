@@ -2704,7 +2704,7 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512gnr";
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     case Target::DMR_AVX10_2:
-        return "avx10.2dmr";
+        return "avx10_2dmr";
 #endif
 #ifdef ISPC_XE_ENABLED
     case Target::XELP:
