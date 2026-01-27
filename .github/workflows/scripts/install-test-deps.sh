@@ -42,7 +42,9 @@ else
     exit 1
 fi
 
-tar xf ispc-trunk-linux.tar.gz
+ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+tar xf "$ISPC_TAR"
+ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
 
 if [ -n INSTALL_COMPUTE_RUNTIME ]; then
     echo "install Compute Runtime"
@@ -59,6 +61,6 @@ fi
 
 #GA requires to set env putting value to $GITHUB_ENV & $GITHUB_PATH
 echo "SDE_HOME=$GITHUB_WORKSPACE/$SDE_TAR_NAME-lin" >> $GITHUB_ENV
-echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin" >> $GITHUB_PATH
+echo "$GITHUB_WORKSPACE/$ISPC_DIR/bin" >> $GITHUB_PATH
 echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
