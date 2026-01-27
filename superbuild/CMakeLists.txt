@@ -984,6 +984,29 @@ else()
 endif()
 ]] @ONLY)
 
+# Create mt.exe wrapper script with retry logic to work around timing issue
+# where mt.exe fails when run immediately after lld-link creates large DLLs.
+# Common mt.exe errors: 31 = file access error (timing issue), 1 = general error.
+file(WRITE "${CMAKE_BINARY_DIR}/mt-retry-wrapper.cmd" "@echo off
+setlocal enabledelayedexpansion
+set MT_ARGS=%*
+echo [mt-retry-wrapper] Running: mt.exe %MT_ARGS%
+mt.exe %MT_ARGS%
+if !ERRORLEVEL! EQU 0 exit /b 0
+set LAST_ERR=!ERRORLEVEL!
+echo [mt-retry-wrapper] mt.exe failed (exit code !LAST_ERR!), retrying after 1s delay...
+timeout /t 1 /nobreak >nul 2>&1
+mt.exe %MT_ARGS%
+if !ERRORLEVEL! EQU 0 exit /b 0
+set LAST_ERR=!ERRORLEVEL!
+echo [mt-retry-wrapper] mt.exe failed again (exit code !LAST_ERR!), retrying after 2s delay...
+timeout /t 2 /nobreak >nul 2>&1
+mt.exe %MT_ARGS%
+set LAST_ERR=!ERRORLEVEL!
+if !LAST_ERR! NEQ 0 echo [mt-retry-wrapper] mt.exe failed after 3 attempts with exit code !LAST_ERR!
+exit /b !LAST_ERR!
+")
+
 # Base toolchain file for building ISPC and LLVM dependencies.
 file(CONFIGURE OUTPUT stage2-toolchain.cmake CONTENT [[
 @CCACHE_LAUNCHER_ACTION@(CMAKE_C_COMPILER_LAUNCHER   @CCACHE_EXE@)
@@ -997,7 +1020,7 @@ if (WIN32)
     set(CMAKE_LINKER       "@STAGE2_LLD_LINK_CMAKE@")
     set(CMAKE_AR           "@STAGE2_LLVM_LIB_CMAKE@")
     set(CMAKE_RC_COMPILER  "@STAGE2_LLVM_RC_CMAKE@")
-    set(CMAKE_MT           mt)
+    set(CMAKE_MT           "@CMAKE_BINARY_DIR@/mt-retry-wrapper.cmd")
     set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@ ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@ ${WIN_C_FLAGS}")
 elseif(APPLE)
@@ -1038,7 +1061,7 @@ if (WIN32)
     set(CMAKE_LINKER       "@STAGE2_LLD_LINK_CMAKE@")
     set(CMAKE_AR           "@STAGE2_LLVM_LIB_CMAKE@")
     set(CMAKE_RC_COMPILER  "@STAGE2_LLVM_RC_CMAKE@")
-    set(CMAKE_MT           mt)
+    set(CMAKE_MT           "@CMAKE_BINARY_DIR@/mt-retry-wrapper.cmd")
     set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
@@ -1068,7 +1091,7 @@ endif()
 ]] @ONLY)
 
 # Special toolchain file for building level-zero.
-# Primarily needed because if warning suppression for windows.
+# Primarily needed because of warning suppression for windows.
 # https://github.com/oneapi-src/level-zero/issues/83
 file(CONFIGURE OUTPUT stage2-l0-toolchain.cmake CONTENT [[
 @CCACHE_LAUNCHER_ACTION@(CMAKE_C_COMPILER_LAUNCHER   @CCACHE_EXE@)
@@ -1082,7 +1105,7 @@ if (WIN32)
     set(CMAKE_LINKER       "@STAGE2_LLD_LINK_CMAKE@")
     set(CMAKE_AR           "@STAGE2_LLVM_LIB_CMAKE@")
     set(CMAKE_RC_COMPILER  "@STAGE2_LLVM_RC_CMAKE@")
-    set(CMAKE_MT           mt)
+    set(CMAKE_MT           "@CMAKE_BINARY_DIR@/mt-retry-wrapper.cmd")
     set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@ ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@ ${WIN_C_FLAGS}")
     # Since v1.3 at least this version is requited,
@@ -1124,7 +1147,7 @@ if (WIN32)
     set(CMAKE_LINKER       lld-link)
     set(CMAKE_AR           llvm-lib)
     set(CMAKE_RC_COMPILER  llvm-rc)
-    set(CMAKE_MT           mt)
+    set(CMAKE_MT           "@CMAKE_BINARY_DIR@/mt-retry-wrapper.cmd")
     set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
