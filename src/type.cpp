@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -2969,7 +2969,9 @@ FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appF
     // Always add target suffix except extern "C" and extern "SYCL" internal cases.
     if (g->mangleFunctionsWithTarget) {
         if ((!appFunction && !IsExternC() && !IsExternSYCL()) || appFunction) {
-            mangle.suffix += std::string("_") + g->target->GetISAString();
+            std::string isaString = g->target->GetISAString();
+            std::replace(isaString.begin(), isaString.end(), '.', '_');
+            mangle.suffix += std::string("_") + isaString;
         }
     }
     // If the function is declared as regcall, add __regcall3__ prefix.

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1845,6 +1845,7 @@ bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &CO) {
 // filename's suffix, like "foo_avx.obj".
 std::string lGetMangledFileName(std::string filename, Target *target) {
     std::string isaString = target->GetISAString();
+    std::replace(isaString.begin(), isaString.end(), '.', '_');
 
     assert(!filename.empty() && "`filename` should not be empty");
     std::string targetFileName{filename};
