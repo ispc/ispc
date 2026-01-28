@@ -116,9 +116,7 @@ jobs:
     - name: Install packages
       run: |
         echo "Installing build dependencies..."
-        apt update
-        apt upgrade -y
-        apt install -y git wget tar build-essential cmake ninja-build libglfw3-dev libgl1-mesa-dev libxinerama-dev libxcursor-dev libxi-dev python3-dev
+        apt -y update && apt -y install git wget tar build-essential cmake ninja-build libglfw3-dev libgl1-mesa-dev libxinerama-dev libxcursor-dev libxi-dev python3-dev
 
     - name: Clone RK superbuild repo
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -163,7 +161,7 @@ jobs:
     steps:
     - name: Install packages
       run: |
-        apt update && apt install -y libtbb-dev libglfw3-dev
+        apt -y update && apt -y install libtbb-dev libglfw3-dev
 
     - name: Download RK install
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -214,9 +212,7 @@ jobs:
     steps:
     - name: Install packages
       run: |
-        apt update
-        apt upgrade -y
-        apt install -y build-essential cmake git git-lfs python3 libtbb2-dev
+        apt -y update && apt -y install build-essential cmake git git-lfs python3 libtbb2-dev
 
     - name: Clone OIDN repo
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -262,7 +258,7 @@ jobs:
     steps:
     - name: Install packages
       run: |
-        apt update && apt install -y libtbb2-dev
+        apt -y update && apt -y install libtbb2-dev
 
     - name: Download OIDN install
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
