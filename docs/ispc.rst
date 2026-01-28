@@ -207,6 +207,7 @@ Contents:
     * `Transcendental Functions`_
     * `Saturating Arithmetic`_
     * `Dot product`_
+    * `Intel AMX (Advanced Matrix Extensions)`_
     * `Pseudo-Random Numbers`_
     * `Random Numbers`_
 
@@ -253,6 +254,20 @@ See the file `ReleaseNotes.txt`_ in the ``ispc`` distribution for a list
 of recent changes to the compiler.
 
 .. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/main/docs/ReleaseNotes.txt
+
+
+Updating ISPC Programs For Changes In ISPC 1.30.0
+-------------------------------------------------
+
+New Features:
+
+* Intel AMX (Advanced Matrix Extensions) support has been added to the standard
+  library. AMX provides hardware acceleration for matrix operations, particularly
+  useful for machine learning workloads. The new ``<amx.isph>`` header provides
+  functions for tile configuration, data loading/storing, and matrix dot products
+  for INT8, BF16, and FP16 data types. AMX is supported on ``avx512spr``,
+  ``avx512gnr``, and ``avx10.2dmr`` targets. Please refer to
+  `Intel AMX (Advanced Matrix Extensions)`_ for more details.
 
 
 Updating ISPC Programs For Changes In ISPC 1.29.0
@@ -6001,6 +6016,72 @@ The sum of these results, combined with the ``acc`` accumulator, is then returne
                                     varying int32 acc)
     varying int32 dot2add_i16i16packed_sat(varying uint32 a, varying uint32 b,
                                         varying int32 acc) // saturate the result
+
+
+Intel AMX (Advanced Matrix Extensions)
+--------------------------------------
+
+Intel AMX provides hardware acceleration for matrix operations, particularly
+useful for machine learning workloads. ISPC provides access to AMX instructions
+through the ``<amx.isph>`` header.
+
+AMX is supported on different targets with varying feature sets:
+
+=============  ========  ========  ========  ========
+Target         amx-tile  amx-int8  amx-bf16  amx-fp16
+=============  ========  ========  ========  ========
+avx512spr      Yes       Yes       Yes       No
+avx512gnr      Yes       Yes       Yes       Yes
+avx10.2dmr     Yes       Yes       Yes       Yes
+=============  ========  ========  ========  ========
+
+Using AMX functions on unsupported targets will result in a compile-time error.
+
+**Important**: All tile arguments must be compile-time constants in the range 0-7.
+
+Tile Configuration and Control:
+
+::
+
+    #include <amx.isph>
+
+    // Load/store tile configuration (64-byte structure)
+    void amx_tile_loadconfig(const uniform int8 *uniform config)
+    void amx_tile_storeconfig(uniform int8 *uniform config)
+
+    // Release AMX tile resources
+    void amx_tile_release()
+
+    // Zero a tile
+    void amx_tile_zero(uniform uint8 tile)
+
+    // Load/store tile data
+    void amx_tile_load(uniform uint8 tile, const uniform int8 *uniform data,
+                       uniform int64 stride)
+    void amx_tile_load_t1(uniform uint8 tile, const uniform int8 *uniform data,
+                          uniform int64 stride)  // with cache hint
+    void amx_tile_store(uniform uint8 tile, uniform int8 *uniform data,
+                        uniform int64 stride)
+
+INT8 Dot Products (requires amx-int8):
+
+::
+
+    // dst += src1 x src2 with various signedness combinations
+    void amx_dpbssd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // signed x signed
+    void amx_dpbsud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // signed x unsigned
+    void amx_dpbusd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // unsigned x signed
+    void amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // unsigned x unsigned
+
+BF16/FP16 Dot Products:
+
+::
+
+    // BF16 dot product (requires amx-bf16)
+    void amx_dpbf16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)
+
+    // FP16 dot product (requires amx-fp16, avx512gnr or newer)
+    void amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)
 
 
 Pseudo-Random Numbers
