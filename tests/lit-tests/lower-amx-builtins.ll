@@ -100,6 +100,15 @@ define void @test_dpfp16ps() {
   ret void
 }
 
+; Test tile ID boundary - tile 7 is the maximum valid value
+; CHECK-LABEL: @test_tile_boundary_max
+; CHECK: call void @llvm.x86.tilezero(i8 7)
+; CHECK: ret void
+define void @test_tile_boundary_max() {
+  call void @__ispc_amx_tile_zero(i8 7)
+  ret void
+}
+
 ; Test that constants through alloca/load (O0 pattern) are handled correctly
 ; CHECK-LABEL: @test_tile_zero_through_alloca
 ; CHECK: call void @llvm.x86.tilezero(i8 5)
@@ -108,6 +117,25 @@ define void @test_tile_zero_through_alloca() {
 entry:
   %tile = alloca i8, align 1
   store i8 5, ptr %tile, align 1
+  %loaded = load i8, ptr %tile, align 1
+  call void @__ispc_amx_tile_zero(i8 %loaded)
+  ret void
+}
+
+; Test constants through multiple single-predecessor blocks (O0 pattern)
+; CHECK-LABEL: @test_tile_multi_block_const_prop
+; CHECK: call void @llvm.x86.tilezero(i8 3)
+; CHECK: ret void
+define void @test_tile_multi_block_const_prop() {
+entry:
+  %tile = alloca i8, align 1
+  store i8 3, ptr %tile, align 1
+  br label %middle
+
+middle:
+  br label %use
+
+use:
   %loaded = load i8, ptr %tile, align 1
   call void @__ispc_amx_tile_zero(i8 %loaded)
   ret void
