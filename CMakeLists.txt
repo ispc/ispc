@@ -1049,7 +1049,7 @@ if (ISPC_SLIM_BINARY)
     endforeach()
     install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
 else()
-    # Install short_vec.isph and amx.h for composite binary
+    # Install short_vec.isph and amx.isph for composite binary
     install (FILES "stdlib/include/short_vec.isph" DESTINATION include/stdlib)
     install (FILES "stdlib/include/amx.isph" DESTINATION include/stdlib)
 endif()
