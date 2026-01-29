@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -346,6 +346,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
+        optPM.addFunctionPass(LowerAMXBuiltinsPass());
         optPM.commitFunctionToModulePassManager();
 
         optPM.addModulePass(llvm::GlobalDCEPass());
@@ -594,6 +595,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::InferAlignmentPass());
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
+        optPM.addFunctionPass(LowerAMXBuiltinsPass());
         optPM.addFunctionPass(IntrinsicsOpt());
         optPM.addFunctionPass(InstructionSimplifyPass());
 

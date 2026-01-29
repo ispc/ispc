@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025, Intel Corporation
+  Copyright (c) 2024-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -151,6 +151,17 @@ extern const char *const __get_system_best_isa;
 extern const char *const __is_compile_time_constant_mask;
 extern const char *const __is_compile_time_constant_uniform_int32;
 extern const char *const __is_compile_time_constant_varying_int32;
+extern const char *const __ispc_amx_dpbf16ps;
+extern const char *const __ispc_amx_dpbssd;
+extern const char *const __ispc_amx_dpbsud;
+extern const char *const __ispc_amx_dpbusd;
+extern const char *const __ispc_amx_dpbuud;
+extern const char *const __ispc_amx_dpfp16ps;
+extern const char *const __ispc_amx_not_supported;
+extern const char *const __ispc_amx_tile_load;
+extern const char *const __ispc_amx_tile_load_t1;
+extern const char *const __ispc_amx_tile_store;
+extern const char *const __ispc_amx_tile_zero;
 extern const char *const ISPCAlloc;
 extern const char *const ISPCLaunch;
 extern const char *const ISPCSync;

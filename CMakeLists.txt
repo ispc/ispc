@@ -565,6 +565,8 @@ list(APPEND OPT_SOURCES
     src/opt/IntrinsicsOptPass.h
     src/opt/LowerISPCIntrinsics.cpp
     src/opt/LowerISPCIntrinsics.h
+    src/opt/LowerAMXBuiltinsPass.cpp
+    src/opt/LowerAMXBuiltinsPass.h
     src/opt/MangleOpenCLBuiltins.cpp
     src/opt/MangleOpenCLBuiltins.h
     src/opt/PeepholePass.cpp
@@ -585,8 +587,9 @@ list(APPEND OPT_SOURCES
     src/opt/XeReplaceLLVMIntrinsics.h
 )
 
-set(STDLIB_HEADERS core.isph short_vec.isph stdlib.isph)
+set(STDLIB_HEADERS amx.isph core.isph short_vec.isph stdlib.isph)
 set(ALL_STDLIB_HEADERS
+  amx.isph
   builtins.isph
   core.isph
   short_vec.isph
@@ -1046,8 +1049,9 @@ if (ISPC_SLIM_BINARY)
     endforeach()
     install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
 else()
-    # Install short_vec.isph for composite binary
+    # Install short_vec.isph and amx.isph for composite binary
     install (FILES "stdlib/include/short_vec.isph" DESTINATION include/stdlib)
+    install (FILES "stdlib/include/amx.isph" DESTINATION include/stdlib)
 endif()
 
 ################################################################################
