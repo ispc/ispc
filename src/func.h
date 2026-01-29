@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -26,6 +26,9 @@ class Function {
 
     const Type *GetReturnType() const;
     const FunctionType *GetType() const;
+    const std::string &GetName() const;
+    const std::vector<Symbol *> &GetParameterSymbols() const;
+    const Stmt *GetCode() const;
 
     /** Generate LLVM IR for the function into the current module. */
     void GenerateIR() const;
