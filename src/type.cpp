@@ -2973,7 +2973,9 @@ FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appF
     // Always add target suffix except extern "C" and extern "SYCL" internal cases.
     if (g->mangleFunctionsWithTarget) {
         if ((!appFunction && !IsExternC() && !IsExternSYCL()) || appFunction) {
-            mangle.suffix += std::string("_") + g->target->GetISAString();
+            std::string isaString = g->target->GetISAString();
+            std::replace(isaString.begin(), isaString.end(), '.', '_');
+            mangle.suffix += std::string("_") + isaString;
         }
     }
     // If the function is declared as regcall, add __regcall3__ prefix.
