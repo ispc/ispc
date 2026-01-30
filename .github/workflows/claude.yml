@@ -84,6 +84,7 @@ jobs:
         uses: anthropics/claude-code-action@8a1c4371755898f67cd97006ba7c97702d5fc4bf # v1.0.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call
           track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
           # prompt is only used for workflow_dispatch/workflow_call; empty for issue/PR events
