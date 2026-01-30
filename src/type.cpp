@@ -3370,7 +3370,28 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
 
     // Finally, to determine which of the two atomic types is more general,
     // use the ordering of entries in the AtomicType::BasicType enumerator.
-    return (int(at0->basicType) >= int(at1->basicType)) ? at0 : at1;
+    const Type *moreGeneralType = (int(at0->basicType) >= int(at1->basicType)) ? at0 : at1;
+
+    // Warn about unexpected type precedence when mixing float/double with int64/uint64
+    // In ISPC, int64/uint64 have higher precedence than float/double due to enum ordering,
+    // which differs from C/C++ where floating-point operations would take precedence.
+    bool isFloatType0 = (at0->basicType == AtomicType::TYPE_FLOAT || at0->basicType == AtomicType::TYPE_DOUBLE ||
+                         at0->basicType == AtomicType::TYPE_FLOAT16);
+    bool isFloatType1 = (at1->basicType == AtomicType::TYPE_FLOAT || at1->basicType == AtomicType::TYPE_DOUBLE ||
+                         at1->basicType == AtomicType::TYPE_FLOAT16);
+    bool is64BitIntType0 = (at0->basicType == AtomicType::TYPE_INT64 || at0->basicType == AtomicType::TYPE_UINT64);
+    bool is64BitIntType1 = (at1->basicType == AtomicType::TYPE_INT64 || at1->basicType == AtomicType::TYPE_UINT64);
+
+    // Warn if one operand is a float type and the other is int64/uint64
+    if ((isFloatType0 && is64BitIntType1) || (isFloatType1 && is64BitIntType0)) {
+        Warning(pos,
+                "Implicit conversion between \"%s\" and \"%s\" for %s. "
+                "ISPC converts to \"%s\", which may differ from C/C++ behavior. "
+                "Use explicit cast to avoid ambiguity.",
+                t0->GetString().c_str(), t1->GetString().c_str(), reason, moreGeneralType->GetString().c_str());
+    }
+
+    return moreGeneralType;
 }
 
 bool Type::IsBasicType(const Type *type) {
