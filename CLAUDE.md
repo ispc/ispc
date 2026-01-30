@@ -80,6 +80,9 @@ functional tests for runtime behavior changes.
 **Investigating codegen/optimization issues:**
 - Use `--debug-phase=first:last --dump-file=dbg` to dump IR after each phase to `dbg` folder
 
+**Working with builtins:**
+Use the `ispc-builtins` skill when modifying files in `builtins/` directory.
+
 ## Precommit Rules (MANDATORY)
 
 **Before every commit, you MUST complete ALL of these checks:**
