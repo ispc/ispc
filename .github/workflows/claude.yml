@@ -84,9 +84,14 @@ jobs:
         uses: anthropics/claude-code-action@8a1c4371755898f67cd97006ba7c97702d5fc4bf # v1.0.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call
           track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
           # prompt is only used for workflow_dispatch/workflow_call; empty for issue/PR events
           prompt: ${{ inputs.prompt || '' }}
+          # Required for Claude to access CI workflow logs
+          additional_permissions: |
+            actions: read
+          # Allow tools for building, testing, and code formatting
+          claude_args: |
+            --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git:*),Bash(cmake:*),Bash(clang-format:*),Bash(build/*:*),Bash(*run_tests.py:*),Bash(rm:*),Bash(ls:*),Bash(mkdir:*),Bash(cp:*),Bash(mv:*),Bash(diff:*),Bash(cat:*),Bash(head:*),Bash(tail:*),Bash(llvm-*:*),Bash(opt:*),Bash(llc:*),Bash(FileCheck:*)"
 
