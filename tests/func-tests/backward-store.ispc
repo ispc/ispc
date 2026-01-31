@@ -15,9 +15,10 @@ unmasked noinline void do_backward_store(uniform float src[],
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     // Use 4x programCount to test multiple vector iterations
+    // Arrays sized for up to 64-wide targets (4 * 64 = 256)
     uniform int size = 4 * programCount;
-    uniform float src[64];
-    uniform float dst[64];
+    uniform float src[256];
+    uniform float dst[256];
 
     // Initialize source array: 1, 2, 3, ... size
     for (uniform int i = 0; i < size; ++i) {
