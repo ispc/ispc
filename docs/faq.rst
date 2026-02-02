@@ -67,105 +67,64 @@ If the SSE4 target is used, then the following assembly is printed:
 How can I have the assembly output be printed using Intel assembly syntax?
 --------------------------------------------------------------------------
 
-The ``ispc`` compiler is currently only able to emit assembly with AT+T
-syntax, where the destination operand is the last operand after an
-instruction.  If you'd prefer Intel assembly output, one option is to use
-Agner Fog's ``objconv`` tool: have ``ispc`` emit a native object file and
-then use ``objconv`` to disassemble it, specifying the assembler syntax
-that you prefer.  ``objconv`` `is available for download here`_.
+The ``ispc`` compiler supports both AT&T and Intel assembly syntax. By
+default, AT&T syntax is used, where the destination operand is the last
+operand after an instruction. To use Intel syntax instead, use the
+``--x86-asm-syntax=intel`` command-line option:
 
-.. _is available for download here: http://www.agner.org/optimize/#objconv
+::
+
+   ispc foo.ispc -o foo.s --emit-asm --x86-asm-syntax=intel
+
+The available options are ``--x86-asm-syntax=att`` (default) and
+``--x86-asm-syntax=intel``.
 
 Why are there multiple versions of exported ispc functions in the assembly output?
 ----------------------------------------------------------------------------------
 
-Two generations of all functions qualified with ``export`` are generated:
-one of them is for being be called by other ``ispc`` functions, and the
-other is to be called by the application.  The application callable
-function has the original function's name, while the ``ispc``-callable
-function has a mangled name that encodes the types of the function's
-parameters.
+.. note::
+
+   **Upcoming change:** In a future ISPC release, ``export`` functions will
+   generate only a single external (C/C++-callable) version by default.
+   Starting in ISPC 1.29, the compiler issues a warning when an exported
+   function is called from ISPC code to help identify code that will be
+   affected. To prepare for this change, use non-exported functions for
+   ISPC-to-ISPC calls, or use ``__attribute__((external_only))`` to opt
+   into the new behavior early.
+
+Two versions of all functions qualified with ``export`` are generated:
+one for being called by other ``ispc`` functions, and the other to be
+called by the application. The application-callable function has the
+original function's name, while the ``ispc``-callable function has a
+mangled name that encodes the types of the function's parameters.
 
 The crucial difference between these two functions is that the
 application-callable function doesn't take a parameter encoding the current
 execution mask, while ``ispc``-callable functions have a hidden mask
-parameter.  An implication of this difference is that the ``export``
-function starts with the execution mask "all on".  This allows a number of
+parameter. An implication of this difference is that the ``export``
+function starts with the execution mask "all on". This allows a number of
 improvements in the generated code, particularly on architectures that
 don't have support for masked load and store instructions.
 
-As an example, consider this short function, which loads a vector's worth
-values from two arrays in memory, adds them, and writes the result to an
-output array.
-
-::
-
-    export void foo(uniform float a[], uniform float b[],
-                    uniform float result[]) {
-        float aa = a[programIndex], bb = b[programIndex];
-        result[programIndex] = aa+bb;
-    }
-
-Here is the assembly code for the application-callable instance of the
-function.
-
-::
-
-    _foo:
-            movups        (%rsi), %xmm1
-            movups        (%rdi), %xmm0
-            addps         %xmm1, %xmm0
-            movups        %xmm0, (%rdx)
-            ret
-
-
-And here is the assembly code for the ``ispc``-callable instance of the
-function.
-
-::
-
-    "_foo___uptr<Uf>uptr<Uf>uptr<Uf>":
-            movmskps      %xmm0, %eax
-            cmpl          $15, %eax
-            je            LBB0_3
-            testl         %eax, %eax
-            jne           LBB0_4
-            ret
-    LBB0_3:
-            movups        (%rsi), %xmm1
-            movups        (%rdi), %xmm0
-            addps         %xmm1, %xmm0
-            movups        %xmm0, (%rdx)
-            ret
-    LBB0_4:
-    ####
-    ####  Code elided; handle mixed mask case..
-    ####
-            ret
-
-There are a few things to notice in this code.  First, the current program
-mask is coming in via the ``%xmm0`` register and the initial few
-instructions in the function essentially check to see if the mask is all on
-or all off.  If the mask is all on, the code at the label LBB0_3 executes;
-it's the same as the code that was generated for ``_foo`` above.  If the
-mask is all off, then there's nothing to be done, and the function can
-return immediately.
-
-In the case of a mixed mask, a substantial amount of code is generated to
-load from and then store to only the array elements that correspond to
-program instances where the mask is on.  (This code is elided below).  This
-general pattern of having two-code paths for the "all on" and "mixed" mask
-cases is used in the code generated for almost all but the most simple
-functions (where the overhead of the test isn't worthwhile.)
+With the ``__attribute__((external_only))`` attribute, only the external
+version is generated, which simplifies the output and reduces code size
+when ISPC-to-ISPC calls are not needed.
 
 How can I more easily see gathers and scatters in generated assembly?
 ---------------------------------------------------------------------
 
-Because CPU vector ISAs don't have native gather and scatter instructions,
-these memory operations are turned into sequences of a series of
-instructions in the code that ``ispc`` generates.  In some cases, it can be
-useful to see where gathers and scatters actually happen in code; there is
-an otherwise undocumented command-line flag that provides this information.
+.. note::
+
+   Modern vector ISAs include native gather and scatter instructions: AVX2
+   added gather instructions, and AVX-512 added both gather and scatter.
+   The information below applies primarily to older targets (SSE2, SSE4)
+   that lack native support for these operations.
+
+On older targets without native gather and scatter instructions, these
+memory operations are turned into sequences of a series of instructions in
+the code that ``ispc`` generates. In some cases, it can be useful to see
+where gathers and scatters actually happen in code; there is an otherwise
+undocumented command-line flag that provides this information.
 
 Consider this simple program:
 
@@ -247,7 +206,7 @@ default?`_.)  The type of ``int *foo`` follows from these.
 
 Conversely, in a function body, ``int foo[10]`` represents a declaration of
 a 10-element array of varying ``int`` values.  In that we'd certainly like
-to be able to pass such an array to a function that takes a ``int []``
+to be able to pass such an array to a function that takes an ``int []``
 parameter, the natural type for an ``int []`` parameter is a uniform
 pointer to varying integer values.
 
@@ -292,7 +251,7 @@ This motivation also explains why ``uniform int *foo`` represents a varying
 pointer; having pointers be varying by default if they don't have rate
 qualifiers similarly helps with porting code from C/C++ to ``ispc``.
 
-The tricker issue is why pointed-to types are "uniform" by default.  In our
+The trickier issue is why pointed-to types are "uniform" by default.  In our
 experience, data in memory that is accessed via pointers is most often
 uniform; this generally includes all data that has been allocated and
 initialized by the C/C++ application code. In practice, "varying" types are
@@ -320,7 +279,7 @@ points to the same location in memory for all program instances in the
 gang, while a varying pointer allows each program instance to have its own
 pointer value.
 
-References are represented a pointer in the code generated by ``ispc``,
+References are represented as a pointer in the code generated by ``ispc``,
 though this is generally opaque to the user; in ``ispc``, they are
 specifically uniform pointers.  This design decision was made so that given
 code like this:
@@ -349,7 +308,7 @@ How can I supply an initial execution mask in the call from the application?
 
 Recall that when execution transitions from the application code to an
 ``ispc`` function, all of the program instances are initially executing.
-In some cases, it may desired that only some of them are running, based on
+In some cases, it may be desired that only some of them are running, based on
 a data-dependent condition computed in the application program.  This
 situation can easily be handled via an additional parameter from the
 application.
@@ -375,8 +334,9 @@ Then, the ``ispc`` code could process this update as:
     export void ispc_func(uniform float array[], uniform bool update[],
                           uniform int count) {
         foreach (i = 0 ... count) {
-            cif (update[i] == true)
-                // update array[i+programIndex]...
+            cif (update[i] == true) {
+                // update array[i]...
+            }
         }
     }
 
@@ -484,8 +444,8 @@ LLVM tool suite, then it is possible to inline ``ispc`` code with C/C++
 performance advantages when calling out to short functions written in the
 "other" language.  Note that you don't need to use ``clang`` to compile all
 of your C/C++ code, but only for the files where you want to be able to
-inline.  In order to do this, you must have a full installation of LLVM
-version 3.0 or later, including the ``clang`` compiler.
+inline.  In order to do this, you must have a full installation of LLVM,
+including the ``clang`` compiler.
 
 The basic approach is to have the various compilers emit LLVM intermediate
 representation (IR) code and to then use tools from LLVM to link together
@@ -529,7 +489,7 @@ then ``ispc`` will issue an error and refuse to compile the function:
 ::
 
     % echo "export int add(int x) { return ++x; }" | ispc
-    <stdin>:1:12: Error: Illegal to return a "varying" type from exported function "foo"
+    <stdin>:1:12: Error: Illegal to return a "varying" or vector type from exported function "add"
     <stdin>:1:20: Error: Varying parameter "x" is illegal in an exported function.
 
 While there's no fundamental reason why this isn't possible, recall the
@@ -614,8 +574,6 @@ and ``outArray[2]``, and so forth.  The ``reduce_add()`` call at the end
 returns the total number of values that all of the program instances have
 written to the array.
 
-FIXME: add discussion of foreach_active as an option here once that's in
-
 Is it possible to use ispc for explicit vector programming?
 -----------------------------------------------------------
 
@@ -627,12 +585,12 @@ support for explicit vector unit programming, where the vectorization is
 explicit.  Some computations may be more effectively described in the
 explicit model rather than the implicit model.
 
-This support is provided via ``uniform`` instances of short vectors
+This support is provided via ``uniform`` instances of short vectors.
 Specifically, if this short program
 
 ::
 
-    export uniform float<8> madd(uniform float<8> a, uniform float<8> b,
+    uniform float<8> madd(uniform float<8> a, uniform float<8> b,
                                  uniform float<8> c) {
         return a + b * c;
     }
@@ -654,7 +612,7 @@ Note that ``ispc`` doesn't currently support control-flow based on
 
 ::
 
-    export uniform int<8> count(uniform float<8> a, uniform float<8> b) {
+    uniform int<8> count(uniform float<8> a, uniform float<8> b) {
         uniform int<8> sum = 0;
         while (a++ < b)
             ++sum;
@@ -665,7 +623,7 @@ How can I debug my ispc programs using Valgrind?
 ------------------------------------------------
 
 The `valgrind`_ memory checker is an extremely useful memory checker for
-Linux and OSX; it detects a range of memory errors, including accessing
+Linux and macOS; it detects a range of memory errors, including accessing
 memory after it has been freed, accessing memory beyond the end of an
 array, accessing uninitialized stack variables, and so forth.
 In general, applications that use ``ispc`` code run with ``valgrind``
@@ -674,26 +632,19 @@ errors in ``ispc`` code that it does in C/C++ code.
 
 .. _valgrind: http://valgrind.org
 
-One issue to be aware of is that until recently, ``valgrind`` only
-supported the SSE2 vector instructions; if you are using a version of
-``valgrind`` older than the 3.7.0 release (5 November 2011), you should
-compile your ``ispc`` programs with ``--target=sse2`` before running them
-through ``valgrind``.  (Note that if no target is specified, then ``ispc``
-chooses a target based on the capabilities of the system you're running
-``ispc`` on.)  If you run an ``ispc`` program that uses instructions that
-``valgrind`` doesn't support, you'll see an error message like:
+Modern versions of ``valgrind`` support SSE, AVX, AVX2, and AVX-512
+instruction sets. If you encounter an error message like the following,
+it indicates that your version of ``valgrind`` doesn't support some
+instructions used by your ``ispc`` program:
 
 ::
 
-    vex amd64->IR: unhandled instruction bytes: 0xC5 0xFA 0x10 0x0 0xC5 0xFA 0x11 0x84
-    ==46059== valgrind: Unrecognised instruction at address 0x100002707.
+    vex amd64->IR: unhandled instruction bytes: ...
+    valgrind: Unrecognised instruction at address ...
 
-The just-released valgrind 3.7.0 adds support for the SSE4.2 instruction
-set; if you're using that version (and your system supports SSE4.2), then
-you can use ``--target=sse4`` when compiling to run with ``valgrind``.
-
-Note that ``valgrind`` does not yet support programs that use the AVX
-instruction set.
+In this case, either update ``valgrind`` to a newer version or compile
+your ``ispc`` program with an older target (e.g., ``--target=sse4``) for
+debugging purposes.
 
 foreach statements generate more complex assembly than I'd expect; what's going on?
 -----------------------------------------------------------------------------------
@@ -771,6 +722,89 @@ able to eliminate the code for the additional array elements.
 
 With this new version of ``foo()``, only the code for the first loop above
 is generated.
+
+foreach vs. for loops: when to use which?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A common question is why ``foreach`` generates different code than an
+equivalent ``for`` loop using ``programIndex`` and ``programCount``.
+Understanding this difference is important for writing efficient code.
+
+**The key difference:** ``foreach`` begins each loop iteration with an
+"all on" execution mask, meaning all program instances are active at the
+start. In contrast, a ``for`` loop using ``programIndex`` and
+``programCount`` respects the current execution mask, which may have some
+instances disabled. This difference affects code generation significantly.
+
+For example, this ``foreach`` loop:
+
+::
+
+    foreach (index = 0 ... 16) {
+        values[index] = select(upd, newVal, values[index]);
+    }
+
+generates efficient vectorized code (approximately 6 instructions), while
+this seemingly equivalent ``for`` loop:
+
+::
+
+    for (int i = programIndex; i < 16; i += programCount) {
+        values[i] = select(upd, newVal, values[i]);
+    }
+
+may generate significantly more complex code with branches because the
+compiler must handle the possibility of partially-active masks.
+
+**Solution:** To achieve comparable performance with a ``for`` loop, wrap
+it in an ``unmasked`` region:
+
+::
+
+    unmasked {
+        for (uniform int i = 0; i < 16; i += programCount) {
+            int index = i + programIndex;
+            values[index] = select(upd, newVal, values[index]);
+        }
+    }
+
+**When to prefer for loops over foreach:**
+
+For performance-critical code where the iteration count is known to be a
+multiple of ``programCount``, using a ``uniform`` loop counter with
+explicit ``programIndex`` management can be more efficient:
+
+::
+
+    uniform int count_base = count & ~(programCount-1);
+
+    // Main loop - processes programCount elements per iteration
+    for (uniform int i = 0; i < count_base; i += programCount) {
+        varying float temp = in[i + programIndex];
+        out[i + programIndex] = temp * temp;
+    }
+
+    // Tail loop - handles remaining elements
+    for (uniform int i = count_base; i < count; ++i) {
+        uniform float temp = in[i];
+        out[i] = temp * temp;
+    }
+
+This pattern is particularly important when:
+
+* The loop body involves index arithmetic (modulus, division) that could
+  trigger gather/scatter operations with ``foreach``'s varying index
+* Manual loop unrolling is desired (which works better with ``uniform``
+  loop counters)
+* Maximum control over vectorization is needed
+
+In summary:
+
+* Use ``foreach`` for convenience and automatic tail handling
+* Use ``for`` with ``unmasked`` when you need ``foreach``-like behavior
+  but with more control
+* Use ``uniform for`` loops for performance-critical code where you
+  manage the iteration pattern explicitly
 
 
 How do I launch an individual task for each active program instance?
