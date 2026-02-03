@@ -69,6 +69,12 @@ Also look into [existing lit tests](https://github.com/ispc/ispc/tree/main/tests
 If you made a language change new [functional tests](https://github.com/ispc/ispc/tree/main/tests) checking compiler
 behavior in runtime are needed.
 
+### Using Claude Code
+
+This project is configured to work with [Claude Code](https://github.com/anthropics/claude-code), Anthropic's AI-powered
+coding assistant. The repository includes `CLAUDE.md` with project-specific instructions, custom skills, and specialized
+agents to assist with implementing features, fixing bugs, writing tests, and navigating the codebase.
+
 ### Submitting PR
 
 Follow [Working with forks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks)
