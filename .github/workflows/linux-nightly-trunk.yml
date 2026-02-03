@@ -31,7 +31,6 @@ jobs:
     if: github.repository == 'ispc/ispc'
     runs-on: ubuntu-latest
     outputs:
-      # TODO: restore avx2vnni targets when SDE problem is fixed
       targets: >-
         ["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
          "generic-i8x16", "generic-i8x32",
@@ -42,6 +41,7 @@ jobs:
          "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
          "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
          "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+         "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16",
          "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
          "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
          "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
