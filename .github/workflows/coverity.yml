@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       COVERITY_SCAN_BUILD_COMMAND: "cmake --build ${{github.workspace}}/build"
-      COVERITY_SCAN_BRANCH_PATTERN: "(main|releases/.*)"
+      COVERITY_SCAN_BRANCH_PATTERN: "main|releases/.*"
       COVERITY_SCAN_NOTIFICATION_EMAIL: ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
       COVERITY_SCAN_PROJECT_NAME: ${{ secrets.COVERITY_SCAN_PROJECT_NAME }}
       COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
