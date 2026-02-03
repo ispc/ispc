@@ -24,6 +24,12 @@ Performance:
   contiguous load/store operations with vector shuffle, providing 5-10x speedup
   compared to scatter/gather operations.
 
+Deprecated Targets:
+
+* The `sse2-i32x4` and `sse2-i32x8` targets are no longer deprecated. Based on
+  customer feedback indicating active use, we have decided to retain these
+  targets and removed the deprecation warning.
+
 Bug Fixes:
 
 * Fixed integral type aliases not being accepted as non-type template parameters.
