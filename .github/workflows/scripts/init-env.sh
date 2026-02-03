@@ -2,8 +2,8 @@
 
 # Define some widely used environment variables in one place
 
-SDE_MIRROR_ID=${SDE_MIRROR_ID:-"859732"}
-SDE_TAR_NAME=${SDE_TAR_NAME:-"sde-external-9.58.0-2025-06-16"}
+SDE_MIRROR_ID=${SDE_MIRROR_ID:-"873619"}
+SDE_TAR_NAME=${SDE_TAR_NAME:-"sde-external-10.5.0-2026-01-13"}
 USER_AGENT=${USER_AGENT:-"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"}
 LLVM_REPO=${LLVM_REPO:-"https://github.com/ispc/ispc.dependencies"}
 LLVM_VERSION=${LLVM_VERSION:-"21.1"}
