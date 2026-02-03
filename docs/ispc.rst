@@ -46,6 +46,7 @@ Contents:
 
 * `Recent Changes to ISPC`_
 
+  + `Updating ISPC Programs For Changes In ISPC 1.30.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.29.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
@@ -268,6 +269,11 @@ New Features:
   for INT8, BF16, and FP16 data types. AMX is supported on ``avx512spr``,
   ``avx512gnr``, and ``avx10.2dmr`` targets. Please refer to
   `Intel AMX (Advanced Matrix Extensions)`_ for more details.
+
+Language Changes:
+
+* Integral type aliases (``size_t``, ``ptrdiff_t``, ``intptr_t``, ``uintptr_t``)
+  can now be used as non-type template parameters.
 
 
 Updating ISPC Programs For Changes In ISPC 1.29.0
@@ -985,7 +991,7 @@ that's in your ``PATH``.  Congratulations--you've now installed ``ispc``.
 Compiling and Running a Simple ISPC Program
 -------------------------------------------
 
-The directory ``examples/simple`` in the ``ispc`` distribution includes a
+The directory ``examples/cpu/simple`` in the ``ispc`` distribution includes a
 simple example of how to use ``ispc`` with a short C++ program.  See the
 file ``simple.ispc`` in that directory (also reproduced here.)
 
@@ -4725,7 +4731,7 @@ regular task parallelism in the C/C++ application code (be it through
 Intel® oneAPI Threading Building Blocks, OpenMP or another task system), and
 for tasks to use ``ispc`` for SPMD parallelism across the vector lanes as
 appropriate.  Alternatively, ``ispc`` also has support for launching tasks
-from ``ispc`` code.  (Check the ``examples/mandelbrot_tasks`` example to
+from ``ispc`` code.  (Check the ``examples/cpu/mandelbrot_tasks`` example to
 see how it is used.)
 
 Any function that is launched as a task must be declared with the
@@ -7653,9 +7659,7 @@ At runtime, the ``ispc`` dispatch mechanism will cast these pointers to the appr
 types.  Programmers can
 provide C/C++ code with a mechanism to determine the gang width used
 at runtime by ``ispc`` by creating an exported function that simply
-returns the value of ``programCount``.  An example of such a function
-is provided in the file ``examples/util/util.isph`` included in the ``ispc``
-distribution.
+returns the value of ``programCount``.
 
 
 There is one subtlety related to data layout to be aware of: ``ispc``
