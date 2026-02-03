@@ -275,6 +275,11 @@ Language Changes:
 * Integral type aliases (``size_t``, ``ptrdiff_t``, ``intptr_t``, ``uintptr_t``)
   can now be used as non-type template parameters.
 
+Deprecated Targets:
+
+* The ``sse2-i32x4`` and ``sse2-i32x8`` targets are no longer deprecated. Based
+  on customer feedback indicating active use, we have decided to retain these
+  targets and removed the deprecation warning.
 
 Updating ISPC Programs For Changes In ISPC 1.29.0
 -------------------------------------------------

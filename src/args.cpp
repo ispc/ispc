@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2025-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1231,14 +1231,6 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
                         "--opt=disable-zmm can only be used with avx512skx-x16, avx512icl-x16 or generic-i32x16, "
                         "generic-i1x16, generic-i1x32, generic-i1x64 targets.");
             }
-        }
-    }
-
-    // Check for deprecated targets
-    for (auto target : targets) {
-        if (target == ISPCTarget::sse2_i32x4 || target == ISPCTarget::sse2_i32x8) {
-            Warning(SourcePos(), "The target %s is deprecated and will be removed in the future.",
-                    ISPCTargetToString(target).c_str());
         }
     }
 
