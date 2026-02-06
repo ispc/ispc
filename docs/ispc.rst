@@ -3851,10 +3851,10 @@ Requirements (v1):
   (not locals/parameters).
 - ``task``, ``export``, and ``extern "C"/"SYCL"`` are not allowed on
   ``constexpr`` functions in v1.
-- Linkage follows C++ constexpr function behavior:
-  - non-``static`` constexpr functions are emitted with ODR linkage
-    (``linkonce_odr``)
-  - ``static`` constexpr functions have internal linkage
+- Linkage follows C++ constexpr function behavior.
+- Non-``static`` constexpr functions are emitted with ODR linkage
+  (``linkonce_odr``).
+- ``static`` constexpr functions have internal linkage.
 
 Example:
 

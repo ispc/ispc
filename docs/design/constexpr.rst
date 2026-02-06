@@ -88,10 +88,10 @@ constexpr functions
 - ``constexpr`` functions must be "constexpr-suitable" at definition time.
 - The return type can be any constexpr-supported type (including aggregates).
 - ``constexpr`` is not allowed on function parameters.
-- Linkage follows C++ constexpr function behavior:
-  - non-``static`` constexpr functions are emitted with ODR linkage
-    (``linkonce_odr``)
-  - ``static`` constexpr functions have internal linkage
+- Linkage follows C++ constexpr function behavior.
+- Non-``static`` constexpr functions are emitted with ODR linkage
+  (``linkonce_odr``).
+- ``static`` constexpr functions have internal linkage.
 
 constexpr-suitable validation (definition time)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -313,10 +313,10 @@ Requirements (v1):
   globals/functions (not locals/parameters).
 - ``task``, ``export``, and ``extern "C"/"SYCL"`` are not allowed on
   ``constexpr`` functions in v1.
-- Linkage follows C++ constexpr function behavior:
-  - non-``static`` constexpr functions are emitted with ODR linkage
-    (``linkonce_odr``)
-  - ``static`` constexpr functions have internal linkage
+- Linkage follows C++ constexpr function behavior.
+- Non-``static`` constexpr functions are emitted with ODR linkage
+  (``linkonce_odr``).
+- ``static`` constexpr functions have internal linkage.
 
 Examples:
 
