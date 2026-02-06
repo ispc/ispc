@@ -77,6 +77,9 @@ void lCheckVariableTypeQualifiers(int typeQualifiers, SourcePos pos) {
 }
 
 void lCheckTypeQualifiers(int typeQualifiers, DeclaratorKind kind, SourcePos pos) {
+    if (typeQualifiers & TYPEQUAL_CONSTEXPR) {
+        Error(pos, "\"constexpr\" qualifier is illegal in declarator qualifier lists.");
+    }
     if (kind != DK_FUNCTION) {
         lCheckVariableTypeQualifiers(typeQualifiers, pos);
     }
@@ -863,7 +866,7 @@ unsigned int lCreateFunctionFlagsAndCostOverride(int &costOverride, DeclSpecs *d
 void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     bool hasUniformQual = ((typeQualifiers & TYPEQUAL_UNIFORM) != 0);
     bool hasVaryingQual = ((typeQualifiers & TYPEQUAL_VARYING) != 0);
-    bool isConst = ((typeQualifiers & (TYPEQUAL_CONST | TYPEQUAL_CONSTEXPR)) != 0);
+    bool isConst = ((typeQualifiers & TYPEQUAL_CONST) != 0);
 
     if (hasUniformQual && hasVaryingQual) {
         Error(pos, "Can't provide both \"uniform\" and \"varying\" qualifiers.");

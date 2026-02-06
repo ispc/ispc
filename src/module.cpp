@@ -784,15 +784,15 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst, bool isConstexpr)
     llvm::Constant *llvmInitializer = nullptr;
     ConstExpr *constValue = nullptr;
     bool deferredInit = false;
+    if (isConstexpr && initExpr == nullptr) {
+        Error(pos, "Missing initializer for constexpr variable \"%s\".", name.c_str());
+        return;
+    }
     if (storageClass.IsExtern()) {
         if (initExpr != nullptr) {
             Error(pos, "Initializer can't be provided with \"extern\" global variable \"%s\".", name.c_str());
         }
     } else {
-        if (isConstexpr && initExpr == nullptr) {
-            Error(pos, "Missing initializer for constexpr variable \"%s\".", name.c_str());
-            return;
-        }
         if (initExpr != nullptr) {
             initExpr = TypeCheck(initExpr);
             if (initExpr != nullptr) {

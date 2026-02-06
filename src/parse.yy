@@ -307,7 +307,7 @@ struct ForeachDimension {
 %type <typeList> type_specifier_list
 %type <type> atomic_var_type_specifier int_constant_type template_int_constant_type
 
-%type <typeQualifier> type_qualifier type_qualifier_list
+%type <typeQualifier> declaration_type_qualifier type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
 %type <declSpecs> declaration_specifiers
 
@@ -1343,11 +1343,11 @@ declaration_specifiers
           }
           $$ = ds;
       }
-    | type_qualifier
+    | declaration_type_qualifier
       {
           $$ = new DeclSpecs(nullptr, StorageClass::NONE, $1);
       }
-    | type_qualifier declaration_specifiers
+    | declaration_type_qualifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != nullptr)
@@ -1710,10 +1710,6 @@ specifier_qualifier_list
             }
             else if ($1 == TYPEQUAL_CONST)
                 $$ = $2->GetAsConstType();
-            else if ($1 == TYPEQUAL_CONSTEXPR) {
-                Error(@1, "\"constexpr\" qualifier is illegal in struct member declarations.");
-                $$ = $2;
-            }
             else if ($1 == TYPEQUAL_SIGNED) {
                 const Type *t = $2->GetAsSignedType();
                 if (t)
@@ -1777,6 +1773,11 @@ specifier_qualifier_list
                 Error(@1, "Lost type qualifier in parser.");
             $$ = nullptr;
         }
+    }
+    | TOKEN_CONSTEXPR specifier_qualifier_list
+    {
+        Error(@1, "\"constexpr\" qualifier is illegal in type names and struct member declarations.");
+        $$ = $2;
     }
     | soa_width_specifier specifier_qualifier_list
     {
@@ -1952,9 +1953,13 @@ enumerator
       }
     ;
 
+declaration_type_qualifier
+    : type_qualifier       { $$ = $1; }
+    | TOKEN_CONSTEXPR      { $$ = TYPEQUAL_CONSTEXPR; }
+    ;
+
 type_qualifier
     : TOKEN_CONST         { $$ = TYPEQUAL_CONST; }
-    | TOKEN_CONSTEXPR     { $$ = TYPEQUAL_CONSTEXPR; }
     | TOKEN_UNIFORM       { $$ = TYPEQUAL_UNIFORM; }
     | TOKEN_VARYING       { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK          { $$ = TYPEQUAL_TASK; }

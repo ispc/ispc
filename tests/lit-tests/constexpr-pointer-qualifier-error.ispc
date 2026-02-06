@@ -3,4 +3,4 @@
 uniform int g = 1;
 uniform int * constexpr P = &g;
 
-// CHECK: Error: {{.*}}constexpr{{.*}}
+// CHECK: Error: {{.*}}unexpected 'constexpr'{{.*}}
