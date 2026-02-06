@@ -3807,6 +3807,7 @@ enumerator values, non-type template arguments, and default parameter values.
 **Constexpr variables**
 
 - ``constexpr`` implies ``const``.
+- ``constexpr`` is not allowed on ``typedef`` declarations.
 - The initializer must be a constant expression.
 - Supported types (v1): atomic, enum, pointer, short vector, array, and struct.
 - Arrays must have fully specified sizes.
@@ -3844,10 +3845,16 @@ Requirements (v1):
 - The function body must be constexpr-suitable at definition time.
 - The function must return a value (no ``void`` return in v1).
 - The function may only call other ``constexpr`` functions.
+- ``constexpr`` is not allowed on function parameters.
 - Control flow conditions must be uniform.
-- Pointer dereference is not allowed; address-of is limited to globals/functions.
+- Pointer dereference is not allowed; address-of is limited to globals/functions
+  (not locals/parameters).
 - ``task``, ``export``, and ``extern "C"/"SYCL"`` are not allowed on
   ``constexpr`` functions in v1.
+- Linkage follows C++ constexpr function behavior:
+  - non-``static`` constexpr functions are emitted with ODR linkage
+    (``linkonce_odr``)
+  - ``static`` constexpr functions have internal linkage
 
 Example:
 

@@ -66,6 +66,7 @@ constexpr variables
 ~~~~~~~~~~~~~~~~~~~
 
 - ``constexpr`` implies ``const``.
+- ``constexpr`` is not allowed on ``typedef`` declarations.
 - The initializer must be a constant expression (constant-evaluable).
 - Allowed v1 types:
   - atomic types (bool, int, float, double, etc.)
@@ -76,8 +77,7 @@ constexpr variables
 - Arrays must have fully specified sizes.
 - Pointer values are limited to null or addresses of globals/functions.
 - The value is available to constant-expression evaluation.
-- Storage class and linkage follow existing rules (``constexpr`` does not
-  change them).
+- For variables, storage class and linkage follow existing rules.
 
 constexpr functions
 ~~~~~~~~~~~~~~~~~~~
@@ -87,6 +87,11 @@ constexpr functions
 - The selected overload must be ``constexpr`` for constant evaluation.
 - ``constexpr`` functions must be "constexpr-suitable" at definition time.
 - The return type can be any constexpr-supported type (including aggregates).
+- ``constexpr`` is not allowed on function parameters.
+- Linkage follows C++ constexpr function behavior:
+  - non-``static`` constexpr functions are emitted with ODR linkage
+    (``linkonce_odr``)
+  - ``static`` constexpr functions have internal linkage
 
 constexpr-suitable validation (definition time)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,8 +116,8 @@ Disallowed (v1):
 
 - Writes to non-local storage (globals, captured references, or pointer
   dereference).
-- Taking the address of local variables; only global/function addresses are
-  allowed.
+- Taking the address of local variables or parameters; only global/function
+  addresses are allowed.
 - ``new``, ``delete``, ``launch``, ``invoke_sycl``, ``sync``, ``print``,
   atomics, and any other side-effecting builtins.
 - ``foreach*`` statements (``foreach``, ``foreach_active``, ``foreach_unique``).
@@ -272,6 +277,7 @@ constant-expression contexts.
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 - ``constexpr`` implies ``const``.
+- ``constexpr`` is not allowed on ``typedef`` declarations.
 - The initializer must be a constant expression.
 - V1 supports atomic, enum, pointer, short vector, array, and struct types.
 - Arrays must have fully specified sizes.
@@ -301,11 +307,16 @@ Requirements (v1):
 - The function body must be constexpr-suitable at definition time.
 - The function must return a value (no ``void`` return in v1).
 - The function may only call other ``constexpr`` functions.
+- ``constexpr`` is not allowed on function parameters.
 - Control flow conditions must be uniform.
 - Pointer dereference is not allowed; address-of is limited to
-  globals/functions.
+  globals/functions (not locals/parameters).
 - ``task``, ``export``, and ``extern "C"/"SYCL"`` are not allowed on
   ``constexpr`` functions in v1.
+- Linkage follows C++ constexpr function behavior:
+  - non-``static`` constexpr functions are emitted with ODR linkage
+    (``linkonce_odr``)
+  - ``static`` constexpr functions have internal linkage
 
 Examples:
 
