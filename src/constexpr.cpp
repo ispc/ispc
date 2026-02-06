@@ -2018,8 +2018,7 @@ void ConstexprValidator::VisitExpr(const Expr *expr) {
         VisitExpr(rd->expr);
     } else if (auto *ao = llvm::dyn_cast<AddressOfExpr>(expr)) {
         Symbol *sym = ao->GetBaseSymbol();
-        if (sym == nullptr ||
-            (sym->parentFunction != nullptr && sym->GetSymbolKind() != Symbol::SymbolKind::Function)) {
+        if (sym == nullptr || (sym->GetSymbolKind() != Symbol::SymbolKind::Function && IsLocalOrParam(sym))) {
             DisallowedExpr(expr, "address-of");
             return;
         }

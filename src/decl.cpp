@@ -539,6 +539,12 @@ Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk), stora
 Declarator::~Declarator() { delete attributeList; }
 
 void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
+    int declTypeQualifiers = ds->typeQualifiers;
+    if (ds->storageClass.IsTypedef() && (declTypeQualifiers & TYPEQUAL_CONSTEXPR)) {
+        Error(pos, "\"constexpr\" qualifier is illegal in typedef declarations.");
+        declTypeQualifiers &= ~TYPEQUAL_CONSTEXPR;
+    }
+
     if (attributeList) {
         attributeList->MergeAttrList(*ds->attributeList);
     } else {
@@ -554,7 +560,7 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     }
 
     if (!lIsFunctionKind(this)) {
-        lCheckVariableTypeQualifiers(ds->typeQualifiers, pos);
+        lCheckVariableTypeQualifiers(declTypeQualifiers, pos);
     }
 
     InitFromType(baseType, ds);
@@ -591,7 +597,7 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
             lCheckAddressSpace(addrSpace, name, pos);
             type = lGetTypeWithAddressSpace(type, addrSpace, name, pos);
         }
-        if (ds->typeQualifiers & TYPEQUAL_CONSTEXPR) {
+        if (declTypeQualifiers & TYPEQUAL_CONSTEXPR) {
             type = type->GetAsConstType();
         }
     }
@@ -1017,6 +1023,11 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                       "Storage class \"%s\" is illegal in "
                       "function parameter declaration for parameter \"%s\".",
                       d->declSpecs->storageClass.GetString().c_str(), decl->name.c_str());
+            }
+            if (d->declSpecs->typeQualifiers & TYPEQUAL_CONSTEXPR) {
+                Error(decl->pos,
+                      "\"constexpr\" qualifier is illegal in function parameter declaration for parameter \"%s\".",
+                      decl->name.c_str());
             }
             if (decl->type->IsVoidType()) {
                 Error(decl->pos, "Parameter with type \"void\" illegal in function "
