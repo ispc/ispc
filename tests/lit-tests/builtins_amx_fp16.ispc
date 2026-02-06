@@ -44,9 +44,12 @@
 
 #include <amx.isph>
 
+constexpr uniform int tile_dst_id() { return amx_tmm2; }
+constexpr uniform int tile_src0_id() { return amx_tmm0; }
+constexpr uniform int tile_src1_id() { return amx_tmm1; }
+
 __attribute__((external_only))
 export void test_amx_fp16() {
     // require amxfp16 feature (GNR+)
-    amx_dpfp16ps(2, 0, 1);
+    amx_dpfp16ps<tile_dst_id(), tile_src0_id(), tile_src1_id()>();
 }
-

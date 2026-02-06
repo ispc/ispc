@@ -86,6 +86,35 @@ inline void amx_tile_store(uniform uint8 tile, uniform int8 *uniform data, unifo
     __amx_tile_store(tile, data, stride);
 }
 
+/// Named AMX tile IDs for constexpr/template use.
+/// `static` avoids linkage conflicts when included from multiple translation units.
+static constexpr uniform int amx_tmm0 = 0;
+static constexpr uniform int amx_tmm1 = 1;
+static constexpr uniform int amx_tmm2 = 2;
+static constexpr uniform int amx_tmm3 = 3;
+static constexpr uniform int amx_tmm4 = 4;
+static constexpr uniform int amx_tmm5 = 5;
+static constexpr uniform int amx_tmm6 = 6;
+static constexpr uniform int amx_tmm7 = 7;
+
+///////////////////////////////////////////////////////////////////////////////
+// AMX template wrappers for compile-time tile IDs
+///////////////////////////////////////////////////////////////////////////////
+
+template <int Tile> inline void amx_tile_zero() { __amx_tile_zero((uniform uint8)Tile); }
+
+template <int Tile> inline void amx_tile_load(const uniform int8 *uniform data, uniform int64 stride) {
+    __amx_tile_load((uniform uint8)Tile, data, stride);
+}
+
+template <int Tile> inline void amx_tile_load_t1(const uniform int8 *uniform data, uniform int64 stride) {
+    __amx_tile_load_t1((uniform uint8)Tile, data, stride);
+}
+
+template <int Tile> inline void amx_tile_store(uniform int8 *uniform data, uniform int64 stride) {
+    __amx_tile_store((uniform uint8)Tile, data, stride);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // AMX INT8 Dot Products (requires amx-int8)
 ///////////////////////////////////////////////////////////////////////////////
@@ -114,6 +143,22 @@ inline void amx_dpbusd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2
 /// @param src2 Source tile 2 number (0-7).
 inline void amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpbuud(dst, src1, src2); }
 
+template <int DstTile, int Src1Tile, int Src2Tile> inline void amx_dpbssd() {
+    __amx_dpbssd((uniform uint8)DstTile, (uniform uint8)Src1Tile, (uniform uint8)Src2Tile);
+}
+
+template <int DstTile, int Src1Tile, int Src2Tile> inline void amx_dpbsud() {
+    __amx_dpbsud((uniform uint8)DstTile, (uniform uint8)Src1Tile, (uniform uint8)Src2Tile);
+}
+
+template <int DstTile, int Src1Tile, int Src2Tile> inline void amx_dpbusd() {
+    __amx_dpbusd((uniform uint8)DstTile, (uniform uint8)Src1Tile, (uniform uint8)Src2Tile);
+}
+
+template <int DstTile, int Src1Tile, int Src2Tile> inline void amx_dpbuud() {
+    __amx_dpbuud((uniform uint8)DstTile, (uniform uint8)Src1Tile, (uniform uint8)Src2Tile);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // AMX FP16 Dot Product (requires amx-fp16)
 ///////////////////////////////////////////////////////////////////////////////
@@ -124,6 +169,10 @@ inline void amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2
 /// @param src2 Source tile 2 number (0-7).
 inline void amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpfp16ps(dst, src1, src2); }
 
+template <int DstTile, int Src1Tile, int Src2Tile> inline void amx_dpfp16ps() {
+    __amx_dpfp16ps((uniform uint8)DstTile, (uniform uint8)Src1Tile, (uniform uint8)Src2Tile);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // AMX BF16 Dot Product (requires amx-bf16)
 ///////////////////////////////////////////////////////////////////////////////
@@ -133,5 +182,9 @@ inline void amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 sr
 /// @param src1 Source tile 1 number (0-7).
 /// @param src2 Source tile 2 number (0-7).
 inline void amx_dpbf16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpbf16ps(dst, src1, src2); }
+
+template <int DstTile, int Src1Tile, int Src2Tile> inline void amx_dpbf16ps() {
+    __amx_dpbf16ps((uniform uint8)DstTile, (uniform uint8)Src1Tile, (uniform uint8)Src2Tile);
+}
 
 #undef EXT
