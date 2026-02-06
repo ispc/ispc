@@ -794,6 +794,9 @@ void Function::GenerateIR() const {
                     // We use stdlib as library so do not add internal attr for its functions.
                     UpdateLinkage(llvm::GlobalValue::InternalLinkage);
                 }
+            } else if (type->IsConstexpr()) {
+                // Match C++ constexpr function linkage semantics (implicitly inline/ODR).
+                UpdateLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
             }
 
             if (g->target->isXeTarget()) {
