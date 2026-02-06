@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2025, Intel Corporation
+#  Copyright (c) 2013-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -93,8 +93,10 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     # git: "release/16.x"
     if  version_LLVM == "trunk":
         GIT_TAG="main"
+    elif  version_LLVM == "22_1":
+        GIT_TAG="release/22.x"
     elif  version_LLVM == "21_1":
-        GIT_TAG="llvmorg-21.1.7"
+        GIT_TAG="llvmorg-21.1.8"
     elif  version_LLVM == "20_1":
         GIT_TAG="llvmorg-20.1.8"
     elif  version_LLVM == "19_1":
@@ -398,9 +400,9 @@ def check_targets():
       ("AVX2VNNI",   [["avx2vnni-i32x4", "avx2vnni-i32x8",  "avx2vnni-i32x16"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI"], "-adl", False]),
       ("SKX",        [["avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
-                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX"], "-skx", False]),
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "SKX"], "-skx", False]),
       ("ICL",        [["avx512icl-x16", "avx512icl-x8", "avx512icl-x4", "avx512icl-x64", "avx512icl-x32"],
-                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL"], "-icl", False]),
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "SKX", "ICL"], "-icl", False]),
       ("SPR",        [["avx512spr-x16", "avx512spr-x8", "avx512spr-x4", "avx512spr-x64", "avx512spr-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR"], "-spr", False]),
       ("GNR",        [["avx512gnr-x16", "avx512gnr-x8", "avx512gnr-x4", "avx512gnr-x64", "avx512gnr-x32"],
@@ -444,7 +446,7 @@ def check_targets():
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
 
-    return [result, result_sde]
+    return [result, result_sde, hw_arch]
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
@@ -612,7 +614,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
         stability.wrapexe = ""
         stability.calling_conv = None
 # prepare parameters of run
-        [targets_t, sde_targets_t] = check_targets()
+        [targets_t, sde_targets_t, hw_arch] = check_targets()
         rebuild = True
         opts = []
         archs = []
@@ -639,7 +641,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "17.0", "18.1", "19.1", "20.1", "21.1", "trunk"]:
+        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "17.0", "18.1", "19.1", "20.1", "21.1", "22.1", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -701,7 +703,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
                 if (stability.target in unsupported_llvm_targets(LLVM[i])):
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
-
+                print_debug("Running native - " + hw_arch + "\n", False, "")
                 # now set archs for targets
                 arch = archs
                 for i1 in range(0,len(arch)):
@@ -720,8 +722,9 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
                 if (stability.target in unsupported_llvm_targets(LLVM[i])):
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
-
-                stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
+                sde_flag = sde_targets[j][0]
+                stability.wrapexe = get_sde() + " " + sde_flag + " -- "
+                print_debug("Running SDE " + sde_flag + "\n", False, "")
                 arch = archs
                 for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
@@ -971,7 +974,7 @@ if __name__ == '__main__':
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
-        help='version of llvm to build: 6.0-21.1 trunk. Default: trunk', default="trunk")
+        help='version of llvm to build: 6.0-22.1 trunk. Default: trunk', default="trunk")
     llvm_group.add_option('--full-checkout', dest='full_checkout', action='store_true', default=False,
         help=('Disable a shallow clone and checkout a whole LLVM repository.\n'
               'By default it clones LLVM with --depth=1 to save space and time'))
@@ -992,7 +995,7 @@ if __name__ == '__main__':
     llvm_group.add_option('--llvm-disable-assertions', dest='llvm_disable_assertions',
         help='build LLVM with assertions disabled', default=False, action="store_true")
     llvm_group.add_option('--macos-version-min', dest='macos_version_min',
-        help='Minimal macOS version to target with this LLVM build (ignored on other OSes)', default="10.12" if platform.machine() == 'x86_64' else "11.0")
+        help='Minimal macOS version to target with this LLVM build (ignored on other OSes)', default="10.13" if platform.machine() == 'x86_64' else "11.0")
     llvm_group.add_option('--macos-universal-binary', dest='macos_universal_bin',
         help='Build Universal Binaries (x86_64+arm64) on macOS', default=False, action='store_true')
     llvm_group.add_option('--force', dest='force',
@@ -1024,7 +1027,7 @@ if __name__ == '__main__':
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' +
             '-O0, -O1, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
-            'build (only build with different LLVM), 6.0-21.1, trunk, native (do not use SDE),\n' +
+            'build (only build with different LLVM), 6.0-22.1, trunk, native (do not use SDE),\n' +
             'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',

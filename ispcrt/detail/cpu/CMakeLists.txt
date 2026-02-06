@@ -1,4 +1,4 @@
-## Copyright 2023 Intel Corporation
+## Copyright 2023-2026 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 set(ISPCRT_BUILD_TASK_MODELS "OpenMP;TBB;Threads")
@@ -37,7 +37,9 @@ if (ISPCRT_BUILD_TASKING)
         if (TBB_ROOT)
             message(STATUS "TBB root:" ${TBB_ROOT})
             # Try to find TBB library and header files
-            find_library(TBB_LIB NAMES libtbb.so.2 tbb PATHS ${TBB_ROOT}/lib NO_DEFAULT_PATH)
+            # Search in lib/ and lib/intel64/gcc4.8/ for oneAPI TBB compatibility
+            find_library(TBB_LIB NAMES libtbb.so.2 tbb
+                PATHS ${TBB_ROOT}/lib ${TBB_ROOT}/lib/intel64/gcc4.8 NO_DEFAULT_PATH)
             find_path(TBB_INCLUDE_DIR NAMES ${TBB_HEADER} PATHS ${TBB_ROOT}/include NO_DEFAULT_PATH)
             # If TBB library and header files are found, use them.
             if (TBB_LIB AND TBB_INCLUDE_DIR)

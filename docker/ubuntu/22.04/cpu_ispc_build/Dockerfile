@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2025, Intel Corporation
+#  Copyright (c) 2017-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -14,6 +14,7 @@ ARG SHA=main
 ARG LTO=OFF
 ARG PGO=OFF
 ARG LLVM_VERSION
+ARG LLVM_SHA
 ARG LLVM_DISABLE_ASSERTIONS
 
 # !!! Make sure that your docker config provides enough memory to the container,
@@ -25,7 +26,7 @@ RUN uname -a
 RUN apt-get -y update && \
     DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y \
         wget ninja-build build-essential gcc g++ git python3-dev \
-        ca-certificates libtbb2-dev && \
+        ca-certificates libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt
@@ -62,7 +63,8 @@ RUN git clone https://github.com/$REPO.git ispc && \
         -DLLVM_VERSION="$LLVM_VERSION" \
         -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
         -DCMAKE_INSTALL_PREFIX="$LLVM_HOME"/bin-"$LLVM_VERSION" \
-        -DLLVM_DISABLE_ASSERTIONS="$LLVM_DISABLE_ASSERTIONS" && \
+        -DLLVM_DISABLE_ASSERTIONS="$LLVM_DISABLE_ASSERTIONS" \
+        ${LLVM_SHA:+-DLLVM_SHA=$LLVM_SHA} && \
     cmake --build build && \
     rm -rf build
 

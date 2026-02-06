@@ -104,7 +104,7 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ispc_llvm_linux
-        path: build/ispc-trunk-linux.tar.gz
+        path: build/ispc-*-linux.tar.gz
 
 
   linux-test-llvm:
@@ -147,6 +147,6 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       if: failure()
       with:
-        name: fail_db.llvm20.${{matrix.target}}.txt
+        name: fail_db.llvm21.${{matrix.target}}.txt
         path: fail_db.txt
 

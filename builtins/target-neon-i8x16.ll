@@ -2,7 +2,7 @@
 ;; target-neon-8.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019-2025 Intel
+;;  Copyright(c) 2019-2026 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -12,6 +12,65 @@ define(`ISA',`NEON')
 
 include(`util.m4')
 include(`target-neon-common.ll')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; mask operations
+
+declare <8 x i16> @NEON_PREFIX_PADDLU.v8i16.v16i8(<16 x i8>) nounwind readnone
+declare <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<8 x i16>) nounwind readnone
+declare <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32>) nounwind readnone
+
+define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %and_mask = and <WIDTH x i8> %0,
+    <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128,
+     i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>
+  %v8 = call <8 x i16> @NEON_PREFIX_PADDLU.v8i16.v16i8(<16 x i8> %and_mask)
+  %v4 = call <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<8 x i16> %v8)
+  %v2 = call <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32> %v4)
+  %va = extractelement <2 x i64> %v2, i32 0
+  %vb = extractelement <2 x i64> %v2, i32 1
+  %vbshift = shl i64 %vb, 8
+  %v = or i64 %va, %vbshift
+  ret i64 %v
+}
+
+define i1 @__any(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  v16tov8(MASK, %0, %v8a, %v8b)
+  %vor8 = or <8 x MASK> %v8a, %v8b
+  %v16 = sext <8 x i8> %vor8 to <8 x i16>
+  v8tov4(i16, %v16, %v16a, %v16b)
+  %vor16 = or <4 x i16> %v16a, %v16b
+  %v32 = sext <4 x i16> %vor16 to <4 x i32>
+  v4tov2(i32, %v32, %v32a, %v32b)
+  %vor32 = or <2 x i32> %v32a, %v32b
+  %v0 = extractelement <2 x i32> %vor32, i32 0
+  %v1 = extractelement <2 x i32> %vor32, i32 1
+  %v = or i32 %v0, %v1
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  v16tov8(MASK, %0, %v8a, %v8b)
+  %vand8 = and <8 x MASK> %v8a, %v8b
+  %v16 = sext <8 x i8> %vand8 to <8 x i16>
+  v8tov4(i16, %v16, %v16a, %v16b)
+  %vand16 = and <4 x i16> %v16a, %v16b
+  %v32 = sext <4 x i16> %vand16 to <4 x i32>
+  v4tov2(i32, %v32, %v32a, %v32b)
+  %vand32 = and <2 x i32> %v32a, %v32b
+  %v0 = extractelement <2 x i32> %vand32, i32 0
+  %v1 = extractelement <2 x i32> %vand32, i32 1
+  %v = and i32 %v0, %v1
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__none(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %any = call i1 @__any(<WIDTH x MASK> %0)
+  %none = icmp eq i1 %any, 0
+  ret i1 %none
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt/rcp

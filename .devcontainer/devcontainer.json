@@ -1,19 +1,19 @@
 {
-  "__comment1__": "Copyright (c) 2023-2025, Intel Corporation",
+  "__comment1__": "Copyright (c) 2023-2026, Intel Corporation",
   "__comment2__": "SPDX-License-Identifier: BSD-3-Clause",
   "name": "ISPC developers environment (CPU only)",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu22.04",
   "features": {
     "ghcr.io/devcontainers-contrib/features/apt-get-packages:1": { "packages" : "libc6-dev,libc6-dev-i386,cmake,make,flex,bison,m4,wget,libtbb-dev" },
     "ghcr.io/wxw-matt/devcontainer-features/command_runner:latest": {
-      "command1" : "mkdir /llvm && cd /llvm && wget -q -O llvm.tar.xz https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz",
+      "command1" : "mkdir /llvm && cd /llvm && wget -q -O llvm.tar.xz https://github.com/ispc/ispc.dependencies/releases/download/llvm-21.1-ispc-dev/llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz",
       "command2" : "cd /llvm && tar xvf llvm.tar.xz && rm -rf llvm.tar.xz" }
   },
   "containerEnv": {
     "ISPC_HOME" : "/workspaces/ispc",
     "LLVM_HOME" : "/llvm"
   },
-  "remoteEnv": { "PATH": "/llvm/bin-20.1/bin:${containerEnv:PATH}" },
+  "remoteEnv": { "PATH": "/llvm/bin-21.1/bin:${containerEnv:PATH}" },
   "onCreateCommand": {
     "command1": "cmake -B ${containerWorkspaceFolder}/build ${containerWorkspaceFolder}"
   },

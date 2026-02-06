@@ -1,0 +1,76 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Docker Build Check
+
+permissions: read-all
+
+on:
+  schedule:
+    # Run weekly on Sunday at midnight UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Only run on main repo to avoid unnecessary builds on forks
+    if: github.repository == 'ispc/ispc'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # CentOS
+          - name: centos-8-cpu
+            dockerfile: docker/centos/8/cpu_ispc_build/Dockerfile
+            context: docker/centos/8/cpu_ispc_build
+          # Fedora
+          - name: fedora
+            dockerfile: docker/fedora/Dockerfile
+            context: docker/fedora
+          # Ubuntu 18.04
+          - name: ubuntu-18.04-cpu
+            dockerfile: docker/ubuntu/18.04/cpu_ispc_build/Dockerfile
+            context: docker/ubuntu/18.04/cpu_ispc_build
+          - name: ubuntu-18.04-xpu
+            dockerfile: docker/ubuntu/18.04/xpu_ispc_build/Dockerfile
+            context: docker/ubuntu/18.04/xpu_ispc_build
+          # Ubuntu 20.04
+          - name: ubuntu-20.04-cpu
+            dockerfile: docker/ubuntu/20.04/cpu_ispc_build/Dockerfile
+            context: docker/ubuntu/20.04/cpu_ispc_build
+          - name: ubuntu-20.04-xpu
+            dockerfile: docker/ubuntu/20.04/xpu_ispc_build/Dockerfile
+            context: docker/ubuntu/20.04/xpu_ispc_build
+          # Ubuntu 22.04
+          - name: ubuntu-22.04-cpu
+            dockerfile: docker/ubuntu/22.04/cpu_ispc_build/Dockerfile
+            context: docker/ubuntu/22.04/cpu_ispc_build
+          - name: ubuntu-22.04-xpu
+            dockerfile: docker/ubuntu/22.04/xpu_ispc_build/Dockerfile
+            context: docker/ubuntu/22.04/xpu_ispc_build
+
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Clone the git repo
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Build Docker image (${{ matrix.name }})
+        run: |
+          cd ${{ matrix.context }}
+          docker buildx create --use
+          docker buildx build --tag ispc/${{ matrix.name }} --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" .

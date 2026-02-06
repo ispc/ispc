@@ -1,9 +1,9 @@
 #
-#  Copyright (c) 2017-2025, Intel Corporation
+#  Copyright (c) 2017-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-FROM fedora:39
+FROM fedora:41
 LABEL maintainer="Nurmukhametov, Aleksei <aleksei.nurmukhametov@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
@@ -14,7 +14,8 @@ ARG SHA=main
 RUN if [ -v http_proxy ]; then echo "proxy=$http_proxy" >> /etc/dnf/dnf.conf; fi
 
 # Packages required to build ISPC.
-RUN dnf install -y git cmake python3-setuptools python3-devel && \
+# Fedora 41 provides TBB 2021.x (libtbb.so.12) which is compatible with LLVM 21+
+RUN dnf install -y git cmake python3-setuptools python3-devel wget dnf-plugins-core && \
     dnf install -y clang-devel llvm-devel glibc-devel.i686 && \
     dnf install -y flex bison tbb-devel && \
     dnf clean -y all
@@ -35,9 +36,9 @@ USER ispc_user
 
 # Clone, configure and build ISPC
 # Some check-all tests may fail because we use system LLVM here
-RUN git clone --depth=1 https://github.com/$REPO.git ispc && \
+RUN git clone https://github.com/$REPO.git ispc && \
     git -C ispc checkout $SHA && \
-    cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr && \
+    cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr/local && \
     cmake --build build-ispc -v -j "$(nproc)" && \
     (cmake --build build-ispc --target check-all || true) && \
     (echo "shared libs deps of ispc" && ldd ./build-ispc/bin/ispc) && \

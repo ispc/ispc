@@ -87,11 +87,15 @@ jobs:
           bash .github/workflows/scripts/install-test-deps.sh
         elif [ "${INPUTS_PLATFORM}" == "macos" ]; then
           if [[ "${{ inputs.enable_lto }}" == "true" ]]; then
-            tar xf ispc-trunk-macOS.universal.tar.gz
-            echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> "$GITHUB_PATH"
+            ISPC_TAR=$(ls ispc-*-macOS.universal.tar.gz)
+            tar xf "$ISPC_TAR"
+            ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+            echo "$GITHUB_WORKSPACE/$ISPC_DIR/bin" >> "$GITHUB_PATH"
           else
-            tar xf ispc-trunk-macos.tar.gz
-            echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
+            ISPC_TAR=$(ls ispc-*-macos.tar.gz)
+            tar xf "$ISPC_TAR"
+            ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+            echo "$GITHUB_WORKSPACE/$ISPC_DIR/bin" >> "$GITHUB_PATH"
           fi
           echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
           echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
@@ -142,22 +146,26 @@ jobs:
 
     - name: Running tests on Linux/macOS (run_tests mode)
       if: (inputs.platform == 'linux' || inputs.platform == 'macos') && (inputs.architecture == 'aarch64' || inputs.architecture == 'wasm32' || inputs.architecture == 'wasm64')
-      shell: bash
-      run: |
-        if [ "${INPUTS_ARCHITECTURE}" == "wasm32" ] || [ "${INPUTS_ARCHITECTURE}" == "wasm64" ]; then
-          source scripts/install_emscripten.sh && emcc --version
-        fi
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+      with:
+        timeout_minutes: 240
+        max_attempts: 2
+        shell: bash
+        command: |
+          if [ "${INPUTS_ARCHITECTURE}" == "wasm32" ] || [ "${INPUTS_ARCHITECTURE}" == "wasm64" ]; then
+            source scripts/install_emscripten.sh && emcc --version
+          fi
 
-        echo "PATH=${PATH}"
-        IFS=' ' read -ra OPT_LEVELS <<< "${INPUTS_OPTSETS}"
+          echo "PATH=${PATH}"
+          IFS=' ' read -ra OPT_LEVELS <<< "${INPUTS_OPTSETS}"
 
-        for opt in "${OPT_LEVELS[@]}"; do
-          # Remove dashes from each option
-          opt_no_dash="${opt//-/}"
-          echo "About to execute run_tests.py with opt: $opt_no_dash"
-          ./scripts/run_tests.py -t "${MATRIX_TARGET}" -a "${INPUTS_ARCHITECTURE}" -o "$opt_no_dash" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
-          echo "Finished executing run_tests.py with opt: $opt_no_dash"
-        done
+          for opt in "${OPT_LEVELS[@]}"; do
+            # Remove dashes from each option
+            opt_no_dash="${opt//-/}"
+            echo "About to execute run_tests.py with opt: $opt_no_dash"
+            ./scripts/run_tests.py -t "${MATRIX_TARGET}" -a "${INPUTS_ARCHITECTURE}" -o "$opt_no_dash" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
+            echo "Finished executing run_tests.py with opt: $opt_no_dash"
+          done
       env:
         INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
         INPUTS_OPTSETS: ${{ inputs.optsets }}
@@ -168,7 +176,7 @@ jobs:
       if: inputs.platform == 'windows' && inputs.calling_conv == '' && inputs.architecture != 'aarch64'
       uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
       with:
-        timeout_minutes: 120
+        timeout_minutes: 240
         max_attempts: 2
         shell: pwsh
         command: |
@@ -192,25 +200,29 @@ jobs:
 
     - name: Running tests on Windows (run_tests mode)
       if: inputs.platform == 'windows' && (inputs.calling_conv != '' || inputs.architecture == 'aarch64')
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "$env:INPUTS_ARCHITECTURE"
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+      with:
+        timeout_minutes: 240
+        max_attempts: 2
+        shell: pwsh
+        command: |
+          $env:ISPC_HOME = "$pwd"
+          .github/workflows/scripts/load-vs-env.ps1 "$env:INPUTS_ARCHITECTURE"
 
-        # Split optsets and run tests for each optimization level
-        $optLevels = "$env:INPUTS_OPTSETS".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
-        Write-Host "optLevels array created: $($optLevels -join ', ')"
+          # Split optsets and run tests for each optimization level
+          $optLevels = "$env:INPUTS_OPTSETS".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+          Write-Host "optLevels array created: $($optLevels -join ', ')"
 
-        foreach ($opt in $optLevels) {
-          $optNoDash = $opt -replace "-", ""
-          Write-Host "About to execute run_tests.py with opt: $optNoDash"
-          if ("$env:INPUTS_CALLING_CONV" -ne "" -and "$env:INPUTS_ARCHITECTURE" -ne "aarch64") {
-            python .\scripts\run_tests.py --calling_conv=$env:INPUTS_CALLING_CONV --target=$env:MATRIX_TARGET --arch=$env:INPUTS_ARCHITECTURE --opt=$optNoDash --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
-          } else {
-            python .\scripts\run_tests.py --target=$env:MATRIX_TARGET --arch=$env:INPUTS_ARCHITECTURE --opt=$optNoDash --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
+          foreach ($opt in $optLevels) {
+            $optNoDash = $opt -replace "-", ""
+            Write-Host "About to execute run_tests.py with opt: $optNoDash"
+            if ("$env:INPUTS_CALLING_CONV" -ne "" -and "$env:INPUTS_ARCHITECTURE" -ne "aarch64") {
+              python .\scripts\run_tests.py --calling_conv=$env:INPUTS_CALLING_CONV --target=$env:MATRIX_TARGET --arch=$env:INPUTS_ARCHITECTURE --opt=$optNoDash --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
+            } else {
+              python .\scripts\run_tests.py --target=$env:MATRIX_TARGET --arch=$env:INPUTS_ARCHITECTURE --opt=$optNoDash --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
+            }
+            Write-Host "Finished executing run_tests.py with opt: $optNoDash"
           }
-          Write-Host "Finished executing run_tests.py with opt: $optNoDash"
-        }
-      shell: pwsh
       env:
         INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
         INPUTS_OPTSETS: ${{ inputs.optsets }}
@@ -219,6 +231,7 @@ jobs:
         INPUTS_ISPC_EXTRA_FLAGS: ${{ inputs.ispc_extra_flags }}
 
     - name: Set artifact name prefix
+      if: always()
       id: set-artifact-name
       shell: bash
       run: |

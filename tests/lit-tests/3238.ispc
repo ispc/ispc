@@ -3,6 +3,9 @@
 // set on binop operating on the induction variable.
 
 // REQUIRES: X86_ENABLED
+// The fix for the test was reverted due to stability issues on neon target.
+// XFAIL: *
+
 // RUN: %{ispc} %s --emit-llvm-text --target=host --no-discard-value-names -o - -O1 --nowrap | FileCheck %s
 // RUN: %{ispc} %s --target=avx2 -O1 --emit-asm --x86-asm-syntax=intel --nostdlib --nowrap -o - 2>&1 | FileCheck %s --check-prefix=ASM
 

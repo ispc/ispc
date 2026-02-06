@@ -1,3 +1,84 @@
+=== v1.30.0 === (04 February 2026)
+
+ISPC release featuring Intel AMX (Advanced Matrix Extensions) support in the
+standard library, performance improvements for backward memory access patterns,
+and bug fixes. Based on a patched LLVM 21.1.8.
+
+Standard Library:
+
+* Intel AMX (Advanced Matrix Extensions) support has been added to the standard
+  library. AMX provides hardware acceleration for matrix operations, particularly
+  useful for machine learning workloads. The new `<amx.isph>` header provides
+  functions for tile configuration, data loading/storing, and matrix dot products
+  for INT8, BF16, and FP16 data types. AMX is supported on `avx512spr`,
+  `avx512gnr`, and `avx10.2dmr` targets.
+
+Language Changes:
+
+* Integral type aliases (`size_t`, `ptrdiff_t`, `intptr_t`, `uintptr_t`) can now
+  be used as non-type template parameters.
+
+Performance:
+
+* Optimized backward memory access patterns (e.g., `dst[size-1-i]`) to use
+  contiguous load/store operations with vector shuffle, providing 5-10x speedup
+  compared to scatter/gather operations.
+
+Deprecated Targets:
+
+* The `sse2-i32x4` and `sse2-i32x8` targets are no longer deprecated. Based on
+  customer feedback indicating active use, we have decided to retain these
+  targets and removed the deprecation warning.
+
+Bug Fixes:
+
+* Fixed integral type aliases not being accepted as non-type template parameters.
+
+* Fixed varying control flow regression on NEON targets introduced in v1.26.0.
+
+* Fixed performance regression on Apple Silicon (and other ARM platforms)
+  introduced in v1.26.0, which caused up to 30% slowdown in some workloads.
+
+* Fixed sub-optimal code generation when using `extract()` that caused
+  unnecessary stack spills.
+
+Build System:
+
+* Updated default LLVM version to 21.1.8.
+* Added support for building with LLVM 22.0 and LLVM 23.0.
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/25.13.33276.16
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel Arc(TM)
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.8250
+   https://www.intel.com/content/www/us/en/download/785597/869290/intel-arc-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - OpenCL(TM) Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/cce2baf
+ - https://github.com/intel/vc-intrinsics/commit/ddfa825
+ - https://github.com/oneapi-src/level-zero/commit/v1.20.2
+ - https://github.com/llvm/llvm-project/commit/2078da4 (llvmorg-21.1.8) +
+   patches from llvm_patches folder
+
 === v1.29.0 === (17 December 2025)
 
 ISPC release featuring sample-based profile-guided optimization, optimized dispatcher,

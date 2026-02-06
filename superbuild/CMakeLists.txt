@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2023-2025, Intel Corporation
+#  Copyright (c) 2023-2026, Intel Corporation
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -121,6 +121,7 @@ endif()
 if (NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
     set(STAGE2_PATH "${PREBUILT_STAGE2_PATH}")
 endif()
+
 set(STAGE3_PATH "${CMAKE_BINARY_DIR}/stage3")
 
 if (NOT PREBUILT_STAGE1_PATH STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
@@ -139,6 +140,16 @@ if (BUILD_STAGE2_TOOLCHAIN_ONLY OR INSTALL_TOOLCHAIN)
     set(TOOLCHAIN_STAGE1_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
     set(TOOLCHAIN_STAGE2_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 endif()
+
+# Set up full paths to stage2 clang tools for usage in toolchain files to avoid issues on open source Github runners like
+# lib\SPIRV\LLVMSPIRVLib.lib: 'CMakeFiles/LLVMSPIRVLib.dir/libSPIRV/SPIRVFnVar.cpp.obj': Unknown attribute kind (102) (Producer: 'LLVM21.1.8' Reader: 'LLVM 19.1.5')
+# CMAKE_EXECUTABLE_SUFFIX is .exe on Windows, empty on other platforms
+# NOTE: These must be computed AFTER the BUILD_STAGE2_TOOLCHAIN_ONLY check above which may update STAGE2_PATH
+cmake_path(CONVERT "${STAGE2_PATH}/bin/clang-cl${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_CLANG_CL_CMAKE)
+cmake_path(CONVERT "${STAGE2_PATH}/bin/lld-link${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLD_LINK_CMAKE)
+cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-lib${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLVM_LIB_CMAKE)
+cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-rc${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLVM_RC_CMAKE)
+
 message(STATUS "TOOLCHAIN_STAGE1_INSTALL_PREFIX is ${TOOLCHAIN_STAGE1_INSTALL_PREFIX}")
 message(STATUS "TOOLCHAIN_STAGE2_INSTALL_PREFIX is ${TOOLCHAIN_STAGE2_INSTALL_PREFIX}")
 
@@ -180,7 +191,7 @@ if (APPLE)
 
     set(FULL_STAGE2_LLVM ON)
 
-    set(MACOS_VERSION_MIN 10.12)
+    set(MACOS_VERSION_MIN 10.13)
     if (NOT MACOS_UNIVERSAL_BIN AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
         set(MACOS_VERSION_MIN 11.0)
     endif()
@@ -201,8 +212,10 @@ string(APPEND LIT_TOOLS_DIR ${GNUWIN32} "/bin")
 unset(LLVM_TAG)
 unset(LLVM_VERSION_DOTTED)
 string(REPLACE "." "_" LLVM_VERSION "${LLVM_VERSION}")
-if (${LLVM_VERSION} STREQUAL 21_1)
-    set(LLVM_TAG    llvmorg-21.1.7)
+if (${LLVM_VERSION} STREQUAL 22_1)
+    set(LLVM_TAG    release/22.x)
+elseif (${LLVM_VERSION} STREQUAL 21_1)
+    set(LLVM_TAG    llvmorg-21.1.8)
 elseif (${LLVM_VERSION} STREQUAL 20_1)
     set(LLVM_TAG    llvmorg-20.1.8)
 elseif (${LLVM_VERSION} STREQUAL 19_1)
@@ -243,6 +256,17 @@ else()
     message(FATAL_ERROR "Incorrect LLVM version")
 endif()
 
+# Allow overriding LLVM_TAG with a specific commit SHA
+if (DEFINED LLVM_SHA AND NOT "${LLVM_SHA}" STREQUAL "")
+    message(STATUS "Overriding LLVM_TAG with LLVM_SHA: ${LLVM_SHA}")
+    set(LLVM_TAG ${LLVM_SHA})
+    # Disable shallow clone when a specific SHA is provided to avoid race conditions
+    # where the SHA may not be available in a shallow clone if LLVM main has moved forward
+    set(LLVM_GIT_SHALLOW OFF)
+else()
+    set(LLVM_GIT_SHALLOW ON)
+endif()
+
 if (${LLVM_VERSION} STREQUAL trunk)
     set(LLVM_VERSION_DOTTED main)
     set(LLVM_VERSION_MAJOR 0)
@@ -254,6 +278,11 @@ else()
     set(LLVM_VERSION_MAJOR ${CMAKE_MATCH_1})
     set(LLVM_VERSION_MINOR ${CMAKE_MATCH_2})
     set(LLVM_VERSION_PATCH ${CMAKE_MATCH_3})
+endif()
+
+# LLVM 21+ has stricter warnings about C2y extensions (__COUNTER__ in benchmark library)
+if (NOT WIN32 AND (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 21 OR ${LLVM_VERSION} STREQUAL "trunk"))
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c2y-extensions")
 endif()
 
 set(EXTERNAL_VERBOSE_FLAG "")
@@ -333,6 +362,7 @@ message(STATUS "INSTALL_WITH_XE_DEPS is ${INSTALL_WITH_XE_DEPS}")
 message(STATUS "XE_DEPS is ${XE_DEPS}")
 message(STATUS "SKIP_FETCHING_XE_DEPS is ${SKIP_FETCHING_XE_DEPS}")
 message(STATUS "LLVM_TAG is ${LLVM_TAG}")
+message(STATUS "LLVM_GIT_SHALLOW is ${LLVM_GIT_SHALLOW}")
 message(STATUS "LLVM_VERSION_DOTTED is ${LLVM_VERSION_DOTTED}")
 message(STATUS "LLVM_VERSION_MAJOR is ${LLVM_VERSION_MAJOR}")
 message(STATUS "LLVM_VERSION_MINOR is ${LLVM_VERSION_MINOR}")
@@ -962,11 +992,11 @@ set(ENV{PATH}       "@ENV_PATH_STAGE2@")
 set(WIN_C_FLAGS     "-fuse-ld=lld-link")
 set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
-    set(CMAKE_C_COMPILER   clang-cl)
-    set(CMAKE_CXX_COMPILER clang-cl)
-    set(CMAKE_LINKER       lld-link)
-    set(CMAKE_AR           llvm-lib)
-    set(CMAKE_RC_COMPILER  llvm-rc)
+    set(CMAKE_C_COMPILER   "@STAGE2_CLANG_CL_CMAKE@")
+    set(CMAKE_CXX_COMPILER "@STAGE2_CLANG_CL_CMAKE@")
+    set(CMAKE_LINKER       "@STAGE2_LLD_LINK_CMAKE@")
+    set(CMAKE_AR           "@STAGE2_LLVM_LIB_CMAKE@")
+    set(CMAKE_RC_COMPILER  "@STAGE2_LLVM_RC_CMAKE@")
     set(CMAKE_MT           mt)
     set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@ ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@ ${WIN_C_FLAGS}")
@@ -1003,11 +1033,11 @@ set(WIN_C_FLAGS     "-fuse-ld=lld-link")
 set(WIN_LD_FLAGS    "@CLANG_RT_PROFLIB@")
 set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
-    set(CMAKE_C_COMPILER   clang-cl)
-    set(CMAKE_CXX_COMPILER clang-cl)
-    set(CMAKE_LINKER       lld-link)
-    set(CMAKE_AR           llvm-lib)
-    set(CMAKE_RC_COMPILER  llvm-rc)
+    set(CMAKE_C_COMPILER   "@STAGE2_CLANG_CL_CMAKE@")
+    set(CMAKE_CXX_COMPILER "@STAGE2_CLANG_CL_CMAKE@")
+    set(CMAKE_LINKER       "@STAGE2_LLD_LINK_CMAKE@")
+    set(CMAKE_AR           "@STAGE2_LLVM_LIB_CMAKE@")
+    set(CMAKE_RC_COMPILER  "@STAGE2_LLVM_RC_CMAKE@")
     set(CMAKE_MT           mt)
     set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
@@ -1047,11 +1077,11 @@ set(ENV{PATH} "@ENV_PATH_STAGE2@")
 set(WIN_C_FLAGS "-Wno-error=unused-command-line-argument -Wno-error=unused-but-set-variable")
 set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
-    set(CMAKE_C_COMPILER   clang-cl)
-    set(CMAKE_CXX_COMPILER clang-cl)
-    set(CMAKE_LINKER       lld-link)
-    set(CMAKE_AR           llvm-lib)
-    set(CMAKE_RC_COMPILER  llvm-rc)
+    set(CMAKE_C_COMPILER   "@STAGE2_CLANG_CL_CMAKE@")
+    set(CMAKE_CXX_COMPILER "@STAGE2_CLANG_CL_CMAKE@")
+    set(CMAKE_LINKER       "@STAGE2_LLD_LINK_CMAKE@")
+    set(CMAKE_AR           "@STAGE2_LLVM_LIB_CMAKE@")
+    set(CMAKE_RC_COMPILER  "@STAGE2_LLVM_RC_CMAKE@")
     set(CMAKE_MT           mt)
     set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@ ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@ ${WIN_C_FLAGS}")
@@ -1132,7 +1162,7 @@ if (PGO OR NOT SKIP_STAGE2)
             ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
-            GIT_SHALLOW ON
+            GIT_SHALLOW ${LLVM_GIT_SHALLOW}
             GIT_PROGRESS ON
             UPDATE_COMMAND git checkout .
             PATCH_COMMAND git apply ${LLVM_PATCHES_VER}
@@ -1143,7 +1173,7 @@ if (PGO OR NOT SKIP_STAGE2)
             ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
-            GIT_SHALLOW ON
+            GIT_SHALLOW ${LLVM_GIT_SHALLOW}
             GIT_PROGRESS ON
             UPDATE_COMMAND git checkout .
             SOURCE_DIR llvm-source

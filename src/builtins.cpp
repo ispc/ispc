@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -196,7 +196,7 @@ void lAddDeclarationsToModule(llvm::Module *bcModule, llvm::Module *module) {
         llvm::Triple bcTriple(bcModule->getTargetTriple());
         Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
-        bcModule->setTargetTriple(mTriple);
+        bcModule->setTargetTriple(std::move(mTriple));
 #else
         bcModule->setTargetTriple(mTriple.str());
 #endif

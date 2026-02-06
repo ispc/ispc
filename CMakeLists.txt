@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2025, Intel Corporation
+#  Copyright (c) 2018-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -51,8 +51,8 @@ if (APPLE)
     # so we do this hack to detect the platform. It's not perfect, but good enough.
     execute_process(COMMAND uname -m OUTPUT_VARIABLE UNAME)
     if (UNAME MATCHES "x86_64" OR CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
-        # Note: it's ok to have 10.12 for Universal Binaries.
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum macOS version to support")
+        # Note: it's ok to have 10.13 for Universal Binaries.
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version to support")
     else()
         set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version to support")
     endif()
@@ -565,6 +565,8 @@ list(APPEND OPT_SOURCES
     src/opt/IntrinsicsOptPass.h
     src/opt/LowerISPCIntrinsics.cpp
     src/opt/LowerISPCIntrinsics.h
+    src/opt/LowerAMXBuiltinsPass.cpp
+    src/opt/LowerAMXBuiltinsPass.h
     src/opt/MangleOpenCLBuiltins.cpp
     src/opt/MangleOpenCLBuiltins.h
     src/opt/PeepholePass.cpp
@@ -585,8 +587,9 @@ list(APPEND OPT_SOURCES
     src/opt/XeReplaceLLVMIntrinsics.h
 )
 
-set(STDLIB_HEADERS core.isph short_vec.isph stdlib.isph)
+set(STDLIB_HEADERS amx.isph core.isph short_vec.isph stdlib.isph)
 set(ALL_STDLIB_HEADERS
+  amx.isph
   builtins.isph
   core.isph
   short_vec.isph
@@ -739,7 +742,8 @@ else()
     )
     # Disable warnings coming from LLVM headers
     if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "21.0.0")
-        list(APPEND COMPILE_OPTIONS -Wno-unnecessary-virtual-specifier)
+        # This flag is only valid for C, not C++
+        list(APPEND COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C>:-Wno-duplicate-decl-specifier>)
     endif()
     # Security options for both Debug and Release builds
     list(APPEND COMPILE_OPTIONS
@@ -865,7 +869,7 @@ list(APPEND LINK_LIBRARIES ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
 if (XE_ENABLED)
     # Link against Xe libraries
     foreach(xeLib ${XE_LIBRARY_LIST})
-        find_library(${xeLib}Path NAMES ${xeLib} HINTS ${XE_DEPS_DIR}/lib)
+        find_library(${xeLib}Path NAMES ${xeLib} HINTS ${XE_DEPS_DIR}/lib ${XE_DEPS_DIR}/lib/${CMAKE_LIBRARY_ARCHITECTURE})
         list(APPEND XE_LIBRARY_FULL_PATH_LIST ${${xeLib}Path})
     endforeach()
     list(APPEND LINK_LIBRARIES ${XE_LIBRARY_FULL_PATH_LIST})
@@ -1045,8 +1049,9 @@ if (ISPC_SLIM_BINARY)
     endforeach()
     install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
 else()
-    # Install short_vec.isph for composite binary
+    # Install short_vec.isph and amx.isph for composite binary
     install (FILES "stdlib/include/short_vec.isph" DESTINATION include/stdlib)
+    install (FILES "stdlib/include/amx.isph" DESTINATION include/stdlib)
 endif()
 
 ################################################################################

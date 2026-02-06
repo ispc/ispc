@@ -46,6 +46,7 @@ Contents:
 
 * `Recent Changes to ISPC`_
 
+  + `Updating ISPC Programs For Changes In ISPC 1.30.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.29.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
@@ -207,6 +208,7 @@ Contents:
     * `Transcendental Functions`_
     * `Saturating Arithmetic`_
     * `Dot product`_
+    * `Intel AMX (Advanced Matrix Extensions)`_
     * `Pseudo-Random Numbers`_
     * `Random Numbers`_
 
@@ -254,6 +256,30 @@ of recent changes to the compiler.
 
 .. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/main/docs/ReleaseNotes.txt
 
+
+Updating ISPC Programs For Changes In ISPC 1.30.0
+-------------------------------------------------
+
+New Features:
+
+* Intel AMX (Advanced Matrix Extensions) support has been added to the standard
+  library. AMX provides hardware acceleration for matrix operations, particularly
+  useful for machine learning workloads. The new ``<amx.isph>`` header provides
+  functions for tile configuration, data loading/storing, and matrix dot products
+  for INT8, BF16, and FP16 data types. AMX is supported on ``avx512spr``,
+  ``avx512gnr``, and ``avx10.2dmr`` targets. Please refer to
+  `Intel AMX (Advanced Matrix Extensions)`_ for more details.
+
+Language Changes:
+
+* Integral type aliases (``size_t``, ``ptrdiff_t``, ``intptr_t``, ``uintptr_t``)
+  can now be used as non-type template parameters.
+
+Deprecated Targets:
+
+* The ``sse2-i32x4`` and ``sse2-i32x8`` targets are no longer deprecated. Based
+  on customer feedback indicating active use, we have decided to retain these
+  targets and removed the deprecation warning.
 
 Updating ISPC Programs For Changes In ISPC 1.29.0
 -------------------------------------------------
@@ -970,7 +996,7 @@ that's in your ``PATH``.  Congratulations--you've now installed ``ispc``.
 Compiling and Running a Simple ISPC Program
 -------------------------------------------
 
-The directory ``examples/simple`` in the ``ispc`` distribution includes a
+The directory ``examples/cpu/simple`` in the ``ispc`` distribution includes a
 simple example of how to use ``ispc`` with a short C++ program.  See the
 file ``simple.ispc`` in that directory (also reproduced here.)
 
@@ -4710,7 +4736,7 @@ regular task parallelism in the C/C++ application code (be it through
 Intel® oneAPI Threading Building Blocks, OpenMP or another task system), and
 for tasks to use ``ispc`` for SPMD parallelism across the vector lanes as
 appropriate.  Alternatively, ``ispc`` also has support for launching tasks
-from ``ispc`` code.  (Check the ``examples/mandelbrot_tasks`` example to
+from ``ispc`` code.  (Check the ``examples/cpu/mandelbrot_tasks`` example to
 see how it is used.)
 
 Any function that is launched as a task must be declared with the
@@ -6001,6 +6027,72 @@ The sum of these results, combined with the ``acc`` accumulator, is then returne
                                     varying int32 acc)
     varying int32 dot2add_i16i16packed_sat(varying uint32 a, varying uint32 b,
                                         varying int32 acc) // saturate the result
+
+
+Intel AMX (Advanced Matrix Extensions)
+--------------------------------------
+
+Intel AMX provides hardware acceleration for matrix operations, particularly
+useful for machine learning workloads. ISPC provides access to AMX instructions
+through the ``<amx.isph>`` header.
+
+AMX is supported on different targets with varying feature sets:
+
+=============  ========  ========  ========  ========
+Target         amx-tile  amx-int8  amx-bf16  amx-fp16
+=============  ========  ========  ========  ========
+avx512spr      Yes       Yes       Yes       No
+avx512gnr      Yes       Yes       Yes       Yes
+avx10.2dmr     Yes       Yes       Yes       Yes
+=============  ========  ========  ========  ========
+
+Using AMX functions on unsupported targets will result in a compile-time error.
+
+**Important**: All tile arguments must be compile-time constants in the range 0-7.
+
+Tile Configuration and Control:
+
+::
+
+    #include <amx.isph>
+
+    // Load/store tile configuration (64-byte structure)
+    void amx_tile_loadconfig(const uniform int8 *uniform config)
+    void amx_tile_storeconfig(uniform int8 *uniform config)
+
+    // Release AMX tile resources
+    void amx_tile_release()
+
+    // Zero a tile
+    void amx_tile_zero(uniform uint8 tile)
+
+    // Load/store tile data
+    void amx_tile_load(uniform uint8 tile, const uniform int8 *uniform data,
+                       uniform int64 stride)
+    void amx_tile_load_t1(uniform uint8 tile, const uniform int8 *uniform data,
+                          uniform int64 stride)  // with cache hint
+    void amx_tile_store(uniform uint8 tile, uniform int8 *uniform data,
+                        uniform int64 stride)
+
+INT8 Dot Products (requires amx-int8):
+
+::
+
+    // dst += src1 x src2 with various signedness combinations
+    void amx_dpbssd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // signed x signed
+    void amx_dpbsud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // signed x unsigned
+    void amx_dpbusd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // unsigned x signed
+    void amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)  // unsigned x unsigned
+
+BF16/FP16 Dot Products:
+
+::
+
+    // BF16 dot product (requires amx-bf16)
+    void amx_dpbf16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)
+
+    // FP16 dot product (requires amx-fp16, avx512gnr or newer)
+    void amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2)
 
 
 Pseudo-Random Numbers
@@ -7572,9 +7664,7 @@ At runtime, the ``ispc`` dispatch mechanism will cast these pointers to the appr
 types.  Programmers can
 provide C/C++ code with a mechanism to determine the gang width used
 at runtime by ``ispc`` by creating an exported function that simply
-returns the value of ``programCount``.  An example of such a function
-is provided in the file ``examples/util/util.isph`` included in the ``ispc``
-distribution.
+returns the value of ``programCount``.
 
 
 There is one subtlety related to data layout to be aware of: ``ispc``

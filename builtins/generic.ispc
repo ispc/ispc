@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
@@ -613,6 +613,37 @@ EXT void __restore_ftz_daz_flags(uniform int32) { __not_supported(); }
 EXT uniform bool __rdrand_i16(uniform int8 *uniform) { __not_supported(); }
 EXT uniform bool __rdrand_i32(uniform int8 *uniform) { __not_supported(); }
 EXT uniform bool __rdrand_i64(uniform int8 *uniform) { __not_supported(); }
+
+// Marker function for unsupported AMX operations. LowerAMXBuiltinsPass detects
+// calls to this function and emits compile-time errors on non-AMX targets.
+extern "C" void __ispc_amx_not_supported();
+
+// AMX Tile Configuration - not supported on generic target
+EXT void __amx_tile_loadconfig(const uniform int8 *uniform config) { __ispc_amx_not_supported(); }
+EXT void __amx_tile_storeconfig(uniform int8 *uniform config) { __ispc_amx_not_supported(); }
+EXT void __amx_tile_release() { __ispc_amx_not_supported(); }
+EXT void __amx_tile_zero(uniform uint8 tile) { __ispc_amx_not_supported(); }
+EXT void __amx_tile_load(uniform uint8 tile, const uniform int8 *uniform data, uniform int64 stride) {
+    __ispc_amx_not_supported();
+}
+EXT void __amx_tile_load_t1(uniform uint8 tile, const uniform int8 *uniform data, uniform int64 stride) {
+    __ispc_amx_not_supported();
+}
+EXT void __amx_tile_store(uniform uint8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __ispc_amx_not_supported();
+}
+
+// AMX INT8 Dot Products - not supported on generic target
+EXT void __amx_dpbssd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbsud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbusd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+
+// AMX FP16 Dot Product - not supported on generic target
+EXT void __amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+
+// AMX BF16 Dot Product - not supported on generic target
+EXT void __amx_dpbf16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
 
 // sign extension
 EXT READNONE uniform int32 __sext_uniform_bool(uniform bool x) { return x ? -1 : 0; }

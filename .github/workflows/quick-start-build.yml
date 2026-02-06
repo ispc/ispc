@@ -20,7 +20,7 @@ jobs:
         ubuntu: ['ubuntu-22.04', 'ubuntu-24.04']
     runs-on: ${{ matrix.ubuntu }}
     env:
-      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-21.1-ispc-dev/llvm-21.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -40,14 +40,19 @@ jobs:
       options: --privileged
 
     env:
-      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-21.1-ispc-dev/llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
     - name: Install prerequisites
       run: |
-        pacman -Syu --noconfirm
+        pacman-key --init
+        pacman-key --populate archlinux
+        # Update keyring first, then re-populate to trust new signing keys
+        pacman -Sy --noconfirm archlinux-keyring
+        pacman-key --populate archlinux
+        pacman -Su --noconfirm
         pacman -S --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
 
     - name: Build ISPC
@@ -56,7 +61,7 @@ jobs:
   macos:
     runs-on: macos-latest
     env:
-      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-macos-Release-universal-x86.arm.wasm.tar.xz
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-21.1-ispc-dev/llvm-21.1.8-macos-Release-universal-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -73,7 +78,7 @@ jobs:
   windows:
     runs-on: windows-latest
     env:
-      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-win.vs2022-Release-x86.arm.wasm.tar.7z
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-21.1-ispc-dev/llvm-21.1.8-win.vs2022-Release-x86.arm.wasm.tar.7z
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0

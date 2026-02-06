@@ -25,7 +25,12 @@ jobs:
     steps:
     - name: Setup Arch Linux
       run: |
-        pacman -Syu --noconfirm
+        pacman-key --init
+        pacman-key --populate archlinux
+        # Update keyring first, then re-populate to trust new signing keys
+        pacman -Sy --noconfirm archlinux-keyring
+        pacman-key --populate archlinux
+        pacman -Su --noconfirm
         pacman -S --needed --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
         pacman -S --needed --noconfirm riscv64-linux-gnu-gcc qemu-user
 
@@ -38,8 +43,10 @@ jobs:
 
     - name: Install dependencies and unpack artifacts
       run: |
-        tar xf ispc-trunk-linux.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin" >> "$GITHUB_PATH"
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar xf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        echo "$GITHUB_WORKSPACE/$ISPC_DIR/bin" >> "$GITHUB_PATH"
 
     - name: Check tools
       run: |

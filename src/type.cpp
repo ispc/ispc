@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -2904,7 +2904,11 @@ llvm::DIType *FunctionType::GetDIType(llvm::DIScope *scope) const {
         retArgTypes.push_back(t->GetDIType(scope));
     }
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    llvm::DITypeArray retArgTypesArray = m->diBuilder->getOrCreateTypeArray(retArgTypes);
+#else
     llvm::DITypeRefArray retArgTypesArray = m->diBuilder->getOrCreateTypeArray(retArgTypes);
+#endif
     llvm::DIType *diType = m->diBuilder->createSubroutineType(retArgTypesArray);
     return diType;
 }

@@ -13,8 +13,8 @@ if (-not $env:USER_AGENT) {
   echo "USER_AGENT=$env:USER_AGENT" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 }
 if (-not $env:LLVM_REPO) { $env:LLVM_REPO = "https://github.com/ispc/ispc.dependencies" }
-if (-not $env:LLVM_VERSION) { $env:LLVM_VERSION = "20.1" }
-if (-not $env:LLVM_TAR) { $env:LLVM_TAR = "llvm-20.1.8-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z" }
+if (-not $env:LLVM_VERSION) { $env:LLVM_VERSION = "21.1" }
+if (-not $env:LLVM_TAR) { $env:LLVM_TAR = "llvm-21.1.8-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z" }
 if (-not $env:LLVM_HOME) { $env:LLVM_HOME = "C:\\projects\\llvm" }
 if (-not $env:CROSS_TOOLS_GNUWIN32) {
   $env:CROSS_TOOLS_GNUWIN32 = "C:\\projects\\cross\\gnuwin32"

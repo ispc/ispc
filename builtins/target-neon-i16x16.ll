@@ -1,4 +1,4 @@
-;;  Copyright(c) 2025 Intel
+;;  Copyright(c) 2025-2026 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -8,6 +8,8 @@ define(`ISA',`NEON')
 
 include(`util.m4')
 include(`target-neon-common.ll')
+
+declare i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines

@@ -7,7 +7,6 @@ permissions: read-all
 
 on:
   workflow_dispatch:
-  push:
   pull_request:
 
 concurrency:
@@ -15,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  linux-build-ispc:
+  build-ispc-ubuntu-2204:
     runs-on: ubuntu-22.04
 
     steps:
@@ -40,10 +39,41 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ispc_linux_package
+        path: build/ispc-*-linux.tar.gz
+
+  build-ispc-aarch64:
+    runs-on: ubuntu-22.04-arm
+
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: ispc_linux_aarch64_package
         path: build/ispc-trunk-linux.tar.gz
 
-  win-build-ispc:
+  build-ispc-windows:
     runs-on: windows-2022
+
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+      LLVM_VERSION: "21.1"
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -74,10 +104,10 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ispc_win_package
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-*-windows.zip
 
   build-rk-superbuild-ubuntu-2204:
-    needs: linux-build-ispc
+    needs: build-ispc-ubuntu-2204
     runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04
@@ -86,9 +116,7 @@ jobs:
     - name: Install packages
       run: |
         echo "Installing build dependencies..."
-        apt update
-        apt upgrade -y
-        apt install -y git wget tar build-essential cmake ninja-build libglfw3-dev libgl1-mesa-dev libxinerama-dev libxcursor-dev libxi-dev python3-dev
+        apt -y update && apt -y install git wget tar build-essential cmake ninja-build libglfw3-dev libgl1-mesa-dev libxinerama-dev libxcursor-dev libxi-dev python3-dev
 
     - name: Clone RK superbuild repo
       uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -102,15 +130,52 @@ jobs:
 
     - name: Run RK superbuild
       env:
-        ISPC_VERSION: 1.25.0dev # the exact version is not important but suffix "dev" is required
+        ISPC_VERSION: 1.30.0dev # the exact version is not important but suffix "dev" is required
       run: |
+        ISPC_PACKAGE=$(ls ${GITHUB_WORKSPACE}/ispc-*-linux.tar.gz)
         mkdir build
         cd build
-        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-trunk-linux.tar.gz" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
+        cmake -DISPC_URL="${ISPC_PACKAGE}" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
         cmake --build .
 
-  build-ospray-superbuild-windows:
-    needs: win-build-ispc
+    - name: Upload RK install
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: rk_install_linux
+        path: build/install
+
+  test-oidn-ubuntu-2204:
+    needs: build-rk-superbuild-ubuntu-2204
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - name: oidnTest
+            cmd: ./bin/oidnTest
+          - name: oidnBenchmark
+            cmd: ./bin/oidnBenchmark -v 1
+
+    steps:
+    - name: Install packages
+      run: |
+        apt -y update && apt -y install libtbb-dev libglfw3-dev
+
+    - name: Download RK install
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: rk_install_linux
+
+    - name: Run ${{ matrix.test.name }}
+      run: |
+        chmod +x ./bin/*
+        export LD_LIBRARY_PATH=$PWD/lib:$LD_LIBRARY_PATH
+        ${{ matrix.test.cmd }}
+
+  build-ospray-windows:
+    needs: build-ispc-windows
     runs-on: windows-2022
 
     steps:
@@ -126,8 +191,10 @@ jobs:
 
     - name: Add ISPC to the PATH
       run: |
-        Expand-Archive $pwd\ispc-trunk-windows.zip -DestinationPath $pwd
-        echo "$pwd\ispc-trunk-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $zip = Get-ChildItem -Filter "ispc-*-windows.zip" | Select-Object -First 1
+        Expand-Archive $zip.FullName -DestinationPath $pwd
+        $ispcDir = Get-ChildItem -Directory -Filter "ispc-*-windows" | Select-Object -First 1
+        echo "$pwd\$($ispcDir.Name)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     - name: Build ospray superbuild
       run: |
@@ -135,3 +202,71 @@ jobs:
         cd build
         cmake -G "Visual Studio 17 2022" -A x64 ../scripts/superbuild -DDOWNLOAD_ISPC=OFF -DCMAKE_BUILD_TYPE=Release -DDEPENDENCIES_BUILD_TYPE=Release
         cmake --build . --config Release
+
+  build-oidn-linux-aarch64:
+    needs: build-ispc-aarch64
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: arm64v8/ubuntu:22.04
+
+    steps:
+    - name: Install packages
+      run: |
+        apt -y update && apt -y install build-essential cmake git git-lfs python3 libtbb2-dev
+
+    - name: Clone OIDN repo
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        repository: RenderKit/oidn
+        submodules: true
+        lfs: true
+
+    - name: Download ISPC package
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: ispc_linux_aarch64_package
+
+    - name: Build OIDN
+      run: |
+        tar xf ispc-trunk-linux.tar.gz
+        export PATH="${GITHUB_WORKSPACE}/ispc-trunk-linux/bin:$PATH"
+        mkdir build
+        cd build
+        cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install -DOIDN_INSTALL_DEPENDENCIES=ON -DOIDN_ZIP_MODE=ON ..
+        make -j$(nproc) install
+
+    - name: Upload OIDN install
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: oidn_install_linux_aarch64
+        path: install
+
+  test-oidn-linux-aarch64:
+    needs: build-oidn-linux-aarch64
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: arm64v8/ubuntu:22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - name: oidnTest
+            cmd: ./bin/oidnTest
+          - name: oidnBenchmark
+            cmd: ./bin/oidnBenchmark -v 1
+
+    steps:
+    - name: Install packages
+      run: |
+        apt -y update && apt -y install libtbb2-dev
+
+    - name: Download OIDN install
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      with:
+        name: oidn_install_linux_aarch64
+
+    - name: Run ${{ matrix.test.name }}
+      run: |
+        chmod +x ./bin/*
+        export LD_LIBRARY_PATH=$PWD/lib:$LD_LIBRARY_PATH
+        ${{ matrix.test.cmd }}

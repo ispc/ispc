@@ -11,44 +11,88 @@ on:
     types: [opened, assigned]
   pull_request_review:
     types: [submitted]
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Prompt for Claude"
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      prompt:
+        description: "Prompt for Claude"
+        required: true
+        type: string
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
 
 permissions: {}
 
+env:
+  LLVM_VERSION: "21.1"
+  LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
 jobs:
   claude:
+    # Only run in the main ispc/ispc repo where the secret is available.
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
-    runs-on: ubuntu-latest
+      github.repository == 'ispc/ispc' &&
+      (github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_call' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+        (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
+        (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') &&
+        (github.event.review.author_association == 'OWNER' || github.event.review.author_association == 'MEMBER')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        (github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER')))
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
     permissions:
-      contents: read
+      contents: write # Required to push branches and create commits
       pull-requests: write
       issues: write
-      id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build bison flex m4 \
+            libc6-dev libc6-dev-i386 g++-multilib \
+            libtbb-dev libstdc++6
+
+      - name: Download LLVM
+        run: |
+          wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 \
+            "$LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR"
+          tar xf "$LLVM_TAR"
+          rm -f "$LLVM_TAR"
+          echo "$GITHUB_WORKSPACE/bin-$LLVM_VERSION/bin" >> "$GITHUB_PATH"
 
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@8a1c4371755898f67cd97006ba7c97702d5fc4bf # v1.0.0
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # This is an optional setting that allows Claude to read CI results on PRs
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call
+          track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
+          # prompt is only used for workflow_dispatch/workflow_call; empty for issue/PR events
+          prompt: ${{ inputs.prompt || '' }}
+          # Required for Claude to access CI workflow logs
           additional_permissions: |
             actions: read
-
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
-          claude_args: '--allowedTools Bash(clang-format:*)'
+          # Allow tools for building, testing, and code formatting
+          claude_args: |
+            --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *:*),Bash(gh *:*),Bash(cmake *:*),Bash(*cmake *:*),Bash(clang-format *:*),Bash(*/ispc *:*),Bash(./build/*:*),Bash(build/*:*),Bash(*run_tests.py *:*),Bash(python3 *:*),Bash(curl *:*),Bash(jq *:*),Bash(rm *:*),Bash(ls *:*),Bash(mkdir *:*),Bash(cp *:*),Bash(mv *:*),Bash(touch *:*),Bash(diff *:*),Bash(cat *:*),Bash(head *:*),Bash(tail *:*),Bash(wc *:*),Bash(pwd *:*),Bash(which *:*),Bash(realpath *:*),Bash(llvm-* *:*),Bash(opt *:*),Bash(llc *:*),Bash(FileCheck *:*)"
 

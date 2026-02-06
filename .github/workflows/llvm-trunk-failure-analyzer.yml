@@ -1,0 +1,240 @@
+# Copyright 2024-2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Analyzes failures in the LLVM trunk nightly workflow using Claude Code.
+
+name: LLVM Trunk Failure Analyzer
+
+on:
+  # zizmor: ignore[dangerous-triggers] - workflow_run is intentionally used to analyze nightly failures
+  workflow_run:
+    workflows: ["Nightly Linux tests / LLVM trunk"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Workflow run ID to analyze (leave empty for latest failed run)'
+        required: false
+        type: string
+
+permissions: {}
+
+jobs:
+  analyze-failure:
+    # Disabling this workflow for non ispc/ispc repo, since number of build submissions is limited.
+    # Only run if the nightly workflow failed, or if manually triggered
+    if: github.repository == 'ispc/ispc' && (github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+
+    outputs:
+      issue_number: ${{ steps.create-issue.outputs.issue_number }}
+
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      with:
+        node-version: '20'
+
+    - name: Determine run ID to analyze
+      id: get-run-id
+      env:
+        GH_TOKEN: ${{ github.token }}
+        INPUT_RUN_ID: ${{ inputs.run_id }}
+        WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+      run: |
+        if [ -n "$INPUT_RUN_ID" ]; then
+          RUN_ID="$INPUT_RUN_ID"
+        elif [ -n "$WORKFLOW_RUN_ID" ]; then
+          RUN_ID="$WORKFLOW_RUN_ID"
+        else
+          # Find the latest failed run of the nightly workflow
+          RUN_ID=$(gh run list --workflow="linux-nightly-trunk.yml" --status=failure --limit=1 --json databaseId --jq '.[0].databaseId')
+        fi
+        echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+        echo "Analyzing run ID: $RUN_ID"
+
+    - name: Download LLVM SHA artifact from failed run
+      id: download-sha
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
+        echo "Downloading LLVM SHA artifact from run $RUN_ID"
+
+        # Download the artifact
+        gh run download "$RUN_ID" --name llvm_commit_sha --dir ./artifacts || {
+          echo "Failed to download LLVM SHA artifact"
+          echo "current_sha=unknown" >> "$GITHUB_OUTPUT"
+          exit 0
+        }
+
+        if [ -f "./artifacts/llvm-commit-sha.txt" ]; then
+          CURRENT_SHA=$(cat ./artifacts/llvm-commit-sha.txt)
+          echo "Current LLVM SHA: $CURRENT_SHA"
+          echo "current_sha=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
+        else
+          echo "LLVM SHA file not found"
+          echo "current_sha=unknown" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Get previous successful run's LLVM SHA
+      id: get-previous-sha
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Find the latest successful run before the failed one
+        FAILED_RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
+        FAILED_RUN_DATE=$(gh run view "$FAILED_RUN_ID" --json createdAt --jq '.createdAt')
+
+        echo "Looking for successful runs before $FAILED_RUN_DATE"
+
+        # Get successful runs and find one before the failed run
+        PREV_RUN_ID=$(gh run list --workflow="linux-nightly-trunk.yml" --status=success --limit=5 --json databaseId,createdAt \
+          --jq ".[] | select(.createdAt < \"$FAILED_RUN_DATE\") | .databaseId" | head -1)
+
+        if [ -z "$PREV_RUN_ID" ]; then
+          echo "No previous successful run found"
+          echo "previous_sha=unknown" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "Previous successful run ID: $PREV_RUN_ID"
+
+        # Download artifact from previous run
+        gh run download "$PREV_RUN_ID" --name llvm_commit_sha --dir ./prev_artifacts || {
+          echo "Failed to download previous LLVM SHA artifact"
+          echo "previous_sha=unknown" >> "$GITHUB_OUTPUT"
+          exit 0
+        }
+
+        if [ -f "./prev_artifacts/llvm-commit-sha.txt" ]; then
+          PREV_SHA=$(cat ./prev_artifacts/llvm-commit-sha.txt)
+          echo "Previous LLVM SHA: $PREV_SHA"
+          echo "previous_sha=$PREV_SHA" >> "$GITHUB_OUTPUT"
+        else
+          echo "Previous LLVM SHA file not found"
+          echo "previous_sha=unknown" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Get recent ISPC commits
+      id: get-ispc-commits
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # Get ISPC commits from last 24 hours
+        SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+        echo "Getting ISPC commits since $SINCE"
+
+        COMMITS=$(git log --since="$SINCE" --oneline HEAD 2>/dev/null || echo "")
+        if [ -z "$COMMITS" ]; then
+          # Fallback: get last 5 commits
+          COMMITS=$(git log --oneline -5 HEAD)
+        fi
+
+        echo "Recent ISPC commits:"
+        echo "$COMMITS"
+
+        # Save to file for the agent
+        echo "$COMMITS" > ispc-recent-commits.txt
+
+    - name: Run Claude Code analyzer
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
+        CURRENT_SHA="${{ steps.download-sha.outputs.current_sha }}"
+        PREVIOUS_SHA="${{ steps.get-previous-sha.outputs.previous_sha }}"
+
+        echo "=== LLVM Trunk Failure Analysis ==="
+        echo "Failed run ID: $RUN_ID"
+        echo "Current LLVM SHA: $CURRENT_SHA"
+        echo "Previous LLVM SHA: $PREVIOUS_SHA"
+        echo "=================================="
+
+        # Run Claude Code with the analyzer skill and capture output
+        if ! npx @anthropic-ai/claude-code --print \
+          "/analyze-llvm-trunk --run-id $RUN_ID --current-sha $CURRENT_SHA --previous-sha $PREVIOUS_SHA" \
+          > analysis_output.txt 2>&1; then
+          echo "::error::Claude Code analysis failed"
+          echo "=== Analysis Output ==="
+          cat analysis_output.txt
+          exit 1
+        fi
+        cat analysis_output.txt
+
+    - name: Create GitHub issue with analysis
+      id: create-issue
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
+        CURRENT_SHA="${{ steps.download-sha.outputs.current_sha }}"
+        RUN_URL="https://github.com/${{ github.repository }}/actions/runs/$RUN_ID"
+
+        # Check if an open issue already exists for LLVM trunk failure
+        EXISTING_ISSUE=$(gh issue list --label "llvm-trunk" --state open --limit 1 --json number --jq '.[0].number')
+
+        if [ -n "$EXISTING_ISSUE" ]; then
+          echo "Updating existing issue #$EXISTING_ISSUE"
+          {
+            echo "## New Failure Analysis ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            echo ""
+            echo "**Failed run:** $RUN_URL"
+            echo "**LLVM SHA:** \`$CURRENT_SHA\`"
+            echo ""
+            echo "<details>"
+            echo "<summary>Analysis Output</summary>"
+            echo ""
+            cat analysis_output.txt
+            echo ""
+            echo "</details>"
+            echo ""
+            echo "---"
+            echo "Generated with [Claude Code](https://claude.com/claude-code)"
+          } > issue_body.md
+          gh issue comment "$EXISTING_ISSUE" --body-file issue_body.md
+          echo "issue_number=$EXISTING_ISSUE" >> "$GITHUB_OUTPUT"
+        else
+          echo "Creating new issue"
+          {
+            echo "## LLVM Trunk Build Failure"
+            echo ""
+            echo "**Failed run:** $RUN_URL"
+            echo "**LLVM SHA:** \`$CURRENT_SHA\`"
+            echo ""
+            echo "## Analysis"
+            echo ""
+            cat analysis_output.txt
+            echo ""
+            echo "---"
+            echo "Generated with [Claude Code](https://claude.com/claude-code)"
+          } > issue_body.md
+          ISSUE_NUMBER=$(gh issue create \
+            --title "LLVM trunk nightly build failure" \
+            --label "llvm-trunk" \
+            --body-file issue_body.md | grep -oE '[0-9]+$')
+          echo "Created issue #$ISSUE_NUMBER"
+          echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+        fi
+
+  request-fix:
+    # Request Claude to fix LLVM trunk failures via reusable workflow
+    needs: analyze-failure
+    if: success() && needs.analyze-failure.outputs.issue_number != ''
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+    uses: ./.github/workflows/claude.yml
+    with:
+      prompt: "Fix issue #${{ needs.analyze-failure.outputs.issue_number }} and create a PR"
+    secrets: inherit

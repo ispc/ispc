@@ -42,7 +42,7 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ispc-fresh-build
-        path: build/ispc-trunk-linux.tar.gz
+        path: build/ispc-*-linux.tar.gz
 
   build-openmoonray:
     name: Build OpenMoonRay AUR package
@@ -55,7 +55,12 @@ jobs:
     steps:
     - name: Setup Arch Linux
       run: |
-        pacman -Syu --noconfirm
+        pacman-key --init
+        pacman-key --populate archlinux
+        # Update keyring first, then re-populate to trust new signing keys
+        pacman -Sy --noconfirm archlinux-keyring
+        pacman-key --populate archlinux
+        pacman -Su --noconfirm
         pacman -S --needed --noconfirm base-devel git sudo
 
     - name: Create build user
@@ -72,8 +77,10 @@ jobs:
     - name: Install fresh ISPC
       run: |
         cd /tmp/ispc-build
-        tar -xzf ispc-trunk-linux.tar.gz
-        cp -r ispc-trunk-linux/bin/* /usr/local/bin/
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar -xzf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        cp -r "$ISPC_DIR"/bin/* /usr/local/bin/
         chmod +x /usr/local/bin/ispc
         ispc --version
 

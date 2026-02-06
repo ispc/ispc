@@ -1,7 +1,7 @@
 {
   "vendor": {
     "ispc.github.io": {
-      "license_comment1": "Copyright (c) 2023-2025, Intel Corporation",
+      "license_comment1": "Copyright (c) 2023-2026, Intel Corporation",
       "license_comment2": "SPDX-License-Identifier: BSD-3-Clause"
     }
   },
@@ -14,12 +14,12 @@
     {
       "name": "dependency-versions-os",
       "cacheVariables": {
-        "LLVM_VERSION": "20.1",
+        "LLVM_VERSION": "21.1",
         "LLVM_URL": "https://github.com/llvm/llvm-project.git",
         "VC_INTRINSICS_URL": "https://github.com/intel/vc-intrinsics.git",
-        "VC_INTRINSICS_SHA": "b980474c99859f7e4eb157828c5e80202b062177",
+        "VC_INTRINSICS_SHA": "ddfa8254eb8d6e671070c0699d1777b333f830c6",
         "SPIRV_TRANSLATOR_URL": "https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git",
-        "SPIRV_TRANSLATOR_SHA": "6dd8f2a1681a27f16c53d932d2765920f312aeb2",
+        "SPIRV_TRANSLATOR_SHA": "cce2bafbe48ab10fa9064b360f69f0bf50ada11a",
         "L0_URL": "https://github.com/oneapi-src/level-zero.git",
         "L0_TAG": "v1.20.2",
         "ISPC_CORPUS_URL": "null"

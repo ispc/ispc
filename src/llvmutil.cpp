@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -11,6 +11,7 @@
 #include "llvmutil.h"
 #include "type.h"
 
+#include <cstdlib>
 #include <map>
 #include <set>
 #include <vector>
@@ -1248,8 +1249,8 @@ static bool lVectorIsLinearConstantInts(llvm::ConstantDataVector *cv, int vector
 static bool lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength, int stride,
                                std::vector<llvm::PHINode *> &seenPhis) {
     // Is the first operand a constant integer value splatted across all of
-    // the lanes?
-    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op0);
+    // the lanes? Handle both ConstantDataVector and ConstantVector.
+    llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(op0);
     if (cv == nullptr) {
         return false;
     }
@@ -1266,14 +1267,15 @@ static bool lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLen
 
     // If the splat value doesn't evenly divide the stride we're looking
     // for, there's no way that we can get the linear sequence we're
-    // looking or.
+    // looking for. Use absolute value to handle negative strides.
     int64_t splatVal = splat->getSExtValue();
-    if (splatVal == 0 || splatVal > stride || (stride % splatVal) != 0) {
+    int64_t absStride = std::abs(stride);
+    if (splatVal == 0 || splatVal > absStride || (absStride % splatVal) != 0) {
         return false;
     }
 
     // Check to see if the other operand is a linear vector with stride
-    // given by stride/splatVal.
+    // given by stride/splatVal (preserving the sign of stride).
     return lVectorIsLinear(op1, vectorLength, (int)(stride / splatVal), seenPhis);
 }
 
@@ -1283,8 +1285,8 @@ static bool lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLen
 static bool lCheckShlForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength, int stride,
                                std::vector<llvm::PHINode *> &seenPhis) {
     // Is the second operand a constant integer value splatted across all of
-    // the lanes?
-    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op1);
+    // the lanes? Handle both ConstantDataVector and ConstantVector.
+    llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(op1);
     if (cv == nullptr) {
         return false;
     }
@@ -1301,14 +1303,21 @@ static bool lCheckShlForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLen
 
     // If (1 << the splat value) doesn't evenly divide the stride we're
     // looking for, there's no way that we can get the linear sequence
-    // we're looking or.
-    int64_t equivalentMul = (1LL << splat->getSExtValue());
-    if (equivalentMul > stride || (stride % equivalentMul) != 0) {
+    // we're looking for. Use absolute value to handle negative strides.
+    // Guard against negative shifts (UB) and shifts >= 63 which would make
+    // equivalentMul negative (1LL << 63 = INT64_MIN).
+    int64_t shiftVal = splat->getSExtValue();
+    if (shiftVal < 0 || shiftVal >= 63) {
+        return false;
+    }
+    int64_t equivalentMul = (1LL << shiftVal);
+    int64_t absStride = std::abs(stride);
+    if (equivalentMul > absStride || (absStride % equivalentMul) != 0) {
         return false;
     }
 
     // Check to see if the first operand is a linear vector with stride
-    // given by stride/splatVal.
+    // given by stride/equivalentMul (preserving the sign of stride).
     return lVectorIsLinear(op0, vectorLength, (int)(stride / equivalentMul), seenPhis);
 }
 
@@ -1380,10 +1389,19 @@ static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride, std::v
             bool l1 = lVectorIsLinear(op1, vectorLength, stride, seenPhis);
             return (e0 && l1);
         } else if (bop->getOpcode() == llvm::Instruction::Sub) {
-            // For subtraction, we only match:
-            // programIndex - unif -> ascending linear seqeuence
-            return (lVectorIsLinear(bop->getOperand(0), vectorLength, stride, seenPhis) &&
-                    lVectorValuesAllEqual(bop->getOperand(1), vectorLength, seenPhis));
+            // For subtraction, we match two patterns:
+            // programIndex - unif -> ascending linear sequence (positive stride)
+            if (lVectorIsLinear(op0, vectorLength, stride, seenPhis) &&
+                lVectorValuesAllEqual(op1, vectorLength, seenPhis)) {
+                return true;
+            }
+            // unif - programIndex -> descending linear sequence (negative stride)
+            // This enables optimization of backward memory access patterns like dst[size-1-i]
+            if (lVectorValuesAllEqual(op0, vectorLength, seenPhis) &&
+                lVectorIsLinear(op1, vectorLength, -stride, seenPhis)) {
+                return true;
+            }
+            return false;
         } else if (bop->getOpcode() == llvm::Instruction::Mul) {
             // Multiplies are a bit trickier, so are handled in a separate
             // function.

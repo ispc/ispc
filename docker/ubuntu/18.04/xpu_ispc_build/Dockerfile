@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2024-2025, Intel Corporation
+#  Copyright (c) 2024-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -32,9 +32,6 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     apt-get -y update && apt-get --no-install-recommends install -y "$CROSS_LIBS" && \
     rm -rf /var/lib/apt/lists/*
 
-# Install TBB (required for ISPCRT).
-RUN if [ "$XE_DEPS" == "ON" ]; then apt-get -y update && apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
-
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
         export CMAKE_URL="https://cmake.org/files/v3.23/cmake-3.23.5-linux-x86_64.sh"; \
@@ -43,6 +40,31 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
     sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
+
+# Install TBB (required for ISPCRT).
+# Use oneAPI TBB on x86 (to avoid enum-constexpr-conversion errors with LLVM 21+)
+# Build TBB from source on ARM64 (Intel apt packages are x86-only)
+RUN if [ "$XE_DEPS" == "ON" ]; then \
+        if [[ $(uname -m) =~ "x86" ]]; then \
+            wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor -o /usr/share/keyrings/intel-oneapi-archive-keyring.gpg && \
+            echo "deb [signed-by=/usr/share/keyrings/intel-oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | tee /etc/apt/sources.list.d/oneAPI.list && \
+            apt-get -y update && apt-get --no-install-recommends install -y intel-oneapi-tbb-devel && \
+            rm -rf /var/lib/apt/lists/*; \
+        else \
+            git clone --depth 1 --branch v2021.13.0 https://github.com/oneapi-src/oneTBB.git /tmp/oneTBB && \
+            cmake -S /tmp/oneTBB -B /tmp/oneTBB/build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DTBB_TEST=OFF \
+                -DCMAKE_INSTALL_PREFIX=/opt/intel/oneapi/tbb/2021.13 && \
+            cmake --build /tmp/oneTBB/build -j"$(nproc)" && \
+            cmake --install /tmp/oneTBB/build && \
+            rm -rf /tmp/oneTBB && \
+            ln -s /opt/intel/oneapi/tbb/2021.13 /opt/intel/oneapi/tbb/latest; \
+        fi; \
+    fi
+
+# Set TBB_ROOT to point to oneAPI TBB installation
+ENV TBB_ROOT=/opt/intel/oneapi/tbb/latest
 
 # Zlib is required to build Python3
 RUN apt-get -y update && \
