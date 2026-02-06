@@ -254,14 +254,11 @@ static ISPCTarget lGetSystemISA() {
     case Target::ISA::GNR_AVX512:
         return ISPCTarget::avx512gnr_x16;
     case Target::ISA::NVL_AVX10_2:
-        // Return DMR/SPR target for LLVM versions < 22.0
-        // TODO: NVL is DMR without AMX so if ISPC supports AMX natively, this should be revisited.
+        // Return ICL target for LLVM versions < 22.0
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
         return ISPCTarget::avx10_2nvl_x8;
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-        return ISPCTarget::avx10_2dmr_x8;
 #else
-        return ISPCTarget::avx512spr_x8;
+        return ISPCTarget::avx512icl_x8;
 #endif
     case Target::ISA::DMR_AVX10_2:
         // Return SPR target for LLVM versions < 20.0
@@ -704,9 +701,10 @@ class AllCPUs {
             Set(CPU_LNL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_ARL, CPU_None);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
-        compat[CPU_NVL] = Set(CPU_NVL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
-                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_ARL,
-                              CPU_LNL, CPU_SPR, CPU_GNR, CPU_DMR, CPU_None);
+        // NVL doesn't have AMX, so exclude AMX-capable CPUs (SPR, GNR, DMR)
+        compat[CPU_NVL] =
+            Set(CPU_NVL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_ARL, CPU_LNL, CPU_None);
 #endif
         compat[CPU_TGL] =
             Set(CPU_TGL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
@@ -1722,6 +1720,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd});
+        // DMR has AMX capabilities, NVL does not
+        setCapability(TargetCapability::AmxTile, (m_ispc_target == ISPCTarget::avx10_2dmr_x4));
+        setCapability(TargetCapability::AmxInt8, (m_ispc_target == ISPCTarget::avx10_2dmr_x4));
+        setCapability(TargetCapability::AmxBf16, (m_ispc_target == ISPCTarget::avx10_2dmr_x4));
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx10_2dmr_x4));
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
         CPUfromISA = (m_ispc_target == ISPCTarget::avx10_2dmr_x4) ? CPU_DMR : CPU_NVL;
 #else
@@ -1746,6 +1749,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd});
+        // DMR has AMX capabilities, NVL does not
+        setCapability(TargetCapability::AmxTile, (m_ispc_target == ISPCTarget::avx10_2dmr_x8));
+        setCapability(TargetCapability::AmxInt8, (m_ispc_target == ISPCTarget::avx10_2dmr_x8));
+        setCapability(TargetCapability::AmxBf16, (m_ispc_target == ISPCTarget::avx10_2dmr_x8));
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx10_2dmr_x8));
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
         CPUfromISA = (m_ispc_target == ISPCTarget::avx10_2dmr_x8) ? CPU_DMR : CPU_NVL;
 #else
@@ -1770,6 +1778,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd});
+        // DMR has AMX capabilities, NVL does not
+        setCapability(TargetCapability::AmxTile, (m_ispc_target == ISPCTarget::avx10_2dmr_x16));
+        setCapability(TargetCapability::AmxInt8, (m_ispc_target == ISPCTarget::avx10_2dmr_x16));
+        setCapability(TargetCapability::AmxBf16, (m_ispc_target == ISPCTarget::avx10_2dmr_x16));
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx10_2dmr_x16));
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
         CPUfromISA = (m_ispc_target == ISPCTarget::avx10_2dmr_x16) ? CPU_DMR : CPU_NVL;
 #else
@@ -1793,6 +1806,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection});
+        // DMR has AMX capabilities, NVL does not
+        setCapability(TargetCapability::AmxTile, (m_ispc_target == ISPCTarget::avx10_2dmr_x32));
+        setCapability(TargetCapability::AmxInt8, (m_ispc_target == ISPCTarget::avx10_2dmr_x32));
+        setCapability(TargetCapability::AmxBf16, (m_ispc_target == ISPCTarget::avx10_2dmr_x32));
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx10_2dmr_x32));
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
         CPUfromISA = (m_ispc_target == ISPCTarget::avx10_2dmr_x32) ? CPU_DMR : CPU_NVL;
 #else
@@ -1814,6 +1832,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection});
+        // DMR has AMX capabilities, NVL does not
+        setCapability(TargetCapability::AmxTile, (m_ispc_target == ISPCTarget::avx10_2dmr_x64));
+        setCapability(TargetCapability::AmxInt8, (m_ispc_target == ISPCTarget::avx10_2dmr_x64));
+        setCapability(TargetCapability::AmxBf16, (m_ispc_target == ISPCTarget::avx10_2dmr_x64));
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx10_2dmr_x64));
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
         CPUfromISA = (m_ispc_target == ISPCTarget::avx10_2dmr_x64) ? CPU_DMR : CPU_NVL;
 #else
@@ -2782,7 +2805,7 @@ const char *Target::ISAToString(ISA isa) {
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
     case Target::NVL_AVX10_2:
-        return "avx10.2nvl";
+        return "avx10_2nvl";
 #endif
 #ifdef ISPC_XE_ENABLED
     case Target::XELP:

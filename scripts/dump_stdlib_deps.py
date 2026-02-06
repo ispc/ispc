@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2025, Intel Corporation
+#  Copyright (c) 2025-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -170,12 +170,12 @@ class ISPCTarget:
         'avx10.2dmr-x32': 'avx512gnr-x32',
         'avx10.2dmr-x64': 'avx512gnr-x64',
 
-        # AVX10.2 NVL targets
-        'avx10.2nvl-x4': 'avx10.2dmr-x4',
-        'avx10.2nvl-x8': 'avx10.2dmr-x8',
-        'avx10.2nvl-x16': 'avx10.2dmr-x16',
-        'avx10.2nvl-x32': 'avx10.2dmr-x32',
-        'avx10.2nvl-x64': 'avx10.2dmr-x64',
+        # AVX10.2 NVL targets (NVL doesn't have AMX, so inherit it from ICL)
+        'avx10.2nvl-x4': 'avx512icl-x4',
+        'avx10.2nvl-x8': 'avx512icl-x8',
+        'avx10.2nvl-x16': 'avx512icl-x16',
+        'avx10.2nvl-x32': 'avx512icl-x32',
+        'avx10.2nvl-x64': 'avx512icl-x64',
 
         # AVX512 hierarchy
         'avx512gnr-x4': 'avx512spr-x4',

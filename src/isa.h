@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2025-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -220,7 +220,7 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
             int dmr = gnr && avx10_2 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 && avxvnniint16 &&
                       amxcomplex && sha512 && sm3 && sm4;
             // Nova Lake:              NVL = ARL + AVX10_2 + APX + ...
-            int nvl = arl && avx10_2 && apx && prefetchi && avx512_fp16;
+            int nvl = arl && avx10_2 && apx && avx512_fp16;
 
             if (dmr) {
                 return DMR_AVX10_2;
