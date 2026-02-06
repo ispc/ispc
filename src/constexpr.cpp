@@ -851,7 +851,10 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
     }
     if (auto *be = llvm::dyn_cast<BinaryExpr>(expr)) {
         if (be->op == BinaryExpr::Comma) {
-            (void)EvalExpr(be->arg0);
+            ConstExpr *lhs = EvalExpr(be->arg0);
+            if (lhs == nullptr) {
+                return nullptr;
+            }
             return EvalExpr(be->arg1);
         }
         ConstExpr *lhs = EvalExpr(be->arg0);
