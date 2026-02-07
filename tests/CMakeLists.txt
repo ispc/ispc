@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2025, Intel Corporation
+#  Copyright (c) 2018-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -22,6 +22,7 @@ list(APPEND LIT_ARGS "-Dispc_llvm_version_number=${LLVM_VERSION_NUMBER}")
 list(APPEND LIT_ARGS "-Dx86_enabled=$<IF:$<BOOL:${X86_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Darm_enabled=$<IF:$<BOOL:${ARM_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Driscv_enabled=$<IF:$<BOOL:${RISCV_ENABLED}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dppc64_enabled=$<IF:$<BOOL:${PPC64_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dwasm_enabled=$<IF:$<BOOL:${WASM_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dxe_enabled=$<IF:$<BOOL:${XE_ENABLED}>,ON,OFF>")
 # ISPC enabled OS.

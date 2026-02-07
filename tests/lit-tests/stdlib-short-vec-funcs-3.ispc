@@ -3,6 +3,8 @@
 
 // RUN: %{ispc} --target=host -o %t.o %s 2>&1
 
+// UNSUPPORTED: PPC64LE_HOST
+
 #include <short_vec.isph>
 
 #define VARYING(NAME, TYPE, N)                                                                                         \

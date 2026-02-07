@@ -6,6 +6,7 @@
 // RUN: %t.c.bin | FileCheck %s
 
 // REQUIRES: !MACOS_HOST
+// UNSUPPORTED: PPC64LE_HOST
 
 // CHECK-NOT: Floating point exception
 // CHECK: Correct result

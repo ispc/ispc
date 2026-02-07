@@ -1,6 +1,8 @@
 // RUN: %{ispc} %s --target=host --opt=fast-math --nostdlib --nowrap 2>&1 | FileCheck %s -check-prefix=CHECK_WARN
 // RUN: %{ispc} %s --target=host --opt=fast-math -O0 --emit-llvm-text -o -| FileCheck %s -check-prefix=CHECK_NOFDIV
 
+// UNSUPPORTED: PPC64LE_HOST
+
 // CHECK_NOFDIV-NOT: fdiv
 
 

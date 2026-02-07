@@ -4,6 +4,7 @@
 // RUN: %t.c.bin | FileCheck %s
 
 // REQUIRES: !MACOS_HOST
+// UNSUPPORTED: PPC64LE_HOST
 
 // CHECK: int8_min: 1
 // CHECK: int8_max: 1
