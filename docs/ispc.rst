@@ -1246,7 +1246,7 @@ To compile for Intel Xe LP platform:
    ispc foo.ispc -o foo.bin --target=xelp-x16 --device=tgllp --emit-zebin
 
 Currently-supported architectures are ``x86``, ``x86-64``, ``xe64``,
-``arm``, and ``aarch64``.
+``arm``, ``aarch64``, and ``ppc64le``.
 
 The target CPU determines both the default instruction set used as well as
 which CPU architecture the code is tuned for.  ``ispc --help`` provides a
