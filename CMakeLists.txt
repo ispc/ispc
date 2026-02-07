@@ -994,6 +994,7 @@ function(add_ispc_slim NAME)
 
     # Defines targets for generic builtin implementations
     generate_generic_builtins(${NAME})
+    configure_ispc_obj(generic-target)
 
     # stdlib, stdlibs-bc, stdlibs-cpp targets are created in Stdlib.cmake
     configure_ispc_obj(stdlib)
@@ -1046,7 +1047,6 @@ if (ISPC_SLIM_BINARY)
     message(STATUS "ISPC will be built as a slim binary")
 else()
     add_ispc_slim(ispc-slim)
-    configure_ispc_obj(generic-target)
 
     add_executable(ispc src/main.cpp src/binary_composite.cpp)
     configure_ispc_exe(ispc)

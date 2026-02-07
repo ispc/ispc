@@ -842,7 +842,7 @@ void lPrintTargetInfo(const std::string &proc_unit_type, const std::string &trip
     printf("Target Feature String: %s\n", feature.c_str());
 }
 
-Arch lGetArchFromTarget(ISPCTarget target) {
+Arch lGetArchFromTarget(ISPCTarget target, DeviceType CPUID) {
 #ifdef ISPC_ARM_ENABLED
     if (ISPCTargetIsNeon(target)) {
 #if defined(__arm__)
@@ -858,7 +858,10 @@ Arch lGetArchFromTarget(ISPCTarget target) {
     }
 #endif
 #ifdef ISPC_PPC64_ENABLED
-    if (ISPCTargetIsGeneric(target)) {
+    if (CPUID == CPU_PPC64LE_Generic) {
+        return Arch::ppc64le;
+    }
+    if (ISPCTargetIsGeneric(target) && CPUID == CPU_None) {
 #if defined(ISPC_HOST_IS_PPC64LE)
         return Arch::ppc64le;
 #endif
@@ -1140,7 +1143,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     }
 
     if (arch == Arch::none) {
-        arch = lGetArchFromTarget(m_ispc_target);
+        arch = lGetArchFromTarget(m_ispc_target, CPUID);
     }
 
     bool error = false;
