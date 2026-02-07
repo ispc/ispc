@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2025, Intel Corporation
+#  Copyright (c) 2018-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -9,13 +9,19 @@
 function(add_ispc_example)
     set(options USE_COMMON_SETTINGS)
     set(oneValueArgs NAME ISPC_SRC_NAME DATA_DIR)
-    set(multiValueArgs ISPC_IA_TARGETS ISPC_ARM_TARGETS ISPC_FLAGS TARGET_SOURCES LIBRARIES DATA_FILES RUN_ARGS)
+    set(multiValueArgs ISPC_IA_TARGETS ISPC_ARM_TARGETS ISPC_PPC64LE_TARGETS ISPC_FLAGS TARGET_SOURCES LIBRARIES DATA_FILES RUN_ARGS)
     cmake_parse_arguments("example" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     if ("${ISPC_ARCH}" MATCHES "x86")
         string(REPLACE "," ";" ISPC_TARGETS ${example_ISPC_IA_TARGETS})
     elseif ("${ISPC_ARCH}" STREQUAL "arm" OR "${ISPC_ARCH}" STREQUAL "aarch64")
         string(REPLACE "," ";" ISPC_TARGETS ${example_ISPC_ARM_TARGETS})
+    elseif ("${ISPC_ARCH}" STREQUAL "ppc64le")
+        if (example_ISPC_PPC64LE_TARGETS)
+            string(REPLACE "," ";" ISPC_TARGETS ${example_ISPC_PPC64LE_TARGETS})
+        else()
+            set(ISPC_TARGETS "generic-i32x4")
+        endif()
     else()
         message(FATAL_ERROR "Unknown architecture ${ISPC_ARCH}")
     endif()
@@ -34,8 +40,10 @@ function(add_ispc_example)
     target_compile_options(${example_NAME} PRIVATE $<$<COMPILE_LANGUAGE:ISPC>:--arch=${ISPC_ARCH}>)
 
     if (UNIX)
-        set(arch_flag "-m${ISPC_ARCH_BIT}")
-        target_compile_options(${example_NAME} PRIVATE $<$<COMPILE_LANGUAGE:C,CXX>:${arch_flag}>)
+        if ("${ISPC_ARCH}" MATCHES "x86")
+            set(arch_flag "-m${ISPC_ARCH_BIT}")
+            target_compile_options(${example_NAME} PRIVATE $<$<COMPILE_LANGUAGE:C,CXX>:${arch_flag}>)
+        endif()
     elseif (WIN32 AND MSVC)
         target_compile_options(${example_NAME} PRIVATE  $<$<COMPILE_LANGUAGE:C,CXX>:/fp:fast /Oi>)
     endif()
