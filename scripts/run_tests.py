@@ -662,7 +662,7 @@ def run_test(testname, host, target, jit_lib_path=None):
                     if options.wrapexe and options.wrapexe.startswith('qemu'):
                         gcc_arch += ' -static'
                 elif target.arch == 'ppc64le':
-                    gcc_arch = ''
+                    gcc_arch = '-mcpu=power8'
                     if options.wrapexe and options.wrapexe.startswith('qemu'):
                         gcc_arch += ' -static'
                 elif target.arch == 'wasm64':
