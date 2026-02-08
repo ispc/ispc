@@ -62,7 +62,8 @@ static const char *lGetSystemISA() {
     }
     const char *isa = isa_strings[isa_id];
     if (isa_id >= SPR_AVX512) {
-        snprintf(amx_isa_string, sizeof(amx_isa_string), "%s (AMX %s)", isa, __os_enabled_amx_support() ? "on" : "off");
+        snprintf(amx_isa_string, sizeof(amx_isa_string), "%s (AMX %s)", isa,
+                 __os_enabled_amx_support() ? "on" : "off");
         return amx_isa_string;
     }
     return isa;
