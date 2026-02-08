@@ -65,3 +65,13 @@ jobs:
     - name: Run lit tests
       run: |
         cmake --build build --target check-all
+
+    - name: Run PPC64LE tests
+      run: |
+        PATH="$PWD"/build/bin:"$PATH" \
+        python3 scripts/run_tests.py \
+          --target=generic-i32x4 \
+          --arch=ppc64le \
+          --wrap-exe="qemu-ppc64le" \
+          --compiler=powerpc64le-linux-gnu-g++ \
+          -o O2
