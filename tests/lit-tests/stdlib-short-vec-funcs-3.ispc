@@ -3,11 +3,9 @@
 
 // RUN: %{ispc} --target=host -o %t.o %s 2>&1
 
-// ISPC's round() maps to llvm.roundeven, which the LLVM 20 PowerPC backend
-// fails to select for vector types (Cannot select: v4f32 = froundeven).
-// This is an LLVM bug fixed in LLVM 21 by PR llvm/llvm-project#150597.
-// TODO: Re-enable this test for ppc64le once ISPC moves to LLVM 21+.
-// UNSUPPORTED: PPC64LE_HOST
+// LLVM 20 PowerPC backend can't select froundeven for vector types
+// (Cannot select: v4f32 = froundeven). Fixed in LLVM 21 by PR #150597.
+// UNSUPPORTED: PPC64LE_HOST && !LLVM_21_0+
 
 #include <short_vec.isph>
 

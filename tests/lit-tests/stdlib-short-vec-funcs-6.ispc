@@ -4,10 +4,8 @@
 // RUN: %{ispc} --target=host -o %t.o %s 2>&1
 
 // LLVM 20 PowerPC backend crashes on vector atan2/pow/fmod with
-// "Do not know how to promote this operator's result!".
-// This is fixed in LLVM 21 (confirmed with llc-21).
-// TODO: Re-enable this test for ppc64le once ISPC moves to LLVM 21+.
-// UNSUPPORTED: PPC64LE_HOST
+// "Do not know how to promote this operator's result!". Fixed in LLVM 21.
+// UNSUPPORTED: PPC64LE_HOST && !LLVM_21_0+
 
 #include <short_vec.isph>
 
