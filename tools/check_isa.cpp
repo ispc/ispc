@@ -69,7 +69,7 @@ static const char *lGetSystemISA() {
     return isa;
 #elif defined(__riscv)
     return "RISC-V";
-#elif defined(__powerpc64__)
+#elif defined(__powerpc64__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
     return "PPC64LE";
 #else
 #error "Unsupported host CPU architecture."
