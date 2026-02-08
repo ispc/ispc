@@ -9,7 +9,7 @@
 // ISPC assertion failure in lAllDivBaseEqual (llvmutil.cpp) for generic
 // targets: the integer divide optimization passes a non-power-of-2 baseValue.
 // TODO: Fix this ISPC bug for generic targets.
-// UNSUPPORTED: PPC64LE_HOST
+// XFAIL: PPC64LE_HOST
 
 // CHECK-NOT: Floating point exception
 // CHECK: Correct result

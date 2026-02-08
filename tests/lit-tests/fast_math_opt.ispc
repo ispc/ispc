@@ -3,7 +3,7 @@
 
 // Generic target stdlib's rcp implementation uses 1.0/x (fdiv) rather than
 // a hardware rcp instruction, so the CHECK_NOFDIV check fails on ppc64le.
-// UNSUPPORTED: PPC64LE_HOST
+// XFAIL: PPC64LE_HOST
 
 // CHECK_NOFDIV-NOT: fdiv
 

@@ -5,7 +5,7 @@
 
 // LLVM 20 PowerPC backend crashes on vector atan2/pow/fmod with
 // "Do not know how to promote this operator's result!". Fixed in LLVM 21.
-// UNSUPPORTED: PPC64LE_HOST && !LLVM_21_0+
+// XFAIL: PPC64LE_HOST && !LLVM_21_0+
 
 #include <short_vec.isph>
 
