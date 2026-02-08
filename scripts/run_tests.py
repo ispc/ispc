@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2025, Intel Corporation
+#  Copyright (c) 2013-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -111,6 +111,8 @@ class TargetConfig(object):
     def set_target(self):
         if self.target == 'neon':
             self.arch = 'aarch64'
+        elif self.target.startswith('generic') and self.arch == 'ppc64le':
+            pass  # arch is already set correctly
 
 # Representation of output which goes to console.
 # It consist of stdout & stderr.
@@ -657,6 +659,10 @@ def run_test(testname, host, target, jit_lib_path=None):
                     gcc_arch = '-march=armv8-a'
                 elif target.arch == 'riscv64':
                     gcc_arch = '-march=rv64gcv'
+                    if options.wrapexe and options.wrapexe.startswith('qemu'):
+                        gcc_arch += ' -static'
+                elif target.arch == 'ppc64le':
+                    gcc_arch = ''
                     if options.wrapexe and options.wrapexe.startswith('qemu'):
                         gcc_arch += ' -static'
                 elif target.arch == 'wasm64':
@@ -1356,6 +1362,9 @@ elif platform.machine() == "aarch64":
 elif platform.machine() == "arm64":
     default_target = "neon-i32x4"
     default_arch = "aarch64"
+elif platform.machine() == "ppc64le":
+    default_target = "generic-i32x8"
+    default_arch = "ppc64le"
 elif "86" in platform.machine() or platform.machine() == "AMD64":
     # Some variant of x86: x86_64, i386, i486, i586, i686
     # Windows reports platform as AMD64
