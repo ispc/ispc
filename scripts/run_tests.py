@@ -1363,7 +1363,7 @@ elif platform.machine() == "arm64":
     default_target = "neon-i32x4"
     default_arch = "aarch64"
 elif platform.machine() == "ppc64le":
-    default_target = "generic-i32x8"
+    default_target = "generic-i32x4"
     default_arch = "ppc64le"
 elif "86" in platform.machine() or platform.machine() == "AMD64":
     # Some variant of x86: x86_64, i386, i486, i586, i686
