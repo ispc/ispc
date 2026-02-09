@@ -1,9 +1,6 @@
 #include "FastMath.h"
 #include "builtins-decl.h"
 
-
-//#define AGGRESSIVE_FAST_MATH_OPT
-
 namespace ispc {
 
 bool FastMathPass::optimizeFpInstructions(llvm::BasicBlock &bb) {
