@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -917,6 +917,9 @@ struct Globals {
 
     /* When true, enable compile time tracing. */
     bool enableTimeTrace;
+
+    /* If true, disable validation of target support in Target constructor. */
+    bool disableTargetValidation;
 
     /* When compile time tracing is enabled, set time granularity. */
     int timeTraceGranularity;
