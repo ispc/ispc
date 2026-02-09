@@ -24,22 +24,16 @@ jobs:
     name: PowerPC64LE generic-i32x4 test
     runs-on: ubuntu-22.04
     container:
-      image: ubuntu:24.04
+      image: ubuntu:25.10
       options: --privileged
 
     steps:
     - name: Install dependencies
       run: |
         apt-get update
-        apt-get install -y wget gnupg software-properties-common
-        # Add LLVM 20 repository
-        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-        echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" \
-          > /etc/apt/sources.list.d/llvm-20.list
-        apt-get update
         # Build tools and LLVM
         apt-get install -y git cmake make m4 flex bison python3 python3-dev libtbb-dev \
-          gcc-multilib llvm-20 llvm-20-dev clang-20 libclang-20-dev llvm-20-tools
+          gcc-multilib llvm llvm-dev clang libclang-dev llvm-tools
         # PPC64 cross-compiler and QEMU
         apt-get install -y gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu \
           libc6-dev-ppc64el-cross qemu-user
@@ -51,15 +45,14 @@ jobs:
     - name: Check tools
       run: |
         cmake --version
-        /usr/lib/llvm-20/bin/llvm-config --version
-        /usr/lib/llvm-20/bin/clang --version
+        llvm-config --version
+        clang --version
         powerpc64le-linux-gnu-gcc --version
         qemu-ppc64le --version
 
     - name: Build ISPC with PPC64 support
       run: |
-        PATH=/usr/lib/llvm-20/bin:$PATH \
-          cmake -B build -DPPC64_ENABLED=ON
+        cmake -B build -DPPC64_ENABLED=ON
         cmake --build build -j"$(nproc)"
 
     - name: Run lit tests
