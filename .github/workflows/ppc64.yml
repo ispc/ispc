@@ -38,7 +38,7 @@ jobs:
           > /etc/apt/sources.list.d/llvm-20.list
         apt-get update
         # Build tools and LLVM
-        apt-get install -y git cmake make m4 flex bison python3 \
+        apt-get install -y git cmake make m4 flex bison python3 libtbb-dev \
           llvm-20 llvm-20-dev clang-20 libclang-20-dev llvm-20-tools
         # PPC64 cross-compiler and QEMU
         apt-get install -y gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu \
@@ -59,7 +59,7 @@ jobs:
     - name: Build ISPC with PPC64 support
       run: |
         PATH=/usr/lib/llvm-20/bin:$PATH \
-          cmake -B build -DPPC64_ENABLED=ON -DISPCRT_BUILD=OFF
+          cmake -B build -DPPC64_ENABLED=ON
         cmake --build build -j"$(nproc)"
 
     - name: Run lit tests
