@@ -35,6 +35,8 @@ jobs:
         apt-get install -y git cmake make m4 flex bison python3 python3-dev libtbb-dev \
           llvm llvm-dev clang libclang-dev llvm-20-tools libstdc++-15-dev \
           libc6-dev-i386-cross libc6-dev-armhf-cross
+        # FileCheck is installed as FileCheck-20; CMake expects unversioned name
+        ln -sf FileCheck-20 /usr/bin/FileCheck
         # PPC64 cross-compiler and QEMU
         apt-get install -y gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu \
           libc6-dev-ppc64el-cross qemu-user
