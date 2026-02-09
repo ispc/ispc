@@ -11,6 +11,7 @@
 #pragma once
 
 #include "CheckIRForXeTarget.h"
+#include "FastMath.h"
 #include "GatherCoalescePass.h"
 #include "ImproveMemoryOps.h"
 #include "InstructionSimplify.h"
@@ -25,6 +26,5 @@
 #include "ReplacePseudoMemoryOps.h"
 #include "ReplaceStdlibShiftPass.h"
 #include "ScalarizePass.h"
-#include "FastMath.h"
 #include "XeGatherCoalescePass.h"
 #include "XeReplaceLLVMIntrinsics.h"

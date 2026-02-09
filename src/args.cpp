@@ -837,7 +837,7 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             const char *opt = argv[i] + 6;
             if (!strncmp(opt, "fast-math", 9)) {
                 const char *fastMathOpt = opt + 9;
-                if(*fastMathOpt == 0) {
+                if (*fastMathOpt == 0) {
                     // Default value if the mode is unspecified
                     g->opt.fastMath = Opt::FastMathMode::Legacy;
                 } else if (*fastMathOpt == ':') {
