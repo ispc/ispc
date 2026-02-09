@@ -33,7 +33,7 @@ jobs:
         apt-get update
         # Build tools and LLVM
         apt-get install -y git cmake make m4 flex bison python3 python3-dev libtbb-dev \
-          gcc-multilib llvm llvm-dev clang libclang-dev llvm-tools
+          gcc-multilib llvm llvm-dev clang libclang-dev llvm-20-tools
         # PPC64 cross-compiler and QEMU
         apt-get install -y gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu \
           libc6-dev-ppc64el-cross qemu-user
