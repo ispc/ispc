@@ -13,11 +13,11 @@ bool FastMathPass::optimizeFpInstructions(llvm::BasicBlock &bb) {
 
     llvm::FastMathFlags fmFlags;
 
-    if (g->opt.fastMath == Opt::FastMathMode::Safe) {
+    if (g->opt.fastMath == Opt::FastMathMode::Balanced) {
         fmFlags.setAllowContract(true);
         fmFlags.setAllowReassoc(true);
         fmFlags.setNoSignedZeros(true);
-    } else if (g->opt.fastMath == Opt::FastMathMode::Unsafe) {
+    } else if (g->opt.fastMath == Opt::FastMathMode::Aggressive) {
         // This improves the performance of generated codes in some cases but
         // it is much more dangerous. Indeed, it assumes there are no NaN,
         // infinities, negative zeros or subnormal values computed by the
@@ -27,8 +27,6 @@ bool FastMathPass::optimizeFpInstructions(llvm::BasicBlock &bb) {
         // for ISPC users). For more information, please read:
         // https://github.com/iree-org/iree/issues/19743
         fmFlags.setFast(true);
-
-        // TODO: alternative solution: only enable SafeMode + ISPC reciprocals
     }
 
     // Note: we do modify instruction list during the traversal, so the iterator
