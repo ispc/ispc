@@ -2177,7 +2177,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         llvm::Triple triple = GetTriple();
 
         // The last validity check to ensure that supported for this target was enabled in the build.
-        if (!g->target_registry->isSupported(m_ispc_target, g->target_os, arch)) {
+        if (!g->disableTargetValidation && !g->target_registry->isSupported(m_ispc_target, g->target_os, arch)) {
             std::string target_string = ISPCTargetToString(m_ispc_target);
             std::string arch_str = ArchToString(arch);
             std::string os_str = OSToString(g->target_os);
@@ -3175,6 +3175,7 @@ Globals::Globals() {
     includeFloat16Conversions = false;
 
     enableTimeTrace = false;
+    disableTargetValidation = false;
     // set default granularity to 500.
     timeTraceGranularity = 500;
     target = nullptr;

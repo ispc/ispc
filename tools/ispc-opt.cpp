@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025, Intel Corporation
+  Copyright (c) 2024-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -134,6 +134,7 @@ int main(int argc, char **argv) {
     }
 
     ispc::g = new ispc::Globals;
+    ispc::g->disableTargetValidation = true;
     LLVMContext *ctx = ispc::g->ctx;
 
     if (Addressing == 64) {
