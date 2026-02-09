@@ -1024,7 +1024,7 @@ configure_ispc_obj(builtin)
 add_executable(ispc-opt tools/ispc-opt.cpp)
 configure_ispc_exe(ispc-opt)
 # TODO! should we link against all the same LLVM/Clang libraries? Clang libs is definetely not needed
-target_link_libraries(ispc-opt ${LINK_LIBRARIES} builtin optimization common)
+target_link_libraries(ispc-opt ${LINK_LIBRARIES} optimization common)
 
 # The final target has to be ispc due to two use-cases we do not want to
 # interfere with: make ispc and $<TARGET_FILE:ispc>.

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2025, Intel Corporation
+  Copyright (c) 2019-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -68,6 +68,9 @@ TargetLibRegistry::TargetLibRegistry() {
     // TODO: check for conflicts / duplicates.
     m_dispatch = nullptr;
     m_dispatch_macos = nullptr;
+    if (libs == nullptr) {
+        return;
+    }
     for (auto lib : *libs) {
         switch (lib->getType()) {
         case BitcodeLib::BitcodeLibType::Dispatch:
