@@ -844,10 +844,10 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
                     fastMathOpt += 1;
                     if (!strcmp(fastMathOpt, "legacy")) {
                         g->opt.fastMath = Opt::FastMathMode::Legacy;
-                    } else if (!strcmp(fastMathOpt, "safe")) {
-                        g->opt.fastMath = Opt::FastMathMode::Safe;
-                    } else if (!strcmp(fastMathOpt, "unsafe")) {
-                        g->opt.fastMath = Opt::FastMathMode::Unsafe;
+                    } else if (!strcmp(fastMathOpt, "balanced")) {
+                        g->opt.fastMath = Opt::FastMathMode::Balanced;
+                    } else if (!strcmp(fastMathOpt, "aggressive")) {
+                        g->opt.fastMath = Opt::FastMathMode::Aggressive;
                     } else {
                         errorHandler.AddError("Unknown fast-math mode \"%s\".", fastMathOpt);
                     }
