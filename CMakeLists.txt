@@ -590,6 +590,8 @@ list(APPEND OPT_SOURCES
     src/opt/ReplaceStdlibShiftPass.h
     src/opt/ScalarizePass.cpp
     src/opt/ScalarizePass.h
+    src/opt/FastMath.cpp
+    src/opt/FastMath.h
     src/opt/XeGatherCoalescePass.cpp
     src/opt/XeGatherCoalescePass.h
     src/opt/XeReplaceLLVMIntrinsics.cpp

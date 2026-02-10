@@ -31,7 +31,7 @@ uniform float16 retNegF16() {
 }
 
 // CHECK: @retFastMathF16
-// CHECK: fmul half %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 0xH3800
+// CHECK: fmul {{((contract|reassoc|arcp|nsz|nnan|ninf|afn|fast) )*}}half %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 0xH3800
 uniform float16 retFastMathF16(uniform float16 arg) {
     return arg / 2.f16;
 }
