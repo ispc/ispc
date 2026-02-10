@@ -401,6 +401,12 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         }
         optPM.addFunctionPass(llvm::DCEPass(), 220);
 
+        // This should be early (before the InstCombinePass and 
+        // InstructionSimplifyPass to actually be effective).
+        if (g->opt.fastMath) {
+            optPM.addFunctionPass(FastMathPass());
+        }
+
         // On to more serious optimizations
         optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
         optPM.addFunctionPass(llvm::InferAlignmentPass());
