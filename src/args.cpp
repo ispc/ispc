@@ -835,8 +835,25 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             }
         } else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
-            if (!strcmp(opt, "fast-math")) {
-                g->opt.fastMath = true;
+            if (!strncmp(opt, "fast-math", 9)) {
+                const char *fastMathOpt = opt + 9;
+                if(*fastMathOpt == 0) {
+                    // Default value if the mode is unspecified
+                    g->opt.fastMath = Opt::FastMathMode::Legacy;
+                } else if (*fastMathOpt == ':') {
+                    fastMathOpt += 1;
+                    if (!strcmp(fastMathOpt, "legacy")) {
+                        g->opt.fastMath = Opt::FastMathMode::Legacy;
+                    } else if (!strcmp(fastMathOpt, "safe")) {
+                        g->opt.fastMath = Opt::FastMathMode::Safe;
+                    } else if (!strcmp(fastMathOpt, "unsafe")) {
+                        g->opt.fastMath = Opt::FastMathMode::Unsafe;
+                    } else {
+                        errorHandler.AddError("Unknown fast-math mode \"%s\".", fastMathOpt);
+                    }
+                } else {
+                    errorHandler.AddError("Unknown --opt= option \"%s\".", opt);
+                }
             } else if (!strcmp(opt, "fast-masked-vload")) {
                 g->opt.fastMaskedVload = true;
             } else if (!strcmp(opt, "disable-assertions")) {

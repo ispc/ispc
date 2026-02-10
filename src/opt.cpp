@@ -403,7 +403,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         // This should be early (before the InstCombinePass and 
         // InstructionSimplifyPass to actually be effective).
-        if (g->opt.fastMath) {
+        if (g->opt.fastMath != Opt::FastMathMode::None) {
             optPM.addFunctionPass(FastMathPass());
         }
 

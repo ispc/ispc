@@ -1,13 +1,7 @@
 #include "FastMath.h"
 #include "builtins-decl.h"
 
-// Enable all fast math flags. This improves the performance of generated
-// codes in some cases but it is much more dangerous. Indeed, it assumes there
-// are no NaN, Inf, negative zeros or subnormal values computed by the target 
-// code. If this assumption is broken, then LLVM store poison values in the 
-// output so the target code basically has an undefined behaviour and may do
-// completely crazy things (very hard to debug for ISPC users).
-// See https://github.com/iree-org/iree/issues/19743 for more information.
+
 //#define AGGRESSIVE_FAST_MATH_OPT
 
 namespace ispc {
@@ -19,15 +13,23 @@ bool FastMathPass::optimizeFpInstructions(llvm::BasicBlock &bb) {
 
     llvm::FastMathFlags fmFlags;
 
-#ifdef AGGRESSIVE_FAST_MATH_OPT
-    fmFlags.setFast(true);
-#else
-    // The three first are required to perform basic FP math reassociation.
-    fmFlags.setAllowContract(true);
-    fmFlags.setAllowReassoc(true);
-    fmFlags.setNoSignedZeros(true);
-    fmFlags.setAllowReciprocal(true);
-#endif
+    if (g->opt.fastMath == Opt::FastMathMode::Safe) {
+        fmFlags.setAllowContract(true);
+        fmFlags.setAllowReassoc(true);
+        fmFlags.setNoSignedZeros(true);
+    } else if (g->opt.fastMath == Opt::FastMathMode::Unsafe) {
+        // This improves the performance of generated codes in some cases but
+        // it is much more dangerous. Indeed, it assumes there are no NaN,
+        // infinities, negative zeros or subnormal values computed by the
+        // target code. If this assumption is broken, then LLVM stores poison
+        // values in the output so the target code basically has an undefined
+        // behaviour and may do completely crazy things (very hard to debug
+        // for ISPC users). For more information, please read:
+        // https://github.com/iree-org/iree/issues/19743
+        fmFlags.setFast(true);
+
+        // TODO: alternative solution: only enable SafeMode + ISPC reciprocals
+    }
 
     // Note: we do modify instruction list during the traversal, so the iterator
     // is moved forward before the instruction is processed.
