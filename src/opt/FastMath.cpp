@@ -11,9 +11,13 @@ bool FastMathPass::optimizeFpInstructions(llvm::BasicBlock &bb) {
     llvm::FastMathFlags fmFlags;
 
     if (g->opt.fastMath == Opt::FastMathMode::Balanced) {
+        // Note that imprecise rcp instructions are apparently only generated
+        // when at least both math function approximations and reciprocal are
+        // allowed.
         fmFlags.setAllowContract(true);
         fmFlags.setAllowReassoc(true);
         fmFlags.setNoSignedZeros(true);
+        fmFlags.setAllowReciprocal(true);
     } else if (g->opt.fastMath == Opt::FastMathMode::Aggressive) {
         // This improves the performance of generated codes in some cases but
         // it is much more dangerous. Indeed, it assumes there are no NaN,
