@@ -1,3 +1,7 @@
+// This test checks the optimizations performed by the different fast-math modes on divisions.
+
+// REQUIRES: X86_ENABLED
+
 // RUN: %{ispc} %s --target=avx512spr-x16 --opt=fast-math -O2 --emit-llvm-text -o -| FileCheck %s -check-prefix=CHECK_X64_IR_DEFAULT
 // RUN: %{ispc} %s --target=avx512spr-x16 --opt=fast-math:legacy -O2 --emit-llvm-text -o -| FileCheck %s -check-prefix=CHECK_X64_IR_LEGACY
 // RUN: %{ispc} %s --target=avx512spr-x16 --opt=fast-math:balanced -O2 --emit-llvm-text -o -| FileCheck %s -check-prefix=CHECK_X64_IR_BALANCED

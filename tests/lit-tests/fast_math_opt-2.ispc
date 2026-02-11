@@ -1,4 +1,8 @@
-// RUN: %{ispc} %s --target=host --opt=fast-math:balanced -O2 --emit-llvm-text -o -| FileCheck %s -check-prefix=CHECK_IR_BALANCED
+// This test checks the optimizations performed by the different fast-math modes on basic operations.
+
+// REQUIRES: X86_ENABLED
+
+// RUN: %{ispc} %s --target=avx2-i32x8 --opt=fast-math:balanced -O2 --emit-llvm-text -o -| FileCheck %s -check-prefix=CHECK_IR_BALANCED
 // RUN: %{ispc} %s --target=avx2-i32x8 --opt=fast-math:balanced -O2 --emit-asm -o -| FileCheck %s -check-prefix=CHECK_X64_ASM_BALANCED
 // RUN: %{ispc} %s --target=avx2-i32x8 --opt=fast-math:aggressive -O2 --emit-asm -o -| FileCheck %s -check-prefix=CHECK_X64_ASM_AGGRESSIVE
 
