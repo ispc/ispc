@@ -33,8 +33,7 @@ jobs:
         apt-get update
         # Build tools and LLVM
         apt-get install -y git cmake make m4 flex bison python3 python3-dev libtbb-dev \
-          llvm llvm-dev clang libclang-dev llvm-20-tools libstdc++-15-dev \
-          libc6-dev-i386-cross libc6-dev-armhf-cross
+          llvm llvm-dev clang libclang-dev llvm-20-tools libstdc++-15-dev
         # FileCheck is installed as FileCheck-20; CMake expects unversioned name
         ln -sf FileCheck-20 /usr/bin/FileCheck
         # PPC64 cross-compiler and QEMU
@@ -55,7 +54,7 @@ jobs:
 
     - name: Build ISPC with PPC64 support
       run: |
-        cmake -B build -DPPC64_ENABLED=ON
+        cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF -DX86_ENABLED=OFF
         cmake --build build -j"$(nproc)"
 
     - name: Run lit tests
