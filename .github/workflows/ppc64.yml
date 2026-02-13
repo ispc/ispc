@@ -54,7 +54,7 @@ jobs:
 
     - name: Build ISPC with PPC64 support
       run: |
-        cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF -DX86_ENABLED=OFF
+        cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF
         cmake --build build -j"$(nproc)"
 
     - name: Run lit tests

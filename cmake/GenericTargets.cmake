@@ -121,7 +121,5 @@ function (generate_generic_builtins ispc_name)
     add_custom_target(generic-stdlib-bc DEPENDS ${GENERIC_STDLIB_BC_FILE})
     add_custom_target(generic-stdlib-cpp DEPENDS ${GENERIC_STDLIB_CPP_FILE})
 
-    set_source_files_properties(${GENERIC_TARGET_CPP_FILE} ${GENERIC_STDLIB_CPP_FILE} PROPERTIES GENERATED true)
     add_library(generic-target OBJECT EXCLUDE_FROM_ALL ${GENERIC_TARGET_CPP_FILE} ${GENERIC_STDLIB_CPP_FILE})
-    add_dependencies(generic-target generic-target-cpp generic-stdlib-cpp)
 endfunction()
