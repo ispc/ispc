@@ -1,7 +1,7 @@
 # Copyright 2026, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
-name: PowerPC64 Tests
+name: PowerPC64 QEMU Tests
 
 permissions: read-all
 
@@ -12,7 +12,7 @@ on:
       - 'builtins/**'
       - 'cmake/**'
       - 'CMakeLists.txt'
-      - '.github/workflows/ppc64.yml'
+      - '.github/workflows/ppc64le_qemu.yml'
   workflow_dispatch:
 
 concurrency:
