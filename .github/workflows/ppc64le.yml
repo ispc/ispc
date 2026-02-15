@@ -29,8 +29,8 @@ jobs:
       run: |
         apt-get update
         # Build tools and LLVM
-        apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev g++-multilib
-        apt-get install -y llvm llvm-dev clang libclang-dev llvm-19-tools
+        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev g++-multilib
+        sudo apt-get install -y llvm llvm-dev clang libclang-dev llvm-19-tools
 
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
