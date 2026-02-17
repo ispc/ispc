@@ -22,7 +22,7 @@
 
 if(CMAKE_ISPC_COMPILER_ID STREQUAL "Intel")
   # Enable depfile support for Ninja generator
-  # This is the fix for https://github.com/ispc/ispc/issues/XXXX
+  # Fixes: Ninja builds always rebuild ISPC files even when unchanged
   if((NOT DEFINED CMAKE_DEPENDS_USE_COMPILER OR CMAKE_DEPENDS_USE_COMPILER)
       AND CMAKE_GENERATOR MATCHES "Ninja")
     # ISPC supports GCC-style dependency files via -M -MT -MF flags

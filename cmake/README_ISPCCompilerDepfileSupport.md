@@ -48,9 +48,7 @@ This workaround is needed when:
 
 ## When can this be removed?
 
-This module can be removed once CMake's upstream `Compiler/Intel-ISPC.cmake` is updated to support the Ninja generator natively. Track the issue at:
-- ISPC issue: https://github.com/ispc/ispc/issues/XXXX
-- Potential CMake issue: (to be filed)
+This module can be removed once CMake's upstream `Compiler/Intel-ISPC.cmake` is updated to support the Ninja generator natively.
 
 ## Technical details
 
