@@ -1,0 +1,113 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: PowerPC64 Tests
+
+permissions: read-all
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'builtins/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/ppc64.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ppc64-native-test:
+    name: PowerPC64LE generic-i32x4 test (native)
+    runs-on: ubuntu-24.04-ppc64le
+    env:
+      LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.ppc.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Install additional dependencies
+      run: |
+        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev g++-multilib
+
+    - name: Check tools
+      run: |
+        cmake --version
+        llvm-config --version
+        clang --version
+        gcc --version
+        g++ --version
+
+    - name: Build ISPC with PPC64 support
+      run: |
+        PATH=/usr/lib/llvm-20/bin:$PATH cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF
+        cmake --build build -j"$(nproc)"
+
+    - name: Run lit tests
+      run: |
+        cmake --build build --target check-all
+
+    - name: Run PPC64LE tests
+      run: |
+        PATH="$PWD"/build/bin:"$PATH" \
+        python3 scripts/run_tests.py \
+          --target=generic-i32x4 \
+          --arch=ppc64le \
+          --compiler=g++ \
+          -o O2
+
+  ppc64-cross-test:
+    name: PowerPC64LE generic-i32x4 test (cross-compiled)
+    runs-on: ubuntu-24.04
+    env:
+      LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.ppc.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Install PPC64 cross-compilation tools
+      run: |
+        sudo apt-get install -y gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu \
+          libc6-dev-ppc64el-cross qemu-user
+
+    - name: Check tools
+      run: |
+        cmake --version
+        llvm-config --version
+        clang --version
+        powerpc64le-linux-gnu-gcc --version
+        qemu-ppc64le --version
+
+    - name: Build ISPC with PPC64 support
+      run: |
+        cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF
+        cmake --build build -j"$(nproc)"
+
+    - name: Run lit tests
+      run: |
+        cmake --build build --target check-all
+
+    - name: Run PPC64LE tests
+      run: |
+        PATH="$PWD"/build/bin:"$PATH" \
+        python3 scripts/run_tests.py \
+          --target=generic-i32x4 \
+          --arch=ppc64le \
+          --wrap-exe="qemu-ppc64le" \
+          --compiler=powerpc64le-linux-gnu-g++ \
+          -o O2
