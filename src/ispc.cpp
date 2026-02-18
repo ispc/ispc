@@ -842,7 +842,7 @@ void lPrintTargetInfo(const std::string &proc_unit_type, const std::string &trip
     printf("Target Feature String: %s\n", feature.c_str());
 }
 
-Arch lGetArchFromTarget(ISPCTarget target, DeviceType CPUID) {
+Arch lGetArchFromTarget(ISPCTarget target) {
 #ifdef ISPC_ARM_ENABLED
     if (ISPCTargetIsNeon(target)) {
 #if defined(__arm__)
@@ -858,10 +858,7 @@ Arch lGetArchFromTarget(ISPCTarget target, DeviceType CPUID) {
     }
 #endif
 #ifdef ISPC_PPC64_ENABLED
-    if (CPUID == CPU_PPC64LE_Generic) {
-        return Arch::ppc64le;
-    }
-    if (ISPCTargetIsGeneric(target) && CPUID == CPU_None) {
+    if (ISPCTargetIsGeneric(target)) {
 #if defined(ISPC_HOST_IS_PPC64LE)
         return Arch::ppc64le;
 #endif
@@ -1143,8 +1140,17 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     }
 
     if (arch == Arch::none) {
-        arch = lGetArchFromTarget(m_ispc_target, CPUID);
+        arch = lGetArchFromTarget(m_ispc_target);
     }
+#ifdef ISPC_PPC64_ENABLED
+    // When cross-compiling for PPC64LE (e.g., --cpu=ppc64le on an x86 host),
+    // lGetArchFromTarget cannot infer the arch from a generic target alone.
+    // Fix up the arch based on the CPU identifier.
+    // TODO: add a proper PowerPC target
+    if (CPUID == CPU_PPC64LE_Generic) {
+        arch = Arch::ppc64le;
+    }
+#endif
 
     bool error = false;
     // Make sure the target architecture is a known one; print an error
