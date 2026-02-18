@@ -46,6 +46,10 @@ Build System:
 
 * Updated default LLVM version to 21.1.8.
 * Added support for building with LLVM 22.0 and LLVM 23.0.
+* Added ISPCCompilerDepfileSupport.cmake module to fix unnecessary rebuilds when
+  using ISPC as a CMake language with Ninja generator (CMake 3.19+). Include this
+  module after project() to enable proper dependency tracking. See
+  cmake/README_ISPCCompilerDepfileSupport.md for usage details.
 
 Recommended versions of Runtime Dependencies when targeting GPU:
 

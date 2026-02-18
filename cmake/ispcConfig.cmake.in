@@ -47,3 +47,9 @@ if(ISPC_SHARED_LIBRARY_AVAILABLE)
 else()
     find_package_message(@PROJECT_NAME@ "Found ISPC: ${PACKAGE_PREFIX_DIR} (executable only)" "[${PACKAGE_PREFIX_DIR}]")
 endif()
+
+# Provide information about the depfile support module for Ninja users
+if(CMAKE_GENERATOR MATCHES "Ninja")
+    message(STATUS "ISPC: If using ISPC as a LANGUAGE in CMake 3.19+, include ISPCCompilerDepfileSupport to enable proper caching:")
+    message(STATUS "  include(\${CMAKE_CURRENT_LIST_DIR}/ISPCCompilerDepfileSupport.cmake)")
+endif()

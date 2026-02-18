@@ -1110,6 +1110,8 @@ write_basic_package_version_file(
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfigVersion.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ISPCCompilerDepfileSupport.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/README_ISPCCompilerDepfileSupport.md"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
