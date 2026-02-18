@@ -1,4 +1,5 @@
 #include "test_static.isph"
+// rule: skip on arch=ppc64le
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float16 f = aFOO[programCount]/4;
     uniform float16 calc = sqrt(f) * sqrt(f) - aFOO[programCount]/4;

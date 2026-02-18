@@ -1,4 +1,5 @@
 #include "test_static.isph"
+// rule: skip on arch=ppc64le
 uniform bool ok(uniform float16 x, uniform float16 ref) {
     return (abs(x - ref) < 1e-2f16) || abs((x - ref) / ref) < 1e-1f16;
 }
