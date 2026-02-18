@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -447,10 +447,9 @@ class DependentMemberExpr : public MemberExpr {
 
 /** @brief Expression representing a compile-time constant value.
 
-    This class can currently represent compile-time constants of anything
-    that is an AtomicType or an EnumType; for anything more complex, we
-    don't currently have a representation of a compile-time constant that
-    can be further reasoned about.
+    ConstExpr can represent atomic/enum constants, null pointer constants, and
+    aggregate constants (vectors/arrays/structs) via per-element ConstExpr
+    values.
  */
 class ConstExpr : public Expr {
   public:
@@ -500,9 +499,14 @@ class ConstExpr : public Expr {
     /** Create a ConstExpr from a varying bool value */
     ConstExpr(const Type *t, bool *b, SourcePos p);
 
+    /** Create a ConstExpr from a pointer constant (uniform or varying). */
+    ConstExpr(const Type *t, llvm::Constant *ptr, SourcePos p);
+
     /** Create ConstExpr with the same type and values as the given one,
         but at the given position. */
     ConstExpr(const ConstExpr *old, SourcePos pos);
+    /** Create ConstExpr from aggregate element values. */
+    ConstExpr(const Type *t, const std::vector<ConstExpr *> &values, SourcePos p);
 
     static inline bool classof(ConstExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) {
@@ -541,13 +545,18 @@ class ConstExpr : public Expr {
     /** Return the ConstExpr's values as a string. */
     std::string GetValuesAsStr(const std::string &separator) const;
 
-    /** Return the number of values in the ConstExpr; should be either 1,
-        if it has uniform type, or the target's vector width if it's
-        varying. */
+    /** Return the number of values in the ConstExpr; for aggregates this
+        is the element count, otherwise 1 for uniform or the target vector
+        width for varying. */
     int Count() const;
 
     /** Return true if the type and values of two ConstExpr are the same. */
     bool IsEqual(const ConstExpr *ce) const;
+
+    bool IsAggregate() const { return isAggregate; }
+    const std::vector<ConstExpr *> &GetAggregateValues() const { return aggregateValues; }
+    bool IsPointerConst() const { return isPointer; }
+    llvm::Constant *GetPointerConstant() const { return ptrConst; }
 
   protected:
     ConstExpr(const Symbol *s, SourcePos pos);
@@ -557,6 +566,10 @@ class ConstExpr : public Expr {
     AtomicType::BasicType getBasicType() const;
 
     const Type *type;
+    bool isAggregate = false;
+    bool isPointer = false;
+    std::vector<ConstExpr *> aggregateValues;
+    llvm::Constant *ptrConst = nullptr;
     union {
         int8_t int8Val[ISPC_MAX_NVEC];
         uint8_t uint8Val[ISPC_MAX_NVEC];

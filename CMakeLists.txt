@@ -522,6 +522,8 @@ list(APPEND FRONTEND_SOURCES
     src/ast.h
     src/builtins.cpp
     src/builtins.h
+    src/constexpr.cpp
+    src/constexpr.h
     src/ctx.cpp
     src/ctx.h
     src/decl.cpp
