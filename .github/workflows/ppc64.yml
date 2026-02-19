@@ -23,8 +23,6 @@ jobs:
   ppc64-native-test:
     name: PowerPC64LE generic-i32x4 test (native)
     runs-on: ubuntu-24.04-ppc64le
-    env:
-      LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.ppc.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -33,23 +31,21 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Install additional dependencies
-      run: |
-        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev
+        sudo apt-get update
+        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev \
+          llvm-19-dev clang-19 lld-19
 
     - name: Check tools
       run: |
         cmake --version
-        llvm-config --version
-        clang --version
+        llvm-config-19 --version
+        clang-19 --version
         gcc --version
         g++ --version
 
     - name: Build ISPC with PPC64 support
       run: |
-        PATH=/usr/lib/llvm-20/bin:$PATH cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF -DX86_ENABLED=OFF
+        PATH=/usr/lib/llvm-19/bin:$PATH cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF -DX86_ENABLED=OFF
         cmake --build build -j"$(nproc)"
 
     - name: Run lit tests
