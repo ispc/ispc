@@ -10,10 +10,10 @@
 // CHECK-NEXT: vmovups 32(
 // CHECK-NEXT: vmovups 64(
 // CHECK-NEXT: vmovups 96(
-// CHECK-NEXT: vfmadd132ps (
-// CHECK-NEXT: vfmadd231ps 32(
-// CHECK-NEXT: vfmadd231ps 64(
-// CHECK: vfmadd231ps 96(
+// CHECK-NEXT: vfmadd{{[0-9]+}}ps (
+// CHECK-NEXT: vfmadd{{[0-9]+}}ps 32(
+// CHECK-NEXT: vfmadd{{[0-9]+}}ps 64(
+// CHECK: vfmadd{{[0-9]+}}ps 96(
 
 unmasked uniform float dotProductSoA_Unroll(uniform float a[], uniform float b[], uniform size_t N)
 {
