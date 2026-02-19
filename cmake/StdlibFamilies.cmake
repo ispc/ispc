@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2025, Intel Corporation
+#  Copyright (c) 2025-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -40,6 +40,13 @@ function(define_stdlib_families)
         list(APPEND AVX10_X16 "avx10_2dmr-x16")
         list(APPEND AVX10_X32 "avx10_2dmr-x32")
         list(APPEND AVX10_X64 "avx10_2dmr-x64")
+    endif()
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "22.0.0")
+        list(APPEND AVX10_X4 "avx10_2nvl-x4")
+        list(APPEND AVX10_X8 "avx10_2nvl-x8")
+        list(APPEND AVX10_X16 "avx10_2nvl-x16")
+        list(APPEND AVX10_X32 "avx10_2nvl-x32")
+        list(APPEND AVX10_X64 "avx10_2nvl-x64")
     endif()
     # Convert lists to comma-separated strings with leading comma
     foreach(width IN ITEMS X4 X8 X16 X32 X64)

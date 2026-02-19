@@ -408,7 +408,9 @@ def check_targets():
       ("GNR",        [["avx512gnr-x16", "avx512gnr-x8", "avx512gnr-x4", "avx512gnr-x64", "avx512gnr-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "GNR"], "-gnr", False]),
       ("DMR",        [["avx10.2dmr-x16", "avx10.2dmr-x8", "avx10.2dmr-x4", "avx10.2dmr-x64", "avx10.2dmr-x32"],
-                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "GNR", "DMR"], "-dmr", False])
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "GNR", "DMR"], "-dmr", False]),
+      ("NVL",        [["avx10.2nvl-x16", "avx10.2nvl-x8", "avx10.2nvl-x4", "avx10.2nvl-x64", "avx10.2nvl-x32"],
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "NVL"], "-nvl", False])
     ])
 
     hw_arch = take_lines(check_isa, "first").split()[1]

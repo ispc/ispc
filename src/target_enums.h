@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2025, Intel Corporation
+  Copyright (c) 2019-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -85,6 +85,11 @@ enum class ISPCTarget {
     avx10_2dmr_x16,
     avx10_2dmr_x32,
     avx10_2dmr_x64,
+    avx10_2nvl_x4,
+    avx10_2nvl_x8,
+    avx10_2nvl_x16,
+    avx10_2nvl_x32,
+    avx10_2nvl_x64,
     neon_i8x16,
     neon_i8x32,
     neon_i16x8,

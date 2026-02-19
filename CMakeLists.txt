@@ -395,6 +395,10 @@ if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.2")
     list(APPEND X86_TARGETS avx10_2dmr-x4 avx10_2dmr-x8 avx10_2dmr-x16 avx10_2dmr-x32 avx10_2dmr-x64)
 endif()
 
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "22.0.0")
+    list(APPEND X86_TARGETS avx10_2nvl-x4 avx10_2nvl-x8 avx10_2nvl-x16 avx10_2nvl-x32 avx10_2nvl-x64)
+endif()
+
 list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8 neon-i8x32 neon-i16x16)
 list(APPEND RISCV_TARGETS rvv-x4)
 list(APPEND WASM_TARGETS wasm-i32x4)
