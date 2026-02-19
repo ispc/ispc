@@ -649,7 +649,7 @@ class AllCPUs {
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_PPC64_ENABLED
-        names[CPU_PPC64LE_Generic].push_back("ppc64le");
+        names[CPU_PPC64LE_Generic].push_back("pwr8");
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -1143,7 +1143,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         arch = lGetArchFromTarget(m_ispc_target);
     }
 #ifdef ISPC_PPC64_ENABLED
-    // When cross-compiling for PPC64LE (e.g., --cpu=ppc64le on an x86 host),
+    // When cross-compiling for PPC64LE (e.g., --cpu=pwr8 on an x86 host),
     // lGetArchFromTarget cannot infer the arch from a generic target alone.
     // Fix up the arch based on the CPU identifier.
     // TODO: add a proper PowerPC target
@@ -2281,7 +2281,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif
 #ifdef ISPC_PPC64_ENABLED
         if (arch == Arch::ppc64le) {
-            if (m_cpu == "ppc64le") {
+            if (m_cpu == "pwr8") {
                 featuresString = "+vsx";
                 m_cpu = "pwr8";
             }
