@@ -2283,7 +2283,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         if (arch == Arch::ppc64le) {
             if (m_cpu == "pwr8") {
                 featuresString = "+vsx";
-                m_cpu = "pwr8";
             }
         }
 #endif
