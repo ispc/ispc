@@ -404,7 +404,7 @@ typedef enum {
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_PPC64_ENABLED
-    CPU_PPC64LE_Generic,
+    CPU_PPC64LE_Pwr8,
 #endif
 #ifdef ISPC_XE_ENABLED
     GPU_TGLLP,
@@ -516,7 +516,7 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_PPC64_ENABLED
-    {CPU_PPC64LE_Generic, {}},
+    {CPU_PPC64LE_Pwr8, {}},
 #endif
 #ifdef ISPC_XE_ENABLED
     {GPU_TGLLP, {}},
@@ -649,7 +649,7 @@ class AllCPUs {
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_PPC64_ENABLED
-        names[CPU_PPC64LE_Generic].push_back("pwr8");
+        names[CPU_PPC64LE_Pwr8].push_back("pwr8");
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -772,7 +772,7 @@ class AllCPUs {
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_PPC64_ENABLED
-        compat[CPU_PPC64LE_Generic] = Set(CPU_PPC64LE_Generic, CPU_None);
+        compat[CPU_PPC64LE_Pwr8] = Set(CPU_PPC64LE_Pwr8, CPU_None);
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -1031,7 +1031,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_PPC64_ENABLED
-        case CPU_PPC64LE_Generic:
+        case CPU_PPC64LE_Pwr8:
             m_ispc_target = ISPCTarget::generic_i32x4;
             break;
 #endif
@@ -1147,7 +1147,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     // lGetArchFromTarget cannot infer the arch from a generic target alone.
     // Fix up the arch based on the CPU identifier.
     // TODO: add a proper PowerPC target
-    if (CPUID == CPU_PPC64LE_Generic) {
+    if (CPUID == CPU_PPC64LE_Pwr8) {
         arch = Arch::ppc64le;
     }
 #endif
@@ -2183,7 +2183,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         }
 #ifdef ISPC_PPC64_ENABLED
         if (arch == Arch::ppc64le && ISPCTargetIsGeneric(m_ispc_target) && cpu_string.empty()) {
-            CPUID = CPU_PPC64LE_Generic;
+            CPUID = CPU_PPC64LE_Pwr8;
             cpu = a.GetDefaultNameFromType(CPUID).c_str();
         }
 #endif
