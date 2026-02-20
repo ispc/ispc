@@ -33,7 +33,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev \
-          llvm-19-dev clang-19 lld-19
+          llvm-19-dev clang-19 lld-19 libclang-19-dev
 
     - name: Check tools
       run: |
