@@ -1764,8 +1764,13 @@ static llvm::Type *lGetVectorLLVMType(llvm::LLVMContext *ctx, const VectorType *
 
     llvm::Type *bt = nullptr;
     // Non-uniform vector types are represented in IR as an array.
-    // So, creating them with base as storage type similar to arrays.
-    if (isStorage || !base->IsUniformType()) {
+    // Use the storage type only when explicitly requested (isStorage=true).
+    // For internal (non-storage) use, non-uniform bool<N> vectors use
+    // BoolVectorType (the mask representation, e.g. <W x i32>) as element
+    // type, consistent with how scalar varying bool uses BoolVectorType
+    // internally. LLVMStorageType() vs LLVMType() only differs for bool;
+    // for all other element types the two are identical.
+    if (isStorage) {
         bt = base->LLVMStorageType(ctx);
     } else {
         bt = base->LLVMType(ctx);

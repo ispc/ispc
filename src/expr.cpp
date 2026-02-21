@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -7945,7 +7945,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         } else {
             // Emit instructions to do type conversion of each of the elements
             // of the vector.
-            llvm::Value *cast = llvm::UndefValue::get(toType->LLVMStorageType(g->ctx));
+            llvm::Value *cast = llvm::UndefValue::get(toType->LLVMType(g->ctx));
             for (int i = 0; i < toVector->GetElementCount(); ++i) {
                 llvm::Value *ei = ctx->ExtractInst(exprVal, i);
                 llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, ei, toVector->GetElementType(),
@@ -7955,7 +7955,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                 }
                 if ((toVector->GetElementType()->IsBoolType()) &&
                     (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {
-                    conv = ctx->SwitchBoolToStorageType(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
+                    conv = ctx->SwitchBoolToMaskType(conv, toVector->GetElementType()->LLVMType(g->ctx));
                 }
 
                 cast = ctx->InsertInst(cast, conv, i);
@@ -7998,11 +7998,11 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             cast = ctx->BroadcastValue(conv, toTypeLLVM);
         } else if (llvm::isa<llvm::ArrayType>(toTypeLLVM)) {
             // Example varying float => varying float<3>
-            cast = llvm::UndefValue::get(toType->LLVMStorageType(g->ctx));
+            cast = llvm::UndefValue::get(toType->LLVMType(g->ctx));
             for (int i = 0; i < toVector->GetElementCount(); ++i) {
                 if ((toVector->GetElementType()->IsBoolType()) &&
                     (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {
-                    conv = ctx->SwitchBoolToStorageType(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
+                    conv = ctx->SwitchBoolToMaskType(conv, toVector->GetElementType()->LLVMType(g->ctx));
                 }
                 // Here's InsertInst produces InsertValueInst.
                 cast = ctx->InsertInst(cast, conv, i);
