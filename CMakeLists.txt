@@ -155,10 +155,16 @@ if (LLVM_TARGETS_BUILT MATCHES "RISCV")
     set(LLVM_SUPPORTS_RISCV ON)
 endif()
 
+set(LLVM_SUPPORTS_PPC64 OFF)
+if (LLVM_TARGETS_BUILT MATCHES "PowerPC")
+    set(LLVM_SUPPORTS_PPC64 ON)
+endif()
+
 option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ${LLVM_SUPPORTS_ARM})
 # Turn off RISC-V support by default. Later we can use ${LLVM_SUPPORTS_RISCV} for default option value.
 option(RISCV_ENABLED "Enable RISC-V support" OFF)
+option(PPC64_ENABLED "Enable PowerPC64 support" OFF)
 option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
 option(XE_ENABLED "Enable Intel Xe support" OFF)
 
@@ -370,8 +376,8 @@ find_package(FLEX 2.6 REQUIRED)
         )
     endif()
 
-if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT RISCV_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
-  message( FATAL_ERROR "Either X86, ARM, RISC-V, WASM or XE targets need to be enabled.")
+if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT RISCV_ENABLED AND NOT PPC64_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
+  message( FATAL_ERROR "Either X86, ARM, RISC-V, PowerPC64, WASM or XE targets need to be enabled.")
 endif ()
 
 # All possible ISPC targets
@@ -450,6 +456,9 @@ if (ARM_ENABLED)
 endif()
 if (RISCV_ENABLED)
     list(APPEND LLVM_COMPONENTS riscv)
+endif()
+if (PPC64_ENABLED)
+    list(APPEND LLVM_COMPONENTS powerpc)
 endif()
 if (WASM_ENABLED)
     list(APPEND LLVM_COMPONENTS webassembly)
@@ -646,6 +655,10 @@ endif()
 
 if (RISCV_ENABLED)
     list(APPEND COMPILE_DEFINITIONS ISPC_RISCV_ENABLED)
+endif()
+
+if (PPC64_ENABLED)
+    list(APPEND COMPILE_DEFINITIONS ISPC_PPC64_ENABLED)
 endif()
 
 if (XE_ENABLED)

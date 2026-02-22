@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013-2025, Intel Corporation
+  Copyright (c) 2013-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -69,6 +69,8 @@ static const char *lGetSystemISA() {
     return isa;
 #elif defined(__riscv)
     return "RISC-V";
+#elif defined(__powerpc64__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+    return "PPC64LE";
 #else
 #error "Unsupported host CPU architecture."
 #endif

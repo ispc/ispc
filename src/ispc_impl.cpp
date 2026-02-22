@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2025-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -507,6 +507,15 @@ bool Initialize() {
     LLVMInitializeRISCVAsmParser();
     LLVMInitializeRISCVDisassembler();
     LLVMInitializeRISCVTargetMC();
+#endif
+
+#ifdef ISPC_PPC64_ENABLED
+    LLVMInitializePowerPCTargetInfo();
+    LLVMInitializePowerPCTarget();
+    LLVMInitializePowerPCAsmPrinter();
+    LLVMInitializePowerPCAsmParser();
+    LLVMInitializePowerPCDisassembler();
+    LLVMInitializePowerPCTargetMC();
 #endif
 
 #ifdef ISPC_WASM_ENABLED

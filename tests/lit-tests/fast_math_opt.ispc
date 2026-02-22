@@ -1,6 +1,10 @@
 // RUN: %{ispc} %s --target=host --opt=fast-math --nostdlib --nowrap 2>&1 | FileCheck %s -check-prefix=CHECK_WARN
 // RUN: %{ispc} %s --target=host --opt=fast-math -O0 --emit-llvm-text -o -| FileCheck %s -check-prefix=CHECK_NOFDIV
 
+// Generic target stdlib's rcp implementation uses 1.0/x (fdiv) rather than
+// a hardware rcp instruction, so the CHECK_NOFDIV check fails on ppc64le.
+// XFAIL: PPC64LE_HOST
+
 // CHECK_NOFDIV-NOT: fdiv
 
 

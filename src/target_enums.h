@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2025, Intel Corporation
+  Copyright (c) 2019-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -26,7 +26,7 @@ std::string OSToString(TargetOS os);
 std::string OSToLowerString(TargetOS os);
 TargetOS GetHostOS();
 
-enum class Arch { none, x86, x86_64, arm, aarch64, riscv64, wasm32, wasm64, xe64, error };
+enum class Arch { none, x86, x86_64, arm, aarch64, riscv64, ppc64le, wasm32, wasm64, xe64, error };
 Arch operator++(Arch &, int);
 
 Arch ParseArch(std::string arch);

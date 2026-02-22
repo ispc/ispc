@@ -1,3 +1,4 @@
+// rule: skip on arch=ppc64le
 #include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = 0;

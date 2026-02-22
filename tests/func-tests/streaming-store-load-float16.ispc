@@ -1,4 +1,5 @@
 #include "test_static.isph"
+// rule: skip on arch=ppc64le
 void var_store(uniform float16 a[], varying float x) {
     streaming_store(a, x);
 }

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2025, Intel Corporation
+#  Copyright (c) 2025-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -84,6 +84,12 @@ function (generate_generic_builtins ispc_name)
         )
     endif()
 
+    if (PPC64_ENABLED AND ISPC_LINUX_TARGET)
+        list(APPEND ARCH_LIST
+            "ppc64le,64"
+        )
+    endif()
+
     foreach(os ${os_list})
         foreach(target ${TARGET_LIST})
             foreach(pair ${ARCH_LIST})
@@ -91,7 +97,7 @@ function (generate_generic_builtins ispc_name)
                 list(GET pair_split 0 arch)
                 list(GET pair_split 1 bit)
                 # Skip unsupported cases, see Target::GetTripleString for more details.
-                if (${os} STREQUAL "windows" AND (${arch} STREQUAL "arm" OR ${arch} STREQUAL "riscv64"))
+                if (${os} STREQUAL "windows" AND (${arch} STREQUAL "arm" OR ${arch} STREQUAL "riscv64" OR ${arch} STREQUAL "ppc64le"))
                     continue()
                 endif()
                 generate_generic_target_builtin(${ispc_name} ${target} ${arch} ${bit} ${os})

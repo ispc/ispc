@@ -254,7 +254,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, openmp, from_valid
                 try_do_LLVM("patch LLVM with patch " + patch, "git apply " + patch, from_validation, verbose)
         os.chdir("../")
 
-    targets_and_common_options = r"  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;RISCV\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
+    targets_and_common_options = r"  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;PowerPC\;RISCV\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
 
     # Build without terminfo support. Starting from 19.0 it's the default and the options is removed.
     if version_LLVM < "19_0":
