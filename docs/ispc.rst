@@ -270,6 +270,15 @@ New Features:
   ``avx512gnr``, and ``avx10.2dmr`` targets. Please refer to
   `Intel AMX (Advanced Matrix Extensions)`_ for more details.
 
+New Architecture Support:
+
+* Initial support for the PowerPC 64-bit little-endian (ppc64le) architecture
+  has been added using generic targets (e.g., generic-i32x4). The baseline is
+  POWER ISA 2.7 (POWER8+) with VSX. This support is experimental and not
+  included in official ISPC binaries. To use it, build ISPC from source with
+  the `PPC64_ENABLED=ON` CMake option. Usage: `ispc --arch=ppc64le
+  --target=generic-i32x4 foo.ispc -o foo.o`.
+
 Language Changes:
 
 * Integral type aliases (``size_t``, ``ptrdiff_t``, ``intptr_t``, ``uintptr_t``)

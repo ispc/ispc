@@ -1,14 +1,3 @@
-=== v1.31.0 === (TBD)
-
-Experimental PowerPC64 Support:
-
-* Initial support for the PowerPC 64-bit little-endian (ppc64le) architecture
-  has been added using generic targets (e.g., generic-i32x4). The baseline is
-  POWER ISA 3.0 (POWER8+) with VSX. This support is experimental and not
-  included in official ISPC binaries. To use it, build ISPC from source with
-  the `PPC64_ENABLED=ON` CMake option. Usage: `ispc --arch=ppc64le
-  --target=generic-i32x4 foo.ispc -o foo.o`.
-
 === v1.30.0 === (04 February 2026)
 
 ISPC release featuring Intel AMX (Advanced Matrix Extensions) support in the
