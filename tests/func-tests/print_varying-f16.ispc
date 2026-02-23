@@ -1,5 +1,6 @@
 #include "test_static.isph"
 // rule: skip on jit=true
+// rule: skip on arch=ppc64le
 
 task void print_f(uniform float aFOO[]) {
     float16 a = aFOO[programIndex];

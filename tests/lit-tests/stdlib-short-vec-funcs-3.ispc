@@ -3,6 +3,10 @@
 
 // RUN: %{ispc} --target=host -o %t.o %s 2>&1
 
+// LLVM 20 PowerPC backend can't select froundeven for vector types
+// (Cannot select: v4f32 = froundeven). Fixed in LLVM 21 by PR #150597.
+// XFAIL: PPC64LE_HOST && !LLVM_21_0+
+
 #include <short_vec.isph>
 
 #define VARYING(NAME, TYPE, N)                                                                                         \

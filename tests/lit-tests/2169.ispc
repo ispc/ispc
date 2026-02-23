@@ -6,6 +6,10 @@
 // RUN: %t.c.bin | FileCheck %s
 
 // REQUIRES: !MACOS_HOST
+// ISPC assertion failure in lAllDivBaseEqual (llvmutil.cpp) for generic
+// targets: the integer divide optimization passes a non-power-of-2 baseValue.
+// TODO: Fix this ISPC bug for generic targets.
+// XFAIL: PPC64LE_HOST
 
 // CHECK-NOT: Floating point exception
 // CHECK: Correct result

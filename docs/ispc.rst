@@ -257,6 +257,18 @@ of recent changes to the compiler.
 .. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/main/docs/ReleaseNotes.txt
 
 
+Updating ISPC Programs For Changes In ISPC 1.31.0
+-------------------------------------------------
+
+New Architecture Support:
+
+* Initial support for the PowerPC 64-bit little-endian (ppc64le) architecture
+  has been added using generic targets (e.g., generic-i32x4). The baseline is
+  POWER ISA 2.7 (POWER8+) with VSX. This support is experimental and not
+  included in official ISPC binaries. To use it, build ISPC from source with
+  the `PPC64_ENABLED=ON` CMake option. Usage: `ispc --arch=ppc64le
+  --target=generic-i32x4 foo.ispc -o foo.o`.
+
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
 

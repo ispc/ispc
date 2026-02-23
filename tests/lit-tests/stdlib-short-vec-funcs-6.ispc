@@ -3,6 +3,10 @@
 
 // RUN: %{ispc} --target=host -o %t.o %s 2>&1
 
+// LLVM 20 PowerPC backend crashes on vector atan2/pow/fmod with
+// "Do not know how to promote this operator's result!". Fixed in LLVM 21.
+// XFAIL: PPC64LE_HOST && !LLVM_21_0+
+
 #include <short_vec.isph>
 
 #define VARYING(NAME, TYPE, N)                                                                                         \

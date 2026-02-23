@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2025, Intel Corporation
+#  Copyright (c) 2025-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -40,7 +40,7 @@ def bundle_header(src, output):
             outfile.write("0x00 };\n\n")
             outfile.write(f"int {name}_length = {length};\n")
 
-ARCH_CHOICES = ['i686', 'x86', 'x86_64', 'arm', 'armv8a', 'arm64', 'riscv64', 'aarch64', 'wasm32', 'wasm64', 'xe64']
+ARCH_CHOICES = ['i686', 'x86', 'x86_64', 'arm', 'armv8a', 'arm64', 'riscv64', 'ppc64le', 'aarch64', 'wasm32', 'wasm64', 'xe64']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
@@ -106,6 +106,8 @@ if args[0].arch in ARCH_CHOICES:
         ispc_arch = "aarch64"
     elif args[0].arch == "riscv64":
         ispc_arch = "riscv64"
+    elif args[0].arch == "ppc64le":
+        ispc_arch = "ppc64le"
     elif args[0].arch == "wasm32":
         ispc_arch = "wasm32"
     elif args[0].arch == "wasm64":

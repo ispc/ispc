@@ -4,6 +4,9 @@
 // RUN: %t.c.bin | FileCheck %s
 
 // REQUIRES: !MACOS_HOST
+// ABI mismatch between ISPC and clang on ppc64le for int8/int16 return types:
+// int8_min and int16_min return incorrect values when linked with clang.
+// XFAIL: PPC64LE_HOST
 
 // CHECK: int8_min: 1
 // CHECK: int8_max: 1
