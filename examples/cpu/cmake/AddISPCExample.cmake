@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -26,6 +26,8 @@ if (UNIX)
             set(ispc_arch "arm")
         elseif ("${ARCH}" STREQUAL "aarch64")
             set(ispc_arch "aarch64")
+        elseif ("${ARCH}" STREQUAL "ppc64le")
+            set(ispc_arch "ppc64le")
         endif()
     endif()
 

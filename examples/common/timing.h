@@ -1,12 +1,12 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include <stdint.h>
 
-#if defined(__arm__) || defined(__aarch64__)
+#if defined(__arm__) || defined(__aarch64__) || defined(__powerpc64__)
 #include <stddef.h>
 #include <sys/time.h>
 // There's no easy way to get a hardware clock counter on ARM, so instead
@@ -68,7 +68,7 @@ static inline double rtc(void) {
 }
 
 #endif // !WIN32
-#endif // !__arm__ && !__aarch64__
+#endif // !__arm__ && !__aarch64__ && !__powerpc64__
 
 static uint64_t ustart, uend;
 static double tstart, tend;

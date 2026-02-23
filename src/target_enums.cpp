@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2025, Intel Corporation
+  Copyright (c) 2019-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -54,7 +54,9 @@ Arch operator++(Arch &arch, int dummy) {
                   "Enum Arch is not sequential");
     static_assert(static_cast<underlying>(Arch::riscv64) == static_cast<underlying>(Arch::aarch64) + 1,
                   "Enum Arch is not sequential");
-    static_assert(static_cast<underlying>(Arch::wasm32) == static_cast<underlying>(Arch::riscv64) + 1,
+    static_assert(static_cast<underlying>(Arch::ppc64le) == static_cast<underlying>(Arch::riscv64) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::wasm32) == static_cast<underlying>(Arch::ppc64le) + 1,
                   "Enum Arch is not sequential");
     static_assert(static_cast<underlying>(Arch::wasm64) == static_cast<underlying>(Arch::wasm32) + 1,
                   "Enum Arch is not sequential");
@@ -322,6 +324,8 @@ Arch ParseArch(std::string arch) {
         return Arch::aarch64;
     } else if (arch == "riscv64") {
         return Arch::riscv64;
+    } else if (arch == "ppc64le") {
+        return Arch::ppc64le;
     } else if (arch == "wasm32") {
         return Arch::wasm32;
     } else if (arch == "wasm64") {
@@ -346,6 +350,8 @@ std::string ArchToString(Arch arch) {
         return "aarch64";
     case Arch::riscv64:
         return "riscv64";
+    case Arch::ppc64le:
+        return "ppc64le";
     case Arch::wasm32:
         return "wasm32";
     case Arch::wasm64:

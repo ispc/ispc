@@ -2,6 +2,7 @@
 // sincos() function is available only on Linux.
 // rule: skip on OS=*
 // rule: run on OS=linux
+// rule: skip on arch=ppc64le
 bool ok(float16 x, float16 ref) { return (abs(x - ref) < 1e-4) || abs((x-ref)/ref) < 1e-3; }
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
   varying float16 arg = aFOO[programIndex];

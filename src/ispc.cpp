@@ -65,6 +65,8 @@ Module *ispc::m;
 #define ISPC_HOST_IS_ARM
 #elif defined(__riscv)
 #define ISPC_HOST_IS_RISCV
+#elif defined(__powerpc64__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define ISPC_HOST_IS_PPC64LE
 #elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 #define ISPC_HOST_IS_X86
 #endif
@@ -224,6 +226,8 @@ static ISPCTarget lGetSystemISA() {
     return lGetARMSystemISA();
 #elif defined(ISPC_HOST_IS_RISCV)
     return ISPCTarget::rvv_x4;
+#elif defined(ISPC_HOST_IS_PPC64LE)
+    return ISPCTarget::generic_i32x4;
 #elif defined(ISPC_HOST_IS_X86)
     enum Target::ISA isa = (enum Target::ISA)dispatch::get_x86_isa();
     switch (isa) {
@@ -399,6 +403,9 @@ typedef enum {
     CPU_SpacemiT_X60,
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
+#ifdef ISPC_PPC64_ENABLED
+    CPU_PPC64LE_Pwr8,
+#endif
 #ifdef ISPC_XE_ENABLED
     GPU_TGLLP,
     GPU_ACM_G10,
@@ -508,6 +515,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_SpacemiT_X60, {}},
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
+#ifdef ISPC_PPC64_ENABLED
+    {CPU_PPC64LE_Pwr8, {}},
+#endif
 #ifdef ISPC_XE_ENABLED
     {GPU_TGLLP, {}},
     {GPU_ACM_G10, {}},
@@ -638,6 +648,10 @@ class AllCPUs {
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 
+#ifdef ISPC_PPC64_ENABLED
+        names[CPU_PPC64LE_Pwr8].push_back("pwr8");
+#endif
+
 #ifdef ISPC_XE_ENABLED
         names[GPU_TGLLP].push_back("tgllp");
         names[GPU_TGLLP].push_back("dg1");
@@ -757,6 +771,10 @@ class AllCPUs {
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 
+#ifdef ISPC_PPC64_ENABLED
+        compat[CPU_PPC64LE_Pwr8] = Set(CPU_PPC64LE_Pwr8, CPU_None);
+#endif
+
 #ifdef ISPC_XE_ENABLED
         compat[GPU_TGLLP] = Set(GPU_TGLLP, CPU_None);
         compat[GPU_ACM_G10] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, CPU_None);
@@ -837,6 +855,13 @@ Arch lGetArchFromTarget(ISPCTarget target) {
 #ifdef ISPC_RISCV_ENABLED
     if (ISPCTargetIsRiscV(target)) {
         return Arch::riscv64;
+    }
+#endif
+#ifdef ISPC_PPC64_ENABLED
+    if (ISPCTargetIsGeneric(target)) {
+#if defined(ISPC_HOST_IS_PPC64LE)
+        return Arch::ppc64le;
+#endif
     }
 #endif
 #if ISPC_XE_ENABLED
@@ -1005,6 +1030,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             break;
 #endif // ISPC_RISCV_ENABLED
 
+#ifdef ISPC_PPC64_ENABLED
+        case CPU_PPC64LE_Pwr8:
+            m_ispc_target = ISPCTarget::generic_i32x4;
+            break;
+#endif
+
 #ifdef ISPC_XE_ENABLED
         case GPU_TGLLP:
             m_ispc_target = ISPCTarget::xelp_x16;
@@ -1111,6 +1142,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     if (arch == Arch::none) {
         arch = lGetArchFromTarget(m_ispc_target);
     }
+#ifdef ISPC_PPC64_ENABLED
+    // When cross-compiling for PPC64LE (e.g., --cpu=pwr8 on an x86 host),
+    // lGetArchFromTarget cannot infer the arch from a generic target alone.
+    // Fix up the arch based on the CPU identifier.
+    // TODO: add a proper PowerPC target
+    if (CPUID == CPU_PPC64LE_Pwr8) {
+        arch = Arch::ppc64le;
+    }
+#endif
 
     bool error = false;
     // Make sure the target architecture is a known one; print an error
@@ -2141,6 +2181,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             CPUID = CPU_x86_64;
             cpu = a.GetDefaultNameFromType(CPUID).c_str();
         }
+#ifdef ISPC_PPC64_ENABLED
+        if (arch == Arch::ppc64le && ISPCTargetIsGeneric(m_ispc_target) && cpu_string.empty()) {
+            CPUID = CPU_PPC64LE_Pwr8;
+            cpu = a.GetDefaultNameFromType(CPUID).c_str();
+        }
+#endif
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             std::string target_string = ISPCTargetToString(m_ispc_target);
@@ -2230,6 +2276,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             if (m_cpu == "generic-rv64gcv") {
                 featuresString = "+m,+a,+f,+d,+c,+v,+zvl128b";
                 m_cpu = "";
+            }
+        }
+#endif
+#ifdef ISPC_PPC64_ENABLED
+        if (arch == Arch::ppc64le) {
+            if (m_cpu == "pwr8") {
+                featuresString = "+vsx";
             }
         }
 #endif
@@ -2516,6 +2569,8 @@ llvm::Triple Target::GetTriple() const {
             triple.setArchName("aarch64");
         } else if (m_arch == Arch::riscv64) {
             triple.setArchName("riscv64");
+        } else if (m_arch == Arch::ppc64le) {
+            triple.setArchName("ppc64le");
         } else if (m_arch == Arch::xe64) {
             triple.setArchName("spir64");
         } else {
@@ -2537,6 +2592,8 @@ llvm::Triple Target::GetTriple() const {
         } else if (m_arch == Arch::arm) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);
         } else if (m_arch == Arch::riscv64) {
+            triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
+        } else if (m_arch == Arch::ppc64le) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         } else {
             Error(SourcePos(), "Unknown arch.");
