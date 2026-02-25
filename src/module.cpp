@@ -1076,6 +1076,15 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
+    const bool isInternal = storageClass.IsStatic() || isInline;
+    const bool isExternal = functionType->IsExported() || isExternCorSYCL;
+
+    if (isInternal && isExternal) {
+        const char *internalQualifier = isInline ? "inline" : "static";
+        const char *externalQualifier = isExternCorSYCL ? "extern" : "export";
+        Error(pos, "Function qualifier '%s' incompatible with '%s'.", externalQualifier, internalQualifier);
+    }
+
     if (isVectorCall) {
         if (!storageClass.IsExternC()) {
             Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name.c_str());
