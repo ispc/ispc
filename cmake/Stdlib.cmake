@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2025, Intel Corporation
+#  Copyright (c) 2018-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -181,14 +181,21 @@ function (generate_stdlibs ispc_name)
     add_custom_target(stdlibs-cpp DEPENDS stdlibs-bc)
     set_target_properties(stdlibs-cpp PROPERTIES SOURCE "${STDLIB_CPP_FILES}")
 
-    add_library(stdlib OBJECT EXCLUDE_FROM_ALL ${STDLIB_CPP_FILES} ${STDLIB_HEADERS_CPP})
-    add_dependencies(stdlib stdlibs-cpp)
-    add_dependencies(stdlib stdlib-headers-cpp)
+    # The stdlib OBJECT library is only needed for the composite binary which embeds
+    # bitcode as C++ objects. In slim mode, bitcode files are distributed alongside
+    # the binary and loaded at runtime, so the OBJECT library is not needed.
+    # Creating it in slim mode causes a dependency cycle detected by Ninja 1.12+:
+    # stdlib.bc -> bin/ispc -> stdlib.dir/*.cpp.o -> stdlib.cpp -> stdlib.bc
+    if (NOT ISPC_SLIM_BINARY)
+        add_library(stdlib OBJECT EXCLUDE_FROM_ALL ${STDLIB_CPP_FILES} ${STDLIB_HEADERS_CPP})
+        add_dependencies(stdlib stdlibs-cpp)
+        add_dependencies(stdlib stdlib-headers-cpp)
 
-    if (MSVC)
-        source_group("Generated Include Files" FILES ${STDLIB_HEADERS_CPP})
-        source_group("Generated Stdlib Files" FILES ${STDLIB_CPP_FILES})
+        if (MSVC)
+            source_group("Generated Include Files" FILES ${STDLIB_HEADERS_CPP})
+            source_group("Generated Stdlib Files" FILES ${STDLIB_CPP_FILES})
+        endif()
+        set_source_files_properties(${STDLIB_HEADERS_CPP} PROPERTIES GENERATED true)
+        set_source_files_properties(${STDLIB_CPP_FILES} PROPERTIES GENERATED true)
     endif()
-    set_source_files_properties(${STDLIB_HEADERS_CPP} PROPERTIES GENERATED true)
-    set_source_files_properties(${STDLIB_CPP_FILES} PROPERTIES GENERATED true)
 endfunction()
