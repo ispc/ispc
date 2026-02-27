@@ -456,6 +456,9 @@ static std::string lEscapeForMakeDepfile(const std::string &path) {
         case '$':
             result += "$$";
             break;
+        case ':':
+            result += "\\:";
+            break;
         default:
             result += c;
             break;
