@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -435,6 +435,38 @@ static bool lIsExternC(const Symbol *sym) {
     return ft->IsExternC();
 }
 
+// Escape a path for use in a make/Ninja depfile.
+// Make depfile format requires certain characters to be backslash-escaped so
+// that tools like Ninja do not split tokens at spaces or misparse the rule.
+// Escape order matters: backslash must be escaped first to avoid double-escaping.
+static std::string lEscapeForMakeDepfile(const std::string &path) {
+    std::string result;
+    result.reserve(path.size());
+    for (char c : path) {
+        switch (c) {
+        case '\\':
+            result += "\\\\";
+            break;
+        case ' ':
+            result += "\\ ";
+            break;
+        case '#':
+            result += "\\#";
+            break;
+        case '$':
+            result += "$$";
+            break;
+        case ':':
+            result += "\\:";
+            break;
+        default:
+            result += c;
+            break;
+        }
+    }
+    return result;
+}
+
 static void lUnescapeStringInPlace(std::string &str) {
     // There are many more escape sequences, but since this is a path,
     // we can get away with only supporting the basic ones (i.e. no
@@ -512,10 +544,10 @@ bool Module::writeDeps(Output &CO) {
     }
 
     if (generateMakeRule) {
-        fprintf(file, "%s:", targetName.c_str());
+        fprintf(file, "%s:", lEscapeForMakeDepfile(targetName).c_str());
         // Rules always emit source first.
         if (srcFile && !IsStdin(srcFile)) {
-            fprintf(file, " %s", srcFile);
+            fprintf(file, " %s", lEscapeForMakeDepfile(srcFile).c_str());
         }
         std::string unescaped;
 
@@ -528,7 +560,7 @@ bool Module::writeDeps(Output &CO) {
                 continue;
             }
             fprintf(file, " \\\n");
-            fprintf(file, " %s", unescaped.c_str());
+            fprintf(file, " %s", lEscapeForMakeDepfile(unescaped).c_str());
         }
         fprintf(file, "\n");
     } else {
