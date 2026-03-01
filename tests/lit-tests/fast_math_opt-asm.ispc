@@ -1,5 +1,7 @@
 // This test checks the optimizations performed by the different fast-math modes on divisions at the assembly level.
 // The IR/ASM tests are split because MacOS does not support avx512spr targets required for native float16 support.
+// Besides, generic target stdlib's rcp implementation uses 1.0/x (fdiv) rather than a hardware rcp instruction
+// so it will fail on ppc64le for example.
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 
@@ -7,10 +9,6 @@
 // RUN: %{ispc} %s --target=avx512spr-x16 --opt=fast-math:legacy -O2 --emit-asm -o -| FileCheck %s -check-prefix=CHECK_X64_ASM_LEGACY
 // RUN: %{ispc} %s --target=avx512spr-x16 --opt=fast-math:balanced -O2 --emit-asm -o -| FileCheck %s -check-prefix=CHECK_X64_ASM_BALANCED
 // RUN: %{ispc} %s --target=avx512spr-x16 --opt=fast-math:aggressive -O2 --emit-asm -o -| FileCheck %s -check-prefix=CHECK_X64_ASM_AGGRESSIVE
-
-// Generic target stdlib's rcp implementation uses 1.0/x (fdiv) rather than
-// a hardware rcp instruction, so the CHECK_NOFDIV check fails on ppc64le.
-// XFAIL: PPC64LE_HOST
 
 // The default mode is the legacy one
 // CHECK_X64_ASM_DEFAULT: vrcpph
