@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025, Intel Corporation
+  Copyright (c) 2026-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -14,6 +14,7 @@
 #include <string>
 
 #include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
@@ -304,6 +305,15 @@ Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *sym
         argTypes.push_back(type);
     }
     FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+    if (funcType != nullptr) {
+        llvm::AttributeList attrs = func->getAttributes();
+        unsigned int numParams = func->arg_size();
+        for (unsigned int j = 0; j < numParams; ++j) {
+            if (attrs.hasParamAttr(j, llvm::Attribute::ImmArg)) {
+                funcType->SetParameterImmArg(j, true);
+            }
+        }
+    }
     Debug(noPos, "Created Intrinsic symbol \"%s\" [%s]\n", name.c_str(), funcType->GetString().c_str());
     Symbol *sym = new Symbol(name, noPos, Symbol::SymbolKind::Function, funcType);
     sym->function = func;

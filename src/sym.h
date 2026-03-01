@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -76,12 +76,14 @@ class Symbol : public Traceable {
     ConstExpr *constValue;     /*!< For symbols with const-qualified types, this may store
                                     the symbol's compile-time constant value.  This value may
                                     validly be nullptr for a const-qualified type, however; for
-                                    example, the ConstExpr class can't currently represent
-                                    struct types.  For cases like these, ConstExpr is nullptr,
+                                    example, the ConstExpr class doesn't always represent
+                                    all complex constant values. For cases like these, ConstExpr is nullptr,
                                     though for all const symbols, the value pointed to by the
                                     storageInfo pointer member will be its constant value.  (This
                                     messiness is due to needing an ispc ConstExpr for the early
                                     constant folding optimizations). */
+    bool isConstexpr;          /*!< True if the symbol was declared with constexpr. */
+    bool constEvalPending;     /*!< True if constant evaluation of the initializer is deferred. */
     StorageClass storageClass; /*!< Records the storage class (if any) provided with the
                                     symbol's declaration. */
     int varyingCFDepth;        /*!< This member records the number of levels of nested 'varying'

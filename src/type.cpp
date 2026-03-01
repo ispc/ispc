@@ -2630,6 +2630,7 @@ llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, SourcePos p)
     : Type(FUNCTION_TYPE, Variability::Uniform, false, p), returnType(r), paramTypes(a),
       paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
+      paramImmArgs(llvm::SmallVector<bool, 8>(a.size(), false)),
       paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), nullptr)),
       paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)), flags(0) {
     Assert(returnType != nullptr);
@@ -2641,7 +2642,8 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
                            const llvm::SmallVector<std::string, 8> &an, const llvm::SmallVector<Expr *, 8> &ad,
                            const llvm::SmallVector<SourcePos, 8> &ap, int cost, unsigned int functionFlags, SourcePos p)
     : Type(FUNCTION_TYPE, Variability::Uniform, false, p), returnType(r), paramTypes(a), paramNames(an),
-      paramDefaults(ad), paramPositions(ap), costOverride(cost), flags(functionFlags) {
+      paramImmArgs(llvm::SmallVector<bool, 8>(a.size(), false)), paramDefaults(ad), paramPositions(ap),
+      costOverride(cost), flags(functionFlags) {
     Assert(paramTypes.size() == paramNames.size() && paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
     Assert(returnType != nullptr);
@@ -2651,6 +2653,7 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
 FunctionType::FunctionType(const FunctionType &other)
     : FunctionType(other.returnType, other.paramTypes, other.paramNames, other.paramDefaults, other.paramPositions,
                    other.costOverride, other.flags, other.pos) {
+    paramImmArgs = other.paramImmArgs;
     // Reset any cached values
     this->asMaskedType = nullptr;
     this->asUnmaskedType = nullptr;
@@ -2663,6 +2666,7 @@ const FunctionType *FunctionType::createWithSignature(const Type *newReturnType,
     FunctionType *ins = static_cast<FunctionType *>(create());
     ins->returnType = newReturnType;
     ins->paramTypes = newParamTypes;
+    ins->paramImmArgs.resize(newParamTypes.size(), false);
     return ins;
 }
 
@@ -2924,6 +2928,9 @@ const std::string FunctionType::GetReturnTypeString() const {
     }
 
     std::string ret;
+    if (IsConstexpr()) {
+        ret += "constexpr ";
+    }
     if (IsTask()) {
         ret += "task ";
     }
@@ -3168,6 +3175,16 @@ Expr *FunctionType::GetParameterDefault(int i) const {
     return paramDefaults[i];
 }
 
+void FunctionType::SetParameterDefault(int i, Expr *expr) {
+    if (i < 0) {
+        return;
+    }
+    if (i >= (int)paramDefaults.size()) {
+        paramDefaults.resize(i + 1, nullptr);
+    }
+    paramDefaults[i] = expr;
+}
+
 const SourcePos &FunctionType::GetParameterSourcePos(int i) const {
     Assert(i < (int)paramPositions.size());
     return paramPositions[i];
@@ -3176,6 +3193,23 @@ const SourcePos &FunctionType::GetParameterSourcePos(int i) const {
 const std::string &FunctionType::GetParameterName(int i) const {
     Assert(i < (int)paramNames.size());
     return paramNames[i];
+}
+
+bool FunctionType::IsParameterImmArg(int i) const {
+    if (i < 0 || i >= (int)paramImmArgs.size()) {
+        return false;
+    }
+    return paramImmArgs[i];
+}
+
+void FunctionType::SetParameterImmArg(int i, bool immarg) {
+    if (i < 0) {
+        return;
+    }
+    if (i >= (int)paramImmArgs.size()) {
+        paramImmArgs.resize(i + 1, false);
+    }
+    paramImmArgs[i] = immarg;
 }
 
 ///////////////////////////////////////////////////////////////////////////

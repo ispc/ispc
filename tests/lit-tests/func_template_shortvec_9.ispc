@@ -1,9 +1,8 @@
 // Check compiler diagnostics
 // RUN: not %{ispc} --target=host %s --nowrap 2>&1 | FileCheck %s
-// CHECK: 14:10: Error: Only atomic types (int, float, ...) and template type parameters are legal for vector types.
-// CHECK: 28:14: Error: Only atomic types (int, float, ...) and template type parameters are legal for vector types.
-// CHECK: 29:14: Error: Illegal to specify vector size of 0.
-// CHECK: 19:21: Warning: Array index "2" may be out of bounds for 1 element array.
+// CHECK-COUNT-2: Error: Vector size must be a compile-time constant or template non-type parameter.
+// CHECK: Error: Illegal to specify vector size of 0.
+// CHECK: Warning: Array index "2" may be out of bounds for 1 element array.
 
 struct S {
     int x;

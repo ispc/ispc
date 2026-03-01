@@ -78,15 +78,19 @@
 
 #include <amx.isph>
 
+constexpr uniform int tile_zero_id() { return amx_tmm2; }
+constexpr uniform int tile_load_id() { return amx_tmm0; }
+constexpr uniform int tile_load_t1_id() { return amx_tmm1; }
+
 __attribute__((external_only))
 export void test_amx_tile(uniform int8* uniform config, uniform int8* uniform data) {
     // Base AMX tile operations - require amxtile feature
     amx_tile_loadconfig(config);
     amx_tile_storeconfig(config);
-    amx_tile_zero(2);
-    amx_tile_load(0, data, (uniform int64)64);
-    amx_tile_load_t1(1, data, (uniform int64)64);
-    amx_tile_store(0, data, (uniform int64)64);
+    // Exercise constexpr + template AMX wrappers for tile immargs.
+    amx_tile_zero<tile_zero_id()>();
+    amx_tile_load<tile_load_id()>(data, (uniform int64)64);
+    amx_tile_load_t1<tile_load_t1_id()>(data, (uniform int64)64);
+    amx_tile_store<tile_load_id()>(data, (uniform int64)64);
     amx_tile_release();
 }
-

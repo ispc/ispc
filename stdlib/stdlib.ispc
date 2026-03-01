@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -100,14 +100,14 @@ __declspec(safe) static inline unsigned int64 broadcast(unsigned int64 v, unifor
 template <typename T> unmasked varying T __rotate_via_shuffle(varying T v, uniform int32 i) {
     // Pre-computed shuffle masks for each rotation
 #if TARGET_WIDTH == 4
-    static const int masks[4] = {
+    static constexpr int masks[4] = {
         {0, 1, 2, 3}, // rotate by 0
         {1, 2, 3, 0}, // rotate by 1
         {2, 3, 0, 1}, // rotate by 2
         {3, 0, 1, 2}  // rotate by 3
     };
 #elif TARGET_WIDTH == 8
-    static const int masks[8] = {
+    static constexpr int masks[8] = {
         {0, 1, 2, 3, 4, 5, 6, 7}, // rotate by 0
         {1, 2, 3, 4, 5, 6, 7, 0}, // rotate by 1
         {2, 3, 4, 5, 6, 7, 0, 1}, // rotate by 2
@@ -118,7 +118,7 @@ template <typename T> unmasked varying T __rotate_via_shuffle(varying T v, unifo
         {7, 0, 1, 2, 3, 4, 5, 6}  // rotate by 7
     };
 #elif TARGET_WIDTH == 16
-    static const int masks[16] = {
+    static constexpr int masks[16] = {
         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, // rotate by 0
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0}, // rotate by 1
         {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1}, // rotate by 2
@@ -137,7 +137,7 @@ template <typename T> unmasked varying T __rotate_via_shuffle(varying T v, unifo
         {15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}  // rotate by 15
     };
 #elif TARGET_WIDTH == 32
-    static const int masks[32] = {
+    static constexpr int masks[32] = {
         {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
          16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, // rotate by 0
         {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
@@ -204,7 +204,7 @@ template <typename T> unmasked varying T __rotate_via_shuffle(varying T v, unifo
          15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30} // rotate by 31
     };
 #elif TARGET_WIDTH == 64
-    static const int masks[64] = {
+    static constexpr int masks[64] = {
         {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
          22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
          44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63}, // rotate by 0
@@ -3375,8 +3375,8 @@ __declspec(safe) static inline float sin(float x_full) {
         }
         return ret;
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        static const float pi_over_two_vec = 1.57079637050628662109375;
-        static const float two_over_pi_vec = 0.636619746685028076171875;
+        static constexpr float pi_over_two_vec = 1.57079637050628662109375;
+        static constexpr float two_over_pi_vec = 0.636619746685028076171875;
         float scaled = x_full * two_over_pi_vec;
         float k_real = floor(scaled);
         int k = (int)k_real;
@@ -3389,17 +3389,17 @@ __declspec(safe) static inline float sin(float x_full) {
 
         // These coefficients are from sollya with fpminimax(sin(x)/x, [|0, 2,
         // 4, 6, 8, 10|], [|single...|], [0;Pi/2]);
-        static const float sin_c2 = -0.16666667163372039794921875;
-        static const float sin_c4 = 8.333347737789154052734375e-3;
-        static const float sin_c6 = -1.9842604524455964565277099609375e-4;
-        static const float sin_c8 = 2.760012648650445044040679931640625e-6;
-        static const float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+        static constexpr float sin_c2 = -0.16666667163372039794921875;
+        static constexpr float sin_c4 = 8.333347737789154052734375e-3;
+        static constexpr float sin_c6 = -1.9842604524455964565277099609375e-4;
+        static constexpr float sin_c8 = 2.760012648650445044040679931640625e-6;
+        static constexpr float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
 
-        static const float cos_c2 = -0.5;
-        static const float cos_c4 = 4.166664183139801025390625e-2;
-        static const float cos_c6 = -1.388833043165504932403564453125e-3;
-        static const float cos_c8 = 2.47562347794882953166961669921875e-5;
-        static const float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+        static constexpr float cos_c2 = -0.5;
+        static constexpr float cos_c4 = 4.166664183139801025390625e-2;
+        static constexpr float cos_c6 = -1.388833043165504932403564453125e-3;
+        static constexpr float cos_c8 = 2.47562347794882953166961669921875e-5;
+        static constexpr float cos_c10 = -2.59630184018533327616751194000244140625e-7;
 
         float outside = sin_usecos ? 1 : x;
         float c2 = sin_usecos ? cos_c2 : sin_c2;
@@ -3427,8 +3427,8 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
     } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
         return __stdlib_sinf(x_full);
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        static const uniform float pi_over_two_vec = 1.57079637050628662109375;
-        static const uniform float two_over_pi_vec = 0.636619746685028076171875;
+        static constexpr uniform float pi_over_two_vec = 1.57079637050628662109375;
+        static constexpr uniform float two_over_pi_vec = 0.636619746685028076171875;
         uniform float scaled = x_full * two_over_pi_vec;
         uniform float k_real = floor(scaled);
         uniform int k = (int)k_real;
@@ -3441,17 +3441,17 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
 
         // These coefficients are from sollya with fpminimax(sin(x)/x, [|0, 2,
         // 4, 6, 8, 10|], [|single...|], [0;Pi/2]);
-        static const uniform float sin_c2 = -0.16666667163372039794921875;
-        static const uniform float sin_c4 = 8.333347737789154052734375e-3;
-        static const uniform float sin_c6 = -1.9842604524455964565277099609375e-4;
-        static const uniform float sin_c8 = 2.760012648650445044040679931640625e-6;
-        static const uniform float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+        static constexpr uniform float sin_c2 = -0.16666667163372039794921875;
+        static constexpr uniform float sin_c4 = 8.333347737789154052734375e-3;
+        static constexpr uniform float sin_c6 = -1.9842604524455964565277099609375e-4;
+        static constexpr uniform float sin_c8 = 2.760012648650445044040679931640625e-6;
+        static constexpr uniform float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
 
-        static const uniform float cos_c2 = -0.5;
-        static const uniform float cos_c4 = 4.166664183139801025390625e-2;
-        static const uniform float cos_c6 = -1.388833043165504932403564453125e-3;
-        static const uniform float cos_c8 = 2.47562347794882953166961669921875e-5;
-        static const uniform float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+        static constexpr uniform float cos_c2 = -0.5;
+        static constexpr uniform float cos_c4 = 4.166664183139801025390625e-2;
+        static constexpr uniform float cos_c6 = -1.388833043165504932403564453125e-3;
+        static constexpr uniform float cos_c8 = 2.47562347794882953166961669921875e-5;
+        static constexpr uniform float cos_c10 = -2.59630184018533327616751194000244140625e-7;
 
         uniform float outside, c2, c4, c6, c8, c10;
         if (sin_usecos) {
@@ -3607,8 +3607,8 @@ __declspec(safe) static inline float cos(float x_full) {
         }
         return ret;
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        static const float pi_over_two_vec = 1.57079637050628662109375;
-        static const float two_over_pi_vec = 0.636619746685028076171875;
+        static constexpr float pi_over_two_vec = 1.57079637050628662109375;
+        static constexpr float two_over_pi_vec = 0.636619746685028076171875;
         float scaled = x_full * two_over_pi_vec;
         float k_real = floor(scaled);
         int k = (int)k_real;
@@ -3658,8 +3658,8 @@ __declspec(safe) static inline uniform float cos(uniform float x_full) {
     } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
         return __stdlib_cosf(x_full);
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        static const uniform float pi_over_two_vec = 1.57079637050628662109375;
-        static const uniform float two_over_pi_vec = 0.636619746685028076171875;
+        static constexpr uniform float pi_over_two_vec = 1.57079637050628662109375;
+        static constexpr uniform float two_over_pi_vec = 0.636619746685028076171875;
         uniform float scaled = x_full * two_over_pi_vec;
         uniform float k_real = floor(scaled);
         uniform int k = (int)k_real;
@@ -4327,10 +4327,10 @@ __declspec(safe) static inline void __range_reduce_log(float input, varying floa
     //                  = 0x8  0x0  0x7  0xF  0xF  0xF  0xF  0xF
 
     // const int exponent_mask(0x7F800000)
-    static const int nonexponent_mask = 0x807FFFFF;
+    static constexpr int nonexponent_mask = 0x807FFFFF;
 
     // We want the reduced version to have an exponent of -1 which is -1 + 127 after biasing or 126
-    static const int exponent_neg1 = (126l << 23);
+    static constexpr int exponent_neg1 = (126l << 23);
     // NOTE(boulos): We don't need to mask anything out since we know
     // the sign bit has to be 0. If it's 1, we need to return infinity/nan
     // anyway (log(x), x = +-0 -> infinity, x < 0 -> NaN).
@@ -4348,9 +4348,9 @@ __declspec(safe) static inline void __range_reduce_log(float input, varying floa
 __declspec(safe) static inline void __range_reduce_log(uniform float input, uniform float *uniform reduced,
                                                        uniform int *uniform exponent) {
     uniform int int_version = intbits(input);
-    static const uniform int nonexponent_mask = 0x807FFFFF;
+    static constexpr uniform int nonexponent_mask = 0x807FFFFF;
 
-    static const uniform int exponent_neg1 = (126ul << 23);
+    static constexpr uniform int exponent_neg1 = (126ul << 23);
     uniform int biased_exponent = int_version >> 23;
     uniform int offset_exponent = biased_exponent + 1;
     *exponent = offset_exponent - 127; // get the real value
@@ -5258,7 +5258,7 @@ __declspec(safe) static inline uniform float half_to_float(uniform unsigned int1
     } else {
         // https://gist.github.com/2144712
         // Fabian "ryg" Giesen.
-        static const uniform unsigned int32 shifted_exp = 0x7c00ul << 13; // exponent mask after shift
+        static constexpr uniform unsigned int32 shifted_exp = 0x7c00ul << 13; // exponent mask after shift
 
         uniform int32 o = ((int32)(h & 0x7fff)) << 13; // exponent/mantissa bits
         uniform unsigned int32 exp = shifted_exp & o;  // just the exponent
@@ -5520,7 +5520,7 @@ __attribute__((unmangled)) unmasked uniform double __extendhfdf2(uniform float16
 // 0x3e9f8000
 
 __declspec(safe) static inline int float_to_srgb8(float inval) {
-    static const uniform unsigned int table[104] = {
+    static constexpr uniform unsigned int table[104] = {
         0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d, 0x00a7001a,
         0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a, 0x010e0033, 0x01280033,
         0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033, 0x01dc0067, 0x020f0067, 0x02430067,
@@ -5535,8 +5535,8 @@ __declspec(safe) static inline int float_to_srgb8(float inval) {
         0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
     };
 
-    static const uniform unsigned int near_zero = 0x39000000;
-    static const uniform unsigned int almost_one = 0x3f7fffff;
+    static constexpr uniform unsigned int near_zero = 0x39000000;
+    static constexpr uniform unsigned int almost_one = 0x3f7fffff;
 
     // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
     inval = max(inval, floatbits(near_zero));
@@ -5553,7 +5553,7 @@ __declspec(safe) static inline int float_to_srgb8(float inval) {
 }
 
 __declspec(safe) static inline uniform int float_to_srgb8(uniform float inval) {
-    static const uniform unsigned int table[104] = {
+    static constexpr uniform unsigned int table[104] = {
         0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d, 0x00a7001a,
         0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a, 0x010e0033, 0x01280033,
         0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033, 0x01dc0067, 0x020f0067, 0x02430067,
@@ -5568,8 +5568,8 @@ __declspec(safe) static inline uniform int float_to_srgb8(uniform float inval) {
         0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
     };
 
-    static const uniform unsigned int near_zero = 0x39000000;
-    static const uniform unsigned int almost_one = 0x3f7fffff;
+    static constexpr uniform unsigned int near_zero = 0x39000000;
+    static constexpr uniform unsigned int almost_one = 0x3f7fffff;
 
     // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
     inval = max(inval, floatbits(near_zero));
