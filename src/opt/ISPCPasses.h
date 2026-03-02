@@ -11,6 +11,7 @@
 #pragma once
 
 #include "CheckIRForXeTarget.h"
+#include "FastMath.h"
 #include "GatherCoalescePass.h"
 #include "ImproveMemoryOps.h"
 #include "InstructionSimplify.h"

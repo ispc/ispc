@@ -31,7 +31,7 @@ uniform float retNegF() {
 }
 
 // CHECK: @retFastMathF
-// CHECK: fmul float %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 5.000000e-01
+// CHECK: fmul {{((contract|reassoc|arcp|nsz|nnan|ninf|afn|fast) )*}}float %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 5.000000e-01
 uniform float retFastMathF(uniform float arg) {
     return arg / 2.f;
 }
