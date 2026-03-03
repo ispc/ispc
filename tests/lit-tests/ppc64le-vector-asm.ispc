@@ -1,6 +1,7 @@
 // Test that PowerPC VSX vector instructions are generated for ppc64le targets.
 
 // RUN: %{ispc} %s --target=generic-i32x4 --arch=ppc64le --target-os=linux --nowrap --emit-asm -o - | FileCheck %s
+// RUN: %{ispc} %s --target=vsx-i32x4 --arch=ppc64le --target-os=linux --nowrap --emit-asm -o - | FileCheck %s
 
 // REQUIRES: PPC64_ENABLED && LINUX_ENABLED
 
