@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   ppc64-native-test:
-    name: PowerPC64LE generic-i32x4 test (native)
+    name: PowerPC64LE test (native)
     runs-on: ubuntu-24.04-ppc64le
 
     steps:
@@ -52,17 +52,17 @@ jobs:
       run: |
         cmake --build build --target check-all
 
-    - name: Run PPC64LE tests
+    - name: Run PPC64LE VSX tests
       run: |
         PATH="$PWD"/build/bin:"$PATH" \
         python3 scripts/run_tests.py \
-          --target=generic-i32x4 \
+          --target=vsx-i32x4 \
           --arch=ppc64le \
           --compiler=g++ \
           -o O2
 
   ppc64-cross-test:
-    name: PowerPC64LE generic-i32x4 test (cross-compiled)
+    name: PowerPC64LE test (cross-compiled)
     runs-on: ubuntu-24.04
     env:
       LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.ppc.wasm.tar.xz
@@ -98,11 +98,11 @@ jobs:
       run: |
         cmake --build build --target check-all
 
-    - name: Run PPC64LE tests
+    - name: Run PPC64LE VSX tests
       run: |
         PATH="$PWD"/build/bin:"$PATH" \
         python3 scripts/run_tests.py \
-          --target=generic-i32x4 \
+          --target=vsx-i32x4 \
           --arch=ppc64le \
           --wrap-exe="qemu-ppc64le" \
           --compiler=powerpc64le-linux-gnu-g++ \
