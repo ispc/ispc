@@ -260,6 +260,9 @@ class Target {
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
+#ifdef ISPC_PPC64_ENABLED
+        VSX,
+#endif
 #ifdef ISPC_RISCV_ENABLED
         RV64GCV,
 #endif
