@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2025, Intel Corporation
+#  Copyright (c) 2025-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -82,11 +82,21 @@ function(define_stdlib_families)
         "neon_i32x4:generic-i32x4:neon-i32x4"
         "neon_i32x8:generic-i32x8:neon-i32x8"
         "neon_i8x32:generic-i8x32:neon-i8x32"
+
+        # VSX families - use generic targets
+        # VSX stdlib is identical to generic except for target-cpu attribute
+        "vsx_i8x16:generic-i8x16:vsx-i8x16"
+        "vsx_i8x32:generic-i8x32:vsx-i8x32"
+        "vsx_i16x8:generic-i16x8:vsx-i16x8"
+        "vsx_i16x16:generic-i16x16:vsx-i16x16"
+        "vsx_i32x4:generic-i32x4:vsx-i32x4"
+        "vsx_i32x8:generic-i32x8:vsx-i32x8"
     )
 
     # Separate families by architecture for efficient filtering
     set(x86_families "")
     set(arm_families "")
+    set(ppc64_families "")
 
     # Parsing loop - store family info locally and classify by architecture
     foreach(family_def ${FAMILY_DEFINITIONS})
@@ -119,11 +129,14 @@ function(define_stdlib_families)
         list(GET members 0 first_member)
         list(FIND X86_TARGETS ${first_member} is_x86)
         list(FIND ARM_TARGETS ${first_member} is_arm)
+        list(FIND PPC64_TARGETS ${first_member} is_ppc64)
 
         if(is_x86 GREATER -1)
             list(APPEND x86_families ${family_name})
         elseif(is_arm GREATER -1)
             list(APPEND arm_families ${family_name})
+        elseif(is_ppc64 GREATER -1)
+            list(APPEND ppc64_families ${family_name})
         else()
             message(WARNING "Family ${family_name} doesn't match any known architecture")
         endif()
@@ -143,6 +156,7 @@ function(define_stdlib_families)
     set(STDLIB_FAMILY_ALL_MEMBERS "${all_members}" PARENT_SCOPE)
     set(STDLIB_X86_FAMILIES "${x86_families}" PARENT_SCOPE)
     set(STDLIB_ARM_FAMILIES "${arm_families}" PARENT_SCOPE)
+    set(STDLIB_PPC64_FAMILIES "${ppc64_families}" PARENT_SCOPE)
 
     validate_stdlib_families()
 endfunction()
@@ -208,18 +222,21 @@ function(validate_stdlib_families)
         foreach(target ${STDLIB_FAMILY_${family}})
             list(FIND X86_TARGETS ${target} x86_idx)
             list(FIND ARM_TARGETS ${target} arm_idx)
+            list(FIND PPC64_TARGETS ${target} ppc64_idx)
 
-            if(x86_idx EQUAL -1 AND arm_idx EQUAL -1)
+            if(x86_idx EQUAL -1 AND arm_idx EQUAL -1 AND ppc64_idx EQUAL -1)
                 message(FATAL_ERROR
                     "Width family ${family} references non-existent target: ${target}\n"
-                    "This target is not in X86_TARGETS or ARM_TARGETS list.")
+                    "This target is not in X86_TARGETS, ARM_TARGETS, or PPC64_TARGETS list.")
             endif()
 
             # Verify family members are from same architecture
             if(x86_idx GREATER -1)
                 set(target_arch "x86")
-            else()
+            elseif(arm_idx GREATER -1)
                 set(target_arch "arm")
+            else()
+                set(target_arch "ppc64")
             endif()
 
             if(family_arch STREQUAL "")
