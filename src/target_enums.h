@@ -91,6 +91,12 @@ enum class ISPCTarget {
     neon_i16x16,
     neon_i32x4,
     neon_i32x8,
+    vsx_i8x16,
+    vsx_i8x32,
+    vsx_i16x8,
+    vsx_i16x16,
+    vsx_i32x4,
+    vsx_i32x8,
     rvv_x4,
     wasm_i32x4,
     xelp_x8,
@@ -131,4 +137,5 @@ bool ISPCTargetIsRiscV(ISPCTarget target);
 bool ISPCTargetIsWasm(ISPCTarget target);
 bool ISPCTargetIsGen(ISPCTarget target);
 bool ISPCTargetIsGeneric(ISPCTarget target);
+bool ISPCTargetIsVSX(ISPCTarget target);
 } // namespace ispc
