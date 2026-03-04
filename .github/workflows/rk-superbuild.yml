@@ -36,7 +36,7 @@ jobs:
         .github/workflows/scripts/build-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: ispc_linux_package
         path: build/ispc-*-linux.tar.gz
@@ -63,7 +63,7 @@ jobs:
         .github/workflows/scripts/build-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: ispc_linux_aarch64_package
         path: build/ispc-trunk-linux.tar.gz
@@ -101,7 +101,7 @@ jobs:
         cmake --build build
 
     - name: Upload package
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: ispc_win_package
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-*-windows.zip
@@ -124,7 +124,7 @@ jobs:
         repository: RenderKit/superbuild
 
     - name: Download package
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: ispc_linux_package
 
@@ -139,7 +139,7 @@ jobs:
         cmake --build .
 
     - name: Upload RK install
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: rk_install_linux
         path: build/install
@@ -164,7 +164,7 @@ jobs:
         apt -y update && apt -y install libtbb-dev libglfw3-dev
 
     - name: Download RK install
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: rk_install_linux
 
@@ -185,7 +185,7 @@ jobs:
         repository: ospray/ospray
 
     - name: Download package
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: ispc_win_package
 
@@ -222,7 +222,7 @@ jobs:
         lfs: true
 
     - name: Download ISPC package
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: ispc_linux_aarch64_package
 
@@ -236,7 +236,7 @@ jobs:
         make -j$(nproc) install
 
     - name: Upload OIDN install
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: oidn_install_linux_aarch64
         path: install
@@ -261,7 +261,7 @@ jobs:
         apt -y update && apt -y install libtbb2-dev
 
     - name: Download OIDN install
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: oidn_install_linux_aarch64
 
