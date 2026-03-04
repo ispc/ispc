@@ -31,6 +31,8 @@ list(APPEND LIT_ARGS "-Dlinux_enabled=$<IF:$<BOOL:${ISPC_LINUX_TARGET}>,ON,OFF>"
 list(APPEND LIT_ARGS "-Dps_enabled=$<IF:$<BOOL:${ISPC_PS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_ARM_TARGET}>,ON,OFF>")
+# FileCheck executable
+list(APPEND LIT_ARGS "-Dfile_check_executable=${FILE_CHECK_EXECUTABLE}")
 # ISPC library is enabled
 list(APPEND LIT_ARGS "-Dispc_lib_enabled=$<IF:$<BOOL:${ISPC_LIBRARY}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dispc_lib_jit_enabled=$<IF:$<BOOL:${ISPC_LIBRARY_JIT}>,ON,OFF>")
