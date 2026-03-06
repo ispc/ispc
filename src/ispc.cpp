@@ -2827,6 +2827,10 @@ const char *Target::ISAToString(ISA isa) {
     case Target::NEON:
         return "neon";
 #endif
+#ifdef ISPC_PPC64_ENABLED
+    case Target::VSX:
+        return "vsx";
+#endif
 #ifdef ISPC_RISCV_ENABLED
     case Target::RV64GCV:
         return "rv64gcv";
