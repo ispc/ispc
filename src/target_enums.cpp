@@ -220,8 +220,23 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::avx10_2dmr_x64) ==
                       static_cast<underlying>(ISPCTarget::avx10_2dmr_x32) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::neon_i8x16) ==
+    static_assert(static_cast<underlying>(ISPCTarget::avx10_2nvl_x4) ==
                       static_cast<underlying>(ISPCTarget::avx10_2dmr_x64) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx10_2nvl_x8) ==
+                      static_cast<underlying>(ISPCTarget::avx10_2nvl_x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx10_2nvl_x16) ==
+                      static_cast<underlying>(ISPCTarget::avx10_2nvl_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx10_2nvl_x32) ==
+                      static_cast<underlying>(ISPCTarget::avx10_2nvl_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx10_2nvl_x64) ==
+                      static_cast<underlying>(ISPCTarget::avx10_2nvl_x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i8x16) ==
+                      static_cast<underlying>(ISPCTarget::avx10_2nvl_x64) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::neon_i8x32) ==
                       static_cast<underlying>(ISPCTarget::neon_i8x16) + 1,
@@ -477,6 +492,18 @@ ISPCTarget ParseISPCTarget(std::string target) {
     } else if (target == "avx10.2dmr-x64") {
         return ISPCTarget::avx10_2dmr_x64;
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
+    } else if (target == "avx10.2nvl-x4") {
+        return ISPCTarget::avx10_2nvl_x4;
+    } else if (target == "avx10.2nvl-x8") {
+        return ISPCTarget::avx10_2nvl_x8;
+    } else if (target == "avx10.2nvl-x16") {
+        return ISPCTarget::avx10_2nvl_x16;
+    } else if (target == "avx10.2nvl-x32") {
+        return ISPCTarget::avx10_2nvl_x32;
+    } else if (target == "avx10.2nvl-x64") {
+        return ISPCTarget::avx10_2nvl_x64;
+#endif
     } else if (target == "neon-i8x16") {
         return ISPCTarget::neon_i8x16;
     } else if (target == "neon-i8x32") {
@@ -680,6 +707,16 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx10.2dmr-x32";
     case ISPCTarget::avx10_2dmr_x64:
         return "avx10.2dmr-x64";
+    case ISPCTarget::avx10_2nvl_x4:
+        return "avx10.2nvl-x4";
+    case ISPCTarget::avx10_2nvl_x8:
+        return "avx10.2nvl-x8";
+    case ISPCTarget::avx10_2nvl_x16:
+        return "avx10.2nvl-x16";
+    case ISPCTarget::avx10_2nvl_x32:
+        return "avx10.2nvl-x32";
+    case ISPCTarget::avx10_2nvl_x64:
+        return "avx10.2nvl-x64";
     case ISPCTarget::neon_i8x16:
         return "neon-i8x16";
     case ISPCTarget::neon_i8x32:
@@ -808,6 +845,11 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx10_2dmr_x16:
     case ISPCTarget::avx10_2dmr_x32:
     case ISPCTarget::avx10_2dmr_x64:
+    case ISPCTarget::avx10_2nvl_x4:
+    case ISPCTarget::avx10_2nvl_x8:
+    case ISPCTarget::avx10_2nvl_x16:
+    case ISPCTarget::avx10_2nvl_x32:
+    case ISPCTarget::avx10_2nvl_x64:
         return true;
     default:
         return false;
