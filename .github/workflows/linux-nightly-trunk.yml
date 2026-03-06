@@ -65,7 +65,7 @@ jobs:
           echo "$LLVM_SHA" > llvm-commit-sha.txt
 
       - name: Upload LLVM SHA artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: llvm_commit_sha
           path: llvm-commit-sha.txt
@@ -110,7 +110,7 @@ jobs:
         tar czvf llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz bin-trunk
 
     - name: Upload package
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: llvm_trunk_linux
         path: docker/ubuntu/22.04/cpu_ispc_build/llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
@@ -125,7 +125,7 @@ jobs:
         submodules: true
 
     - name: Download package
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: llvm_trunk_linux
 
@@ -150,7 +150,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: ispc_llvm_trunk_linux
         path: build/ispc-trunk-linux.tar.gz
