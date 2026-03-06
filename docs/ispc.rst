@@ -3808,6 +3808,88 @@ them:
     const varying int x = { 1, 2, 3, 2 + 2 };
     const varying int y = x * 2;
 
+Constexpr
+^^^^^^^^^
+
+``constexpr`` declares variables and functions that can be evaluated at
+compile time. ``constexpr`` values can be used in constant-expression
+contexts such as array sizes, short vector lengths, ``switch`` case labels,
+enumerator values, non-type template arguments, and default parameter values.
+
+**Constexpr variables**
+
+- ``constexpr`` implies ``const``.
+- ``constexpr`` is not allowed on ``typedef`` declarations.
+- The initializer must be a constant expression.
+- Supported types (v1): atomic, enum, pointer, short vector, array, and struct.
+- Arrays must have fully specified sizes.
+- Struct/array elements must themselves be constexpr-supported types.
+- Pointer values are limited to null or addresses of globals/functions.
+- ``constexpr`` values may be ``uniform`` or ``varying``. Varying constexpr
+  values are lane-wise compile-time constants; contexts that require uniform
+  constants still require uniform results.
+
+Examples:
+
+::
+
+    constexpr uniform int Tile = 16;
+    uniform float buf[Tile];
+
+    struct Pair { int a; int b; };
+    constexpr uniform Pair P = { 1, 2 };
+    constexpr uniform int PB = P.b;
+
+    constexpr uniform int Arr[3] = { 10, 20, 30 };
+    constexpr uniform int A2 = Arr[2];
+
+    constexpr varying int lane = programIndex;
+    constexpr varying int off = lane * 4;
+
+**Constexpr functions**
+
+``constexpr`` functions can be evaluated at compile time when called in a
+constant-expression context. The function is still generated as normal code
+and can be called at runtime.
+
+Requirements (v1):
+
+- The function body must be constexpr-suitable at definition time.
+- The function must return a value (no ``void`` return in v1).
+- The function may only call other ``constexpr`` functions.
+- ``constexpr`` is not allowed on function parameters.
+- Control flow conditions must be uniform.
+- Pointer dereference is not allowed; address-of is limited to globals/functions
+  (not locals/parameters).
+- ``task``, ``export``, and ``extern "C"/"SYCL"`` are not allowed on
+  ``constexpr`` functions in v1.
+- Linkage follows C++ constexpr function behavior.
+- Non-``static`` constexpr functions are emitted with ODR linkage
+  (``linkonce_odr``).
+- ``static`` constexpr functions have internal linkage.
+
+Example:
+
+::
+
+    constexpr uniform int gcd(uniform int a, uniform int b) {
+        while (b != 0) {
+            uniform int t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
+    }
+
+    uniform int buf[gcd(48, 18)];
+
+**Forward references**
+
+Global initializers and default parameter values may call ``constexpr``
+functions defined later in the same file. Other constant-expression contexts
+(array sizes, short vector lengths, template arguments) still require
+definitions to be visible before use.
+
 
 Attributes
 ----------
@@ -5156,8 +5238,8 @@ For non-type template parameters, the following rules apply:
       }
 
 * Varying types are not allowed.
-* Integral constants, enumeration constants and template parameters (in the context of the nested templates)
-  can be used as non-type template arguments. Constant expressions are not allowed.
+* Integral constants, enumeration constants, constexpr expressions, and template parameters (in the context of
+  the nested templates) can be used as non-type template arguments.
 * Partial specialization of function templates with non-type template parameters is not allowed.
 
 
