@@ -580,7 +580,9 @@ bool Module::writeDeps(Output &CO) {
             fprintf(file, "%s\n", it->c_str());
         }
     }
-    fclose(file);
+    if (file != stdout) {
+        fclose(file);
+    }
     return true;
 }
 
