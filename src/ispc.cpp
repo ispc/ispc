@@ -285,6 +285,10 @@ static bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
         if (arch != Arch::arm && arch != Arch::aarch64) {
             ret = false;
         }
+    } else if (ISPCTargetIsVSX(target)) {
+        if (arch != Arch::ppc64le) {
+            ret = false;
+        }
     } else if (ISPCTargetIsGen(target)) {
         if (arch != Arch::xe64) {
             ret = false;
@@ -858,6 +862,9 @@ Arch lGetArchFromTarget(ISPCTarget target) {
     }
 #endif
 #ifdef ISPC_PPC64_ENABLED
+    if (ISPCTargetIsVSX(target)) {
+        return Arch::ppc64le;
+    }
     if (ISPCTargetIsGeneric(target)) {
 #if defined(ISPC_HOST_IS_PPC64LE)
         return Arch::ppc64le;
@@ -1032,7 +1039,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
 #ifdef ISPC_PPC64_ENABLED
         case CPU_PPC64LE_Pwr8:
-            m_ispc_target = ISPCTarget::generic_i32x4;
+            m_ispc_target = ISPCTarget::vsx_i32x4;
             break;
 #endif
 
@@ -1146,8 +1153,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     // When cross-compiling for PPC64LE (e.g., --cpu=pwr8 on an x86 host),
     // lGetArchFromTarget cannot infer the arch from a generic target alone.
     // Fix up the arch based on the CPU identifier.
-    // TODO: add a proper PowerPC target
-    if (CPUID == CPU_PPC64LE_Pwr8) {
+    if (CPUID == CPU_PPC64LE_Pwr8 && arch != Arch::ppc64le) {
         arch = Arch::ppc64le;
     }
 #endif
@@ -1898,6 +1904,90 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         unsupported_target = true;
         break;
 #endif
+#ifdef ISPC_PPC64_ENABLED
+    case ISPCTarget::vsx_i8x16:
+        this->m_isa = Target::VSX;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 16;
+        this->m_hasScatter = false;
+        this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 8;
+        CPUfromISA = CPU_PPC64LE_Pwr8;
+        break;
+    case ISPCTarget::vsx_i8x32:
+        this->m_isa = Target::VSX;
+        this->m_nativeVectorWidth = 32;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 32;
+        this->m_hasScatter = false;
+        this->m_hasGather = true;
+        this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 8;
+        CPUfromISA = CPU_PPC64LE_Pwr8;
+        break;
+    case ISPCTarget::vsx_i16x8:
+        this->m_isa = Target::VSX;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 8;
+        this->m_hasScatter = false;
+        this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+        CPUfromISA = CPU_PPC64LE_Pwr8;
+        break;
+    case ISPCTarget::vsx_i16x16:
+        this->m_isa = Target::VSX;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_hasScatter = false;
+        this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+        CPUfromISA = CPU_PPC64LE_Pwr8;
+        break;
+    case ISPCTarget::vsx_i32x4:
+        this->m_isa = Target::VSX;
+        this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_hasScatter = false;
+        this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        CPUfromISA = CPU_PPC64LE_Pwr8;
+        break;
+    case ISPCTarget::vsx_i32x8:
+        this->m_isa = Target::VSX;
+        this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_hasScatter = false;
+        this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        CPUfromISA = CPU_PPC64LE_Pwr8;
+        break;
+#else
+    case ISPCTarget::vsx_i8x16:
+    case ISPCTarget::vsx_i8x32:
+    case ISPCTarget::vsx_i16x8:
+    case ISPCTarget::vsx_i16x16:
+    case ISPCTarget::vsx_i32x4:
+    case ISPCTarget::vsx_i32x8:
+        unsupported_target = true;
+        break;
+#endif
 #ifdef ISPC_RISCV_ENABLED
     case ISPCTarget::rvv_x4:
         this->m_isa = Target::RV64GCV;
@@ -2182,7 +2272,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             cpu = a.GetDefaultNameFromType(CPUID).c_str();
         }
 #ifdef ISPC_PPC64_ENABLED
-        if (arch == Arch::ppc64le && ISPCTargetIsGeneric(m_ispc_target) && cpu_string.empty()) {
+        if (arch == Arch::ppc64le && (ISPCTargetIsGeneric(m_ispc_target) || ISPCTargetIsVSX(m_ispc_target)) &&
+            cpu_string.empty()) {
             CPUID = CPU_PPC64LE_Pwr8;
             cpu = a.GetDefaultNameFromType(CPUID).c_str();
         }
@@ -2286,6 +2377,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             }
         }
 #endif
+        // VSX targets also need +vsx features
+        if (ISPCTargetIsVSX(m_ispc_target)) {
+            featuresString = "+vsx";
+        }
         // Support 'i64' and 'double' types in cm
         if (isXeTarget()) {
             featuresString += "+longlong";
@@ -2732,6 +2827,10 @@ const char *Target::ISAToString(ISA isa) {
     case Target::NEON:
         return "neon";
 #endif
+#ifdef ISPC_PPC64_ENABLED
+    case Target::VSX:
+        return "vsx";
+#endif
 #ifdef ISPC_RISCV_ENABLED
     case Target::RV64GCV:
         return "rv64gcv";
@@ -2793,6 +2892,10 @@ const char *Target::ISAToTargetString(ISA isa) {
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON:
         return "neon-i32x4";
+#endif
+#ifdef ISPC_PPC64_ENABLED
+    case Target::VSX:
+        return "vsx-i32x4";
 #endif
 #ifdef ISPC_WASM_ENABLED
     case Target::WASM:
@@ -2922,6 +3025,23 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::neon_i32x8:
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_ARM_ENABLED
+#ifdef ISPC_PPC64_ENABLED
+    case ISPCTarget::vsx_i8x16:
+    case ISPCTarget::vsx_i8x32:
+    case ISPCTarget::vsx_i16x8:
+    case ISPCTarget::vsx_i16x16:
+    case ISPCTarget::vsx_i32x4:
+    case ISPCTarget::vsx_i32x8:
+        return Target::ISA::VSX;
+#else  // ISPC_PPC64_ENABLED
+    case ISPCTarget::vsx_i8x16:
+    case ISPCTarget::vsx_i8x32:
+    case ISPCTarget::vsx_i16x8:
+    case ISPCTarget::vsx_i16x16:
+    case ISPCTarget::vsx_i32x4:
+    case ISPCTarget::vsx_i32x8:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_PPC64_ENABLED
 #ifdef ISPC_RISCV_ENABLED
     case ISPCTarget::rvv_x4:
         return Target::ISA::RV64GCV;

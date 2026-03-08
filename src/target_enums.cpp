@@ -238,7 +238,19 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::neon_i32x8) ==
                       static_cast<underlying>(ISPCTarget::neon_i32x4) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::rvv_x4) == static_cast<underlying>(ISPCTarget::neon_i32x8) + 1,
+    static_assert(static_cast<underlying>(ISPCTarget::vsx_i8x16) == static_cast<underlying>(ISPCTarget::neon_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::vsx_i8x32) == static_cast<underlying>(ISPCTarget::vsx_i8x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::vsx_i16x8) == static_cast<underlying>(ISPCTarget::vsx_i8x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::vsx_i16x16) == static_cast<underlying>(ISPCTarget::vsx_i16x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::vsx_i32x4) == static_cast<underlying>(ISPCTarget::vsx_i16x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::vsx_i32x8) == static_cast<underlying>(ISPCTarget::vsx_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::rvv_x4) == static_cast<underlying>(ISPCTarget::vsx_i32x8) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::wasm_i32x4) == static_cast<underlying>(ISPCTarget::rvv_x4) + 1,
                   "Enum ISPCTarget is not sequential");
@@ -489,6 +501,18 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::neon_i32x4;
     } else if (target == "neon-i32x8") {
         return ISPCTarget::neon_i32x8;
+    } else if (target == "vsx-i8x16") {
+        return ISPCTarget::vsx_i8x16;
+    } else if (target == "vsx-i8x32") {
+        return ISPCTarget::vsx_i8x32;
+    } else if (target == "vsx-i16x8") {
+        return ISPCTarget::vsx_i16x8;
+    } else if (target == "vsx-i16x16") {
+        return ISPCTarget::vsx_i16x16;
+    } else if (target == "vsx-i32x4" || target == "vsx") {
+        return ISPCTarget::vsx_i32x4;
+    } else if (target == "vsx-i32x8") {
+        return ISPCTarget::vsx_i32x8;
     } else if (target == "rvv-x4") {
         return ISPCTarget::rvv_x4;
     } else if (target == "wasm-i32x4") {
@@ -692,6 +716,18 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "neon-i32x4";
     case ISPCTarget::neon_i32x8:
         return "neon-i32x8";
+    case ISPCTarget::vsx_i8x16:
+        return "vsx-i8x16";
+    case ISPCTarget::vsx_i8x32:
+        return "vsx-i8x32";
+    case ISPCTarget::vsx_i16x8:
+        return "vsx-i16x8";
+    case ISPCTarget::vsx_i16x16:
+        return "vsx-i16x16";
+    case ISPCTarget::vsx_i32x4:
+        return "vsx-i32x4";
+    case ISPCTarget::vsx_i32x8:
+        return "vsx-i32x8";
     case ISPCTarget::rvv_x4:
         return "rvv-x4";
     case ISPCTarget::wasm_i32x4:
@@ -881,6 +917,20 @@ bool ISPCTargetIsGeneric(ISPCTarget target) {
     case ISPCTarget::generic_i32x8:
     case ISPCTarget::generic_i32x16:
     case ISPCTarget::generic_i64x4:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool ISPCTargetIsVSX(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::vsx_i8x16:
+    case ISPCTarget::vsx_i8x32:
+    case ISPCTarget::vsx_i16x8:
+    case ISPCTarget::vsx_i16x16:
+    case ISPCTarget::vsx_i32x4:
+    case ISPCTarget::vsx_i32x8:
         return true;
     default:
         return false;
