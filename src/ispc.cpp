@@ -227,7 +227,7 @@ static ISPCTarget lGetSystemISA() {
 #elif defined(ISPC_HOST_IS_RISCV)
     return ISPCTarget::rvv_x4;
 #elif defined(ISPC_HOST_IS_PPC64LE)
-    return ISPCTarget::generic_i32x4;
+    return ISPCTarget::vsx_i32x4;
 #elif defined(ISPC_HOST_IS_X86)
     enum Target::ISA isa = (enum Target::ISA)dispatch::get_x86_isa();
     switch (isa) {
@@ -865,11 +865,6 @@ Arch lGetArchFromTarget(ISPCTarget target) {
     if (ISPCTargetIsVSX(target)) {
         return Arch::ppc64le;
     }
-    if (ISPCTargetIsGeneric(target)) {
-#if defined(ISPC_HOST_IS_PPC64LE)
-        return Arch::ppc64le;
-#endif
-    }
 #endif
 #if ISPC_XE_ENABLED
     if (ISPCTargetIsGen(target)) {
@@ -1149,14 +1144,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     if (arch == Arch::none) {
         arch = lGetArchFromTarget(m_ispc_target);
     }
-#ifdef ISPC_PPC64_ENABLED
-    // When cross-compiling for PPC64LE (e.g., --cpu=pwr8 on an x86 host),
-    // lGetArchFromTarget cannot infer the arch from a generic target alone.
-    // Fix up the arch based on the CPU identifier.
-    if (CPUID == CPU_PPC64LE_Pwr8 && arch != Arch::ppc64le) {
-        arch = Arch::ppc64le;
-    }
-#endif
 
     bool error = false;
     // Make sure the target architecture is a known one; print an error
@@ -2272,8 +2259,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             cpu = a.GetDefaultNameFromType(CPUID).c_str();
         }
 #ifdef ISPC_PPC64_ENABLED
-        if (arch == Arch::ppc64le && (ISPCTargetIsGeneric(m_ispc_target) || ISPCTargetIsVSX(m_ispc_target)) &&
-            cpu_string.empty()) {
+        if (arch == Arch::ppc64le && ISPCTargetIsGeneric(m_ispc_target) && cpu_string.empty()) {
             CPUID = CPU_PPC64LE_Pwr8;
             cpu = a.GetDefaultNameFromType(CPUID).c_str();
         }
@@ -2370,14 +2356,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             }
         }
 #endif
-#ifdef ISPC_PPC64_ENABLED
-        if (arch == Arch::ppc64le) {
-            if (m_cpu == "pwr8") {
-                featuresString = "+vsx";
-            }
-        }
-#endif
-        // VSX targets also need +vsx features
+        // VSX targets need +vsx features
         if (ISPCTargetIsVSX(m_ispc_target)) {
             featuresString = "+vsx";
         }
