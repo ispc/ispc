@@ -268,6 +268,12 @@ New Architecture Support:
   included in official ISPC binaries. To use it, build ISPC from source with
   the `PPC64_ENABLED=ON` CMake option. Usage: `ispc --arch=ppc64le
   --target=generic-i32x4 foo.ispc -o foo.o`.
+* Implementation of two new fast-math modes: ``balanced`` and ``aggressive``.
+  These modes bring more aggressive optimizations compared to the default
+  ``legacy`` mode. The latter was the mode provided so far in previous ISPC
+  versions. It is still available and left unchanged. The fast-math mode can be
+  specified with the option ``--opt=fast-math:<mode>``. See the optimization
+  settings section for more information about the new modes.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
@@ -1674,11 +1680,55 @@ Available options:
   memory accesses beyond the end of an array, which could cause undefined
   behavior if not handled carefully.
 
-- ``fast-math``
+- ``fast-math[:<mode>]``
 
   Perform non-IEEE-compliant optimizations of numeric expressions. These
   optimizations may improve performance but can result in less precise results
-  or different behavior compared to IEEE-compliant math.
+  or different behavior compared to IEEE-compliant math. Various fast-math
+  modes are available. The default one is the ``legacy`` mode.
+
+  Available modes:
+
+  - ``legacy``
+
+    Replace divisions by constants (i.e., ``x / const``) to multiplications by
+    the inverse (i.e., ``x * (1/const)``), and perform reciprocal approximations
+    (i.e., ``x / y`` is replaced with ``x * rcp(y)``). Please read the
+    documentation about ``rcp()`` for more information about its precision.
+    This mode was used in version 1.30 and earlier.
+
+  - ``balanced``
+
+    Enable *imprecise* optimizations. This mode may dramatically change results
+    in floating-point in pathological cases (e.g., up to a point it can produce
+    unexpected infinities or even "not a number" values).
+    It can:
+
+    - Perform algebraically equivalent transformations such as re-association;
+    - Perform floating-point contractions (e.g., fusing a multiply followed
+      by an addition into a fused multiply-and-add);
+    - Treat divisions as multiplications by reciprocals
+      (i.e., consider ``a / b`` to be equivalent to ``a * (1.0 / b)``, and
+      ``a / (b / c)`` to ``a * (c / b)``, and vice versa for both);
+    - Treat the sign of a zero argument or zero result as insignificant.
+
+    As opposed to the ``aggressive`` mode, this one does not produce any
+    *undefined behavior* as such.
+    Technically, this mode currently enables the LLVM's following fast-math
+    flags: ``reassoc``, ``contract``, ``arcp``, ``nsz``. This may change in a
+    future release.
+
+  - ``aggressive``
+
+    Enable *unsafe* optimizations and even more imprecise ones. 
+    In addition to the optimizations enabled by the ``balanced`` mode, this one
+    also assumes there are neither +/- infinities nor "not a number" values in
+    order to perform further optimizations. Codes breaking these assumptions
+    exhibit an *undefined behavior*.
+    This mode can also perform approximations of math functions (e.g., ``sqrt()``)
+    and reciprocals (similar to what ``rcp()`` does).
+    Technically, this mode currently enables all the LLVM's fast-math flags and
+    unexpected values currently produce poison values.
 
 - ``force-aligned-memory``
 
@@ -5452,8 +5502,11 @@ above.
     template <typename T, uint N> T<N> ceil(T<N> a)
     template <typename T, uint N> T<N> trunc(T<N> a)
 
-``rcp()`` computes an approximation to ``1/v``.  The amount of error is
-different on different architectures.
+``rcp()`` computes an approximation to ``1/v``.  The precision is dependent of
+the target CPU architecture. Input/output denormalized numbers may be flushed to
+zeros. For regular numbers, the relative error is usually a few ULPs (unit of
+least precision). Newton-Raphson iterations can be performed to reach such a
+precision.
 
 ::
 

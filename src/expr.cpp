@@ -2710,7 +2710,7 @@ Expr *BinaryExpr::Optimize() {
     ConstExpr *constArg0 = llvm::dyn_cast<ConstExpr>(arg0);
     ConstExpr *constArg1 = llvm::dyn_cast<ConstExpr>(arg1);
 
-    if (g->opt.fastMath) {
+    if (g->opt.fastMath == Opt::FastMathMode::Legacy) {
         // TODO: consider moving fast-math optimizations to backend
 
         // optimizations related to division by floats..
