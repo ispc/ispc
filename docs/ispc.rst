@@ -1685,17 +1685,18 @@ Available options:
   Perform non-IEEE-compliant optimizations of numeric expressions. These
   optimizations may improve performance but can result in less precise results
   or different behavior compared to IEEE-compliant math. Various fast-math
-  modes are available. The default one is the ``legacy`` mode.
+  modes are available.
 
   Available modes:
 
-  - ``legacy``
+  - ``legacy`` (default)
 
     Replace divisions by constants (i.e., ``x / const``) to multiplications by
     the inverse (i.e., ``x * (1/const)``), and perform reciprocal approximations
     (i.e., ``x / y`` is replaced with ``x * rcp(y)``). Please read the
     documentation about ``rcp()`` for more information about its precision.
-    This mode was used in version 1.30 and earlier.
+    This was the unique implicit mode available in version 1.30 and earlier. 
+    Its behavior is the same in newer versions.
 
   - ``balanced``
 
