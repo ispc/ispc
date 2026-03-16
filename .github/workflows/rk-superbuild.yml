@@ -15,58 +15,22 @@ concurrency:
 
 jobs:
   build-ispc-ubuntu-2204:
-    runs-on: ubuntu-22.04
-
-    steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh
-
-    - name: Upload package
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-      with:
-        name: ispc_linux_package
-        path: build/ispc-*-linux.tar.gz
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      artifact_name: ispc_linux_package
+      runner: ubuntu-22.04
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   build-ispc-aarch64:
-    runs-on: ubuntu-22.04-arm
-
-    steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh
-
-    - name: Upload package
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-      with:
-        name: ispc_linux_aarch64_package
-        path: build/ispc-trunk-linux.tar.gz
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      artifact_name: ispc_linux_aarch64_package
+      runner: ubuntu-22.04-arm
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.8-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
 
   build-ispc-windows:
     runs-on: windows-2022
