@@ -23,43 +23,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-ispc:
-    name: Build ISPC (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  build-ispc-linux:
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      artifact_name: ispc-archive
+      runner: ubuntu-22.04
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            install_deps_args: ""
-            artifact_name: ispc-archive
-            artifact_path: build/ispc-*-linux.tar.gz
-          - os: macos-14
-            install_deps_args: macos-14
-            artifact_name: ispc-macos-arm
-            artifact_path: build/ispc-*-macos.tar.gz
-
-    steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-      with:
-        submodules: true
-
-    - name: Install ISPC build dependencies
-      run: .github/workflows/scripts/install-build-deps.sh ${{ matrix.install_deps_args }}
-
-    - name: Build ISPC
-      run: .github/workflows/scripts/build-ispc.sh
-
-    - name: Upload ISPC artifact
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_path }}
+  build-ispc-macos:
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: macos
+      artifact_name: ispc-macos-arm
+      runner: macos-14
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.8-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
   build-projects:
     name: Build ${{ matrix.project.name }}
-    needs: build-ispc
+    needs: build-ispc-linux
     runs-on: ubuntu-22.04
     container:
       image: archlinux@sha256:2fcdd55448255f87dd337ef5c0fdbd5e4fec432345db1aa5faea4bf2764b4ca8
@@ -149,7 +133,7 @@ jobs:
 
   build-projects-with-builder:
     name: Build ${{ matrix.project.name }}
-    needs: build-ispc
+    needs: build-ispc-linux
     runs-on: ubuntu-22.04
     container:
       image: archlinux@sha256:2fcdd55448255f87dd337ef5c0fdbd5e4fec432345db1aa5faea4bf2764b4ca8
@@ -238,7 +222,7 @@ jobs:
 
   build-ispc-downsampler:
     name: Build ispc-downsampler on macOS ARM
-    needs: build-ispc
+    needs: build-ispc-macos
     runs-on: macos-14
 
     steps:
