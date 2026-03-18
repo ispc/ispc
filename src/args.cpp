@@ -142,7 +142,14 @@ static ArgsParseResult usage() {
     printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow\n");
 #endif
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
-    printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
+    printf("        fast-math[:<mode>]\t\tPerform non-IEEE-compliant optimizations of numeric expressions. Default "
+           "mode is legacy\n");
+    printf("            legacy\t\t\tReplace divisions by constants to multiplications and perform reciprocal "
+           "approximations\n");
+    printf("            balanced\t\t\tEnable imprecise optimizations (i.e. algebraically-equivalent transformations, "
+           "contractions, a/b treated as a*(1/b), a/(b/c) as a*c/b, -0 as +0, and vice versa)\n");
+    printf("            aggressive\t\t\tEnable unsafe optimizations (i.e. assume there is neither NaN nor +/- Inf) and "
+           "even more imprecise ones (e.g. reciprocal approximations)\n");
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
     printf("        reset-ftz-daz\t\t\tReset FTZ/DAZ flags on ISPC extern function entrance / restore on return\n");
     printf("    [--pic]\t\t\t\tGenerate position-independent code.  Ignored for Windows target\n");
@@ -835,8 +842,25 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             }
         } else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
-            if (!strcmp(opt, "fast-math")) {
-                g->opt.fastMath = true;
+            if (!strncmp(opt, "fast-math", 9)) {
+                const char *fastMathOpt = opt + 9;
+                if (*fastMathOpt == 0) {
+                    // Default value if the mode is unspecified
+                    g->opt.fastMath = Opt::FastMathMode::Legacy;
+                } else if (*fastMathOpt == ':') {
+                    fastMathOpt += 1;
+                    if (!strcmp(fastMathOpt, "legacy")) {
+                        g->opt.fastMath = Opt::FastMathMode::Legacy;
+                    } else if (!strcmp(fastMathOpt, "balanced")) {
+                        g->opt.fastMath = Opt::FastMathMode::Balanced;
+                    } else if (!strcmp(fastMathOpt, "aggressive")) {
+                        g->opt.fastMath = Opt::FastMathMode::Aggressive;
+                    } else {
+                        errorHandler.AddError("Unknown fast-math mode \"%s\".", fastMathOpt);
+                    }
+                } else {
+                    errorHandler.AddError("Unknown --opt= option \"%s\".", opt);
+                }
             } else if (!strcmp(opt, "fast-masked-vload")) {
                 g->opt.fastMaskedVload = true;
             } else if (!strcmp(opt, "disable-assertions")) {
