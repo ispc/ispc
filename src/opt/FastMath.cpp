@@ -1,3 +1,9 @@
+/*
+  Copyright (c) 2026, Intel Corporation
+
+  SPDX-License-Identifier: BSD-3-Clause
+*/
+
 #include "FastMath.h"
 #include "builtins-decl.h"
 
@@ -35,10 +41,8 @@ bool FastMathPass::optimizeFpInstructions(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
         llvm::BasicBlock::iterator curIter = iter++;
         llvm::Instruction *inst = &*curIter;
-        llvm::BinaryOperator *binOpInst = llvm::dyn_cast<llvm::BinaryOperator>(inst);
-        llvm::FPMathOperator *fpMathInst = llvm::dyn_cast<llvm::FPMathOperator>(inst);
-        if (binOpInst && fpMathInst) {
-            binOpInst->setFastMathFlags(fmFlags);
+        if (llvm::dyn_cast<llvm::FPMathOperator>(inst)) {
+            inst->setFastMathFlags(fmFlags);
             modifiedAny = true;
         }
     }
