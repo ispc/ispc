@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -2065,7 +2065,11 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
                                                 LLVMInt32(i), "isa_ok", bblock);
         llvm::BasicBlock *callBBlock = llvm::BasicBlock::Create(*g->ctx, "do_call", dispatchFunc);
         llvm::BasicBlock *nextBBlock = llvm::BasicBlock::Create(*g->ctx, "next_try", dispatchFunc);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+        llvm::CondBrInst::Create(ok, callBBlock, nextBBlock, bblock);
+#else
         llvm::BranchInst::Create(callBBlock, nextBBlock, ok, bblock);
+#endif
 
         // Store the chosen variant in the cache.
         builder.SetInsertPoint(callBBlock);

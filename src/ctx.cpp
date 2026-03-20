@@ -232,7 +232,11 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
     allocaBlock = llvm::BasicBlock::Create(*g->ctx, "allocas", llvmFunction, 0);
     bblock = llvm::BasicBlock::Create(*g->ctx, "entry", llvmFunction, 0);
     /* But jump from it immediately into the real entry block */
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    llvm::UncondBrInst::Create(bblock, allocaBlock);
+#else
     llvm::BranchInst::Create(bblock, allocaBlock);
+#endif
 
     funcStartPos = funSym->pos;
 
@@ -3490,7 +3494,11 @@ void FunctionEmitContext::setLoopMetadata(llvm::Instruction *inst,
 }
 
 llvm::Instruction *FunctionEmitContext::BranchInst(llvm::BasicBlock *dest) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    llvm::Instruction *b = llvm::UncondBrInst::Create(dest, bblock);
+#else
     llvm::Instruction *b = llvm::BranchInst::Create(dest, bblock);
+#endif
     AddDebugPos(b);
     return b;
 }
@@ -3506,7 +3514,11 @@ llvm::Instruction *FunctionEmitContext::BranchInst(llvm::BasicBlock *trueBlock, 
     if (emitXeHardwareMask())
         test = XePrepareVectorBranch(test);
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    b = llvm::CondBrInst::Create(test, trueBlock, falseBlock, bblock);
+#else
     b = llvm::BranchInst::Create(trueBlock, falseBlock, test, bblock);
+#endif
     AddDebugPos(b);
     return b;
 }
