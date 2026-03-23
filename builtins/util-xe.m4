@@ -4497,6 +4497,7 @@ declare float @expf(float) nounwind readnone
 declare float @logf(float) nounwind readnone
 declare float @powf(float, float) nounwind readnone
 declare float @cbrtf(float) nounwind readnone
+declare float @erff(float) nounwind readnone
 
 define float @__stdlib_sinf(float) nounwind readnone alwaysinline {
   %r = call float @sinf(float %0)
@@ -4560,6 +4561,11 @@ define float @__stdlib_cbrtf(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define float @__stdlib_erff(float) nounwind readnone alwaysinline {
+  %r = call float @erff(float %0)
+  ret float %r
+}
+
 declare double @sin(double) nounwind readnone
 declare double @asin(double) nounwind readnone
 declare double @cos(double) nounwind readnone
@@ -4571,6 +4577,7 @@ declare double @exp(double) nounwind readnone
 declare double @log(double) nounwind readnone
 declare double @pow(double, double) nounwind readnone
 declare double @cbrt(double) nounwind readnone
+declare double @erf(double) nounwind readnone
 
 define double @__stdlib_sin(double) nounwind readnone alwaysinline {
   %r = call double @sin(double %0)
@@ -4626,6 +4633,11 @@ define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
 
 define double @__stdlib_cbrt(double) nounwind readnone alwaysinline {
   %r = call double @cbrt(double %0)
+  ret double %r
+}
+
+define double @__stdlib_erf(double) nounwind readnone alwaysinline {
+  %r = call double @erf(double %0)
   ret double %r
 }
 

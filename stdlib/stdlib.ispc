@@ -4664,6 +4664,201 @@ __declspec(safe) static inline float cbrt(float x) {
     }
 }
 
+__declspec(safe) static inline uniform float erf(uniform float x_full) {
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_erff(x_full);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision: <60 ULP for normal numbers (it should be ~30 ULP in practice).
+
+        uniform float x = min(abs(x_full), 4.0);
+
+        const uniform float m1 =  +1.1283755302e+0;
+        const uniform float m2 =  +3.1074651630e-4;
+        const uniform float m3 =  -3.8050818440e-1;
+        const uniform float m4 =  +2.4178463966e-2;
+        const uniform float m5 =  +4.4264476750e-2;
+        const uniform float m6 =  +1.1311466992e-1;
+        const uniform float m7 =  -1.4139567316e-1;
+        const uniform float m8 =  +7.1130916480e-2;
+        const uniform float m9 =  -1.9599121064e-2;
+        const uniform float m10 = +3.0720939390e-3;
+        const uniform float m11 = -2.5190578890e-4;
+        const uniform float m12 = +7.9832543630e-6;
+
+        // These coefficients are from sollya with:
+        // fpminimax(erf(x), [|1,...,12|], [|single...|], [0.0;3.25]);
+        // Estrin's scheme is used here to minimize the latency a bit.
+        uniform float x2 = x * x;
+        uniform float m_res = m12;
+        m_res = x2 * m_res + (x * m11 + m10);
+        m_res = x2 * m_res + (x * m9 + m8);
+        m_res = x2 * m_res + (x * m7 + m6);
+        m_res = x2 * m_res + (x * m5 + m4);
+        m_res = x2 * m_res + (x * m3 + m2);
+        m_res = x2 * m_res + (x * m1);
+
+        uniform float res = select(x > 3.2, 1.0, m_res);
+        uniform float signed_res = floatbits(intbits(res) | signbits(x_full));
+        return signed_res;
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <5 ULP.
+
+        uniform float x = min(abs(x_full), 4.0);
+
+        // Implement a tweaked approximation of Abramowitz and Stegun (AS)
+        // for x > 0.5, combined with tweaked Maclaurin series in [0.0;0.5].
+        // Indeed, the absolute error of the initial AS approx is 3e-7
+        // for x > 0, but the relative error is higher close to 0.
+        // The relative error of the tweaked AS approx should be < 3 ULP.
+        // The relative error of tweaked Maclaurin series is less < 2 ULP.
+        // The terms of the Maclaurin series are tweaked so 1 less term is
+        // needed for about the same precision (i.e. faster).
+        // The Horner's sheme is used mainly for better performance.
+        // The AS approx has been improved using a 
+        // See https://en.wikipedia.org/wiki/Error_function
+
+        // Tweaked Maclaurin series
+
+        const uniform float m0 = +1.1283791671e+0; // 2 / sqrt(pi)
+        const uniform float m1 = +1.0000000000e+0; // +1/(0!*1)
+        const uniform float m2 = -3.3333333333e-1; // -1/(1!*3)
+        const uniform float m3 = +1.0000000000e-1; // +1/(2!*5)
+        const uniform float m4 = -2.3797619048e-2; // 0.9995 * -1/(3!*7)
+        const uniform float m5 = +4.4050925926e-3; // 0.9515 * +1/(4!*9)
+
+        uniform float x2 = x * x;
+        uniform float m_res = m5;
+        m_res = x2 * m_res + m4;
+        m_res = x2 * m_res + m3;
+        m_res = x2 * m_res + m2;
+        m_res = x2 * m_res + m1;
+        m_res = x * m_res * m0;
+
+        // Tweaked Abramowitz and Stegun approximation
+
+        // These coefficients are from sollya with:
+        // f = 1/(1-erf(x))^(1/32)-1;
+        // fpminimax(f, [|0,1,2,3,4,5|], [|single...|], [0.498;1.85]);
+        const uniform float a0 = +1.0000026931e+0;
+        const uniform float a1 = +3.5245843230e-2;
+        const uniform float a2 = +2.0549248904e-2;
+        const uniform float a3 = +3.9014820940e-3;
+        const uniform float a4 = -3.0609220270e-4;
+        const uniform float a5 = +1.1007476860e-4;
+
+        uniform float a_res = a5;
+        a_res = x * a_res + a4;
+        a_res = x * a_res + a3;
+        a_res = x * a_res + a2;
+        a_res = x * a_res + a1;
+        a_res = x * a_res + a0;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = 1.0 - 1.0 / a_res;
+
+        // Selection by range (with implicit handling of NaN)
+        uniform float res = select(x > 0.5, a_res, m_res);
+
+        // Transfer the sign
+        uniform float signed_res = floatbits(intbits(res) | signbits(x_full));
+
+        return signed_res;
+    }
+}
+
+__declspec(safe) static inline float erf(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_erff(x_full);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_erff(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // See the uniform version for more information
+
+        float x = min(abs(x_full), 4.0);
+
+        const float m1 =  +1.1283755302e+0;
+        const float m2 =  +3.1074651630e-4;
+        const float m3 =  -3.8050818440e-1;
+        const float m4 =  +2.4178463966e-2;
+        const float m5 =  +4.4264476750e-2;
+        const float m6 =  +1.1311466992e-1;
+        const float m7 =  -1.4139567316e-1;
+        const float m8 =  +7.1130916480e-2;
+        const float m9 =  -1.9599121064e-2;
+        const float m10 = +3.0720939390e-3;
+        const float m11 = -2.5190578890e-4;
+        const float m12 = +7.9832543630e-6;
+
+        float x2 = x * x;
+        float m_res = m12;
+        m_res = x2 * m_res + (x * m11 + m10);
+        m_res = x2 * m_res + (x * m9 + m8);
+        m_res = x2 * m_res + (x * m7 + m6);
+        m_res = x2 * m_res + (x * m5 + m4);
+        m_res = x2 * m_res + (x * m3 + m2);
+        m_res = x2 * m_res + (x * m1);
+
+        float res = select(x > 3.2, 1.0, m_res);
+        float signed_res = floatbits(intbits(res) | signbits(x_full));
+        return signed_res;
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // See the uniform version for more information
+
+        float x = min(abs(x_full), 4.0);
+
+        const float m0 = +1.1283791671e+0;
+        const float m1 = +1.0000000000e+0;
+        const float m2 = -3.3333333333e-1;
+        const float m3 = +1.0000000000e-1;
+        const float m4 = -2.3797619048e-2;
+        const float m5 = +4.4050925926e-3;
+
+        float x2 = x * x;
+        float m_res = m5;
+        m_res = x2 * m_res + m4;
+        m_res = x2 * m_res + m3;
+        m_res = x2 * m_res + m2;
+        m_res = x2 * m_res + m1;
+        m_res = x * m_res * m0;
+
+        const float a0 = +1.0000026931e+0;
+        const float a1 = +3.5245843230e-2;
+        const float a2 = +2.0549248904e-2;
+        const float a3 = +3.9014820940e-3;
+        const float a4 = -3.0609220270e-4;
+        const float a5 = +1.1007476860e-4;
+
+        float a_res = a5;
+        a_res = x * a_res + a4;
+        a_res = x * a_res + a3;
+        a_res = x * a_res + a2;
+        a_res = x * a_res + a1;
+        a_res = x * a_res + a0;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = a_res * a_res;
+        a_res = 1.0 - 1.0 / a_res;
+
+        float res = select(x > 0.5, a_res, m_res);
+        float signed_res = floatbits(intbits(res) | signbits(x_full));
+        return signed_res;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (16-bit float precision)
 
@@ -4880,6 +5075,14 @@ __declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_
 
 __declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
     return __pow_uniform_half(a, b);
+}
+
+__declspec(safe) static inline float16 erf(float16 x_full) {
+    return (float16)(erf((float)x_full));
+}
+
+__declspec(safe) static inline uniform float16 erf(uniform float16 x_full) {
+    return (uniform float16)(erf((uniform float)x_full));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -5248,6 +5451,21 @@ __declspec(safe) static inline double cbrt(double a) {
 }
 
 __declspec(safe) static inline uniform double cbrt(uniform double a) { return __stdlib_cbrt(a); }
+
+__declspec(safe) static inline double erf(double a) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_erfd(a);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_erf(extract(a, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double erf(uniform double a) { return __stdlib_erf(a); }
 
 ///////////////////////////////////////////////////////////////////////////
 // half-precision floats

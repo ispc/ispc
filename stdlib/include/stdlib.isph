@@ -997,6 +997,8 @@ __declspec(safe) inline float pow(float a, float b);
 __declspec(safe) inline uniform float pow(uniform float a, uniform float b);
 __declspec(safe) inline float cbrt(float x);
 __declspec(safe) inline uniform float cbrt(uniform float x);
+__declspec(safe) inline float erf(float x);
+__declspec(safe) inline uniform float erf(uniform float x);
 
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (16-bit float precision)
@@ -1035,6 +1037,8 @@ __declspec(safe) inline float16 log(float16 x_full);
 __declspec(safe) inline uniform float16 log(uniform float16 x_full);
 __declspec(safe) inline float16 pow(float16 a, float16 b);
 __declspec(safe) inline uniform float16 pow(uniform float16 a, uniform float16 b);
+__declspec(safe) inline float16 erf(float16 x);
+__declspec(safe) inline uniform float16 erf(uniform float16 x);
 
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (double precision)
@@ -1085,6 +1089,8 @@ __declspec(safe) inline double pow(double a, double b);
 __declspec(safe) inline uniform double pow(uniform double a, uniform double b);
 __declspec(safe) inline double cbrt(double x);
 __declspec(safe) inline uniform double cbrt(uniform double x);
+__declspec(safe) inline double erf(double x);
+__declspec(safe) inline uniform double erf(uniform double x);
 
 ///////////////////////////////////////////////////////////////////////////
 // half-precision floats
