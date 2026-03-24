@@ -4669,23 +4669,25 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         return __stdlib_erff(x_full);
     } else if (__math_lib == __math_lib_ispc_fast) {
 
-        // Precision: <200 ULP for normal numbers
+        // Precision: <80 ULP for all numbers (including subnormals).
+        // Correctly supports infinities and NaNs (though not required).
 
         uniform float x = abs(x_full);
 
         // Sollya:
-        // fpminimax(erf(x), [|1,...,8|], [|single...|], [0.0;1.75]);
-        // Precision: ~150 ULP for normal numbers
-        const uniform float a1 =  +1.1283890010e+0;
-        const uniform float a2 =  -6.7477038830e-4;
-        const uniform float a3 =  -3.6852616070e-1;
-        const uniform float a4 =  -3.2353758810e-2;
-        const uniform float a5 =  +1.7877873780e-1;
-        const uniform float a6 =  -6.8000443280e-2;
-        const uniform float a7 =  +3.6224152430e-3;
-        const uniform float a8 =  +1.4705687063e-3;
+        // fpminimax(erf(x), [|1,...,9|], [|single...|], [0.0;2.05]);
+        const uniform float a1 = +1.1283835173e+0;
+        const uniform float a2 = -2.8501544150e-4;
+        const uniform float a3 = -3.7310788040e-1;
+        const uniform float a4 = -1.1739640497e-2;
+        const uniform float a5 = +1.3303731380e-1;
+        const uniform float a6 = -1.2685810216e-2;
+        const uniform float a7 = -3.3539909870e-2;
+        const uniform float a8 = +1.4499780722e-2;
+        const uniform float a9 = -1.8588694510e-3;
 
-        uniform float a_res = a8;
+        uniform float a_res = a9;
+        a_res = x * a_res + a8;
         a_res = x * a_res + a7;
         a_res = x * a_res + a6;
         a_res = x * a_res + a5;
@@ -4696,19 +4698,16 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         a_res = x * a_res;
 
         // Sollya:
-        // fpminimax(erf(x), [|1,...,8|], [|single...|], [1.75;3.12]);
-        // Precision: ~190 ULP for normal numbers
-        const uniform float b1 =  +8.6952811480e-1;
-        const uniform float b2 =  +1.0043158530e+0;
-        const uniform float b3 =  -2.0123345850e+0;
-        const uniform float b4 =  +1.4146350620e+0;
-        const uniform float b5 =  -5.3969722990e-1;
-        const uniform float b6 =  +1.1918614060e-1;
-        const uniform float b7 =  -1.4405321330e-2;
-        const uniform float b8 =  +7.4139807840e-4;
+        // fpminimax(erf(x), [|1,...,7|], [|single...|], [2.05;3.30]);
+        const uniform float b1 = +1.4865404367e+0;
+        const uniform float b2 = -6.6944038870e-1;
+        const uniform float b3 = -7.4785791340e-2;
+        const uniform float b4 = +1.7385362090e-1;
+        const uniform float b5 = -6.4946919680e-2;
+        const uniform float b6 = +1.0646330193e-2;
+        const uniform float b7 = -6.7520828450e-4;
 
-        uniform float b_res = b8;
-        b_res = x * b_res + b7;
+        uniform float b_res = b7;
         b_res = x * b_res + b6;
         b_res = x * b_res + b5;
         b_res = x * b_res + b4;
@@ -4717,7 +4716,7 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         b_res = x * b_res + b1;
         b_res = x * b_res;
 
-        uniform float res = select(x < 3.12, select(x < 1.75, a_res, b_res), 1.0);
+        uniform float res = select(x > 3.30, 1.0, select(x < 2.05, a_res, b_res));
         uniform float signed_res = floatbits(intbits(res) | signbits(x_full));
         return signed_res;
     } else if (__math_lib == __math_lib_ispc) {
@@ -4809,16 +4808,20 @@ __declspec(safe) static inline float erf(float x_full) {
 
         float x = abs(x_full);
 
-        const float a1 =  +1.1283890010e+0;
-        const float a2 =  -6.7477038830e-4;
-        const float a3 =  -3.6852616070e-1;
-        const float a4 =  -3.2353758810e-2;
-        const float a5 =  +1.7877873780e-1;
-        const float a6 =  -6.8000443280e-2;
-        const float a7 =  +3.6224152430e-3;
-        const float a8 =  +1.4705687063e-3;
+        // Sollya:
+        // fpminimax(erf(x), [|1,...,9|], [|single...|], [0.0;2.05]);
+        const float a1 = +1.1283835173e+0;
+        const float a2 = -2.8501544150e-4;
+        const float a3 = -3.7310788040e-1;
+        const float a4 = -1.1739640497e-2;
+        const float a5 = +1.3303731380e-1;
+        const float a6 = -1.2685810216e-2;
+        const float a7 = -3.3539909870e-2;
+        const float a8 = +1.4499780722e-2;
+        const float a9 = -1.8588694510e-3;
 
-        float a_res = a8;
+        float a_res = a9;
+        a_res = x * a_res + a8;
         a_res = x * a_res + a7;
         a_res = x * a_res + a6;
         a_res = x * a_res + a5;
@@ -4828,17 +4831,17 @@ __declspec(safe) static inline float erf(float x_full) {
         a_res = x * a_res + a1;
         a_res = x * a_res;
 
-        const float b1 =  +8.6952811480e-1;
-        const float b2 =  +1.0043158530e+0;
-        const float b3 =  -2.0123345850e+0;
-        const float b4 =  +1.4146350620e+0;
-        const float b5 =  -5.3969722990e-1;
-        const float b6 =  +1.1918614060e-1;
-        const float b7 =  -1.4405321330e-2;
-        const float b8 =  +7.4139807840e-4;
+        // Sollya:
+        // fpminimax(erf(x), [|1,...,7|], [|single...|], [2.05;3.30]);
+        const float b1 = +1.4865404367e+0;
+        const float b2 = -6.6944038870e-1;
+        const float b3 = -7.4785791340e-2;
+        const float b4 = +1.7385362090e-1;
+        const float b5 = -6.4946919680e-2;
+        const float b6 = +1.0646330193e-2;
+        const float b7 = -6.7520828450e-4;
 
-        float b_res = b8;
-        b_res = x * b_res + b7;
+        float b_res = b7;
         b_res = x * b_res + b6;
         b_res = x * b_res + b5;
         b_res = x * b_res + b4;
@@ -4847,7 +4850,7 @@ __declspec(safe) static inline float erf(float x_full) {
         b_res = x * b_res + b1;
         b_res = x * b_res;
 
-        float res = select(x < 3.12, select(x < 1.75, a_res, b_res), 1.0);
+        float res = select(x > 3.30, 1.0, select(x < 2.05, a_res, b_res));
         float signed_res = floatbits(intbits(res) | signbits(x_full));
         return signed_res;
     } else if (__math_lib == __math_lib_ispc) {
