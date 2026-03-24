@@ -4669,50 +4669,70 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         return __stdlib_erff(x_full);
     } else if (__math_lib == __math_lib_ispc_fast) {
 
-        // Precision: <60 ULP for normal numbers (it should be ~30 ULP in practice).
+        // Precision: <200 ULP for normal numbers
 
-        uniform float x = min(abs(x_full), 4.0);
+        uniform float x = abs(x_full);
 
         // Sollya:
-        // fpminimax(erf(x), [|1,...,12|], [|single...|], [0.0;3.25]);
-        const uniform float m1 =  +1.1283755302e+0;
-        const uniform float m2 =  +3.1074651630e-4;
-        const uniform float m3 =  -3.8050818440e-1;
-        const uniform float m4 =  +2.4178463966e-2;
-        const uniform float m5 =  +4.4264476750e-2;
-        const uniform float m6 =  +1.1311466992e-1;
-        const uniform float m7 =  -1.4139567316e-1;
-        const uniform float m8 =  +7.1130916480e-2;
-        const uniform float m9 =  -1.9599121064e-2;
-        const uniform float m10 = +3.0720939390e-3;
-        const uniform float m11 = -2.5190578890e-4;
-        const uniform float m12 = +7.9832543630e-6;
+        // fpminimax(erf(x), [|1,...,8|], [|single...|], [0.0;1.75]);
+        // Precision: ~150 ULP for normal numbers
+        const uniform float a1 =  +1.1283890010e+0;
+        const uniform float a2 =  -6.7477038830e-4;
+        const uniform float a3 =  -3.6852616070e-1;
+        const uniform float a4 =  -3.2353758810e-2;
+        const uniform float a5 =  +1.7877873780e-1;
+        const uniform float a6 =  -6.8000443280e-2;
+        const uniform float a7 =  +3.6224152430e-3;
+        const uniform float a8 =  +1.4705687063e-3;
 
-        // Estrin's scheme is used here to minimize the latency a bit.
-        uniform float x2 = x * x;
-        uniform float m_res = m12;
-        m_res = x2 * m_res + (x * m11 + m10);
-        m_res = x2 * m_res + (x * m9 + m8);
-        m_res = x2 * m_res + (x * m7 + m6);
-        m_res = x2 * m_res + (x * m5 + m4);
-        m_res = x2 * m_res + (x * m3 + m2);
-        m_res = x2 * m_res + (x * m1);
+        uniform float a_res = a8;
+        a_res = x * a_res + a7;
+        a_res = x * a_res + a6;
+        a_res = x * a_res + a5;
+        a_res = x * a_res + a4;
+        a_res = x * a_res + a3;
+        a_res = x * a_res + a2;
+        a_res = x * a_res + a1;
+        a_res = x * a_res;
 
-        uniform float res = select(x > 3.2, 1.0, m_res);
+        // Sollya:
+        // fpminimax(erf(x), [|1,...,8|], [|single...|], [1.75;3.12]);
+        // Precision: ~190 ULP for normal numbers
+        const uniform float b1 =  +8.6952811480e-1;
+        const uniform float b2 =  +1.0043158530e+0;
+        const uniform float b3 =  -2.0123345850e+0;
+        const uniform float b4 =  +1.4146350620e+0;
+        const uniform float b5 =  -5.3969722990e-1;
+        const uniform float b6 =  +1.1918614060e-1;
+        const uniform float b7 =  -1.4405321330e-2;
+        const uniform float b8 =  +7.4139807840e-4;
+
+        uniform float b_res = b8;
+        b_res = x * b_res + b7;
+        b_res = x * b_res + b6;
+        b_res = x * b_res + b5;
+        b_res = x * b_res + b4;
+        b_res = x * b_res + b3;
+        b_res = x * b_res + b2;
+        b_res = x * b_res + b1;
+        b_res = x * b_res;
+
+        uniform float res = select(x < 3.12, select(x < 1.75, a_res, b_res), 1.0);
         uniform float signed_res = floatbits(intbits(res) | signbits(x_full));
         return signed_res;
     } else if (__math_lib == __math_lib_ispc) {
 
-        // Precision: <5 ULP.
+        // Precision: <10 ULP
 
-        uniform float x = min(abs(x_full), 3.8);
+        uniform float x_abs = abs(x_full);
+        uniform float x = select(x_abs > 3.8, 3.8, x_abs);
 
         // Implement a tweaked approximation of Abramowitz and Stegun (AS)
-        // for x > 0.8, combined with a polynomial approx in [0.0;0.8].
+        // for x > 1.1, combined with a polynomial approx in [0.0;1.1].
         // Indeed, the absolute error of the initial AS approx is 3e-7
         // for x > 0, but the relative error is higher close to 0.
-        // The relative error of the tweaked AS approx should be < 15 ULP.
-        // The relative error of tweaked Maclaurin series is less < 5 ULP.
+        // The relative error of the tweaked AS approx is <7 ULP.
+        // The relative error of polynomial approx is <5 ULP.
         // The Horner's sheme is used mainly for better performance.
         // The AS coefficients have been optimized for the target range.
         // See https://en.wikipedia.org/wiki/Error_function
@@ -4720,32 +4740,35 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         // Basic polynomial approx (for values close to zero)
 
         // Sollya:
-        // fpminimax(erf(x), [|1,3,5,7,9|], [|single...|], [0.0;0.8]);
-        const uniform float m0 = +1.1283789873e+0;
-        const uniform float m1 = -3.7611418960e-1;
-        const uniform float m2 = +1.1268994212e-1;
-        const uniform float m3 = -2.6218412444e-2;
-        const uniform float m4 = +4.0270145980e-3;
+        // fpminimax(erf(x), [|1,3,5,7,9,11|], [|single...|], [0.0;1.1], 
+        //           relative, floating, 1.1283791065*x);
+        const uniform float p0 = +1.128379035e+0;
+        const uniform float p1 = -3.761187792e-1;
+        const uniform float p2 = +1.127654165e-1;
+        const uniform float p3 = -2.660885081e-2;
+        const uniform float p4 = +4.800619092e-3;
+        const uniform float p5 = -5.166958435e-4;
 
         uniform float x2 = x * x;
-        uniform float m_res = m4;
-        m_res = x2 * m_res + m3;
-        m_res = x2 * m_res + m2;
-        m_res = x2 * m_res + m1;
-        m_res = x2 * m_res + m0;
-        m_res = x * m_res;
+        uniform float p_res = p5;
+        p_res = x2 * p_res + p4;
+        p_res = x2 * p_res + p3;
+        p_res = x2 * p_res + p2;
+        p_res = x2 * p_res + p1;
+        p_res = x2 * p_res + p0;
+        p_res = x * p_res;
 
         // Tweaked Abramowitz and Stegun approximation
 
         // Sollya:
         // f = 1/(1-erf(x))^(1/32);
-        // fpminimax(f, [|0,1,2,3,4,5|], [|single...|], [0.8;1.85]);
-        const uniform float a0 = +1.0000098944e+0;
-        const uniform float a1 = +3.5213988270e-2;
-        const uniform float a2 = +2.0604146644e-2;
-        const uniform float a3 = +3.8554281930e-3;
-        const uniform float a4 = -2.8727666360e-4;
-        const uniform float a5 = +1.0707636102e-4;
+        // fpminimax(f, [|0,1,2,3,4,5|], [|single...|], [1.1;2.2]);
+        const uniform float a0 = +1.0000020266e+0;
+        const uniform float a1 = +3.5238835960e-2;
+        const uniform float a2 = +2.0573450250e-2;
+        const uniform float a3 = +3.8739212320e-3;
+        const uniform float a4 = -2.9268921930e-4;
+        const uniform float a5 = +1.0768850916e-4;
 
         uniform float a_res = a5;
         a_res = x * a_res + a4;
@@ -4761,7 +4784,7 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         a_res = 1.0 - 1.0 / a_res;
 
         // Selection by range (with implicit handling of NaN)
-        uniform float res = select(x > 0.8, a_res, m_res);
+        uniform float res = select(x > 1.1, a_res, p_res);
 
         // Transfer the sign
         uniform float signed_res = floatbits(intbits(res) | signbits(x_full));
@@ -4784,59 +4807,78 @@ __declspec(safe) static inline float erf(float x_full) {
 
         // See the uniform version for more information
 
-        float x = min(abs(x_full), 3.8);
+        float x = abs(x_full);
 
-        const float m1 =  +1.1283755302e+0;
-        const float m2 =  +3.1074651630e-4;
-        const float m3 =  -3.8050818440e-1;
-        const float m4 =  +2.4178463966e-2;
-        const float m5 =  +4.4264476750e-2;
-        const float m6 =  +1.1311466992e-1;
-        const float m7 =  -1.4139567316e-1;
-        const float m8 =  +7.1130916480e-2;
-        const float m9 =  -1.9599121064e-2;
-        const float m10 = +3.0720939390e-3;
-        const float m11 = -2.5190578890e-4;
-        const float m12 = +7.9832543630e-6;
+        const float a1 =  +1.1283890010e+0;
+        const float a2 =  -6.7477038830e-4;
+        const float a3 =  -3.6852616070e-1;
+        const float a4 =  -3.2353758810e-2;
+        const float a5 =  +1.7877873780e-1;
+        const float a6 =  -6.8000443280e-2;
+        const float a7 =  +3.6224152430e-3;
+        const float a8 =  +1.4705687063e-3;
 
-        float x2 = x * x;
-        float m_res = m12;
-        m_res = x2 * m_res + (x * m11 + m10);
-        m_res = x2 * m_res + (x * m9 + m8);
-        m_res = x2 * m_res + (x * m7 + m6);
-        m_res = x2 * m_res + (x * m5 + m4);
-        m_res = x2 * m_res + (x * m3 + m2);
-        m_res = x2 * m_res + (x * m1);
+        float a_res = a8;
+        a_res = x * a_res + a7;
+        a_res = x * a_res + a6;
+        a_res = x * a_res + a5;
+        a_res = x * a_res + a4;
+        a_res = x * a_res + a3;
+        a_res = x * a_res + a2;
+        a_res = x * a_res + a1;
+        a_res = x * a_res;
 
-        float res = select(x > 3.2, 1.0, m_res);
+        const float b1 =  +8.6952811480e-1;
+        const float b2 =  +1.0043158530e+0;
+        const float b3 =  -2.0123345850e+0;
+        const float b4 =  +1.4146350620e+0;
+        const float b5 =  -5.3969722990e-1;
+        const float b6 =  +1.1918614060e-1;
+        const float b7 =  -1.4405321330e-2;
+        const float b8 =  +7.4139807840e-4;
+
+        float b_res = b8;
+        b_res = x * b_res + b7;
+        b_res = x * b_res + b6;
+        b_res = x * b_res + b5;
+        b_res = x * b_res + b4;
+        b_res = x * b_res + b3;
+        b_res = x * b_res + b2;
+        b_res = x * b_res + b1;
+        b_res = x * b_res;
+
+        float res = select(x < 3.12, select(x < 1.75, a_res, b_res), 1.0);
         float signed_res = floatbits(intbits(res) | signbits(x_full));
         return signed_res;
     } else if (__math_lib == __math_lib_ispc) {
 
         // See the uniform version for more information
 
-        float x = min(abs(x_full), 3.8);
+        float x_abs = abs(x_full);
+        float x = select(x_abs > 3.8, 3.8, x_abs);
 
-        const float m0 = +1.1283789873e+0;
-        const float m1 = -3.7611418960e-1;
-        const float m2 = +1.1268994212e-1;
-        const float m3 = -2.6218412444e-2;
-        const float m4 = +4.0270145980e-3;
+        const float p0 = +1.128379035e+0;
+        const float p1 = -3.761187792e-1;
+        const float p2 = +1.127654165e-1;
+        const float p3 = -2.660885081e-2;
+        const float p4 = +4.800619092e-3;
+        const float p5 = -5.166958435e-4;
 
         float x2 = x * x;
-        float m_res = m4;
-        m_res = x2 * m_res + m3;
-        m_res = x2 * m_res + m2;
-        m_res = x2 * m_res + m1;
-        m_res = x2 * m_res + m0;
-        m_res = x * m_res;
+        float p_res = p5;
+        p_res = x2 * p_res + p4;
+        p_res = x2 * p_res + p3;
+        p_res = x2 * p_res + p2;
+        p_res = x2 * p_res + p1;
+        p_res = x2 * p_res + p0;
+        p_res = x * p_res;
 
-        const float a0 = +1.0000098944e+0;
-        const float a1 = +3.5213988270e-2;
-        const float a2 = +2.0604146644e-2;
-        const float a3 = +3.8554281930e-3;
-        const float a4 = -2.8727666360e-4;
-        const float a5 = +1.0707636102e-4;
+        const float a0 = +1.0000020266e+0;
+        const float a1 = +3.5238835960e-2;
+        const float a2 = +2.0573450250e-2;
+        const float a3 = +3.8739212320e-3;
+        const float a4 = -2.9268921930e-4;
+        const float a5 = +1.0768850916e-4;
 
         float a_res = a5;
         a_res = x * a_res + a4;
@@ -4851,7 +4893,7 @@ __declspec(safe) static inline float erf(float x_full) {
         a_res = a_res * a_res;
         a_res = 1.0 - 1.0 / a_res;
 
-        float res = select(x > 0.8, a_res, m_res);
+        float res = select(x > 1.1, a_res, p_res);
         float signed_res = floatbits(intbits(res) | signbits(x_full));
         return signed_res;
     }
