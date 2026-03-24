@@ -4739,7 +4739,7 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         // Basic polynomial approx (for values close to zero)
 
         // Sollya:
-        // fpminimax(erf(x), [|1,3,5,7,9,11|], [|single...|], [0.0;1.1], 
+        // fpminimax(erf(x), [|1,3,5,7,9,11|], [|single...|], [0.0;1.1],
         //           relative, floating, 1.1283791065*x);
         const uniform float p0 = +1.128379035e+0;
         const uniform float p1 = -3.761187792e-1;
@@ -5120,9 +5120,7 @@ __declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform fl
     return __pow_uniform_half(a, b);
 }
 
-__declspec(safe) static inline float16 erf(float16 x_full) {
-    return (float16)(erf((float)x_full));
-}
+__declspec(safe) static inline float16 erf(float16 x_full) { return (float16)(erf((float)x_full)); }
 
 __declspec(safe) static inline uniform float16 erf(uniform float16 x_full) {
     return (uniform float16)(erf((uniform float)x_full));
