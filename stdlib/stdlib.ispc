@@ -4723,9 +4723,6 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
 
         // Precision: <10 ULP
 
-        uniform float x_abs = abs(x_full);
-        uniform float x = select(x_abs > 3.8, 3.8, x_abs);
-
         // Implement a tweaked approximation of Abramowitz and Stegun (AS)
         // for x > 1.1, combined with a polynomial approx in [0.0;1.1].
         // Indeed, the absolute error of the initial AS approx is 3e-7
@@ -4735,6 +4732,10 @@ __declspec(safe) static inline uniform float erf(uniform float x_full) {
         // The Horner's sheme is used mainly for better performance.
         // The AS coefficients have been optimized for the target range.
         // See https://en.wikipedia.org/wiki/Error_function
+
+        // Note: a constant >= 4.0 is needed here so erf(inf) is exactly 1.0.
+        uniform float x_abs = abs(x_full);
+        uniform float x = select(x_abs > 4.0, 4.0, x_abs);
 
         // Basic polynomial approx (for values close to zero)
 
@@ -4858,7 +4859,7 @@ __declspec(safe) static inline float erf(float x_full) {
         // See the uniform version for more information
 
         float x_abs = abs(x_full);
-        float x = select(x_abs > 3.8, 3.8, x_abs);
+        float x = select(x_abs > 4.0, 4.0, x_abs);
 
         const float p0 = +1.128379035e+0;
         const float p1 = -3.761187792e-1;
