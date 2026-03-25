@@ -9,8 +9,8 @@ uniform bool ok(uniform double x, uniform double ref) {
 
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     for (uniform int i = 0; i != programCount; ++i) {
-        uniform double ref = exp((uniform double)((aFOO[i] / programCount) * 3.0d - 1.5d));
-        uniform double res = exp((aFOO[i] / programCount) * 3.0d - 1.5d);
+        uniform double ref = erf((uniform double)((aFOO[i] / programCount) * 3.0d - 1.5d));
+        uniform double res = erf((aFOO[i] / programCount) * 3.0d - 1.5d);
         RET[i] = ok(res, ref) ? 0 : 1;
     }
 }
