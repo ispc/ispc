@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 // @file short_vec.isph
@@ -140,6 +140,7 @@ SHORT_VEC_ARG1(atan)
 SHORT_VEC_ARG1(exp)
 SHORT_VEC_ARG1(log)
 SHORT_VEC_ARG1(cbrt)
+SHORT_VEC_ARG1(erf)
 
 SHORT_VEC_ARG2(atan2)
 SHORT_VEC_ARG2(pow)

@@ -274,6 +274,7 @@ New Architecture Support:
   versions. It is still available and left unchanged. The fast-math mode can be
   specified with the option ``--opt=fast-math:<mode>``. See the optimization
   settings section for more information about the new modes.
+* The Gauss error function ``erf`` has been added to the standard library.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
@@ -5937,6 +5938,18 @@ for short vector of these types:
     double cbrt(double x)
     uniform double cbrt(uniform double x)
     template <typename T, uint N> T<N> cbrt(T<N> a)
+
+The Gauss error function ``erf`` is available:
+
+::
+
+    float16 erf(float16 x)
+    uniform float16 erf(uniform float16 x)
+    float erf(float x)
+    uniform float erf(uniform float x)
+    double erf(double x)
+    uniform double erf(uniform double x)
+    template <typename T, uint N> T<N> erf(T<N> a)
 
 A few functions that end up doing low-level manipulation of the
 floating-point representation in memory are available.  As in the standard
