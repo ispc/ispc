@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025, Intel Corporation
+  Copyright (c) 2024-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -456,7 +456,11 @@ bool lIsAliased(const IITDesc &L, const IITDesc &R) {
 size_t lNextIITDescs(const IITDesc &D) {
     switch (D.Kind) {
     case IITDesc::Struct:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+        return D.StructNumElements + 1;
+#else
         return D.Struct_NumElements + 1;
+#endif
     case IITDesc::Vector:
     case IITDesc::SameVecWidthArgument:
         return 2;
