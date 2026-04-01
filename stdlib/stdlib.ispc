@@ -4809,8 +4809,6 @@ __declspec(safe) static inline float erf(float x_full) {
 
         float x = abs(x_full);
 
-        // Sollya:
-        // fpminimax(erf(x), [|1,...,9|], [|single...|], [0.0;2.05]);
         const float a1 = +1.1283835173e+0;
         const float a2 = -2.8501544150e-4;
         const float a3 = -3.7310788040e-1;
@@ -4832,8 +4830,6 @@ __declspec(safe) static inline float erf(float x_full) {
         a_res = x * a_res + a1;
         a_res = x * a_res;
 
-        // Sollya:
-        // fpminimax(erf(x), [|1,...,7|], [|single...|], [2.05;3.30]);
         const float b1 = +1.4865404367e+0;
         const float b2 = -6.6944038870e-1;
         const float b3 = -7.4785791340e-2;
@@ -4900,6 +4896,248 @@ __declspec(safe) static inline float erf(float x_full) {
         float res = select(x > 1.1, a_res, p_res);
         float signed_res = floatbits(intbits(res) | signbits(x_full));
         return signed_res;
+    }
+}
+
+// Mixed-precision exp designed mainly for `erfc`.
+// It only supports negative `x_full` values.
+// More precise than the single-precision exp:
+// It avoid a numerical instability for big negative input single-precision
+// values. Indeed, without it, the error of `exp(-x*x)` for x in [0;10] can
+// reach up to 70 ULP! With this function, it is <3.5 ULP.
+__declspec(safe) static inline uniform float _erfc_neg_exp(uniform double x_full) {
+    const uniform double ln2 = 6.9314718055994531e-1d;
+    const uniform double one_over_ln2 = 1.4426950216293335d;
+
+    uniform double scaled = x_full * one_over_ln2;
+    uniform double k_real = floor(scaled);
+    uniform int64 k = (uniform int64)k_real;
+
+    uniform float x = (uniform float)(x_full - k_real * ln2);
+
+    const uniform float one = 1.0;
+    const uniform float c2 = 4.9999991059e-1;
+    const uniform float c3 = 1.6666841507e-1;
+    const uniform float c4 = 4.1653905064e-2;
+    const uniform float c5 = 8.3788307384e-3;
+    const uniform float c6 = 1.3043793151e-3;
+    const uniform float c7 = 2.7555381530e-4;
+
+    uniform float poly = c7;
+    poly = x * poly + c6;
+    poly = x * poly + c5;
+    poly = x * poly + c4;
+    poly = x * poly + c3;
+    poly = x * poly + c2;
+    poly = x * poly + one;
+    poly = x * poly + one;
+
+    const uniform int64 fpbias = 1023;
+    uniform int64 biased_n = k + fpbias;
+    uniform bool underflow = k_real <= -fpbias;
+    biased_n <<= 52;
+    uniform float two_to_the_n = (uniform float)doublebits(biased_n);
+    uniform float result = poly * two_to_the_n;
+    result = underflow ? 0.0 : result;
+    return result;
+}
+
+// See the uniform version for more information
+__declspec(safe) static inline float _erfc_neg_exp(double x_full) {
+    const double ln2 = 6.9314718055994531e-1d;
+    const double one_over_ln2 = 1.4426950216293335d;
+
+    double scaled = x_full * one_over_ln2;
+    double k_real = floor(scaled);
+    int64 k = (int64)k_real;
+
+    float x = (float)(x_full - k_real * ln2);
+
+    const float one = 1.0;
+    const float c2 = 4.9999991059e-1;
+    const float c3 = 1.6666841507e-1;
+    const float c4 = 4.1653905064e-2;
+    const float c5 = 8.3788307384e-3;
+    const float c6 = 1.3043793151e-3;
+    const float c7 = 2.7555381530e-4;
+
+    float poly = c7;
+    poly = x * poly + c6;
+    poly = x * poly + c5;
+    poly = x * poly + c4;
+    poly = x * poly + c3;
+    poly = x * poly + c2;
+    poly = x * poly + one;
+    poly = x * poly + one;
+
+    const int64 fpbias = 1023;
+    int64 biased_n = k + fpbias;
+    bool underflow = k_real <= -fpbias;
+    biased_n <<= 52;
+    float two_to_the_n = (float)doublebits(biased_n);
+    float result = poly * two_to_the_n;
+    result = underflow ? 0.0 : result;
+    return result;
+}
+
+__declspec(safe) static inline uniform float erfc(uniform float x_full) {
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_erfcf(x_full);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision: <80 ULP for all numbers (including subnormals).
+        // Correctly supports infinities and NaNs (though not required).
+
+        uniform float x_sp = abs(x_full);
+        x_sp = select(x_sp > 10.1, 10.1, x_sp);
+        uniform double x_dp = (uniform double)x_sp;
+        uniform double x2_dp = x_dp * x_dp;
+        uniform double x4_dp = x2_dp * x2_dp;
+
+        // Sollya:
+        // fpminimax(log(erfc(x)), 12, [|double...|], [0.0;9.85], absolute);
+        const uniform double c00 = +4.197320213670971199e-06d;
+        const uniform double c01 = -1.128550949837619388e+00d;
+        const uniform double c02 = -6.354525758129699886e-01d;
+        const uniform double c03 = -1.059060072406146635e-01d;
+        const uniform double c04 = +2.352663581509139776e-02d;
+        const uniform double c05 = -3.458848280493454896e-03d;
+        const uniform double c06 = +1.979893961261454264e-04d;
+        const uniform double c07 = +4.052279761164515038e-05d;
+        const uniform double c08 = -1.188755454524737013e-05d;
+        const uniform double c09 = +1.484807869494198427e-06d;
+        const uniform double c10 = -1.053828127691732596e-07d;
+        const uniform double c11 = +4.124237406063885519e-09d;
+        const uniform double c12 = -6.939009269178366423e-11d;
+
+        // Estrin's scheme used to reduce latency
+        uniform double poly = c12;
+        poly = poly * x4_dp + ((c11 * x_dp + c10) * x2_dp + (c09 * x_dp + c08));
+        poly = poly * x4_dp + ((c07 * x_dp + c06) * x2_dp + (c05 * x_dp + c04));
+        poly = poly * x4_dp + ((c03 * x_dp + c02) * x2_dp + (c01 * x_dp + c00));
+
+        uniform float res = _erfc_neg_exp(poly);
+        return select(x_full < 0.0, 2.0 - res, res);
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <5 ULP
+
+        uniform float x_sp = abs(x_full);
+        x_sp = select(x_sp > 10.1, 10.1, x_sp);
+        uniform double x_dp = (uniform double)x_sp;
+        uniform double x2_dp = x_dp * x_dp;
+        uniform double x4_dp = x2_dp * x2_dp;
+
+        // Sollya:
+        // fpminimax(log(erfc(x)), 16, [|double...|], [0.0;10.1], absolute);
+        // Barely numerically stable but enough for single precision.
+        const uniform double b00 = +7.528016144388386869e-08d;
+        const uniform double b01 = -1.128383077173272797e+00d;
+        const uniform double b02 = -6.365867488627735549e-01d;
+        const uniform double b03 = -1.028749803222310105e-01d;
+        const uniform double b04 = +1.926326185826594817e-02d;
+        const uniform double b05 = +1.816228327158303892e-04d;
+        const uniform double b06 = -1.854061368216941477e-03d;
+        const uniform double b07 = +8.456966890087848701e-04d;
+        const uniform double b08 = -2.394872983773455694e-04d;
+        const uniform double b09 = +4.882621630801304224e-05d;
+        const uniform double b10 = -7.427977311595383097e-06d;
+        const uniform double b11 = +8.465890395524544962e-07d;
+        const uniform double b12 = -7.133871899458714267e-08d;
+        const uniform double b13 = +4.312533088891799362e-09d;
+        const uniform double b14 = -1.768121176854640576e-10d;
+        const uniform double b15 = +4.401051115149253867e-12d;
+        const uniform double b16 = -5.018313772746684971e-14d;
+
+        // Estrin's scheme used to reduce latency
+        uniform double poly = b16;
+        poly = poly * x4_dp + ((b15 * x_dp + b14) * x2_dp + (b13 * x_dp + b12));
+        poly = poly * x4_dp + ((b11 * x_dp + b10) * x2_dp + (b09 * x_dp + b08));
+        poly = poly * x4_dp + ((b07 * x_dp + b06) * x2_dp + (b05 * x_dp + b04));
+        poly = poly * x4_dp + ((b03 * x_dp + b02) * x2_dp + (b01 * x_dp + b00));
+
+        uniform float res = _erfc_neg_exp(poly);
+        return select(x_full < 0.0, 2.0 - res, res);
+    }
+}
+
+__declspec(safe) static inline float erfc(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_erfcf(x_full);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_erfcf(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // See the uniform version for more information
+
+        float x_sp = abs(x_full);
+        x_sp = select(x_sp > 10.1, 10.1, x_sp);
+        double x_dp = (double)x_sp;
+        double x2_dp = x_dp * x_dp;
+        double x4_dp = x2_dp * x2_dp;
+
+        const double c00 = +4.197320213670971199e-06d;
+        const double c01 = -1.128550949837619388e+00d;
+        const double c02 = -6.354525758129699886e-01d;
+        const double c03 = -1.059060072406146635e-01d;
+        const double c04 = +2.352663581509139776e-02d;
+        const double c05 = -3.458848280493454896e-03d;
+        const double c06 = +1.979893961261454264e-04d;
+        const double c07 = +4.052279761164515038e-05d;
+        const double c08 = -1.188755454524737013e-05d;
+        const double c09 = +1.484807869494198427e-06d;
+        const double c10 = -1.053828127691732596e-07d;
+        const double c11 = +4.124237406063885519e-09d;
+        const double c12 = -6.939009269178366423e-11d;
+
+        double poly = c12;
+        poly = poly * x4_dp + ((c11 * x_dp + c10) * x2_dp + (c09 * x_dp + c08));
+        poly = poly * x4_dp + ((c07 * x_dp + c06) * x2_dp + (c05 * x_dp + c04));
+        poly = poly * x4_dp + ((c03 * x_dp + c02) * x2_dp + (c01 * x_dp + c00));
+
+        float res = _erfc_neg_exp(poly);
+        return select(x_full < 0.0, 2.0 - res, res);
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // See the uniform version for more information
+
+        float x_sp = abs(x_full);
+        x_sp = select(x_sp > 10.1, 10.1, x_sp);
+        double x_dp = (double)x_sp;
+        double x2_dp = x_dp * x_dp;
+        double x4_dp = x2_dp * x2_dp;
+
+        const double b00 = +7.528016144388386869e-08d;
+        const double b01 = -1.128383077173272797e+00d;
+        const double b02 = -6.365867488627735549e-01d;
+        const double b03 = -1.028749803222310105e-01d;
+        const double b04 = +1.926326185826594817e-02d;
+        const double b05 = +1.816228327158303892e-04d;
+        const double b06 = -1.854061368216941477e-03d;
+        const double b07 = +8.456966890087848701e-04d;
+        const double b08 = -2.394872983773455694e-04d;
+        const double b09 = +4.882621630801304224e-05d;
+        const double b10 = -7.427977311595383097e-06d;
+        const double b11 = +8.465890395524544962e-07d;
+        const double b12 = -7.133871899458714267e-08d;
+        const double b13 = +4.312533088891799362e-09d;
+        const double b14 = -1.768121176854640576e-10d;
+        const double b15 = +4.401051115149253867e-12d;
+        const double b16 = -5.018313772746684971e-14d;
+
+        double poly = b16;
+        poly = poly * x4_dp + ((b15 * x_dp + b14) * x2_dp + (b13 * x_dp + b12));
+        poly = poly * x4_dp + ((b11 * x_dp + b10) * x2_dp + (b09 * x_dp + b08));
+        poly = poly * x4_dp + ((b07 * x_dp + b06) * x2_dp + (b05 * x_dp + b04));
+        poly = poly * x4_dp + ((b03 * x_dp + b02) * x2_dp + (b01 * x_dp + b00));
+
+        float res = _erfc_neg_exp(poly);
+        return select(x_full < 0.0, 2.0 - res, res);
     }
 }
 
@@ -5125,6 +5363,12 @@ __declspec(safe) static inline float16 erf(float16 x_full) { return (float16)(er
 
 __declspec(safe) static inline uniform float16 erf(uniform float16 x_full) {
     return (uniform float16)(erf((uniform float)x_full));
+}
+
+__declspec(safe) static inline float16 erfc(float16 x_full) { return (float16)(erfc((float)x_full)); }
+
+__declspec(safe) static inline uniform float16 erfc(uniform float16 x_full) {
+    return (uniform float16)(erfc((uniform float)x_full));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -5508,6 +5752,21 @@ __declspec(safe) static inline double erf(double a) {
 }
 
 __declspec(safe) static inline uniform double erf(uniform double a) { return __stdlib_erf(a); }
+
+__declspec(safe) static inline double erfc(double a) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_erfcd(a);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_erfc(extract(a, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double erfc(uniform double a) { return __stdlib_erfc(a); }
 
 ///////////////////////////////////////////////////////////////////////////
 // half-precision floats

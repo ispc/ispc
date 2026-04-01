@@ -670,6 +670,7 @@ EXT READNONE uniform float logf(uniform float);
 EXT READNONE uniform float powf(uniform float, uniform float);
 EXT READNONE uniform float cbrtf(uniform float);
 EXT READNONE uniform float erff(uniform float);
+EXT READNONE uniform float erfcf(uniform float);
 
 EXT READNONE uniform float __stdlib_sinf(uniform float x) { return sinf(x); }
 EXT READNONE uniform float __stdlib_cosf(uniform float x) { return cosf(x); }
@@ -686,6 +687,7 @@ EXT READNONE uniform float __stdlib_expf(uniform float x) { return expf(x); }
 EXT READNONE uniform float __stdlib_powf(uniform float x, uniform float y) { return powf(x, y); }
 EXT READNONE uniform float __stdlib_cbrtf(uniform float x) { return cbrtf(x); }
 EXT READNONE uniform float __stdlib_erff(uniform float x) { return erff(x); }
+EXT READNONE uniform float __stdlib_erfcf(uniform float x) { return erfcf(x); }
 
 EXT READNONE uniform double sin(uniform double);
 EXT READNONE uniform double cos(uniform double);
@@ -700,6 +702,7 @@ EXT READNONE uniform double log(uniform double);
 EXT READNONE uniform double pow(uniform double, uniform double);
 EXT READNONE uniform double cbrt(uniform double);
 EXT READNONE uniform double erf(uniform double);
+EXT READNONE uniform double erfc(uniform double);
 
 EXT READNONE uniform double __stdlib_sin(uniform double x) { return sin(x); }
 EXT READNONE uniform double __stdlib_cos(uniform double x) { return cos(x); }
@@ -716,6 +719,7 @@ EXT READNONE uniform double __stdlib_exp(uniform double x) { return exp(x); }
 EXT READNONE uniform double __stdlib_pow(uniform double x, uniform double y) { return pow(x, y); }
 EXT READNONE uniform double __stdlib_cbrt(uniform double x) { return cbrt(x); }
 EXT READNONE uniform double __stdlib_erf(uniform double x) { return erf(x); }
+EXT READNONE uniform double __stdlib_erfc(uniform double x) { return erfc(x); }
 
 EXT READNONE uniform float16 __round_uniform_half(uniform float16 x) { return @llvm.roundeven(x); }
 EXT READNONE varying float16 __round_varying_half(varying float16 x) { return @llvm.roundeven(x); }

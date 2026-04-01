@@ -25,6 +25,7 @@ EXT READNONE inline varying float __svml_logf(varying float);
 EXT READNONE inline varying float __svml_powf(varying float, varying float);
 EXT READNONE inline varying float __svml_cbrtf(varying float);
 EXT READNONE inline varying float __svml_erff(varying float);
+EXT READNONE inline varying float __svml_erfcf(varying float);
 EXT READNONE inline varying float __svml_sqrtf(varying float);
 EXT READNONE inline varying float __svml_invsqrtf(varying float);
 
@@ -41,6 +42,7 @@ EXT READNONE inline varying double __svml_logd(varying double);
 EXT READNONE inline varying double __svml_powd(varying double, varying double);
 EXT READNONE inline varying double __svml_cbrtd(varying double);
 EXT READNONE inline varying double __svml_erfd(varying double);
+EXT READNONE inline varying double __svml_erfcd(varying double);
 EXT READNONE inline varying double __svml_sqrtd(varying double);
 EXT READNONE inline varying double __svml_invsqrtd(varying double);
 
