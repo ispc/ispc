@@ -72,17 +72,21 @@
 
 #include <amx.isph>
 
+constexpr uniform int tile_dst_id() { return amx_tmm2; }
+constexpr uniform int tile_src0_id() { return amx_tmm0; }
+constexpr uniform int tile_src1_id() { return amx_tmm1; }
+
 __attribute__((external_only))
 export void test_amx_int8() {
     // require amxint8 feature (SPR+)
-    amx_dpbssd(2, 0, 1);
-    amx_dpbsud(2, 0, 1);
-    amx_dpbusd(2, 0, 1);
-    amx_dpbuud(2, 0, 1);
+    amx_dpbssd<tile_dst_id(), tile_src0_id(), tile_src1_id()>();
+    amx_dpbsud<tile_dst_id(), tile_src0_id(), tile_src1_id()>();
+    amx_dpbusd<tile_dst_id(), tile_src0_id(), tile_src1_id()>();
+    amx_dpbuud<tile_dst_id(), tile_src0_id(), tile_src1_id()>();
 }
 
 __attribute__((external_only))
 export void test_amx_bf16() {
     // require amxbf16 feature (SPR+)
-    amx_dpbf16ps(2, 0, 1);
+    amx_dpbf16ps<tile_dst_id(), tile_src0_id(), tile_src1_id()>();
 }

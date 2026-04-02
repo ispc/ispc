@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2024-2025, Intel Corporation
+// Copyright (c) 2026-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 // @file stdlib.isph
@@ -12,22 +12,22 @@
 #error ISPC_MATH_LIB_ISPC_VAL undefined
 #endif
 
-static const uniform int32 __math_lib_ispc = ISPC_MATH_LIB_ISPC_VAL;
+static constexpr uniform int32 __math_lib_ispc = ISPC_MATH_LIB_ISPC_VAL;
 
 #ifndef ISPC_MATH_LIB_ISPC_FAST_VAL
 #error ISPC_MATH_LIB_ISPC_FAST_VAL undefined
 #endif
 
-static const uniform int32 __math_lib_ispc_fast = ISPC_MATH_LIB_ISPC_FAST_VAL;
+static constexpr uniform int32 __math_lib_ispc_fast = ISPC_MATH_LIB_ISPC_FAST_VAL;
 
 #ifndef ISPC_MATH_LIB_SVML_VAL
 #error ISPC_MATH_LIB_SVML_VAL undefined
 #endif
 
-static const uniform int32 __math_lib_svml = ISPC_MATH_LIB_SVML_VAL;
+static constexpr uniform int32 __math_lib_svml = ISPC_MATH_LIB_SVML_VAL;
 
 #ifndef ISPC_MATH_LIB_SYSTEM_VAL
 #error ISPC_MATH_LIB_SYSTEM_VAL undefined
 #endif
 
-static const uniform int32 __math_lib_system = ISPC_MATH_LIB_SYSTEM_VAL;
+static constexpr uniform int32 __math_lib_system = ISPC_MATH_LIB_SYSTEM_VAL;
