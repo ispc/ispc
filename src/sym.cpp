@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -253,6 +253,14 @@ bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
     }
 
     if (const StructType *ST = CastType<StructType>(type)) {
+        // Let the types that were created from the forward declaration
+        // (e.g. pointers to it) see the definition.
+        const UndefinedStructType *UST = CastType<UndefinedStructType>(t);
+        if (UST != nullptr && UST->GetStructName() == ST->GetStructName() &&
+            ST->GetVariability() == Variability::Unbound && !ST->IsConstType()) {
+            UST->SetDefinition(ST);
+        }
+
         if (!ST->IsCompleteType()) {
             int n = ST->GetElementCount();
             bool allComplete = true;
