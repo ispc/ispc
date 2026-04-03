@@ -2270,12 +2270,14 @@ bool StructType::checkIfCanBeSOA(const StructType *st) {
 
 UndefinedStructType::UndefinedStructType(const std::string &n, const Variability var, bool ic, SourcePos p,
                                          unsigned int align)
-    : Type(UNDEFINED_STRUCT_TYPE, var, ic, p, align), name(n) {
+    : Type(UNDEFINED_STRUCT_TYPE, var, ic, p, align), name(n),
+      definition(std::make_shared<const StructType *>(nullptr)) {
     Assert(name != "");
 }
 
 UndefinedStructType::UndefinedStructType(const UndefinedStructType &other)
-    : Type(UNDEFINED_STRUCT_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name) {}
+    : Type(UNDEFINED_STRUCT_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
+      definition(other.definition) {}
 
 void UndefinedStructType::RegisterInStructTypeMap() {
     if (variability != Variability::Unbound) {
@@ -2311,6 +2313,49 @@ const UndefinedStructType *UndefinedStructType::createWithAlignment(unsigned int
 }
 
 bool UndefinedStructType::IsCompleteType() const { return false; }
+
+const StructType *UndefinedStructType::GetDefinition() const {
+    const Type *t = *definition;
+    if (t == nullptr) {
+        return nullptr;
+    }
+    if (variability == Variability::Uniform) {
+        t = t->GetAsUniformType();
+    } else if (variability == Variability::Varying) {
+        t = t->GetAsVaryingType();
+    }
+    if (isConst) {
+        t = t->GetAsConstType();
+    }
+    if (alignment != 0) {
+        t = t->GetAsAlignedType(alignment);
+    }
+    return CastType<StructType>(t);
+}
+
+void UndefinedStructType::SetDefinition(const StructType *st) const {
+    Assert(st != nullptr && st->GetStructName() == name && st->GetVariability() == Variability::Unbound &&
+           !st->IsConstType());
+    *definition = st;
+}
+
+const Type *ispc::ResolveForwardDeclaredStruct(const Type *type) {
+    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
+        const StructType *st = ust->GetDefinition();
+        return st ? st : type;
+    }
+    if (const PointerType *pt = CastType<PointerType>(type)) {
+        const UndefinedStructType *ust = CastType<UndefinedStructType>(pt->GetBaseType());
+        const StructType *st = ust ? ust->GetDefinition() : nullptr;
+        return st ? pt->createWithBaseType(st) : type;
+    }
+    if (const ReferenceType *rt = CastType<ReferenceType>(type)) {
+        const UndefinedStructType *ust = CastType<UndefinedStructType>(rt->GetReferenceTarget());
+        const StructType *st = ust ? ust->GetDefinition() : nullptr;
+        return st ? rt->createWithBaseType(st) : type;
+    }
+    return type;
+}
 
 const UndefinedStructType *UndefinedStructType::GetAsSOAType(int width) const {
     FATAL("UndefinedStructType::GetAsSOAType() shouldn't be called.");
