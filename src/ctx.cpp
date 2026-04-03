@@ -2288,6 +2288,9 @@ llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value
 }
 
 const PointerType *FunctionEmitContext::RegularizePointer(const Type *ptrRefType) {
+    // The pointer or reference may have been created when its target was a
+    // forward declared struct that has been defined since.
+    ptrRefType = ResolveForwardDeclaredStruct(ptrRefType);
     if (CastType<ReferenceType>(ptrRefType) != nullptr) {
         return PointerType::GetUniform(ptrRefType->GetReferenceTarget());
     } else {

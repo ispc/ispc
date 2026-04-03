@@ -340,9 +340,19 @@ static void lGetExportedTypes(const Type *type, std::vector<const StructType *> 
             lGetExportedTypes(structType->GetElementType(i), exportedStructTypes, exportedEnumTypes,
                               exportedVectorTypes);
         }
-    } else if (CastType<UndefinedStructType>(type) != nullptr) {
-        // do nothing
-        ;
+    } else if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
+        // The struct may have been defined after this type was created.  The
+        // members of a self-referential struct lead back here, so visit each
+        // definition only once.
+        const StructType *st = ust->GetDefinition();
+        if (st != nullptr) {
+            for (const StructType *exported : *exportedStructTypes) {
+                if (Type::Equal(exported, st->GetAsNonConstType())) {
+                    return;
+                }
+            }
+            lGetExportedTypes(st, exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        }
     } else if (CastType<EnumType>(type) != nullptr) {
         lAddTypeIfNew(type, exportedEnumTypes);
     } else if (CastType<VectorType>(type) != nullptr) {

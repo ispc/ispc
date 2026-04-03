@@ -1443,7 +1443,9 @@ type_specifier
     : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
     {
-        const Type *t = m->symbolTable->LookupType(yytext);
+        // A typedef of a forward declared struct (e.g. "typedef struct Foo FooT;")
+        // refers to the struct's definition once it has been provided.
+        const Type *t = ResolveForwardDeclaredStruct(m->symbolTable->LookupType(yytext));
         $$ = t;
         lCleanUpString($1);
     }

@@ -578,6 +578,8 @@ class PointerType : public Type {
     PointerType *create() const override;
 
     const PointerType *createWithBaseType(const Type *newBaseType) const;
+
+    friend const Type *ResolveForwardDeclaredStruct(const Type *type);
     const PointerType *createWithAddressSpace(AddressSpace newAddrSpace) const;
     const PointerType *createWithBaseTypeAndVariability(const Type *newBaseType, Variability newVariability) const;
     const PointerType *createWithProperty(unsigned int newProperty) const;
@@ -918,7 +920,10 @@ class StructType : public CollectionType {
 /** Type implementation representing a struct name that has been declared
     but where the struct members haven't been defined (i.e. "struct Foo;").
     This class doesn't do much besides serve as a placeholder that other
-    code can use to detect the presence of such as truct.
+    code can use to detect the presence of such as truct.  Types created
+    from it before the struct is defined (e.g. "Foo *") keep referring to
+    it, so it records the definition once one is provided; see
+    GetDefinition().
  */
 class UndefinedStructType : public Type {
   public:
@@ -945,9 +950,19 @@ class UndefinedStructType : public Type {
 
     void RegisterInStructTypeMap();
 
+    /** Returns the full definition of the struct with this type's
+        variability and constness, or nullptr if the struct hasn't been
+        defined yet. */
+    const StructType *GetDefinition() const;
+
+    /** Records the full definition of the struct.  The definition is
+        shared by all variants of this type (e.g. uniform, varying, const). */
+    void SetDefinition(const StructType *st) const;
+
   private:
     const std::string name;
     std::shared_ptr<StructIdentity> identity;
+    std::shared_ptr<const StructType *> definition;
 
     UndefinedStructType(const UndefinedStructType &other);
 
@@ -1000,6 +1015,8 @@ class ReferenceType : public Type {
 
     ReferenceType *create() const override;
     const ReferenceType *createWithBaseType(const Type *newBaseType) const;
+
+    friend const Type *ResolveForwardDeclaredStruct(const Type *type);
     const ReferenceType *createWithAddressSpace(AddressSpace newAddrSpace) const;
 };
 
@@ -1283,5 +1300,14 @@ template <> inline const FunctionType *CastType(const Type *type) {
 }
 
 inline bool IsReferenceType(const Type *t) { return CastType<ReferenceType>(t) != nullptr; }
+
+/** Types created while a struct is only forward declared (e.g. "Foo *" in
+    "struct Foo; struct Bar { Foo *foo; };") keep referring to the
+    UndefinedStructType after the struct is defined; this keeps types of
+    self-referential structs acyclic.  If the given type is such an
+    UndefinedStructType, or a pointer or reference to one, and the struct has
+    been defined since, returns the type with the definition substituted
+    (only one level deep).  Otherwise returns the given type. */
+const Type *ResolveForwardDeclaredStruct(const Type *type);
 
 } // namespace ispc
