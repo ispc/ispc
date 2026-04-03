@@ -276,6 +276,8 @@ New Architecture Support:
   settings section for more information about the new modes.
 * The Gauss error function ``erf`` and the complementary error function ``erfc``
   have been added to the standard library.
+* The ``expm1`` function (meant to compute ``exp(x)-1`` accurately) has also 
+  been added to the standard library.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
@@ -5891,7 +5893,8 @@ functions:
                 uniform double * uniform c)
 
 
-The usual exponential and logarithmic functions are provided.
+The usual exponential and logarithmic functions are provided. Please note that 
+``expm1`` compute ``exp(x)-1`` accurately.
 
 ::
 
@@ -5901,6 +5904,15 @@ The usual exponential and logarithmic functions are provided.
     uniform float exp(uniform float x)
     double exp(double x)
     uniform double exp(uniform double x)
+
+::
+
+    float16 expm1(float16 x)
+    uniform float16 expm1(uniform float16 x)
+    float expm1(float x)
+    uniform float expm1(uniform float x)
+    double expm1(double x)
+    uniform double expm1(uniform double x)
 
 ::
 
@@ -5926,6 +5938,7 @@ above:
 ::
 
     template <typename T, uint N> T<N> exp(T<N> a)
+    template <typename T, uint N> T<N> expm1(T<N> a)
     template <typename T, uint N> T<N> log(T<N> a)
     template <typename T, uint N> T<N> pow(T<N> a, T<N> b)
 

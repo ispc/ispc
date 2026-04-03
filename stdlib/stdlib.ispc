@@ -4314,6 +4314,118 @@ __declspec(safe) static inline uniform float exp(uniform float x_full) {
     }
 }
 
+__declspec(safe) static inline uniform float expm1(uniform float x) {
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_expm1f(x);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision:
+        // - fixup range: <15 ULP
+        // - other range: theoretically about ~2.5 times bigger than `exp`;
+        //   <10 ULP in practice on reasonably-small input values (|x| < 87)
+        //   with the current fast-math-lib `exp` implementation.
+        // Support special values (e.g. NaN, Inf, subnormals) if `exp` support
+        // it too, but `exp` currently does not support them.
+
+        uniform float res = exp(x) - 1.0;
+
+        // Sollya:
+        // fpminimax(exp(x)-1, [|2,3,4,5|], [|single...|], [-0.35;0.35], 0+x);
+        const uniform float c2 = +4.9999380110e-01;
+        const uniform float c3 = +1.6666838527e-01;
+        const uniform float c4 = +4.1876520960e-02;
+        const uniform float c5 = +8.3380723370e-03;
+
+        uniform float fixup = c5;
+        fixup = x * fixup + c4;
+        fixup = x * fixup + c3;
+        fixup = x * fixup + c2;
+        fixup = x * fixup + 1.0;
+        fixup = x * fixup;
+
+        return select(abs(x) < 0.35, fixup, res);
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision:
+        // - fixup range: <5 ULP
+        // - other range: theoretically about ~1.5 times bigger than `exp`;
+        //   <5 ULP in practice with the current `exp` implementation.
+
+        uniform float res = exp(x) - 1.0;
+
+        // Sollya:
+        // fpminimax(exp(x)-1, [|2,3,4,5,6|], [|single...|], [-0.5;0.5], 0+x);
+        const uniform float c2 = +4.9999982120e-01;
+        const uniform float c3 = +1.6666135190e-01;
+        const uniform float c4 = +4.1669137780e-02;
+        const uniform float c5 = +8.4023978560e-03;
+        const uniform float c6 = +1.3871003175e-03;
+
+        uniform float fixup = c6;
+        fixup = x * fixup + c5;
+        fixup = x * fixup + c4;
+        fixup = x * fixup + c3;
+        fixup = x * fixup + c2;
+        fixup = x * fixup + 1.0;
+        fixup = x * fixup;
+
+        return select(abs(x) < 0.5, fixup, res);
+    }
+}
+
+__declspec(safe) static inline float expm1(float x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_expm1f(x);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_expm1f(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // See the uniform version for more information
+
+        float res = exp(x) - 1.0;
+
+        const float c2 = +4.9999380110e-01;
+        const float c3 = +1.6666838527e-01;
+        const float c4 = +4.1876520960e-02;
+        const float c5 = +8.3380723370e-03;
+
+        float fixup = c5;
+        fixup = x * fixup + c4;
+        fixup = x * fixup + c3;
+        fixup = x * fixup + c2;
+        fixup = x * fixup + 1.0;
+        fixup = x * fixup;
+
+        return select(abs(x) < 0.35, fixup, res);
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // See the uniform version for more information
+
+        float res = exp(x) - 1.0;
+
+        const float c2 = +4.9999982120e-01;
+        const float c3 = +1.6666135190e-01;
+        const float c4 = +4.1669137780e-02;
+        const float c5 = +8.4023978560e-03;
+        const float c6 = +1.3871003175e-03;
+
+        float fixup = c6;
+        fixup = x * fixup + c5;
+        fixup = x * fixup + c4;
+        fixup = x * fixup + c3;
+        fixup = x * fixup + c2;
+        fixup = x * fixup + 1.0;
+        fixup = x * fixup;
+
+        return select(abs(x) < 0.5, fixup, res);
+    }
+}
+
 // Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
 // * log(2) + log(y) where y is the reduced range (usually in [1/2,
 // 1)).
@@ -5349,6 +5461,12 @@ __declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varyin
 
 __declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
 
+__declspec(safe) static inline float16 expm1(float16 x_full) { return (float16)(expm1((float)x_full)); }
+
+__declspec(safe) static inline uniform float16 expm1(uniform float16 x_full) {
+    return (uniform float16)(expm1((uniform float)x_full));
+}
+
 __declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
 
 __declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
@@ -5678,6 +5796,21 @@ __declspec(safe) static inline uniform double exp(uniform double x) {
     } else
         return __stdlib_exp(x);
 }
+
+__declspec(safe) static inline double expm1(double x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_expm1d(x);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_expm1(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double expm1(uniform double x) { return __stdlib_expm1(x); }
 
 __declspec(safe) static inline double log(double x) {
     if (__have_native_transcendentals) {
