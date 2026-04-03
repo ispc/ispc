@@ -5810,9 +5810,7 @@ __declspec(safe) static inline double expm1(double x) {
     }
 }
 
-__declspec(safe) static inline uniform double expm1(uniform double x) {
-    return __stdlib_expm1(x);
-}
+__declspec(safe) static inline uniform double expm1(uniform double x) { return __stdlib_expm1(x); }
 
 __declspec(safe) static inline double log(double x) {
     if (__have_native_transcendentals) {
