@@ -983,10 +983,8 @@ __declspec(safe) inline float atan2(float y, float x);
 __declspec(safe) inline uniform float atan2(uniform float y, uniform float x);
 __declspec(safe) inline float exp(float x_full);
 __declspec(safe) inline uniform float exp(uniform float x_full);
-
-// Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
-// * log(2) + log(y) where y is the reduced range (usually in [1/2,
-// 1)).
+__declspec(safe) inline float expm1(float x);
+__declspec(safe) inline uniform float expm1(uniform float x);
 __declspec(safe) inline void __range_reduce_log(float input, varying float *uniform reduced,
                                                 varying int *uniform exponent);
 __declspec(safe) inline void __range_reduce_log(uniform float input, uniform float *uniform reduced,
@@ -1035,6 +1033,8 @@ __declspec(safe) inline float16 atan2(float16 y, float16 x);
 __declspec(safe) inline uniform float16 atan2(uniform float16 y, uniform float16 x);
 __declspec(safe) inline float16 exp(float16 x_full);
 __declspec(safe) inline uniform float16 exp(uniform float16 x_full);
+__declspec(safe) inline float16 expm1(float16 x_full);
+__declspec(safe) inline uniform float16 expm1(uniform float16 x_full);
 __declspec(safe) inline float16 log(float16 x_full);
 __declspec(safe) inline uniform float16 log(uniform float16 x_full);
 __declspec(safe) inline float16 pow(float16 a, float16 b);
@@ -1087,6 +1087,8 @@ __declspec(safe) inline double atan2(double y, double x);
 __declspec(safe) inline uniform double atan2(uniform double y, uniform double x);
 __declspec(safe) inline double exp(double x);
 __declspec(safe) inline uniform double exp(uniform double x);
+__declspec(safe) inline double expm1(double x);
+__declspec(safe) inline uniform double expm1(uniform double x);
 __declspec(safe) inline double log(double x);
 __declspec(safe) inline uniform double log(uniform double x);
 __declspec(safe) inline double pow(double a, double b);
