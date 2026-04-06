@@ -596,6 +596,8 @@ EXT inline READNONE uniform float __stdlib_atanf(uniform float);
 EXT inline READNONE uniform double __stdlib_atan(uniform double);
 EXT inline READNONE uniform float __stdlib_cosf(uniform float);
 EXT inline READNONE uniform double __stdlib_cos(uniform double);
+EXT inline READNONE uniform float __stdlib_coshf(uniform float);
+EXT inline READNONE uniform double __stdlib_cosh(uniform double);
 EXT inline READNONE uniform float __stdlib_expf(uniform float);
 EXT inline READNONE uniform double __stdlib_exp(uniform double);
 EXT inline READNONE uniform float __stdlib_expm1f(uniform float);
@@ -614,8 +616,12 @@ EXT inline READNONE void __stdlib_sincosf(uniform float, uniform int8 *uniform, 
 EXT inline READNONE void __stdlib_sincos(uniform double, uniform int8 *uniform, uniform int8 *uniform);
 EXT inline READNONE uniform float __stdlib_sinf(uniform float);
 EXT inline READNONE uniform double __stdlib_sin(uniform double);
+EXT inline READNONE uniform float __stdlib_sinhf(uniform float);
+EXT inline READNONE uniform double __stdlib_sinh(uniform double);
 EXT inline READNONE uniform float __stdlib_tanf(uniform float);
 EXT inline READNONE uniform double __stdlib_tan(uniform double);
+EXT inline READNONE uniform float __stdlib_tanhf(uniform float);
+EXT inline READNONE uniform double __stdlib_tanh(uniform double);
 
 EXT inline READNONE varying double __broadcast_double(varying double, uniform int32);
 EXT inline READNONE varying float __broadcast_float(varying float, uniform int32);

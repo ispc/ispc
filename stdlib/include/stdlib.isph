@@ -966,10 +966,14 @@ __declspec(safe) inline uniform float frexp(uniform float x, uniform int *unifor
 // Solomon Boulos's "syrah": https://github.com/boulos/syrah/
 __declspec(safe) inline float sin(float x_full);
 __declspec(safe) inline uniform float sin(uniform float x_full);
+__declspec(safe) inline float sinh(float x);
+__declspec(safe) inline uniform float sinh(uniform float x);
 __declspec(safe) inline float asin(float x0);
 __declspec(safe) inline uniform float asin(uniform float x0);
 __declspec(safe) inline float cos(float x_full);
 __declspec(safe) inline uniform float cos(uniform float x_full);
+__declspec(safe) inline float cosh(float x);
+__declspec(safe) inline uniform float cosh(uniform float x);
 __declspec(safe) inline float acos(float v);
 __declspec(safe) inline uniform float acos(uniform float v);
 __declspec(safe) inline void sincos(float x_full, varying float *uniform sin_result, varying float *uniform cos_result);
@@ -977,6 +981,8 @@ __declspec(safe) inline void sincos(uniform float x_full, uniform float *uniform
                                     uniform float *uniform cos_result);
 __declspec(safe) inline float tan(float x_full);
 __declspec(safe) inline uniform float tan(uniform float x_full);
+__declspec(safe) inline float tanh(float x);
+__declspec(safe) inline uniform float tanh(uniform float x);
 __declspec(safe) inline float atan(float x_full);
 __declspec(safe) inline uniform float atan(uniform float x_full);
 __declspec(safe) inline float atan2(float y, float x);
@@ -1015,12 +1021,18 @@ __declspec(safe) inline uniform float16 frexp(uniform float16 x, uniform int *un
 // If no native trigonometry support, convert to float, get asin and convert to half back
 __declspec(safe) inline float16 sin(float16 x_full);
 __declspec(safe) inline uniform float16 sin(uniform float16 x_full);
+__declspec(safe) inline float16 sinh(float16 x_full);
+__declspec(safe) inline uniform float16 sinh(uniform float16 x_full);
 __declspec(safe) inline float16 asin(float16 x_full);
 __declspec(safe) inline uniform float16 asin(uniform float16 x_full);
 __declspec(safe) inline float16 cos(float16 x_full);
 __declspec(safe) inline uniform float16 cos(uniform float16 x_full);
+__declspec(safe) inline float16 cosh(float16 x_full);
+__declspec(safe) inline uniform float16 cosh(uniform float16 x_full);
 __declspec(safe) inline float16 tan(float16 x_full);
 __declspec(safe) inline uniform float16 tan(uniform float16 x_full);
+__declspec(safe) inline float16 tanh(float16 x_full);
+__declspec(safe) inline uniform float16 tanh(uniform float16 x_full);
 __declspec(safe) inline float16 acos(float16 x_full);
 __declspec(safe) inline uniform float16 acos(uniform float16 x_full);
 __declspec(safe) inline void sincos(float16 x_full, varying float16 *uniform sin_result,
@@ -1070,10 +1082,14 @@ __declspec(safe) inline double frexp(double x, varying int *uniform pw2);
 __declspec(safe) inline uniform double frexp(uniform double x, uniform int *uniform pw2);
 __declspec(safe) inline double sin(double x);
 __declspec(safe) inline uniform double sin(uniform double x);
+__declspec(safe) inline double sinh(double x);
+__declspec(safe) inline uniform double sinh(uniform double x);
 __declspec(safe) inline uniform double asin(uniform double x);
 __declspec(safe) inline double asin(const double x);
 __declspec(safe) inline double cos(const double x);
 __declspec(safe) inline uniform double cos(uniform double x);
+__declspec(safe) inline double cosh(double x);
+__declspec(safe) inline uniform double cosh(uniform double x);
 __declspec(safe) inline double acos(const double v);
 __declspec(safe) inline uniform double acos(const uniform double v);
 __declspec(safe) inline void sincos(double x, varying double *uniform sin_result, varying double *uniform cos_result);
@@ -1081,6 +1097,8 @@ __declspec(safe) inline void sincos(uniform double x, uniform double *uniform si
                                     uniform double *uniform cos_result);
 __declspec(safe) inline double tan(double x);
 __declspec(safe) inline uniform double tan(uniform double x);
+__declspec(safe) inline double tanh(double x);
+__declspec(safe) inline uniform double tanh(uniform double x);
 __declspec(safe) inline double atan(double x);
 __declspec(safe) inline uniform double atan(uniform double x);
 __declspec(safe) inline double atan2(double y, double x);

@@ -5860,11 +5860,14 @@ define i64 @__clock() nounwind {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 declare float @sinf(float) nounwind readnone
+declare float @sinhf(float) nounwind readnone
 declare float @cosf(float) nounwind readnone
+declare float @coshf(float) nounwind readnone
 declare void @sincosf(float, float *, float *) nounwind
 declare float @asinf(float) nounwind readnone
 declare float @acosf(float) nounwind readnone
 declare float @tanf(float) nounwind readnone
+declare float @tanhf(float) nounwind readnone
 declare float @atanf(float) nounwind readnone
 declare float @atan2f(float, float) nounwind readnone
 declare float @expf(float) nounwind readnone
@@ -5880,8 +5883,18 @@ define float @__stdlib_sinf(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define float @__stdlib_sinhf(float) nounwind readnone alwaysinline {
+  %r = call float @sinhf(float %0)
+  ret float %r
+}
+
 define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
   %r = call float @cosf(float %0)
+  ret float %r
+}
+
+define float @__stdlib_coshf(float) nounwind readnone alwaysinline {
+  %r = call float @coshf(float %0)
   ret float %r
 }
 
@@ -5904,6 +5917,11 @@ define float @__stdlib_acosf(float) nounwind readnone alwaysinline {
 
 define float @__stdlib_tanf(float) nounwind readnone alwaysinline {
   %r = call float @tanf(float %0)
+  ret float %r
+}
+
+define float @__stdlib_tanhf(float) nounwind readnone alwaysinline {
+  %r = call float @tanhf(float %0)
   ret float %r
 }
 
@@ -5953,10 +5971,13 @@ define float @__stdlib_expm1f(float) nounwind readnone alwaysinline {
 }
 
 declare double @sin(double) nounwind readnone
+declare double @sinh(double) nounwind readnone
 declare double @asin(double) nounwind readnone
 declare double @cos(double) nounwind readnone
+declare double @cosh(double) nounwind readnone
 declare void @sincos(double, double *, double *) nounwind
 declare double @tan(double) nounwind readnone
+declare double @tanh(double) nounwind readnone
 declare double @atan(double) nounwind readnone
 declare double @atan2(double, double) nounwind readnone
 declare double @exp(double) nounwind readnone
@@ -5972,6 +5993,11 @@ define double @__stdlib_sin(double) nounwind readnone alwaysinline {
   ret double %r
 }
 
+define double @__stdlib_sinh(double) nounwind readnone alwaysinline {
+  %r = call double @sinh(double %0)
+  ret double %r
+}
+
 define double @__stdlib_asin(double) nounwind readnone alwaysinline {
   %r = call double @asin(double %0)
   ret double %r
@@ -5979,6 +6005,11 @@ define double @__stdlib_asin(double) nounwind readnone alwaysinline {
 
 define double @__stdlib_cos(double) nounwind readnone alwaysinline {
   %r = call double @cos(double %0)
+  ret double %r
+}
+
+define double @__stdlib_cosh(double) nounwind readnone alwaysinline {
+  %r = call double @cosh(double %0)
   ret double %r
 }
 
@@ -5991,6 +6022,11 @@ define void @__stdlib_sincos(double, i8 *, i8 *) nounwind alwaysinline {
 
 define double @__stdlib_tan(double) nounwind readnone alwaysinline {
   %r = call double @tan(double %0)
+  ret double %r
+}
+
+define double @__stdlib_tanh(double) nounwind readnone alwaysinline {
+  %r = call double @tanh(double %0)
   ret double %r
 }
 
