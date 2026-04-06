@@ -3483,6 +3483,32 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
     }
 }
 
+__declspec(safe) static inline uniform float sinh(uniform float x) {
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_sinhf(x);
+    } else if (__math_lib == __math_lib_ispc_fast || __math_lib == __math_lib_ispc) {
+        // Precision dependent to `expm1` (just slighly bigger).
+        // Currently <5 ULP in default-math-lib.
+        return 0.5 * (expm1(x) - expm1(-x));
+    }
+}
+
+__declspec(safe) static inline float sinh(float x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_sinhf(x);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_sinhf(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast || __math_lib == __math_lib_ispc) {
+        // See the uniform version for more information
+        return 0.5 * (expm1(x) - expm1(-x));
+    }
+}
+
 __declspec(safe) static inline float asin(float x0) {
     bool isneg = x0 < 0;
     float x = abs(x0);
@@ -3710,6 +3736,32 @@ __declspec(safe) static inline uniform float cos(uniform float x_full) {
 
         formula = flip_sign ? -formula : formula;
         return formula;
+    }
+}
+
+__declspec(safe) static inline uniform float cosh(uniform float x) {
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_coshf(x);
+    } else if (__math_lib == __math_lib_ispc_fast || __math_lib == __math_lib_ispc) {
+        // Precision dependent to `exp` (slightly smaller).
+        // Currently <5 ULP in default-math-lib.
+        return 0.5 * (exp(x) + exp(-x));
+    }
+}
+
+__declspec(safe) static inline float cosh(float x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_coshf(x);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_coshf(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast || __math_lib == __math_lib_ispc) {
+        // See the uniform version for more information
+        return 0.5 * (exp(x) + exp(-x));
     }
 }
 
@@ -4147,6 +4199,140 @@ __declspec(safe) static inline uniform float atan2(uniform float y, uniform floa
         uniform bool y_lt_0 = y < 0;
         uniform float offset = x_lt_0 ? (y_lt_0 ? -pi_vec : pi_vec) : 0;
         return offset + atan_arg;
+    }
+}
+
+__declspec(safe) static inline uniform float tanh(uniform float x) {
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_tanhf(x);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision: <10 ULP
+        // Padé approximation generated from Lambert's continued fractions and
+        // manually optimized (with Sollya) so to get a smaller maximum error
+        // on the range [-8.0;8.0].
+        // Properly support special values (e.g. NaN, Inf, subnormals).
+
+        const uniform float a1 = +3.4459429000e+07;
+        const uniform float a2 = +4.8225360000e+06;
+        const uniform float a3 = +1.4751137500e+05;
+        const uniform float a4 = +1.3072869873e+03;
+        const uniform float a5 = +2.6487326620e+00;
+
+        const uniform float b0 = +3.4459432000e+07;
+        const uniform float b1 = +1.6308998000e+07;
+        const uniform float b2 = +9.8926356250e+05;
+        const uniform float b3 = +1.6239637695e+04;
+        const uniform float b4 = +7.3853576660e+01;
+        const uniform float b5 = +4.5743070540e-02;
+
+        // See the default version regarding the tiny epsilon
+        uniform float x2 = x * x + 1e-37;
+
+        uniform float a_poly = a5;
+        a_poly = x2 * a_poly + a4;
+        a_poly = x2 * a_poly + a3;
+        a_poly = x2 * a_poly + a2;
+        a_poly = x2 * a_poly + a1;
+        a_poly = x * a_poly;
+
+        uniform float b_poly = b5;
+        b_poly = x2 * b_poly + b4;
+        b_poly = x2 * b_poly + b3;
+        b_poly = x2 * b_poly + b2;
+        b_poly = x2 * b_poly + b1;
+        b_poly = x2 * b_poly + b0;
+
+        uniform float res = a_poly / b_poly;
+        return select(x < -8.0, -1.0, select(x > 8.0, 1.0, res));
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision:
+        // - fixup range: <5 ULP
+        // - other range: the error should be slighly higher than `exp`,
+        //                in practice, it is <5 ULP with the current `exp`
+
+        uniform float xt = select(x < -9.5, -9.5, x);
+        uniform float t = exp(-xt);
+        uniform float res = (t * t - 1.0) / (-1.0 - t * t);
+
+        // Sollya:
+        // fpminimax(tanh(x), [|3,5,7|], [|single...|], [-0.425;0.425], x);
+        const uniform float c3 = -3.3331277970e-01;
+        const uniform float c5 = +1.3263334334e-01;
+        const uniform float c7 = -4.7071605920e-02;
+
+        // Adding a tiny epsilon reduces the generation of subnormal numbers.
+        // This massively improves the execution time when 1e-23 < x < 1e-19 on
+        // CPUs computing subnormal numbers much slower (e.g. most Intel CPUs).
+        uniform float x2 = x * x + 1e-37;
+        uniform float fix = c7;
+        fix = x2 * fix + c5;
+        fix = x2 * fix + c3;
+        fix = (x2 * x) * fix + x;
+
+        return select(abs(x) < 0.425, fix, res);
+    }
+}
+
+__declspec(safe) static inline float tanh(float x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_tanhf(x);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_tanhf(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast) {
+        const float a1 = +3.4459429000e+07;
+        const float a2 = +4.8225360000e+06;
+        const float a3 = +1.4751137500e+05;
+        const float a4 = +1.3072869873e+03;
+        const float a5 = +2.6487326620e+00;
+
+        const float b0 = +3.4459432000e+07;
+        const float b1 = +1.6308998000e+07;
+        const float b2 = +9.8926356250e+05;
+        const float b3 = +1.6239637695e+04;
+        const float b4 = +7.3853576660e+01;
+        const float b5 = +4.5743070540e-02;
+
+        float x2 = x * x + 1e-37;
+
+        float a_poly = a5;
+        a_poly = x2 * a_poly + a4;
+        a_poly = x2 * a_poly + a3;
+        a_poly = x2 * a_poly + a2;
+        a_poly = x2 * a_poly + a1;
+        a_poly = x * a_poly;
+
+        float b_poly = b5;
+        b_poly = x2 * b_poly + b4;
+        b_poly = x2 * b_poly + b3;
+        b_poly = x2 * b_poly + b2;
+        b_poly = x2 * b_poly + b1;
+        b_poly = x2 * b_poly + b0;
+
+        float res = a_poly / b_poly;
+        return select(x < -8.0, -1.0, select(x > 8.0, 1.0, res));
+    } else if (__math_lib == __math_lib_ispc) {
+        float xt = select(x < -9.5, -9.5, x);
+        float t = exp(-xt);
+        float res = (t * t - 1.0) / (-1.0 - t * t);
+
+        const float c3 = -3.3331277970e-01;
+        const float c5 = +1.3263334334e-01;
+        const float c7 = -4.7071605920e-02;
+
+        float x2 = x * x + 1e-37;
+        float fix = c7;
+        fix = x2 * fix + c5;
+        fix = x2 * fix + c3;
+        fix = (x2 * x) * fix + x;
+
+        return select(abs(x) < 0.425, fix, res);
     }
 }
 
@@ -5322,7 +5508,7 @@ __declspec(safe) static inline uniform float16 frexp(uniform float16 x, uniform 
     return float16bits(ix);
 }
 
-// If no native trigonometry support, convert to float, get asin and convert to half back
+// If no native trigonometry support, convert to float, get sin and convert to half back
 __declspec(safe) static inline float16 sin(float16 x_full) {
     if (__have_native_trigonometry) {
         return __sin_varying_half(x_full);
@@ -5337,6 +5523,12 @@ __declspec(safe) static inline uniform float16 sin(uniform float16 x_full) {
     } else {
         return (uniform float16)(sin((uniform float)x_full));
     }
+}
+
+__declspec(safe) static inline float16 sinh(float16 x_full) { return (float16)(sinh((float)x_full)); }
+
+__declspec(safe) static inline uniform float16 sinh(uniform float16 x_full) {
+    return (uniform float16)(sinh((uniform float)x_full));
 }
 
 __declspec(safe) static inline float16 asin(float16 x_full) {
@@ -5371,6 +5563,12 @@ __declspec(safe) static inline uniform float16 cos(uniform float16 x_full) {
     }
 }
 
+__declspec(safe) static inline float16 cosh(float16 x_full) { return (float16)(cosh((float)x_full)); }
+
+__declspec(safe) static inline uniform float16 cosh(uniform float16 x_full) {
+    return (uniform float16)(cosh((uniform float)x_full));
+}
+
 __declspec(safe) static inline float16 tan(float16 x_full) {
     if (__have_native_trigonometry) {
         return __tan_varying_half(x_full);
@@ -5385,6 +5583,12 @@ __declspec(safe) static inline uniform float16 tan(uniform float16 x_full) {
     } else {
         return (uniform float16)(tan((uniform float)x_full));
     }
+}
+
+__declspec(safe) static inline float16 tanh(float16 x_full) { return (float16)(tanh((float)x_full)); }
+
+__declspec(safe) static inline uniform float16 tanh(uniform float16 x_full) {
+    return (uniform float16)(tanh((uniform float)x_full));
 }
 
 __declspec(safe) static inline float16 acos(float16 x_full) {
@@ -5622,6 +5826,21 @@ __declspec(safe) static inline uniform double sin(uniform double x) {
         return __stdlib_sin(x);
 }
 
+__declspec(safe) static inline double sinh(double x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_sinhd(x);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_sinh(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double sinh(uniform double x) { return __stdlib_sinh(x); }
+
 __declspec(safe) static inline uniform double asin(uniform double x) {
     if (__have_native_trigonometry) {
         return __asin_uniform_double(x);
@@ -5667,6 +5886,21 @@ __declspec(safe) static inline uniform double cos(uniform double x) {
     } else
         return __stdlib_cos(x);
 }
+
+__declspec(safe) static inline double cosh(double x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_coshd(x);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_cosh(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double cosh(uniform double x) { return __stdlib_cosh(x); }
 
 __declspec(safe) static inline double acos(const double v) {
     if (__have_native_trigonometry) {
@@ -5732,6 +5966,21 @@ __declspec(safe) static inline uniform double tan(uniform double x) {
     } else
         return __stdlib_tan(x);
 }
+
+__declspec(safe) static inline double tanh(double x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_tanhd(x);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_tanh(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double tanh(uniform double x) { return __stdlib_tanh(x); }
 
 __declspec(safe) static inline double atan(double x) {
     if (__have_native_trigonometry) {

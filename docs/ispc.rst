@@ -278,6 +278,8 @@ New Architecture Support:
   have been added to the standard library.
 * The ``expm1`` function (meant to compute ``exp(x)-1`` accurately) has also 
   been added to the standard library.
+* The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` has also been added
+  to the standard library.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
@@ -5891,6 +5893,45 @@ functions:
     void sincos(double x, varying double * uniform s, varying double * uniform c)
     void sincos(uniform double x, uniform double * uniform s,
                 uniform double * uniform c)
+
+
+``ispc`` provides a standard variety of calls for hyperbolic functions:
+
+::
+
+    float16 sinh(float16 x)
+    uniform float16 sinh(uniform float16 x)
+    float sinh(float x)
+    uniform float sinh(uniform float x)
+    double sinh(double x)
+    uniform double sinh(uniform double x)
+
+::
+
+    float16 cosh(float16 x)
+    uniform float16 cosh(uniform float16 x)
+    float cosh(float x)
+    uniform float cosh(uniform float x)
+    double cosh(double x)
+    uniform double cosh(uniform double x)
+
+::
+
+    float16 tanh(float16 x)
+    uniform float16 tanh(uniform float16 x)
+    float tanh(float x)
+    uniform float tanh(uniform float x)
+    double tanh(double x)
+    uniform double tanh(uniform double x)
+
+The hyperbolic functions also support short vector types with the basic types
+listed above:
+
+::
+
+  template <typename T, uint N> T<N> sinh(T<N> a)
+  template <typename T, uint N> T<N> cosh(T<N> a)
+  template <typename T, uint N> T<N> tanh(T<N> a)
 
 
 The usual exponential and logarithmic functions are provided. Please note that 
