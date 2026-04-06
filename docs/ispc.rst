@@ -5894,7 +5894,7 @@ functions:
 
 
 The usual exponential and logarithmic functions are provided. Please note that 
-``expm1`` compute ``exp(x)-1`` accurately.
+``expm1`` computes ``exp(x)-1`` accurately.
 
 ::
 
