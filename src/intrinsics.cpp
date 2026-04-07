@@ -421,28 +421,53 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string n
 }
 
 bool lIsAnyArgumentKind(const IITDesc &D) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    if (D.Kind != IITDesc::Overloaded) {
+        return false;
+    }
+
+    unsigned Kind = D.getOverloadKind();
+#else
     if (D.Kind != IITDesc::Argument) {
         return false;
     }
 
     unsigned Kind = D.getArgumentKind();
+#endif
     return Kind == IITDesc::AK_Any || Kind == IITDesc::AK_AnyInteger || Kind == IITDesc::AK_AnyFloat ||
            Kind == IITDesc::AK_AnyVector || Kind == IITDesc::AK_AnyPointer;
 }
 
 bool lIsArgDesc(const IITDesc &D) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    bool IsArgDescriptor = D.Kind == IITDesc::Overloaded || D.Kind == IITDesc::Extend || D.Kind == IITDesc::Trunc ||
+                           D.Kind == IITDesc::SameVecWidth || D.Kind == IITDesc::VecElement ||
+                           D.Kind == IITDesc::Subdivide2 || D.Kind == IITDesc::Subdivide4 ||
+                           D.Kind == IITDesc::VecOfBitcastsToInt;
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
     bool IsArgDescriptor = D.Kind == IITDesc::Argument || D.Kind == IITDesc::ExtendArgument ||
-                           D.Kind == IITDesc::TruncArgument ||
-#if ISPC_LLVM_VERSION < ISPC_LLVM_21_0
-                           D.Kind == IITDesc::HalfVecArgument ||
-#endif
+                           D.Kind == IITDesc::TruncArgument || D.Kind == IITDesc::SameVecWidthArgument ||
+                           D.Kind == IITDesc::VecElementArgument || D.Kind == IITDesc::Subdivide2Argument ||
+                           D.Kind == IITDesc::Subdivide4Argument || D.Kind == IITDesc::VecOfBitcastsToInt;
+#else
+    bool IsArgDescriptor = D.Kind == IITDesc::Argument || D.Kind == IITDesc::ExtendArgument ||
+                           D.Kind == IITDesc::TruncArgument || D.Kind == IITDesc::HalfVecArgument ||
                            D.Kind == IITDesc::SameVecWidthArgument || D.Kind == IITDesc::VecElementArgument ||
                            D.Kind == IITDesc::Subdivide2Argument || D.Kind == IITDesc::Subdivide4Argument ||
                            D.Kind == IITDesc::VecOfBitcastsToInt;
+#endif
     return IsArgDescriptor;
 }
 
 bool lIsAliased(const IITDesc &L, const IITDesc &R) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    if (R.Kind == IITDesc::OneNthEltsVec) {
+        return R.getOverloadIndex() == L.getOverloadIndex();
+    }
+    // Check if R is argument with MatchType and has the same argument number as L
+    return lIsArgDesc(R) && R.getOverloadKind() == IITDesc::AK_MatchType && R.Kind == IITDesc::Overloaded &&
+           R.getOverloadIndex() == L.getOverloadIndex();
+#else
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
     if (R.Kind == IITDesc::OneNthEltsVecArgument) {
         return R.getArgumentNumber() == L.getArgumentNumber();
@@ -451,6 +476,7 @@ bool lIsAliased(const IITDesc &L, const IITDesc &R) {
     // Check if R is argument with MatchType and has the same argument number as L
     return lIsArgDesc(R) && R.getArgumentKind() == IITDesc::AK_MatchType && R.Kind == IITDesc::Argument &&
            R.getArgumentNumber() == L.getArgumentNumber();
+#endif
 }
 
 size_t lNextIITDescs(const IITDesc &D) {
@@ -462,7 +488,11 @@ size_t lNextIITDescs(const IITDesc &D) {
         return D.Struct_NumElements + 1;
 #endif
     case IITDesc::Vector:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    case IITDesc::SameVecWidth:
+#else
     case IITDesc::SameVecWidthArgument:
+#endif
         return 2;
     default:
         return 1;
