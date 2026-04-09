@@ -81,3 +81,5 @@
 .\tests\func-tests\select-short-vec.ispc runfail  x86-64    avx2-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
 .\tests\func-tests\select-short-vec-func.ispc runfail  x86-64 avx2vnni-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
 .\tests\func-tests\select-short-vec.ispc runfail  x86-64 avx2vnni-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+./tests/func-tests/exclusive-scan-add-15.ispc compfail  x86-64 avx10.2dmr-x64 unspec   Linux LLVM 23.0 clang++23.0 O1 obj *
+./tests/func-tests/exclusive-scan-add-16.ispc compfail  x86-64 avx10.2dmr-x64 unspec   Linux LLVM 23.0 clang++23.0 O1 obj *
