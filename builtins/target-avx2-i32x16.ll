@@ -3,6 +3,15 @@
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Same target as target-avx2-i32x16 but without native VNNI
+
+define(`HAVE_GATHER', `1')
+define(`ISA',`AVX2')
+define(`WIDTH',`16')
+define(`MASK',`i32')
+include(`util.m4')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macros
 
 ; $1: type
@@ -48,13 +57,6 @@ define(`assemble_4s', `
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Same target as target-avx2-i32x16 but without native VNNI
-
-define(`HAVE_GATHER', `1')
-define(`ISA',`AVX2')
-define(`WIDTH',`16')
-define(`MASK',`i32')
-include(`util.m4')
 
 declare void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
                                       <16 x i32>) nounwind alwaysinline
