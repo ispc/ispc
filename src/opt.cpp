@@ -313,8 +313,14 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     simplifyCFGopt.HoistCommonInsts = true;
 
     // SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to the -Oz flag.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    // LLVM 23+ removed the SizeOptLevel parameter from getInlineParams.
+    // Size optimization is now handled via function attributes (optsize/minsize).
+    llvm::InlineParams IP = llvm::getInlineParamsFromOptLevel(optLevel);
+#else
     const unsigned SizeOptLevel = (optLevel == 1) ? 1 : 0;
     llvm::InlineParams IP = llvm::getInlineParams(optLevel, SizeOptLevel);
+#endif
     if (optLevel == 0) {
         //  This is more or less the minimum set of optimizations that we
         //  need to do to generate code that will actually run.  (We can't
