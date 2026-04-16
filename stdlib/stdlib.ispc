@@ -4588,8 +4588,8 @@ __declspec(safe) static inline float expm1(float x) {
 }
 
 // Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
-// * log(2) + log(y) where y is the reduced range (usually in [1/2,
-// 1)).
+// * log(2) + log(y) where y is the reduced range (usually in [1/2,1)).
+// Warning: this function does not support subnormal numbers.
 __declspec(safe) static inline void __range_reduce_log(float input, varying float *uniform reduced,
                                                        varying int *uniform exponent) {
     int int_version = intbits(input);
@@ -4626,10 +4626,172 @@ __declspec(safe) static inline void __range_reduce_log(uniform float input, unif
     static const uniform int exponent_neg1 = (126ul << 23);
     uniform int biased_exponent = int_version >> 23;
     uniform int offset_exponent = biased_exponent + 1;
-    *exponent = offset_exponent - 127; // get the real value
+    *exponent = offset_exponent - 127;
 
     uniform int blended = (int_version & nonexponent_mask) | (exponent_neg1);
     *reduced = floatbits(blended);
+}
+
+__declspec(safe) static inline uniform float log(uniform float x_full) {
+    if (__have_native_transcendentals) {
+        return __log_uniform_float(x_full);
+    } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_logf(x_full);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision: <30 ULP
+        // Does not support any special values:
+        // zero and negative input values, subnormals numbers, inf and NaNs.
+        // The the default version for implementation details.
+
+        const uniform uint32 x_repr = intbits(x_full);
+
+        const uniform float unstable_range_size = 0.2841;
+        const uniform uint32 start_repr = intbits(1.0);
+        const uniform uint32 end_repr = (uniform uint32)intbits(1.0 + unstable_range_size) + 1ul;
+        const uniform uint32 unstable_range_ulp_size = end_repr - start_repr;
+        const uniform bool close_to_one = x_repr - start_repr < unstable_range_ulp_size;
+
+        uniform float reduced;
+        uniform int exponent;
+
+        __range_reduce_log(x_full, &reduced, &exponent);
+        reduced = select(close_to_one, x_full, reduced);
+
+        const uniform float ln2 = 6.931471825e-01;
+        const uniform float scale = select(close_to_one, 0.0, (uniform float)exponent * ln2);
+
+        // Initial Sollya version (then manually improved from it):
+        // fpminimax(log(x+1), [|1,...,8|], [|single...|], [-0.5,0.2841]);
+        const uniform float c1 = +1.0000009537e+00;
+        const uniform float c2 = -4.9997970460e-01;
+        const uniform float c3 = +3.3307218550e-01;
+        const uniform float c4 = -2.5177517530e-01;
+        const uniform float c5 = +2.0792385936e-01;
+        const uniform float c6 = -1.2708663940e-01;
+        const uniform float c7 = +9.3554288150e-02;
+        const uniform float c8 = -4.0092557670e-01;
+
+        const uniform float x = reduced - 1.0;
+        const uniform float x2 = x * x + 1e-30;
+
+        uniform float result = x * c8 + c7;
+        result = x2 * result + (x * c6 + c5);
+        result = x2 * result + (x * c4 + c3);
+        result = x2 * result + (x * c2 + c1);
+        result = x * result + scale;
+
+        return result;
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <4 ULP
+
+        const uniform uint32 x_repr = intbits(x_full);
+
+        // Is a special input: +Inf, NaNs, negative numbers, subnormal ones
+        const uniform bool special = x_repr + 0x80800000 < 0x81000000;
+
+        if (any(special)) {
+
+            // Rather-slow path
+
+            const uniform float pinf = floatbits(0x7F800000);
+            const uniform float ninf = floatbits(0xFF800000);
+            const uniform float pnan = floatbits(0x7FC00000);
+
+            if (isnan(x_full) || x_full == pinf)
+                return x_full;
+
+            if (x_full < 0.0)
+                return pnan;
+
+            if (x_full == 0.0)
+                return ninf;
+
+            // Subnormal values
+            if (x_repr < 0x00800000) {
+                x_full *= 1e36;
+
+                uniform float reduced;
+                uniform int exponent;
+
+                __range_reduce_log(x_full, &reduced, &exponent);
+
+                const uniform float ln1e36 = 8.2893063348e+01;
+                const uniform float ln2 = 6.931471825e-01;
+                const uniform float scale = (uniform float)exponent * ln2 - ln1e36;
+
+                // Sollya:
+                // fpminimax(log(x+1)/x, [|1,...,7|], [|single...|], [-0.5,-1e-8], 1);
+                const uniform float c02 = -5.0002461670e-01;
+                const uniform float c03 = +3.3212903140e-01;
+                const uniform float c04 = -2.6966506240e-01;
+                const uniform float c05 = +5.0812456760e-02;
+                const uniform float c06 = -7.5164681670e-01;
+                const uniform float c07 = -1.0362093450e+00;
+                const uniform float c08 = -1.1606367826e+00;
+
+                const uniform float x = reduced - 1.0;
+                const uniform float x2 = x * x;
+
+                // Estrin's scheme used to reduce latency
+                uniform float result = x * c08 + c07;
+                result = x2 * result + (x * c06 + c05);
+                result = x2 * result + (x * c04 + c03);
+                result = x2 * result + (x * c02 + 1.0);
+                result = x * result + scale;
+
+                return result;
+            }
+        }
+
+        // Is in the range [1.0;1.0+unstable_range_size]
+        const uniform float unstable_range_size = 0.285;
+        const uniform uint32 start_repr = intbits(1.0);
+        const uniform uint32 end_repr = (uniform uint32)intbits(1.0 + unstable_range_size) + 1ul;
+        const uniform uint32 unstable_range_ulp_size = end_repr - start_repr;
+        const uniform bool close_to_one = x_repr - start_repr < unstable_range_ulp_size;
+
+        uniform float reduced;
+        uniform int exponent;
+
+        __range_reduce_log(x_full, &reduced, &exponent);
+        reduced = select(close_to_one, x_full, reduced);
+
+        // The extended range is meant to avoid a catastrophic
+        // cancellation happenning with the usual approach.
+        const uniform float ln2 = 6.931471825e-01;
+        const uniform float scale = select(close_to_one, 0.0, (uniform float)exponent * ln2);
+
+        // Initial Sollya version:
+        // fpminimax(log(x+1), [|2,...,10|], [|single...|], [-0.5,0.285], x);
+        // The final version is a manual refinement based on it.
+        const uniform float c02 = -4.9999991060e-01;
+        const uniform float c03 = +3.3335432410e-01;
+        const uniform float c04 = -2.4996809660e-01;
+        const uniform float c05 = +1.9873061776e-01;
+        const uniform float c06 = -1.6905537250e-01;
+        const uniform float c07 = +1.6525325180e-01;
+        const uniform float c08 = -7.3399633170e-02;
+        const uniform float c09 = -4.0101176130e-03;
+        const uniform float c10 = -4.4349682330e-01;
+
+        // Adding a tiny epsilon reduces the generation of subnormal numbers.
+        // This massively improves the execution time when 1e-23 < x < 1e-19 on
+        // CPUs computing subnormal numbers much slower (e.g. most Intel CPUs).
+        const uniform float x = reduced - 1.0;
+        const uniform float x2 = x * x + 1e-30;
+
+        // Estrin's scheme used to reduce latency
+        uniform float result = x * c10 + c09;
+        result = x2 * result + (x * c08 + c07);
+        result = x2 * result + (x * c06 + c05);
+        result = x2 * result + (x * c04 + c03);
+        result = x2 * result + (x * c02 + 1.0);
+        result = x * result + scale;
+
+        return result;
+    }
 }
 
 __declspec(safe) static inline float log(float x_full) {
@@ -4645,161 +4807,132 @@ __declspec(safe) static inline float log(float x_full) {
         }
         return ret;
     } else if (__math_lib == __math_lib_ispc_fast) {
-        int e;
-        x_full = frexp(x_full, &e);
 
-        int x_smaller_SQRTHF = (0.707106781186547524f > x_full) ? 0xffffffff : 0;
-        e += x_smaller_SQRTHF;
-        int ix_add = intbits(x_full);
-        ix_add &= x_smaller_SQRTHF;
-        x_full += floatbits(ix_add) - 1.f;
+        // See the uniform version for more information
 
-        float z = x_full * x_full;
-        float y = ((((((((7.0376836292E-2f * x_full + -1.1514610310E-1f) * x_full + 1.1676998740E-1f) * x_full +
-                        -1.2420140846E-1f) *
-                           x_full +
-                       1.4249322787E-1f) *
-                          x_full +
-                      -1.6668057665E-1f) *
-                         x_full +
-                     2.0000714765E-1f) *
-                        x_full +
-                    -2.4999993993E-1f) *
-                       x_full +
-                   3.3333331174E-1f) *
-                  x_full * z;
+        const uint32 x_repr = intbits(x_full);
 
-        float fe = (float)e;
-        y += fe * -2.12194440e-4;
-        y -= 0.5f * z;
-        z = x_full + y;
-        return z + 0.693359375 * fe;
-    } else if (__math_lib == __math_lib_ispc) {
+        const float unstable_range_size = 0.2841;
+        const uint32 start_repr = intbits(1.0);
+        const uint32 end_repr = (uint32)intbits(1.0 + unstable_range_size) + 1ul;
+        const uint32 unstable_range_ulp_size = end_repr - start_repr;
+        const bool close_to_one = x_repr - start_repr < unstable_range_ulp_size;
+
         float reduced;
         int exponent;
 
-        const int NaN_bits = 0x7fc00000;
-        const int Neg_Inf_bits = 0xFF800000;
-        const float NaN = floatbits(NaN_bits);
-        const float neg_inf = floatbits(Neg_Inf_bits);
-        bool use_nan = x_full < 0.;
-        bool use_inf = x_full == 0.;
-        bool exceptional = use_nan || use_inf;
-        const float one = 1.0;
+        __range_reduce_log(x_full, &reduced, &exponent);
+        reduced = select(close_to_one, x_full, reduced);
 
-        float patched = exceptional ? one : x_full;
-        __range_reduce_log(patched, &reduced, &exponent);
+        const float ln2 = 6.931471825e-01;
+        const float scale = select(close_to_one, 0.0, (float)exponent * ln2);
 
-        const float ln2 = 0.693147182464599609375;
+        const float c1 = +1.0000009537e+00;
+        const float c2 = -4.9997970460e-01;
+        const float c3 = +3.3307218550e-01;
+        const float c4 = -2.5177517530e-01;
+        const float c5 = +2.0792385936e-01;
+        const float c6 = -1.2708663940e-01;
+        const float c7 = +9.3554288150e-02;
+        const float c8 = -4.0092557670e-01;
 
-        float x1 = one - reduced;
-        const float c1 = 0.50000095367431640625;
-        const float c2 = 0.33326041698455810546875;
-        const float c3 = 0.2519190013408660888671875;
-        const float c4 = 0.17541764676570892333984375;
-        const float c5 = 0.3424419462680816650390625;
-        const float c6 = -0.599632322788238525390625;
-        const float c7 = +1.98442304134368896484375;
-        const float c8 = -2.4899270534515380859375;
-        const float c9 = +1.7491014003753662109375;
+        const float x = reduced - 1.0;
+        const float x2 = x * x + 1e-30;
 
-        float result = x1 * c9 + c8;
-        result = x1 * result + c7;
-        result = x1 * result + c6;
-        result = x1 * result + c5;
-        result = x1 * result + c4;
-        result = x1 * result + c3;
-        result = x1 * result + c2;
-        result = x1 * result + c1;
-        result = x1 * result + one;
+        float result = x * c8 + c7;
+        result = x2 * result + (x * c6 + c5);
+        result = x2 * result + (x * c4 + c3);
+        result = x2 * result + (x * c2 + c1);
+        result = x * result + scale;
 
-        // Equation was for -(ln(red)/(1-red))
-        result *= -x1;
-        result += (float)(exponent)*ln2;
-
-        return exceptional ? (use_nan ? NaN : neg_inf) : result;
-    }
-}
-
-__declspec(safe) static inline uniform float log(uniform float x_full) {
-    if (__have_native_transcendentals) {
-        return __log_uniform_float(x_full);
-    } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
-        return __stdlib_logf(x_full);
-    } else if (__math_lib == __math_lib_ispc_fast) {
-        uniform int e;
-        x_full = frexp(x_full, &e);
-
-        uniform int x_smaller_SQRTHF = (0.707106781186547524f > x_full) ? 0xffffffff : 0;
-        e += x_smaller_SQRTHF;
-        uniform int ix_add = intbits(x_full);
-        ix_add &= x_smaller_SQRTHF;
-        x_full += floatbits(ix_add) - 1.f;
-
-        uniform float z = x_full * x_full;
-        uniform float y = ((((((((7.0376836292E-2f * x_full + -1.1514610310E-1f) * x_full + 1.1676998740E-1f) * x_full +
-                                -1.2420140846E-1f) *
-                                   x_full +
-                               1.4249322787E-1f) *
-                                  x_full +
-                              -1.6668057665E-1f) *
-                                 x_full +
-                             2.0000714765E-1f) *
-                                x_full +
-                            -2.4999993993E-1f) *
-                               x_full +
-                           3.3333331174E-1f) *
-                          x_full * z;
-
-        uniform float fe = (uniform float)e;
-        y += fe * -2.12194440e-4;
-        y -= 0.5f * z;
-        z = x_full + y;
-        return z + 0.693359375 * fe;
+        return result;
     } else if (__math_lib == __math_lib_ispc) {
-        uniform float reduced;
-        uniform int exponent;
+        const uint32 x_repr = intbits(x_full);
+        const bool special = x_repr + 0x80800000 < 0x81000000;
 
-        const uniform int NaN_bits = 0x7fc00000;
-        const uniform int Neg_Inf_bits = 0xFF800000;
-        const uniform float NaN = floatbits(NaN_bits);
-        const uniform float neg_inf = floatbits(Neg_Inf_bits);
-        uniform bool use_nan = x_full < 0.;
-        uniform bool use_inf = x_full == 0.;
-        uniform bool exceptional = use_nan || use_inf;
-        const uniform float one = 1.0;
+        if (any(special)) {
+            const float pinf = floatbits(0x7F800000);
+            const float ninf = floatbits(0xFF800000);
+            const float pnan = floatbits(0x7FC00000);
 
-        uniform float patched = exceptional ? one : x_full;
-        __range_reduce_log(patched, &reduced, &exponent);
+            if (isnan(x_full) || x_full == pinf)
+                return x_full;
 
-        const uniform float ln2 = 0.693147182464599609375;
+            if (x_full < 0.0)
+                return pnan;
 
-        uniform float x1 = one - reduced;
-        const uniform float c1 = 0.50000095367431640625;
-        const uniform float c2 = 0.33326041698455810546875;
-        const uniform float c3 = 0.2519190013408660888671875;
-        const uniform float c4 = 0.17541764676570892333984375;
-        const uniform float c5 = 0.3424419462680816650390625;
-        const uniform float c6 = -0.599632322788238525390625;
-        const uniform float c7 = +1.98442304134368896484375;
-        const uniform float c8 = -2.4899270534515380859375;
-        const uniform float c9 = +1.7491014003753662109375;
+            if (x_full == 0.0)
+                return ninf;
 
-        uniform float result = x1 * c9 + c8;
-        result = x1 * result + c7;
-        result = x1 * result + c6;
-        result = x1 * result + c5;
-        result = x1 * result + c4;
-        result = x1 * result + c3;
-        result = x1 * result + c2;
-        result = x1 * result + c1;
-        result = x1 * result + one;
+            if (x_repr < 0x00800000) {
+                x_full *= 1e36;
 
-        // Equation was for -(ln(red)/(1-red))
-        result *= -x1;
-        result += (uniform float)(exponent)*ln2;
+                float reduced;
+                int exponent;
 
-        return exceptional ? (use_nan ? NaN : neg_inf) : result;
+                __range_reduce_log(x_full, &reduced, &exponent);
+
+                const float ln1e36 = 8.2893063348e+01;
+                const float ln2 = 6.931471825e-01;
+                const float scale = (float)exponent * ln2 - ln1e36;
+
+                const float c02 = -5.0002461670e-01;
+                const float c03 = +3.3212903140e-01;
+                const float c04 = -2.6966506240e-01;
+                const float c05 = +5.0812456760e-02;
+                const float c06 = -7.5164681670e-01;
+                const float c07 = -1.0362093450e+00;
+                const float c08 = -1.1606367826e+00;
+
+                const float x = reduced - 1.0;
+                const float x2 = x * x;
+
+                float result = x * c08 + c07;
+                result = x2 * result + (x * c06 + c05);
+                result = x2 * result + (x * c04 + c03);
+                result = x2 * result + (x * c02 + 1.0);
+                result = x * result + scale;
+
+                return result;
+            }
+        }
+
+        const float unstable_range_size = 0.285;
+        const uint32 start_repr = intbits(1.0);
+        const uint32 end_repr = (uint32)intbits(1.0 + unstable_range_size) + 1ul;
+        const uint32 unstable_range_ulp_size = end_repr - start_repr;
+        const bool close_to_one = x_repr - start_repr < unstable_range_ulp_size;
+
+        float reduced;
+        int exponent;
+
+        __range_reduce_log(x_full, &reduced, &exponent);
+        reduced = select(close_to_one, x_full, reduced);
+
+        const float ln2 = 6.931471825e-01;
+        const float scale = select(close_to_one, 0.0, (float)exponent * ln2);
+
+        const float c02 = -4.9999991060e-01;
+        const float c03 = +3.3335432410e-01;
+        const float c04 = -2.4996809660e-01;
+        const float c05 = +1.9873061776e-01;
+        const float c06 = -1.6905537250e-01;
+        const float c07 = +1.6525325180e-01;
+        const float c08 = -7.3399633170e-02;
+        const float c09 = -4.0101176130e-03;
+        const float c10 = -4.4349682330e-01;
+
+        const float x = reduced - 1.0;
+        const float x2 = x * x + 1e-30;
+
+        float result = x * c10 + c09;
+        result = x2 * result + (x * c08 + c07);
+        result = x2 * result + (x * c06 + c05);
+        result = x2 * result + (x * c04 + c03);
+        result = x2 * result + (x * c02 + 1.0);
+        result = x * result + scale;
+
+        return result;
     }
 }
 
