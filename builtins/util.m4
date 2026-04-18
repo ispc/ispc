@@ -5872,6 +5872,7 @@ declare float @atanf(float) nounwind readnone
 declare float @atan2f(float, float) nounwind readnone
 declare float @expf(float) nounwind readnone
 declare float @logf(float) nounwind readnone
+declare float @log1pf(float) nounwind readnone
 declare float @powf(float, float) nounwind readnone
 declare float @cbrtf(float) nounwind readnone
 declare float @erff(float) nounwind readnone
@@ -5940,6 +5941,11 @@ define float @__stdlib_logf(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define float @__stdlib_log1pf(float) nounwind readnone alwaysinline {
+  %r = call float @log1pf(float %0)
+  ret float %r
+}
+
 define float @__stdlib_expf(float) nounwind readnone alwaysinline {
   %r = call float @expf(float %0)
   ret float %r
@@ -5984,6 +5990,7 @@ declare double @atan2(double, double) nounwind readnone
 declare double @exp(double) nounwind readnone
 declare double @expm1(double) nounwind readnone
 declare double @log(double) nounwind readnone
+declare double @log1p(double) nounwind readnone
 declare double @pow(double, double) nounwind readnone
 declare double @cbrt(double) nounwind readnone
 declare double @erf(double) nounwind readnone
@@ -6048,6 +6055,11 @@ define double @__stdlib_atan2(double, double) nounwind readnone alwaysinline {
 
 define double @__stdlib_log(double) nounwind readnone alwaysinline {
   %r = call double @log(double %0)
+  ret double %r
+}
+
+define double @__stdlib_log1p(double) nounwind readnone alwaysinline {
+  %r = call double @log1p(double %0)
   ret double %r
 }
 
