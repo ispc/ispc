@@ -276,9 +276,10 @@ New Architecture Support:
   settings section for more information about the new modes.
 * The Gauss error function ``erf`` and the complementary error function ``erfc``
   have been added to the standard library.
-* The ``expm1`` function (meant to compute ``exp(x)-1`` accurately) has also 
-  been added to the standard library.
-* The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` has also been added
+* The ``expm1`` function (meant to compute ``exp(x)-1`` accurately), and the
+  ``log1p`` function (meant to compute ``log(1+x)`` accurately) have also been
+  added to the standard library.
+* The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` have also been added
   to the standard library.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
@@ -5934,8 +5935,10 @@ listed above:
   template <typename T, uint N> T<N> tanh(T<N> a)
 
 
-The usual exponential and logarithmic functions are provided. Please note that 
-``expm1`` computes ``exp(x)-1`` accurately.
+The usual exponential and logarithmic functions are provided. The functions 
+``expm1`` and ``log1p`` are designed to compute ``exp(x)-1`` and ``log(1+x)``
+respectively, ensuring precision where standard implementations may suffer from
+catastrophic cancellation.
 
 ::
 
@@ -5966,6 +5969,15 @@ The usual exponential and logarithmic functions are provided. Please note that
 
 ::
 
+    float16 log1p(float16 x)
+    uniform float16 log1p(uniform float16 x)
+    float log1p(float x)
+    uniform float log1p(uniform float x)
+    double log1p(double x)
+    uniform double log1p(uniform double x)
+
+::
+
     float16 pow(float16 a, float16 b)
     uniform float16 pow(uniform float16 a, uniform float16 b)
     float pow(float a, float b)
@@ -5981,6 +5993,7 @@ above:
     template <typename T, uint N> T<N> exp(T<N> a)
     template <typename T, uint N> T<N> expm1(T<N> a)
     template <typename T, uint N> T<N> log(T<N> a)
+    template <typename T, uint N> T<N> log1p(T<N> a)
     template <typename T, uint N> T<N> pow(T<N> a, T<N> b)
 
 The cube root function ``cbrt`` is provided for ``float``, ``double`` types and
