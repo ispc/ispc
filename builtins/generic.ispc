@@ -670,6 +670,7 @@ EXT READNONE uniform float atanf(uniform float);
 EXT READNONE uniform float atan2f(uniform float, uniform float);
 EXT READNONE uniform float expf(uniform float);
 EXT READNONE uniform float logf(uniform float);
+EXT READNONE uniform float log1pf(uniform float);
 EXT READNONE uniform float powf(uniform float, uniform float);
 EXT READNONE uniform float cbrtf(uniform float);
 EXT READNONE uniform float erff(uniform float);
@@ -690,6 +691,7 @@ EXT READNONE uniform float __stdlib_tanhf(uniform float x) { return tanhf(x); }
 EXT READNONE uniform float __stdlib_atanf(uniform float x) { return atanf(x); }
 EXT READNONE uniform float __stdlib_atan2f(uniform float x, uniform float y) { return atan2f(x, y); }
 EXT READNONE uniform float __stdlib_logf(uniform float x) { return logf(x); }
+EXT READNONE uniform float __stdlib_log1pf(uniform float x) { return log1pf(x); }
 EXT READNONE uniform float __stdlib_expf(uniform float x) { return expf(x); }
 EXT READNONE uniform float __stdlib_powf(uniform float x, uniform float y) { return powf(x, y); }
 EXT READNONE uniform float __stdlib_cbrtf(uniform float x) { return cbrtf(x); }
@@ -711,6 +713,7 @@ EXT READNONE uniform double atan2(uniform double, uniform double);
 EXT READNONE uniform double exp(uniform double);
 EXT READNONE uniform double expm1(uniform double);
 EXT READNONE uniform double log(uniform double);
+EXT READNONE uniform double log1p(uniform double);
 EXT READNONE uniform double pow(uniform double, uniform double);
 EXT READNONE uniform double cbrt(uniform double);
 EXT READNONE uniform double erf(uniform double);
@@ -730,6 +733,7 @@ EXT READNONE uniform double __stdlib_tanh(uniform double x) { return tanh(x); }
 EXT READNONE uniform double __stdlib_atan(uniform double x) { return atan(x); }
 EXT READNONE uniform double __stdlib_atan2(uniform double x, uniform double y) { return atan2(x, y); }
 EXT READNONE uniform double __stdlib_log(uniform double x) { return log(x); }
+EXT READNONE uniform double __stdlib_log1p(uniform double x) { return log1p(x); }
 EXT READNONE uniform double __stdlib_exp(uniform double x) { return exp(x); }
 EXT READNONE uniform double __stdlib_expm1(uniform double x) { return expm1(x); }
 EXT READNONE uniform double __stdlib_pow(uniform double x, uniform double y) { return pow(x, y); }
