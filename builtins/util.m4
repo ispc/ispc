@@ -5973,6 +5973,7 @@ define float @__stdlib_expm1f(float) nounwind readnone alwaysinline {
 declare double @sin(double) nounwind readnone
 declare double @sinh(double) nounwind readnone
 declare double @asin(double) nounwind readnone
+declare double @acos(double) nounwind readnone
 declare double @cos(double) nounwind readnone
 declare double @cosh(double) nounwind readnone
 declare void @sincos(double, double *, double *) nounwind
@@ -6000,6 +6001,11 @@ define double @__stdlib_sinh(double) nounwind readnone alwaysinline {
 
 define double @__stdlib_asin(double) nounwind readnone alwaysinline {
   %r = call double @asin(double %0)
+  ret double %r
+}
+
+define double @__stdlib_acos(double) nounwind readnone alwaysinline {
+  %r = call double @acos(double %0)
   ret double %r
 }
 
