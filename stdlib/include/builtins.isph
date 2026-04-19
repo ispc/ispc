@@ -590,6 +590,7 @@ EXT inline void __streaming_store_varying_i8(NOESCAPE uniform int8 *uniform, var
 EXT inline READNONE uniform float __stdlib_acosf(uniform float);
 EXT inline READNONE uniform float __stdlib_asinf(uniform float);
 EXT inline READNONE uniform double __stdlib_asin(uniform double);
+EXT inline READNONE uniform double __stdlib_acos(uniform double);
 EXT inline READNONE uniform float __stdlib_atan2f(uniform float, uniform float);
 EXT inline READNONE uniform double __stdlib_atan2(uniform double, uniform double);
 EXT inline READNONE uniform float __stdlib_atanf(uniform float);

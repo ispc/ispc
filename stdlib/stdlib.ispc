@@ -3740,21 +3740,124 @@ __declspec(safe) static inline float cosh(float x) {
     }
 }
 
-__declspec(safe) static inline float acos(float v) {
+__declspec(safe) static inline uniform float acos(uniform float x_full) {
     if (__have_native_trigonometry && !__is_xe_target) {
-        return __acos_varying_float(v);
-    } else if (__math_lib == __math_lib_svml) {
-        return __svml_acosf(v);
-    } else {
-        return 1.57079637050628662109375 - asin(v);
+        return __acos_uniform_float(x_full);
+    } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_acos(x_full);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision: <15 ULP.
+        // Natively support special values (e.g. subnormal numbers and NaNs).
+
+        // Sollya:
+        // f = acos(1-x) / sqrt(x)
+        // fpminimax(f, [|0,...,5|], [|single...|], [1e-300;1.0]);
+        const uniform float c0 = +1.4142124653e+00;
+        const uniform float c1 = +1.1792322248e-01;
+        const uniform float c2 = +2.5741405785e-02;
+        const uniform float c3 = +1.0879410430e-02;
+        const uniform float c4 = -2.2721362770e-03;
+        const uniform float c5 = +4.3107867240e-03;
+
+        const uniform float x = abs(x_full);
+        const uniform float t = 1.0 - x;
+        const uniform float t2 = t * t;
+
+        // Estrin's scheme used to reduce the latency
+        uniform float poly = c5 * t + c4;
+        poly = poly * t2 + (c3 * t + c2);
+        poly = poly * t2 + (c1 * t + c0);
+        poly *= sqrt(t);
+
+        return select(x_full < 0.0, PI - poly, poly);
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <5 ULP
+
+        // Sollya:
+        // f = acos(1-x) / sqrt(x)
+        // fpminimax(f, [|0,...,6|], [|single...|], [1e-300;1.004]);
+        const uniform float c0 = +1.4142136574e+00;
+        const uniform float c1 = +1.1783879995e-01;
+        const uniform float c2 = +2.6711430400e-02;
+        const uniform float c3 = +6.7900302820e-03;
+        const uniform float c4 = +5.5398275140e-03;
+        const uniform float c5 = -2.5801914740e-03;
+        const uniform float c6 = +2.2826674390e-03;
+
+        const uniform float x = abs(x_full);
+        const uniform float t = 1.0 - x;
+        const uniform float t2 = t * t;
+
+        // Estrin's scheme used to reduce the latency
+        uniform float poly = c6;
+        poly = poly * t2 + (c5 * t + c4);
+        poly = poly * t2 + (c3 * t + c2);
+        poly = poly * t2 + (c1 * t + c0);
+        poly *= sqrt(t);
+
+        return select(x_full < 0.0, PI - poly, poly);
     }
 }
 
-__declspec(safe) static inline uniform float acos(uniform float v) {
-    if (__have_native_trigonometry && !__is_xe_target)
-        return __acos_uniform_float(v);
-    else
-        return 1.57079637050628662109375 - asin(v);
+__declspec(safe) static inline float acos(float x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_varying_float(x_full);
+    } else if (__math_lib == __math_lib_svml) {
+        return __svml_acosf(x_full);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_acosf(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // See the uniform version for more information
+
+        const float c0 = +1.4142124653e+00;
+        const float c1 = +1.1792322248e-01;
+        const float c2 = +2.5741405785e-02;
+        const float c3 = +1.0879410430e-02;
+        const float c4 = -2.2721362770e-03;
+        const float c5 = +4.3107867240e-03;
+
+        const float x = abs(x_full);
+        const float t = 1.0 - x;
+        const float t2 = t * t;
+
+        float poly = c5 * t + c4;
+        poly = poly * t2 + (c3 * t + c2);
+        poly = poly * t2 + (c1 * t + c0);
+        poly *= sqrt(t);
+
+        return select(x_full < 0.0, PI - poly, poly);
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // See the uniform version for more information
+
+        const float c0 = +1.4142136574e+00;
+        const float c1 = +1.1783879995e-01;
+        const float c2 = +2.6711430400e-02;
+        const float c3 = +6.7900302820e-03;
+        const float c4 = +5.5398275140e-03;
+        const float c5 = -2.5801914740e-03;
+        const float c6 = +2.2826674390e-03;
+
+        const float x = abs(x_full);
+        const float t = 1.0 - x;
+        const float t2 = t * t;
+
+        float poly = c6;
+        poly = poly * t2 + (c5 * t + c4);
+        poly = poly * t2 + (c3 * t + c2);
+        poly = poly * t2 + (c1 * t + c0);
+        poly *= sqrt(t);
+
+        return select(x_full < 0.0, PI - poly, poly);
+    }
 }
 
 __declspec(safe) static inline void sincos(float x_full, varying float *uniform sin_result,
@@ -6016,7 +6119,12 @@ __declspec(safe) static inline double acos(const double v) {
     } else if (__math_lib == __math_lib_svml) {
         return __svml_acosd(v);
     } else {
-        return 1.57079637050628662109375d - asin(v);
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_acos(extract(v, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
     }
 }
 
@@ -6024,7 +6132,7 @@ __declspec(safe) static inline uniform double acos(const uniform double v) {
     if (__have_native_trigonometry)
         return __acos_uniform_double(v);
     else
-        return 1.57079637050628662109375d - asin(v);
+        return __stdlib_acos(v);
 }
 
 __declspec(safe) static inline void sincos(double x, varying double *uniform sin_result,
