@@ -143,47 +143,69 @@ jobs:
       matrix:
         project:
           - name: Leela Chess lc0
-            extra_packages: gtest wget
+            extra_packages: gtest curl
             build_cmd: |
               su - builder -c '
+                set -euo pipefail
+
                 git clone --branch lc0 --single-branch https://github.com/archlinux/aur.git lc0
                 cd lc0
-                # Temporary fix to use unofficial download location for weights
-                export SRCDEST=$HOME/pkg_src
 
-                # Make the directory if needed
-                mkdir -p "$SRCDEST"
+                export SRCDEST="$HOME/pkg_src"
+                mkdir -p "$SRCDEST" "$HOME/.makepkg"
 
-                # Download the weights file to SRCDEST if not present
-                # Filename must match _weights variable in PKGBUILD (weights_hanse-69722-vf2.gz)
+                cat > "$HOME/.makepkg.conf" <<'\''EOF'\''
+                DLAGENTS=(
+                  '\''https::/usr/bin/bash -lc "
+                    set -euo pipefail
+                    url=\$1
+                    out=\$2
+                    tmp=\${out}.partial
+                    mkdir -p \"\$(dirname \"\$out\")\"
+                    rm -f \"\$tmp\"
+                    /usr/bin/curl -L --fail --retry 5 --retry-delay 2 --retry-all-errors \
+                      --connect-timeout 20 --max-time 900 \
+                      -o \"\$tmp\" \"\$url\"
+                    mv -f \"\$tmp\" \"\$out\"
+                  " bash %u %o'\''
+                  '\''http::/usr/bin/bash -lc "
+                    set -euo pipefail
+                    url=\$1
+                    out=\$2
+                    tmp=\${out}.partial
+                    mkdir -p \"\$(dirname \"\$out\")\"
+                    rm -f \"\$tmp\"
+                    /usr/bin/curl -L --fail --retry 5 --retry-delay 2 --retry-all-errors \
+                      --connect-timeout 20 --max-time 900 \
+                      -o \"\$tmp\" \"\$url\"
+                    mv -f \"\$tmp\" \"\$out\"
+                  " bash %u %o'\''
+                )
+                EOF
+
                 weights="weights_hanse-69722-vf2.gz"
-                url="https://derr.pro/lc0/hanse-69722-vf2.gz"
                 if [ ! -f "$SRCDEST/$weights" ]; then
-                  wget -O "$SRCDEST/$weights" "$url"
+                  tmp="$SRCDEST/$weights.partial"
+                  rm -f "$tmp"
+
+                  for url in \
+                    "https://derr.pro/lc0/hanse-69722-vf2.gz" \
+                    "https://storage.lczero.org/files/training_pgns/hanse-69722-vf2.gz"
+                  do
+                    if /usr/bin/curl -L --fail --retry 5 --retry-delay 2 --retry-all-errors \
+                         --connect-timeout 20 --max-time 900 \
+                         -o "$tmp" "$url"; then
+                      mv -f "$tmp" "$SRCDEST/$weights"
+                      break
+                    fi
+                    rm -f "$tmp"
+                  done
+
+                  test -f "$SRCDEST/$weights"
                 fi
+
                 makepkg -s --noconfirm
               '
-
-          # Open3D disabled because open-source default runners don't have enough disk space
-          # - name: Open3D
-          #   extra_packages: minizip
-          #   build_cmd: |
-          #     # Build and install the required dependency for Open3D from AUR
-          #     su - builder -c "
-          #       git clone https://aur.archlinux.org/python-dash.git
-          #       cd python-dash/
-          #       makepkg -si --noconfirm
-          #
-          #       git clone https://aur.archlinux.org/nanoflann.git
-          #       cd nanoflann
-          #       makepkg -si --noconfirm
-          #
-          #       git clone https://aur.archlinux.org/open3d.git
-          #       cd open3d
-          #       sed -i 's|-DUSE_SYSTEM_VTK=ON|-DUSE_SYSTEM_VTK=OFF -DISPC_USE_LEGACY_EMULATION=ON -DBUILD_ISPC_MODULE=ON -DCMAKE_ISPC_COMPILER=/usr/local/bin/ispc -DCMAKE_ISPC_INSTRUCTION_SETS=host|' PKGBUILD
-          #       git diff
-          #       makepkg -s --noconfirm
-          #     "
 
     steps:
     - name: Setup Arch Linux
