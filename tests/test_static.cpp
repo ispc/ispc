@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -32,6 +32,17 @@
 #include <malloc.h>
 #endif
 
+#if defined(__linux__) && defined(__x86_64__)
+#include <sys/syscall.h>
+#include <unistd.h>
+#ifndef ARCH_REQ_XCOMP_PERM
+#define ARCH_REQ_XCOMP_PERM 0x1023
+#endif
+#ifndef XFEATURE_XTILEDATA
+#define XFEATURE_XTILEDATA 18
+#endif
+#endif
+
 #if (TEST_SIG == 7)
 #define varying_f_sz f_sz
 #define v1_varying_f_sz f_sz
@@ -53,7 +64,7 @@
 #else
 // __vectorcall calling convention is off by default.
 #define CALLINGCONV //__vectorcall
-#endif // VECTORCALL_CONV
+#endif              // VECTORCALL_CONV
 #else
 #define CALLINGCONV
 #endif // ISPC_IS_WINDOWS64
@@ -123,6 +134,9 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 #endif
 
 int main(int argc, char *argv[]) {
+#if defined(__linux__) && defined(__x86_64__)
+    syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
+#endif
     int w = width();
     assert(w <= 64);
 
