@@ -1844,8 +1844,8 @@ static uint64_t lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, I
         } else {
             // We create a separate 'undef mask' with all undef/poison bits set.
             // This mask will have no bits set if there are no 'undef/poison' elements.
-            llvm::UndefValue *uv = llvm::dyn_cast<llvm::UndefValue>(elements[i]);
-            Assert(uv != nullptr); // vs return -1 if nullptr?
+            Assert((llvm::isa<llvm::UndefValue>(elements[i]) || llvm::isa<llvm::PoisonValue>(elements[i])) &&
+                   "unexpected constant kind in blend mask");
             undefSetMask |= (1ull << i);
             continue;
         }
