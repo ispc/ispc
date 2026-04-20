@@ -26,10 +26,10 @@ rdrand_definition()
 
 
 define(`expand_4to8', `
-  %$3 = shufflevector <4 x $1> %$2, <4 x $1> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %$3 = shufflevector <4 x $1> %$2, <4 x $1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ')
 define(`extract_4from8', `
-  %$3 = shufflevector <8 x $1> %$2, <8 x $1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$3 = shufflevector <8 x $1> %$2, <8 x $1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ')
 
 declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>) nounwind readnone
@@ -52,9 +52,9 @@ define <4 x i16> @__float_to_half_varying(<4 x float> %v4) nounwind readnone {
 
 define float @__half_to_float_uniform(i16 %v) nounwind readnone {
   %v1 = bitcast i16 %v to <1 x i16>
-  %vv = shufflevector <1 x i16> %v1, <1 x i16> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x i16> %v1, <1 x i16> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   %rv = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %vv)
   %r = extractelement <8 x float> %rv, i32 0
   ret float %r
@@ -62,9 +62,9 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone {
 
 define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %v1 = bitcast float %v to <1 x float>
-  %vv = shufflevector <1 x float> %v1, <1 x float> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x float> %v1, <1 x float> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   ; round to nearest even
   %rv = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %vv, i32 0)
   %r = extractelement <8 x i16> %rv, i32 0
@@ -121,7 +121,7 @@ define <4 x i32> @__gather32_i32(<4 x i32> %ptrs,
 
   %vecmask = trunc <4 x i64> %vecmask64 to <4 x i32>
 
-  %v = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> undef, i8 * null,
+  %v = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> poison, i8 * null,
                       <4 x i32> %ptrs, <4 x i32> %vecmask, i8 1)
   
   ret <4 x i32> %v
@@ -132,7 +132,7 @@ define <4 x i32> @__gather64_i32(<4 x i64> %ptrs,
                                  <4 x i64> %vecmask64) nounwind readonly alwaysinline {
   %vecmask = trunc <4 x i64> %vecmask64 to <4 x i32>
 
-  %v = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> undef, i8 * null,
+  %v = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> poison, i8 * null,
                       <4 x i64> %ptrs, <4 x i32> %vecmask, i8 1)
 
   ret <4 x i32> %v
@@ -176,7 +176,7 @@ define <4 x float> @__gather32_float(<4 x i32> %ptrs,
   %vecmask = trunc <4 x i64> %vecmask64 to <4 x i32>
   %mask = bitcast <4 x i32> %vecmask to <4 x float>
 
-  %v = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> undef, i8 * null,
+  %v = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> poison, i8 * null,
                      <4 x i32> %ptrs, <4 x float> %mask, i8 1)
 
   ret <4 x float> %v
@@ -188,7 +188,7 @@ define <4 x float> @__gather64_float(<4 x i64> %ptrs,
   %vecmask = trunc <4 x i64> %vecmask64 to <4 x i32>
   %mask = bitcast <4 x i32> %vecmask to <4 x float>
 
-  %v = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, i8 * null,
+  %v = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> poison, i8 * null,
                       <4 x i64> %ptrs, <4 x float> %mask, i8 1)
 
   ret <4 x float> %v
@@ -225,7 +225,7 @@ define <4 x i64> @__gather_base_offsets64_i64(i8 * %ptr,
 define <4 x i64> @__gather32_i64(<4 x i32> %ptrs, 
                                  <4 x i64> %vecmask) nounwind readonly alwaysinline {
 
-  %v = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> undef, i8 * null,
+  %v = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> poison, i8 * null,
                       <4 x i32> %ptrs, <4 x i64> %vecmask, i8 1)
   ret <4 x i64> %v
 }
@@ -233,7 +233,7 @@ define <4 x i64> @__gather32_i64(<4 x i32> %ptrs,
 
 define <4 x i64> @__gather64_i64(<4 x i64> %ptrs, 
                                  <4 x i64> %vecmask) nounwind readonly alwaysinline {
-  %v = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> undef, i8 * null,
+  %v = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> poison, i8 * null,
                       <4 x i64> %ptrs, <4 x i64> %vecmask, i8 1)
   ret <4 x i64> %v
 }
@@ -269,7 +269,7 @@ define <4 x double> @__gather32_double(<4 x i32> %ptrs,
                                        <4 x i64> %vecmask64) nounwind readonly alwaysinline {
   %vecmask = bitcast <4 x i64> %vecmask64 to <4 x double>
 
-  %v = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8 * null,
+  %v = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> poison, i8 * null,
                       <4 x i32> %ptrs, <4 x double> %vecmask, i8 1)
 
   ret <4 x double> %v
@@ -279,7 +279,7 @@ define <4 x double> @__gather64_double(<4 x i64> %ptrs,
                                        <4 x i64> %vecmask64) nounwind readonly alwaysinline {
   %vecmask = bitcast <4 x i64> %vecmask64 to <4 x double>
 
-  %v = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8 * null,
+  %v = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> poison, i8 * null,
                       <4 x i64> %ptrs, <4 x double> %vecmask, i8 1)
 
   ret <4 x double> %v

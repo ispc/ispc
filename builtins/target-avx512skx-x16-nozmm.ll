@@ -101,10 +101,10 @@ declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>) nounwind readnone
 declare <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float>, i32) nounwind readnone
 
 define <16 x float> @__half_to_float_varying(<16 x i16> %v) nounwind readnone {
-  %r_0 = shufflevector <16 x i16> %v, <16 x i16> undef,
+  %r_0 = shufflevector <16 x i16> %v, <16 x i16> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %vr_0 = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %r_0)
-  %r_1 = shufflevector <16 x i16> %v, <16 x i16> undef,
+  %r_1 = shufflevector <16 x i16> %v, <16 x i16> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %vr_1 = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %r_1)
   %r = shufflevector <8 x float> %vr_0, <8 x float> %vr_1,
@@ -114,10 +114,10 @@ define <16 x float> @__half_to_float_varying(<16 x i16> %v) nounwind readnone {
 }
 
 define <16 x i16> @__float_to_half_varying(<16 x float> %v) nounwind readnone {
-  %r_0 = shufflevector <16 x float> %v, <16 x float> undef,
+  %r_0 = shufflevector <16 x float> %v, <16 x float> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %vr_0 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %r_0, i32 0)
-  %r_1 = shufflevector <16 x float> %v, <16 x float> undef,
+  %r_1 = shufflevector <16 x float> %v, <16 x float> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %vr_1 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %r_1, i32 0)
   %r = shufflevector <8 x i16> %vr_0, <8 x i16> %vr_1,
@@ -365,9 +365,9 @@ define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
 declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
 define float @__reduce_add_float(<16 x float>) nounwind readonly alwaysinline {
-  %va = shufflevector <16 x float> %0, <16 x float> undef,
+  %va = shufflevector <16 x float> %0, <16 x float> poison,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %vb = shufflevector <16 x float> %0, <16 x float> undef,
+  %vb = shufflevector <16 x float> %0, <16 x float> poison,
           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %v1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %va, <8 x float> %vb)
   %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
@@ -429,13 +429,13 @@ define i32 @__reduce_max_uint32(<16 x i32>) nounwind readnone alwaysinline {
 declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
 define double @__reduce_add_double(<16 x double>) nounwind readonly alwaysinline {
-  %va = shufflevector <16 x double> %0, <16 x double> undef,
+  %va = shufflevector <16 x double> %0, <16 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vb = shufflevector <16 x double> %0, <16 x double> undef,
+  %vb = shufflevector <16 x double> %0, <16 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %vc = shufflevector <16 x double> %0, <16 x double> undef,
+  %vc = shufflevector <16 x double> %0, <16 x double> poison,
          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %vd = shufflevector <16 x double> %0, <16 x double> undef,
+  %vd = shufflevector <16 x double> %0, <16 x double> poison,
          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %vab = fadd <4 x double> %va, %vb
   %vcd = fadd <4 x double> %vc, %vd
@@ -1091,8 +1091,8 @@ rcp14_uniform()
 declare <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
 define <16 x float> @__rcp_fast_varying_float(<16 x float>) nounwind readonly alwaysinline {
   v16tov8(float, %0, %val_lo, %val_hi)
-  %ret_lo = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %val_lo, <8 x float> undef, i8 -1)
-  %ret_hi = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %val_hi, <8 x float> undef, i8 -1)
+  %ret_lo = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %val_lo, <8 x float> poison, i8 -1)
+  %ret_hi = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %val_hi, <8 x float> poison, i8 -1)
   v8tov16(float, %ret_lo, %ret_hi, %ret)
   ret <16 x float> %ret
 }
@@ -1114,10 +1114,10 @@ define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysi
 declare <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
 define <16 x double> @__rcp_fast_varying_double(<16 x double> %val) nounwind readonly alwaysinline {
   v16tov4(double, %val, %val_0, %val_1, %val_2, %val_3)
-  %res_0 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_0, <4 x double> undef, i8 -1)
-  %res_1 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_1, <4 x double> undef, i8 -1)
-  %res_2 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_2, <4 x double> undef, i8 -1)
-  %res_3 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_3, <4 x double> undef, i8 -1)
+  %res_0 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_0, <4 x double> poison, i8 -1)
+  %res_1 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_1, <4 x double> poison, i8 -1)
+  %res_2 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_2, <4 x double> poison, i8 -1)
+  %res_3 = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_3, <4 x double> poison, i8 -1)
   v4tov16(double, %res_0, %res_1, %res_2, %res_3, %res)
   ret <16 x double> %res
 }
@@ -1140,8 +1140,8 @@ rsqrt14_uniform()
 declare <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float>,  <8 x float>,  i8) nounwind readnone
 define <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
   v16tov8(float, %v, %val_lo, %val_hi)
-  %ret_lo = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %val_lo,  <8 x float> undef,  i8 -1)
-  %ret_hi = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %val_hi,  <8 x float> undef,  i8 -1)
+  %ret_lo = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %val_lo,  <8 x float> poison,  i8 -1)
+  %ret_hi = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %val_hi,  <8 x float> poison,  i8 -1)
   v8tov16(float, %ret_lo, %ret_hi, %ret)
   ret <16 x float> %ret
 }
@@ -1168,10 +1168,10 @@ define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly al
 declare <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double>,  <4 x double>,  i8) nounwind readnone
 define <16 x double> @__rsqrt_fast_varying_double(<16 x double> %val) nounwind readonly alwaysinline {
   v16tov4(double, %val, %val_0, %val_1, %val_2, %val_3)
-  %res_0 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_0, <4 x double> undef, i8 -1)
-  %res_1 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_1, <4 x double> undef, i8 -1)
-  %res_2 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_2, <4 x double> undef, i8 -1)
-  %res_3 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_3, <4 x double> undef, i8 -1)
+  %res_0 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_0, <4 x double> poison, i8 -1)
+  %res_1 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_1, <4 x double> poison, i8 -1)
+  %res_2 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_2, <4 x double> poison, i8 -1)
+  %res_3 = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_3, <4 x double> poison, i8 -1)
   v4tov16(double, %res_0, %res_1, %res_2, %res_3, %res)
   ret <16 x double> %res
 }

@@ -72,7 +72,7 @@ llvm::Value *lShrinkVector(llvm::IRBuilder<> &B, llvm::Value *originalVector, un
 
     // Use shufflevector instruction to create the new vector
     llvm::Twine name = originalVector->getName() + ".part";
-    return B.CreateShuffleVector(originalVector, llvm::UndefValue::get(originalVector->getType()), mask, name);
+    return B.CreateShuffleVector(originalVector, llvm::PoisonValue::get(originalVector->getType()), mask, name);
 }
 
 // Create a new vector containing the second part of the const vector.

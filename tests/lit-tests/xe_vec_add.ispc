@@ -87,32 +87,32 @@ export void vadd(uniform int n, uniform T aIN[], uniform T bIN[], uniform T cOUT
   for (int i = 0; i < n; i += programCount) {
 // CHECK_VARYING: @llvm.genx.svm.gather
 // CHECK_VARYING_I8_SIMD16: call <64 x i8> @llvm.genx.svm.gather.v64i8.v16i1.v16i64(<16 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_VARYING_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 undef)
+// CHECK_VARYING_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 {{undef|poison}})
 // CHECK_VARYING_I8_SIMD8: call <32 x i8> @llvm.genx.svm.gather.v32i8.v8i1.v8i64(<8 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_VARYING_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 undef)
+// CHECK_VARYING_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 {{undef|poison}})
 // CHECK_VARYING_I16_SIMD16: call <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_VARYING_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 undef)
+// CHECK_VARYING_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 {{undef|poison}})
 // CHECK_VARYING_I16_SIMD8: call <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_VARYING_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 undef)
+// CHECK_VARYING_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 {{undef|poison}})
     T a = aIN[i + programIndex/2];
 // CHECK_VARYING: @llvm.genx.svm.gather
 // CHECK_VARYING_I8_SIMD16: call <64 x i8> @llvm.genx.svm.gather.v64i8.v16i1.v16i64(<16 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_VARYING_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 undef)
+// CHECK_VARYING_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 {{undef|poison}})
 // CHECK_VARYING_I8_SIMD8: call <32 x i8> @llvm.genx.svm.gather.v32i8.v8i1.v8i64(<8 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_VARYING_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 undef)
+// CHECK_VARYING_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 {{undef|poison}})
 // CHECK_VARYING_I16_SIMD16: call <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_VARYING_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 undef)
+// CHECK_VARYING_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 {{undef|poison}})
 // CHECK_VARYING_I16_SIMD8: call <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_VARYING_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 undef)
+// CHECK_VARYING_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 {{undef|poison}})
     T b = bIN[i + programIndex/2];
 // CHECK_VARYING: @llvm.genx.svm.scatter
-// CHECK_VARYING_I8_SIMD16: call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> undef, <16 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x i1> {{.*}})
+// CHECK_VARYING_I8_SIMD16: call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> {{undef|poison}}, <16 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x i1> {{.*}})
 // CHECK_VARYING_I8_SIMD16-NEXT: call void @llvm.genx.svm.scatter.v16i1.v16i64.v64i8(<16 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_VARYING_I8_SIMD8: call <32 x i8> @llvm.genx.wrregioni.v32i8.v8i8.i16.v8i1(<32 x i8> undef, <8 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 0, <8 x i1> {{.*}})
+// CHECK_VARYING_I8_SIMD8: call <32 x i8> @llvm.genx.wrregioni.v32i8.v8i8.i16.v8i1(<32 x i8> {{undef|poison}}, <8 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 0, <8 x i1> {{.*}})
 // CHECK_VARYING_I8_SIMD8-NEXT: call void @llvm.genx.svm.scatter.v8i1.v8i64.v32i8(<8 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_VARYING_I16_SIMD16: call <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1(<32 x i16> undef, <16 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x i1> {{.*}})
+// CHECK_VARYING_I16_SIMD16: call <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1(<32 x i16> {{undef|poison}}, <16 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x i1> {{.*}})
 // CHECK_VARYING_I16_SIMD16-NEXT: call void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_VARYING_I16_SIMD8: call <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1(<16 x i16> undef, <8 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 0, <8 x i1> {{.*}})
+// CHECK_VARYING_I16_SIMD8: call <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1(<16 x i16> {{undef|poison}}, <8 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 0, <8 x i1> {{.*}})
 // CHECK_VARYING_I16_SIMD8-NEXT: call void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> {{.*}}, i32 1, <8 x i64> {{.*}})
     cOUT[i + programIndex] = a + b;
   }
@@ -131,37 +131,37 @@ export void vadd(uniform int n, uniform T aIN[], uniform T bIN[], uniform T cOUT
 // CHECK_MASKED_ST_I8_SIMD16: load <16 x i8>
 // CHECK_MASKED_ST_I8_SIMD16: load <16 x i8>
 // CHECK_MASKED_ST_I8_SIMD16: call <64 x i8> @llvm.genx.svm.gather.v64i8.v16i1.v16i64(<16 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_MASKED_ST_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 undef)
+// CHECK_MASKED_ST_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 {{undef|poison}})
 // CHECK_MASKED_ST_I8_SIMD16: call <64 x i8> @llvm.genx.svm.gather.v64i8.v16i1.v16i64(<16 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_MASKED_ST_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 undef)
-// CHECK_MASKED_ST_I8_SIMD16: call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> undef, <16 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x i1> {{.*}})
+// CHECK_MASKED_ST_I8_SIMD16-NEXT: call <16 x i8> @llvm.genx.rdregioni.v16i8.v64i8.i16(<64 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 {{undef|poison}})
+// CHECK_MASKED_ST_I8_SIMD16: call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> {{undef|poison}}, <16 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x i1> {{.*}})
 // CHECK_MASKED_ST_I8_SIMD16: call void @llvm.genx.svm.scatter.v16i1.v16i64.v64i8(<16 x i1> {{.*}}, i32 0, {{.*}})
 
 // CHECK_MASKED_ST_I8_SIMD8-NOT: load <8 x i8>
 // CHECK_MASKED_ST_I8_SIMD8-NOT: load <8 x i8>
 // CHECK_MASKED_ST_I8_SIMD8: call <32 x i8> @llvm.genx.svm.gather.v32i8.v8i1.v8i64(<8 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_MASKED_ST_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 undef)
+// CHECK_MASKED_ST_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 {{undef|poison}})
 // CHECK_MASKED_ST_I8_SIMD8: call <32 x i8> @llvm.genx.svm.gather.v32i8.v8i1.v8i64(<8 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_MASKED_ST_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 undef)
-// CHECK_MASKED_ST_I8_SIMD8: call <32 x i8> @llvm.genx.wrregioni.v32i8.v8i8.i16.v8i1(<32 x i8> undef, <8 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 0, <8 x i1> {{.*}})
+// CHECK_MASKED_ST_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 {{undef|poison}})
+// CHECK_MASKED_ST_I8_SIMD8: call <32 x i8> @llvm.genx.wrregioni.v32i8.v8i8.i16.v8i1(<32 x i8> {{undef|poison}}, <8 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 0, <8 x i1> {{.*}})
 // CHECK_MASKED_ST_I8_SIMD8-NEXT: call void @llvm.genx.svm.scatter.v8i1.v8i64.v32i8(<8 x i1> {{.*}}, i32 0, {{.*}})
 
 // CHECK_MASKED_ST_I16_SIMD16: load <16 x i16>
 // CHECK_MASKED_ST_I16_SIMD16: load <16 x i16>
 // CHECK_MASKED_ST_I16_SIMD16: call <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_MASKED_ST_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 undef)
+// CHECK_MASKED_ST_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 {{undef|poison}})
 // CHECK_MASKED_ST_I16_SIMD16: call <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_MASKED_ST_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 undef)
-// CHECK_MASKED_ST_I16_SIMD16: call <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1(<32 x i16> undef, <16 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x i1> {{.*}})
+// CHECK_MASKED_ST_I16_SIMD16-NEXT: call <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16(<32 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 {{undef|poison}})
+// CHECK_MASKED_ST_I16_SIMD16: call <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1(<32 x i16> {{undef|poison}}, <16 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x i1> {{.*}})
 // CHECK_MASKED_ST_I16_SIMD16: call void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> {{.*}}, i32 1, {{.*}})
 
 // CHECK_MASKED_ST_I16_SIMD8: load <8 x i16>
 // CHECK_MASKED_ST_I16_SIMD8: load <8 x i16>
 // CHECK_MASKED_ST_I16_SIMD8: call <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_MASKED_ST_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 undef)
+// CHECK_MASKED_ST_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 {{undef|poison}})
 // CHECK_MASKED_ST_I16_SIMD8: call <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> {{.*}}, i32 1, {{.*}})
-// CHECK_MASKED_ST_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 undef)
-// CHECK_MASKED_ST_I16_SIMD8: call <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1(<16 x i16> undef, <8 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 0, <8 x i1> {{.*}})
+// CHECK_MASKED_ST_I16_SIMD8-NEXT: call <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16(<16 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 {{undef|poison}})
+// CHECK_MASKED_ST_I16_SIMD8: call <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1(<16 x i16> {{undef|poison}}, <8 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 0, <8 x i1> {{.*}})
 // CHECK_MASKED_ST_I16_SIMD8: call void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> {{.*}}, i32 1, <8 x i64> {{.*}})
 
 // CHECK_MASKED_ST_UNSAFE: load
@@ -172,25 +172,25 @@ export void vadd(uniform int n, uniform T aIN[], uniform T bIN[], uniform T cOUT
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD16: load <16 x i8>
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD16: load <16 x i8>
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD16-NOT: @llvm.genx.svm.gather
-// CHECK_MASKED_ST_UNSAFE_I8_SIMD16: call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> undef, <16 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x i1> {{.*}})
+// CHECK_MASKED_ST_UNSAFE_I8_SIMD16: call <64 x i8> @llvm.genx.wrregioni.v64i8.v16i8.i16.v16i1(<64 x i8> {{undef|poison}}, <16 x i8> {{.*}}, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x i1> {{.*}})
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD16: call void @llvm.genx.svm.scatter.v16i1.v16i64.v64i8(<16 x i1> {{.*}}, i32 0, {{.*}})
 
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD8: load <8 x i8>
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD8: load <8 x i8>
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD8-NOT: @llvm.genx.svm.gather
-// CHECK_MASKED_ST_UNSAFE_I8_SIMD8: call <32 x i8> @llvm.genx.wrregioni.v32i8.v8i8.i16.v8i1(<32 x i8> undef, <8 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 0, <8 x i1> {{.*}})
+// CHECK_MASKED_ST_UNSAFE_I8_SIMD8: call <32 x i8> @llvm.genx.wrregioni.v32i8.v8i8.i16.v8i1(<32 x i8> {{undef|poison}}, <8 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 0, <8 x i1> {{.*}})
 // CHECK_MASKED_ST_UNSAFE_I8_SIMD8: call void @llvm.genx.svm.scatter.v8i1.v8i64.v32i8(<8 x i1> {{.*}}, i32 0, {{.*}})
 
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD16: load <16 x i16>
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD16: load <16 x i16>
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD16-NOT: @llvm.genx.svm.gather
-// CHECK_MASKED_ST_UNSAFE_I16_SIMD16: call <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1(<32 x i16> undef, <16 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x i1> {{.*}})
+// CHECK_MASKED_ST_UNSAFE_I16_SIMD16: call <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1(<32 x i16> {{undef|poison}}, <16 x i16> {{.*}}, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x i1> {{.*}})
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD16: call void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> {{.*}}, i32 1, {{.*}})
 
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD8: load <8 x i16>
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD8: load <8 x i16>
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD8-NOT: @llvm.genx.svm.gather
-// CHECK_MASKED_ST_UNSAFE_I16_SIMD8: call <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1(<16 x i16> undef, <8 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 0, <8 x i1> {{.*}})
+// CHECK_MASKED_ST_UNSAFE_I16_SIMD8: call <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1(<16 x i16> {{undef|poison}}, <8 x i16> {{.*}}, i32 0, i32 8, i32 2, i16 0, i32 0, <8 x i1> {{.*}})
 // CHECK_MASKED_ST_UNSAFE_I16_SIMD8: call void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> {{.*}}, i32 1, <8 x i64> {{.*}})
 
     T a = aIN[i + programIndex];

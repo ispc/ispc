@@ -608,8 +608,8 @@ static bool lValuesAreEqual(llvm::Value *v0, llvm::Value *v1, std::vector<llvm::
     return false;
 }
 
-/**  Recognizes constant vector with undef operands except the first one:
- *   <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
+/**  Recognizes constant vector with poison/undef operands except the first one:
+ *   <i64 4, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison>
  */
 static bool lIsFirstElementConstVector(llvm::Value *v) {
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
@@ -631,7 +631,7 @@ static bool lIsFirstElementConstVector(llvm::Value *v) {
         }
 
         for (int i = 1; i < (int)cv->getNumOperands(); ++i) {
-            if (!llvm::isa<llvm::UndefValue>(cv->getOperand(i))) {
+            if (!(llvm::isa<llvm::PoisonValue>(cv->getOperand(i)) || llvm::isa<llvm::UndefValue>(cv->getOperand(i)))) {
                 return false;
             }
         }
@@ -669,7 +669,7 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
                 continue;
             }
 
-            if (llvm::isa<llvm::UndefValue>(insertBase)) {
+            if (llvm::isa<llvm::PoisonValue>(insertBase) || llvm::isa<llvm::UndefValue>(insertBase)) {
                 break;
             }
 
@@ -735,14 +735,14 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
     }
 
     // Catch a pattern of broadcast implemented as InsertElement + Shuffle:
-    //   %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
-    //   %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+    //   %broadcast_init.0 = insertelement <4 x i32> poison, i32 %val, i32 0
+    //   %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> poison,
     //                                              <4 x i32> zeroinitializer
     // Or:
-    //   %gep_ptr2int_broadcast_init = insertelement <8 x i64> undef, i64 %gep_ptr2int, i32 0
+    //   %gep_ptr2int_broadcast_init = insertelement <8 x i64> poison, i64 %gep_ptr2int, i32 0
     //   %0 = add <8 x i64> %gep_ptr2int_broadcast_init,
-    //              <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
-    //   %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
+    //              <i64 4, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison>
+    //   %gep_offset = shufflevector <8 x i64> %0, <8 x i64> poison, <8 x i32> zeroinitializer
     else if (llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(inst)) {
         llvm::Value *indices = shuf->getShuffleMaskForBitcode();
 
@@ -761,7 +761,8 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
                     }
                 }
             }
-            if (ie != nullptr && llvm::isa<llvm::UndefValue>(ie->getOperand(0))) {
+            if (ie != nullptr &&
+                (llvm::isa<llvm::PoisonValue>(ie->getOperand(0)) || llvm::isa<llvm::UndefValue>(ie->getOperand(0)))) {
                 llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(ie->getOperand(2));
                 Assert(ci);
                 if (ci->isZero()) {
@@ -1125,7 +1126,7 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
         return true;
     }
 
-    if (llvm::isa<llvm::UndefValue>(v)) {
+    if (llvm::isa<llvm::PoisonValue>(v) || llvm::isa<llvm::UndefValue>(v)) {
         // ?
         return false;
     }
@@ -1618,8 +1619,8 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
     }
 
     // We should consider "shuffle" case and "insertElement" case separately.
-    // For example we can have shuffle(mul, undef, zero) but function
-    // "LLVMFlattenInsertChain" can handle only case shuffle(insertElement, undef, zero).
+    // For example we can have shuffle(mul, poison, zero) but function
+    // "LLVMFlattenInsertChain" can handle only case shuffle(insertElement, poison, zero).
     // Also if we have insertElement under shuffle we will handle it the next call of
     // "lExtractFirstVectorElement" function.
     if (llvm::isa<llvm::ShuffleVectorInst>(v)) {
@@ -1682,7 +1683,7 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
     llvm::Constant *shufVec[ISPC_MAX_NVEC];
     for (int i = 0; i < shufSize; ++i) {
         if (shuf[i] == -1) {
-            shufVec[i] = llvm::UndefValue::get(LLVMTypes::Int32Type);
+            shufVec[i] = llvm::PoisonValue::get(LLVMTypes::Int32Type);
         } else {
             shufVec[i] = LLVMInt32(shuf[i]);
         }
@@ -1761,10 +1762,10 @@ bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos)
 }
 
 /** Given an llvm::Value, return true if we can determine that it's an
-    undefined value.  This only makes a weak attempt at chasing this down,
-    only detecting flat-out undef values, and bitcasts of undef values. */
+    undefined or poison value.  This only makes a weak attempt at chasing this down,
+    only detecting flat-out undef/poison values, and bitcasts of undef/poison values. */
 bool LLVMIsValueUndef(llvm::Value *value) {
-    if (llvm::isa<llvm::UndefValue>(value)) {
+    if (llvm::isa<llvm::PoisonValue>(value) || llvm::isa<llvm::UndefValue>(value)) {
         return true;
     }
 
@@ -1841,8 +1842,8 @@ static uint64_t lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, I
             // Otherwise get it as an int
             intMaskValue = ci->getValue();
         } else {
-            // We create a separate 'undef mask' with all undef bits set.
-            // This mask will have no bits set if there are no 'undef' elements.
+            // We create a separate 'undef mask' with all undef/poison bits set.
+            // This mask will have no bits set if there are no 'undef/poison' elements.
             llvm::UndefValue *uv = llvm::dyn_cast<llvm::UndefValue>(elements[i]);
             Assert(uv != nullptr); // vs return -1 if nullptr?
             undefSetMask |= (1ull << i);
@@ -1855,10 +1856,10 @@ static uint64_t lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, I
         }
     }
 
-    // if no bits are set in mask, do not need to consider undefs. It's
+    // if no bits are set in mask, do not need to consider undef/poison values. It's
     // always 'all_off'.
-    // If any bits are set in mask, assume' undef' bits as as '1'. This ensures
-    // cases with only '1's and 'undef's will be considered as 'all_on'
+    // If any bits are set in mask, assume 'undef/poison' bits as '1'. This ensures
+    // cases with only '1's and 'undef/poison's will be considered as 'all_on'
     if (mask != 0) {
         mask |= undefSetMask;
     }

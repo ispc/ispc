@@ -899,16 +899,16 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                     // 3. shuffle it with resulting vector
                     // For example:
                     // uniform double<4> d = {f.x, d.x, f.y, d.y};
-                    // vResVal1 = <4 x float> <f.x, undef, f.y, undef>
-                    // vResVal1_conv = fpext <4 x float> <f.x, undef, f.y, undef> to <4 x double>
-                    // vResVal2 = <4 x double> <undef, d.x, undef, d.y>
-                    // initListVector = shufflevector %vResVal1_conv, <4 x double> %undef, <4 x i32> <i32 0, i32 5, i32
+                    // vResVal1 = <4 x float> <f.x, poison, f.y, poison>
+                    // vResVal1_conv = fpext <4 x float> <f.x, poison, f.y, poison> to <4 x double>
+                    // vResVal2 = <4 x double> <poison, d.x, poison, d.y>
+                    // initListVector = shufflevector %vResVal1_conv, <4 x double> %poison, <4 x i32> <i32 0, i32 5, i32
                     // 3, i32 7>
                     // initListVector = shufflevector %vResVal2, <4 x double> %initListVector, <4 x i32> <i32 4, i32 1,
                     // i32 6, i32 3>
 
                     // Our final vector which will be used for initialization
-                    llvm::Value *initListVector = llvm::UndefValue::get(symVectorType->LLVMType(g->ctx));
+                    llvm::Value *initListVector = llvm::PoisonValue::get(symVectorType->LLVMType(g->ctx));
                     for (const auto &[type, expr_map] : exprPerType) {
                         // There is no good way to construct AtomicType from AtomicType::BasicType,
                         // just use the first one
@@ -922,7 +922,7 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                             // Construct ISPC vector type for resulting "initializer" vector for this type
                             const VectorType *vResType = new VectorType(aType, nVectorElements);
                             // Resulting LLVM vector for this type
-                            llvm::Value *initListVectorPerType = llvm::UndefValue::get(vResType->LLVMType(g->ctx));
+                            llvm::Value *initListVectorPerType = llvm::PoisonValue::get(vResType->LLVMType(g->ctx));
                             // Create a linear vector that will be used as a shuffle mask for
                             // shufflevector with initListVector.
                             std::vector<uint32_t> linearVector(nVectorElements);
@@ -2161,7 +2161,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
 
             // We need to compute the result carefully, since vector
             // elements that were computed when the corresponding lane was
-            // disabled have undefined values:
+            // disabled have undefined or poison values:
             // result = (value0 & old_mask) | (value1 & current_mask)
             llvm::Value *value1AndMask = ctx->BinaryAndOperator(value1, ctx->GetInternalMask(), "op&mask");
             llvm::Value *result = ctx->BinaryOrOperator(value0AndMask, value1AndMask, "or_result");
@@ -3873,7 +3873,7 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
                            (CastType<VectorType>(testType)->GetElementCount() == vt->GetElementCount()));
 
         // Do an element-wise select
-        llvm::Value *result = llvm::UndefValue::get(type->LLVMType(g->ctx));
+        llvm::Value *result = llvm::PoisonValue::get(type->LLVMType(g->ctx));
         for (int i = 0; i < vt->GetElementCount(); ++i) {
             llvm::Value *ti = ctx->ExtractInst(testVal, i);
             llvm::Value *e1i = ctx->ExtractInst(expr1Val, i);
@@ -4783,7 +4783,7 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
             int vectorWidth = g->target->getVectorWidth();
 
             while ((cv.size() % vectorWidth) != 0) {
-                cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
+                cv.push_back(llvm::PoisonValue::get(lvt->getElementType()));
             }
 
             return std::pair<llvm::Constant *, bool>(llvm::ConstantVector::get(cv), isNotValidForMultiTargetGlobal);
@@ -4796,12 +4796,12 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
 
             // Uniform short vectors are stored as vectors of length
             // rounded up to a power of 2 bits in size but not less then 128 bit.
-            // So we add additional undef values here until we get the right size.
+            // So we add additional poison values here until we get the right size.
             const VectorType *vt = CastType<VectorType>(type);
             int vectorWidth = vt->getVectorMemoryCount();
 
             while ((cv.size() % vectorWidth) != 0) {
-                cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
+                cv.push_back(llvm::PoisonValue::get(lvt->getElementType()));
             }
 
             return std::pair<llvm::Constant *, bool>(llvm::ConstantVector::get(cv), isNotValidForMultiTargetGlobal);
@@ -7635,7 +7635,7 @@ static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value
     const CollectionType *collectionType = CastType<CollectionType>(type);
     if (collectionType != nullptr) {
         llvm::Type *llvmType = type->GetAsVaryingType()->LLVMStorageType(g->ctx);
-        llvm::Value *retValue = llvm::UndefValue::get(llvmType);
+        llvm::Value *retValue = llvm::PoisonValue::get(llvmType);
 
         const StructType *structType = CastType<StructType>(type->GetAsVaryingType());
 
@@ -7945,7 +7945,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         } else {
             // Emit instructions to do type conversion of each of the elements
             // of the vector.
-            llvm::Value *cast = llvm::UndefValue::get(toType->LLVMType(g->ctx));
+            llvm::Value *cast = llvm::PoisonValue::get(toType->LLVMType(g->ctx));
             for (int i = 0; i < toVector->GetElementCount(); ++i) {
                 llvm::Value *ei = ctx->ExtractInst(exprVal, i);
                 llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, ei, toVector->GetElementType(),
@@ -7998,7 +7998,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             cast = ctx->BroadcastValue(conv, toTypeLLVM);
         } else if (llvm::isa<llvm::ArrayType>(toTypeLLVM)) {
             // Example varying float => varying float<3>
-            cast = llvm::UndefValue::get(toType->LLVMType(g->ctx));
+            cast = llvm::PoisonValue::get(toType->LLVMType(g->ctx));
             for (int i = 0; i < toVector->GetElementCount(); ++i) {
                 if ((toVector->GetElementType()->IsBoolType()) &&
                     (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {

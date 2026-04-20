@@ -251,7 +251,7 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
 /** This function takes chains of InsertElement instructions along the
     lines of:
 
-    %v0 = insertelement undef, value_0, i32 index_0
+    %v0 = insertelement poison, value_0, i32 index_0
     %v1 = insertelement %v1,   value_1, i32 index_1
     ...
     %vn = insertelement %vn-1, value_n-1, i32 index_n-1
@@ -267,19 +267,19 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
     array.
 
     This also handles one of two common broadcast patterns:
-    1.   %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
-         %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+    1.   %broadcast_init.0 = insertelement <4 x i32> poison, i32 %val, i32 0
+         %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> poison,
                                                   <4 x i32> zeroinitializer
-    2.   %gep_ptr2int_broadcast_init = insertelement <8 x i64> undef, i64 %gep_ptr2int, i32 0
+    2.   %gep_ptr2int_broadcast_init = insertelement <8 x i64> poison, i64 %gep_ptr2int, i32 0
          %0 = add <8 x i64> %gep_ptr2int_broadcast_init,
-                  <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
-         %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
+                  <i64 4, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison>
+         %gep_offset = shufflevector <8 x i64> %0, <8 x i64> poison, <8 x i32> zeroinitializer
     Function returns:
     Compare all elements and return one of them if all are equal, otherwise nullptr.
-    If searchFirstUndef argument is true, look for the vector with the first not-undef element, like:
-         <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
+    If searchFirstUndef argument is true, look for the vector with the first not-undef/poison element, like:
+         <i64 4, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison>
     If compare argument is false, don't do compare and return first element instead.
-    If undef argument is true, ignore undef elements (but all undef yields nullptr anyway).
+    If undef argument is true, ignore undef/poison elements (but all undef/poison yields nullptr anyway).
 
  */
 extern llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool compare = true, bool undef = true,
@@ -346,12 +346,12 @@ extern void LLVMCopyMetadata(llvm::Value *vto, const llvm::Instruction *from);
 extern bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos);
 
 /** Given an llvm::Value, return true if we can determine that it's an
-    undefined value.  This only makes a weak attempt at chasing this down,
-    only detecting flat-out undef values, and bitcasts of undef values.
+    undefined or poison value.  This only makes a weak attempt at chasing this down,
+    only detecting flat-out undef/poison values, and bitcasts of undef/poison values.
 
     @todo Is it worth working harder to find more of these?  It starts to
-    get tricky, since having an undef operand doesn't necessarily mean that
-    the result will be undefined.  (And for that matter, is there an LLVM
+    get tricky, since having an undef/poison operand doesn't necessarily mean that
+    the result will be undefined or poison.  (And for that matter, is there an LLVM
     call that will do this for us?)
  */
 extern bool LLVMIsValueUndef(llvm::Value *value);

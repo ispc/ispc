@@ -16,7 +16,7 @@ declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 
 define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ; do the rcpss call
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %vecval = insertelement <4 x float> poison, float %0, i32 0
   %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
   %scall = extractelement <4 x float> %call, i32 0
 
@@ -29,7 +29,7 @@ define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 
 define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
   ; do the rcpss call
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %vecval = insertelement <4 x float> poison, float %0, i32 0
   %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
   %scall = extractelement <4 x float> %call, i32 0
   ret float %scall
@@ -43,7 +43,7 @@ declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
 define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <4 x float> undef, float %0, i32 0
+  %v = insertelement <4 x float> poison, float %0, i32 0
   %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
   %is = extractelement <4 x float> %vis, i32 0
 
@@ -59,7 +59,7 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
 
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
   ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <4 x float> undef, float %0, i32 0
+  %v = insertelement <4 x float> poison, float %0, i32 0
   %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
   %is = extractelement <4 x float> %vis, i32 0
   ret float %is

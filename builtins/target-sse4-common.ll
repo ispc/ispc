@@ -34,7 +34,7 @@ define float @__round_uniform_float(float) nounwind readonly alwaysinline {
   ;  It doesn't matter what we pass as a, since we only need the r0 value
   ;  here.  So we pass the same register for both.  Further, only the 0th
   ;  element of the b parameter matters
-  %xi = insertelement <4 x float> undef, float %0, i32 0
+  %xi = insertelement <4 x float> poison, float %0, i32 0
   %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
   %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
@@ -42,7 +42,7 @@ define float @__round_uniform_float(float) nounwind readonly alwaysinline {
 
 define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
+  %xi = insertelement <4 x float> poison, float %0, i32 0
   ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
   %rs = extractelement <4 x float> %xr, i32 0
@@ -51,7 +51,7 @@ define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
 
 define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
+  %xi = insertelement <4 x float> poison, float %0, i32 0
   ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
   %rs = extractelement <4 x float> %xr, i32 0
@@ -64,7 +64,7 @@ define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
 declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
 
 define double @__round_uniform_double(double) nounwind readonly alwaysinline {
-  %xi = insertelement <2 x double> undef, double %0, i32 0
+  %xi = insertelement <2 x double> poison, double %0, i32 0
   %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 8)
   %rs = extractelement <2 x double> %xr, i32 0
   ret double %rs
@@ -72,7 +72,7 @@ define double @__round_uniform_double(double) nounwind readonly alwaysinline {
 
 define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
+  %xi = insertelement <2 x double> poison, double %0, i32 0
   ; roundsd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
   %rs = extractelement <2 x double> %xr, i32 0
@@ -81,7 +81,7 @@ define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
 
 define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
+  %xi = insertelement <2 x double> poison, double %0, i32 0
   ; roundsd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
   %rs = extractelement <2 x double> %xr, i32 0
@@ -97,7 +97,7 @@ define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ; do the rcpss call
   ;    uniform float iv = extract(__rcp_u(v), 0);
   ;    return iv * (2. - v * iv);
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %vecval = insertelement <4 x float> poison, float %0, i32 0
   %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
   %scall = extractelement <4 x float> %call, i32 0
 
@@ -112,7 +112,7 @@ define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
   ; do the rcpss call
   ;    uniform float iv = extract(__rcp_u(v), 0);
   ;    return iv;
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %vecval = insertelement <4 x float> poison, float %0, i32 0
   %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
   %scall = extractelement <4 x float> %call, i32 0
   ret float %scall
@@ -125,7 +125,7 @@ declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
 define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <4 x float> undef, float %0, i32 0
+  %v = insertelement <4 x float> poison, float %0, i32 0
   %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
   %is = extractelement <4 x float> %vis, i32 0
 
@@ -141,7 +141,7 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
 
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
   ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <4 x float> undef, float %0, i32 0
+  %v = insertelement <4 x float> poison, float %0, i32 0
   %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
   %is = extractelement <4 x float> %vis, i32 0
   ret float %is

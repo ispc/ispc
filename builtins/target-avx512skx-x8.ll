@@ -201,10 +201,10 @@ declare <4 x i64> @llvm.x86.avx512.mask.pmins.q.256(<4 x i64>, <4 x i64>, <4 x i
 declare <4 x i64> @llvm.x86.avx512.mask.pminu.q.256(<4 x i64>, <4 x i64>, <4 x i64>, i8)
 
 define <8 x i64> @__max_varying_int64(<8 x i64>, <8 x i64>) nounwind readonly alwaysinline {
-  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %r0 = call <4 x i64> @llvm.x86.avx512.mask.pmaxs.q.256(<4 x i64> %v0_lo, <4 x i64> %v1_lo, <4 x i64>zeroinitializer, i8 -1)
   %r1 = call <4 x i64> @llvm.x86.avx512.mask.pmaxs.q.256(<4 x i64> %v0_hi, <4 x i64> %v1_hi, <4 x i64>zeroinitializer, i8 -1)
   %res = shufflevector <4 x i64> %r0, <4 x i64> %r1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -212,10 +212,10 @@ define <8 x i64> @__max_varying_int64(<8 x i64>, <8 x i64>) nounwind readonly al
 }
 
 define <8 x i64> @__max_varying_uint64(<8 x i64>, <8 x i64>) nounwind readonly alwaysinline {
-  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   %r0 = call <4 x i64> @llvm.x86.avx512.mask.pmaxu.q.256(<4 x i64> %v0_lo, <4 x i64> %v1_lo, <4 x i64>zeroinitializer, i8 -1)
   %r1 = call <4 x i64> @llvm.x86.avx512.mask.pmaxu.q.256(<4 x i64> %v0_hi, <4 x i64> %v1_hi, <4 x i64>zeroinitializer, i8 -1)
@@ -224,10 +224,10 @@ define <8 x i64> @__max_varying_uint64(<8 x i64>, <8 x i64>) nounwind readonly a
 }
 
 define <8 x i64> @__min_varying_int64(<8 x i64>, <8 x i64>) nounwind readonly alwaysinline {
-  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   %r0 = call <4 x i64> @llvm.x86.avx512.mask.pmins.q.256(<4 x i64> %v0_lo, <4 x i64> %v1_lo, <4 x i64>zeroinitializer, i8 -1)
   %r1 = call <4 x i64> @llvm.x86.avx512.mask.pmins.q.256(<4 x i64> %v0_hi, <4 x i64> %v1_hi, <4 x i64>zeroinitializer, i8 -1)
@@ -236,10 +236,10 @@ define <8 x i64> @__min_varying_int64(<8 x i64>, <8 x i64>) nounwind readonly al
 }
 
 define <8 x i64> @__min_varying_uint64(<8 x i64>, <8 x i64>) nounwind readonly alwaysinline {
-  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v0_lo = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0_hi = shufflevector <8 x i64> %0, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1_lo = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1_hi = shufflevector <8 x i64> %1, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   %r0 = call <4 x i64> @llvm.x86.avx512.mask.pminu.q.256(<4 x i64> %v0_lo, <4 x i64> %v1_lo, <4 x i64>zeroinitializer, i8 -1)
   %r1 = call <4 x i64> @llvm.x86.avx512.mask.pminu.q.256(<4 x i64> %v0_hi, <4 x i64> %v1_hi, <4 x i64>zeroinitializer, i8 -1)
@@ -305,15 +305,15 @@ declare <4 x double> @llvm.x86.avx512.mask.max.pd.256(<4 x double>, <4 x double>
                     <4 x double>, i8)
 
 define <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
-  %a_0 = shufflevector <8 x double> %0, <8 x double> undef,
+  %a_0 = shufflevector <8 x double> %0, <8 x double> poison,
                        <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %a_1 = shufflevector <8 x double> %1, <8 x double> undef,
+  %a_1 = shufflevector <8 x double> %1, <8 x double> poison,
                        <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res_a = call <4 x double> @llvm.x86.avx512.mask.min.pd.256(<4 x double> %a_0, <4 x double> %a_1,
                 <4 x double> zeroinitializer, i8 -1)
-  %b_0 = shufflevector <8 x double> %0, <8 x double> undef,
+  %b_0 = shufflevector <8 x double> %0, <8 x double> poison,
                        <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %b_1 = shufflevector <8 x double> %1, <8 x double> undef,
+  %b_1 = shufflevector <8 x double> %1, <8 x double> poison,
                        <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %res_b = call <4 x double> @llvm.x86.avx512.mask.min.pd.256(<4 x double> %b_0, <4 x double> %b_1,
                 <4 x double> zeroinitializer, i8 -1)
@@ -323,15 +323,15 @@ define <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind r
 }
 
 define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
-  %a_0 = shufflevector <8 x double> %0, <8 x double> undef,
+  %a_0 = shufflevector <8 x double> %0, <8 x double> poison,
                        <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %a_1 = shufflevector <8 x double> %1, <8 x double> undef,
+  %a_1 = shufflevector <8 x double> %1, <8 x double> poison,
                        <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res_a = call <4 x double> @llvm.x86.avx512.mask.max.pd.256(<4 x double> %a_0, <4 x double> %a_1,
                 <4 x double> zeroinitializer, i8 -1)
-  %b_0 = shufflevector <8 x double> %0, <8 x double> undef,
+  %b_0 = shufflevector <8 x double> %0, <8 x double> poison,
                        <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %b_1 = shufflevector <8 x double> %1, <8 x double> undef,
+  %b_1 = shufflevector <8 x double> %1, <8 x double> poison,
                        <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %res_b = call <4 x double> @llvm.x86.avx512.mask.max.pd.256(<4 x double> %b_0, <4 x double> %b_1,
                 <4 x double> zeroinitializer, i8 -1)
@@ -363,9 +363,9 @@ define double @__sqrt_uniform_double(double) nounwind alwaysinline {
 declare <4 x double> @llvm.x86.avx512.mask.sqrt.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
 
 define <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
-  %v0 = shufflevector <8 x double> %0, <8 x double> undef,
+  %v0 = shufflevector <8 x double> %0, <8 x double> poison,
                       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1 = shufflevector <8 x double> %0, <8 x double> undef,
+  %v1 = shufflevector <8 x double> %0, <8 x double> poison,
                       <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %r0 = call <4 x double> @llvm.x86.avx512.mask.sqrt.pd.256(<4 x double> %v0,  <4 x double> zeroinitializer, i8 -1)
   %r1 = call <4 x double> @llvm.x86.avx512.mask.sqrt.pd.256(<4 x double> %v1,  <4 x double> zeroinitializer, i8 -1)
@@ -503,9 +503,9 @@ define i32 @__reduce_max_uint32(<8 x i32>) nounwind readnone alwaysinline {
 declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
 define double @__reduce_add_double(<8 x double>) nounwind readonly alwaysinline {
-  %va = shufflevector <8 x double> %0, <8 x double> undef,
+  %va = shufflevector <8 x double> %0, <8 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vb = shufflevector <8 x double> %0, <8 x double> undef,
+  %vb = shufflevector <8 x double> %0, <8 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %vab = fadd <4 x double> %va, %vb
   %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %vab, <4 x double> %vab)
@@ -650,9 +650,9 @@ define void @__masked_store_i64(<8 x i64>* nocapture, <8 x i64> %v, <WIDTH x MAS
   %ptr_lo = getelementptr PTR_OP_ARGS(`<8 x i64>') %0, i32 0, i32 4
   %ptr_lo_i8 = bitcast i64* %ptr_lo to i8*
 
-  %v_lo = shufflevector <8 x i64> %v, <8 x i64> undef,
+  %v_lo = shufflevector <8 x i64> %v, <8 x i64> poison,
                         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v_hi = shufflevector <8 x i64> %v, <8 x i64> undef,
+  %v_hi = shufflevector <8 x i64> %v, <8 x i64> poison,
                         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   call void @llvm.x86.avx512.mask.storeu.q.256(i8* %ptr_i8, <4 x i64> %v_lo, i8 %mask_i8)
@@ -678,9 +678,9 @@ define void @__masked_store_double(<8 x double>* nocapture, <8 x double> %v, <WI
   %ptr_lo = getelementptr PTR_OP_ARGS(`<8 x double>') %0, i32 0, i32 4
   %ptr_lo_i8 = bitcast double* %ptr_lo to i8*
 
-  %v_lo = shufflevector <8 x double> %v, <8 x double> undef,
+  %v_lo = shufflevector <8 x double> %v, <8 x double> poison,
                         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v_hi = shufflevector <8 x double> %v, <8 x double> undef,
+  %v_hi = shufflevector <8 x double> %v, <8 x double> poison,
                         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   call void @llvm.x86.avx512.mask.storeu.pd.256(i8* %ptr_i8, <4 x double> %v_lo, i8 %mask_i8)
@@ -725,10 +725,10 @@ define <8 x i32>
 declare <4 x i32> @llvm.x86.avx512.mask.gather3div8.si(<4 x i32>, i8*, <4 x i64>, <4 x i1>, i32)
 define <8 x i32>
 @__gather_base_offsets64_i32(i8 * %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x i1> %vecmask) nounwind readonly alwaysinline {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_gather(res1, llvm.x86.avx512.mask.gather3div8.si, 4, i32, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale)
   convert_scale_to_const_gather(res2, llvm.x86.avx512.mask.gather3div8.si, 4, i32, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale)
   %res = shufflevector <4 x i32> %res1, <4 x i32> %res2 , <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -751,10 +751,10 @@ define <8 x i32>
 declare <4 x i64> @llvm.x86.avx512.mask.gather3siv4.di(<4 x i64>, i8*, <4 x i32>, <4 x i1>, i32)
 define <8 x i64>
 @__gather_base_offsets32_i64(i8 * %ptr, i32 %offset_scale, <8 x i32> %offsets, <8 x i1> %vecmask) nounwind readonly alwaysinline {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_gather(res1, llvm.x86.avx512.mask.gather3siv4.di, 4, i64, ptr, offsets_lo, i32, vecmask_lo, <4 x i1>, offset_scale)
   convert_scale_to_const_gather(res2, llvm.x86.avx512.mask.gather3siv4.di, 4, i64, ptr, offsets_hi, i32, vecmask_hi, <4 x i1>, offset_scale)
   %res = shufflevector <4 x i64> %res1, <4 x i64> %res2 , <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -764,10 +764,10 @@ define <8 x i64>
 declare <4 x i64> @llvm.x86.avx512.mask.gather3div4.di(<4 x i64>, i8*, <4 x i64>, <4 x i1>, i32)
 define <8 x i64>
 @__gather_base_offsets64_i64(i8 * %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x i1> %vecmask) nounwind readonly alwaysinline {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_gather(res1, llvm.x86.avx512.mask.gather3div4.di, 4, i64, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale)
   convert_scale_to_const_gather(res2, llvm.x86.avx512.mask.gather3div4.di, 4, i64, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale)
   %res = shufflevector <4 x i64> %res1, <4 x i64> %res2 , <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -797,10 +797,10 @@ define <8 x float>
 declare <4 x float> @llvm.x86.avx512.mask.gather3div8.sf(<4 x float>, i8*, <4 x i64>, <4 x i1>, i32)
 define <8 x float>
 @__gather_base_offsets64_float(i8 * %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x i1> %vecmask) nounwind readonly alwaysinline {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_gather(res_lo, llvm.x86.avx512.mask.gather3div8.sf, 4, float, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale)
   convert_scale_to_const_gather(res_hi, llvm.x86.avx512.mask.gather3div8.sf, 4, float, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale)
   %res = shufflevector <4 x float> %res_lo, <4 x float> %res_hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -823,10 +823,10 @@ define <8 x float>
 declare <4 x double> @llvm.x86.avx512.mask.gather3siv4.df(<4 x double>, i8*, <4 x i32>, <4 x i1>, i32)
 define <8 x double>
 @__gather_base_offsets32_double(i8 * %ptr, i32 %offset_scale, <8 x i32> %offsets, <8 x i1> %vecmask) nounwind readonly alwaysinline {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_gather(res1, llvm.x86.avx512.mask.gather3siv4.df, 4, double, ptr, offsets_lo, i32, vecmask_lo, <4 x i1>, offset_scale)
   convert_scale_to_const_gather(res2, llvm.x86.avx512.mask.gather3siv4.df, 4, double, ptr, offsets_hi, i32, vecmask_hi, <4 x i1>, offset_scale)
   %res = shufflevector <4 x double> %res1, <4 x double> %res2 , <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -836,10 +836,10 @@ define <8 x double>
 declare <4 x double> @llvm.x86.avx512.mask.gather3div4.df(<4 x double>, i8*, <4 x i64>, <4 x i1>, i32)
 define <8 x double>
 @__gather_base_offsets64_double(i8 * %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x i1> %vecmask) nounwind readonly alwaysinline {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_gather(res1, llvm.x86.avx512.mask.gather3div4.df, 4, double, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale)
   convert_scale_to_const_gather(res2, llvm.x86.avx512.mask.gather3div4.df, 4, double, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale)
   %res = shufflevector <4 x double> %res1, <4 x double> %res2 , <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -907,12 +907,12 @@ define void
 declare void @llvm.x86.avx512.mask.scatterdiv8.si(i8*, <4 x i1>, <4 x i64>, <4 x i32>, i32)
 define void
 @__scatter_base_offsets64_i32(i8* %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x i32> %vals, <8 x i1> %vecmask) nounwind {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = shufflevector <8 x i32> %vals, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res_hi = shufflevector <8 x i32> %vals, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = shufflevector <8 x i32> %vals, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res_hi = shufflevector <8 x i32> %vals, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv8.si, 4, res_lo, i32, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale);
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv8.si, 4, res_hi, i32, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale);
   ret void
@@ -934,12 +934,12 @@ define void
 declare void @llvm.x86.avx512.mask.scattersiv4.di(i8*, <4 x i1>, <4 x i32>, <4 x i64>, i32)
 define void
 @__scatter_base_offsets32_i64(i8* %ptr, i32 %offset_scale, <8 x i32> %offsets, <8 x i64> %vals, <8 x i1> %vecmask) nounwind {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res_hi = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = shufflevector <8 x i64> %vals, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res_hi = shufflevector <8 x i64> %vals, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scattersiv4.di, 4, res_lo, i64, ptr, offsets_lo, i32, vecmask_lo, <4 x i1>, offset_scale);
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scattersiv4.di, 4, res_hi, i64, ptr, offsets_hi, i32, vecmask_hi, <4 x i1>, offset_scale);
   ret void
@@ -948,12 +948,12 @@ define void
 declare void @llvm.x86.avx512.mask.scatterdiv4.di(i8*, <4 x i1>, <4 x i64>, <4 x i64>, i32)
 define void
 @__scatter_base_offsets64_i64(i8* %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x i64> %vals, <8 x i1> %vecmask) nounwind {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res_hi = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = shufflevector <8 x i64> %vals, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res_hi = shufflevector <8 x i64> %vals, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv4.di, 4, res_lo, i64, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale);
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv4.di, 4, res_hi, i64, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale);
   ret void
@@ -982,12 +982,12 @@ define void
 declare void @llvm.x86.avx512.mask.scatterdiv8.sf(i8*, <4 x i1>, <4 x i64>, <4 x float>, i32)
 define void
 @__scatter_base_offsets64_float(i8* %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x float> %vals, <8 x i1> %vecmask) nounwind {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = shufflevector <8 x float> %vals, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res_hi = shufflevector <8 x float> %vals, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = shufflevector <8 x float> %vals, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res_hi = shufflevector <8 x float> %vals, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv8.sf, 4, res_lo, float, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale);
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv8.sf, 4, res_hi, float, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale);
   ret void
@@ -1009,12 +1009,12 @@ define void
 declare void @llvm.x86.avx512.mask.scattersiv4.df(i8*, <4 x i1>, <4 x i32>, <4 x double>, i32)
 define void
 @__scatter_base_offsets32_double(i8* %ptr, i32 %offset_scale, <8 x i32> %offsets, <8 x double> %vals, <8 x i1> %vecmask) nounwind {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = shufflevector <8 x double> %vals, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res_hi = shufflevector <8 x double> %vals, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i32> %offsets, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = shufflevector <8 x double> %vals, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res_hi = shufflevector <8 x double> %vals, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scattersiv4.df, 4, res_lo, double, ptr, offsets_lo, i32, vecmask_lo, <4 x i1>, offset_scale);
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scattersiv4.df, 4, res_hi, double, ptr, offsets_hi, i32, vecmask_hi, <4 x i1>, offset_scale);
   ret void
@@ -1023,12 +1023,12 @@ define void
 declare void @llvm.x86.avx512.mask.scatterdiv4.df(i8*, <4 x i1>, <4 x i64>, <4 x double>, i32)
 define void
 @__scatter_base_offsets64_double(i8* %ptr, i32 %offset_scale, <8 x i64> %offsets, <8 x double> %vals, <8 x i1> %vecmask) nounwind {
-  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = shufflevector <8 x double> %vals, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res_hi = shufflevector <8 x double> %vals, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vecmask_lo = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vecmask_hi = shufflevector <8 x i1> %vecmask, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %offsets_lo = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %offsets_hi = shufflevector <8 x i64> %offsets, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = shufflevector <8 x double> %vals, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res_hi = shufflevector <8 x double> %vals, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv4.df, 4, res_lo, double, ptr, offsets_lo, i64, vecmask_lo, <4 x i1>, offset_scale);
   convert_scale_to_const_scatter(llvm.x86.avx512.mask.scatterdiv4.df, 4, res_hi, double, ptr, offsets_hi, i64, vecmask_hi, <4 x i1>, offset_scale);
   ret void
@@ -1072,7 +1072,7 @@ rcp14_uniform()
 ;; rcp float
 declare <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
 define <8 x float> @__rcp_fast_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  %ret = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %0, <8 x float> undef, i8 -1)
+  %ret = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %0, <8 x float> poison, i8 -1)
   ret <8 x float> %ret
 }
 define <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinline {
@@ -1090,10 +1090,10 @@ define <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinl
 ;; rcp double
 declare <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
 define <8 x double> @__rcp_fast_varying_double(<8 x double> %val) nounwind readonly alwaysinline {
-  %val_lo = shufflevector <8 x double> %val, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %val_hi = shufflevector <8 x double> %val, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_lo, <4 x double> undef, i8 -1)
-  %res_hi = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_hi, <4 x double> undef, i8 -1)
+  %val_lo = shufflevector <8 x double> %val, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %val_hi = shufflevector <8 x double> %val, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_lo, <4 x double> poison, i8 -1)
+  %res_hi = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val_hi, <4 x double> poison, i8 -1)
   %res = shufflevector <4 x double> %res_lo, <4 x double> %res_hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x double> %res
 }
@@ -1113,7 +1113,7 @@ rsqrt14_uniform()
 ;; rsqrt float
 declare <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float>,  <8 x float>,  i8) nounwind readnone
 define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
-  %is = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> undef,  i8 -1)
+  %is = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> poison,  i8 -1)
   ; Newton-Raphson iteration to improve precision
   ;  float is = __rsqrt_v(v);
   ;  return 0.5 * is * (3. - (v * is) * is);
@@ -1127,25 +1127,25 @@ define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwa
   ret <8 x float> %half_scale
 }
 define <8 x float> @__rsqrt_fast_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
-  %ret = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> undef,  i8 -1)
+  %ret = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> poison,  i8 -1)
   ret <8 x float> %ret
 }
 
 ;; rsqrt double
 declare <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double>,  <4 x double>,  i8) nounwind readnone
 define <8 x double> @__rsqrt_fast_varying_double(<8 x double> %val) nounwind readonly alwaysinline {
-  %val_lo = shufflevector <8 x double> %val, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %val_hi = shufflevector <8 x double> %val, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %res_lo = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_lo, <4 x double> undef, i8 -1)
-  %res_hi = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_hi, <4 x double> undef, i8 -1)
+  %val_lo = shufflevector <8 x double> %val, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %val_hi = shufflevector <8 x double> %val, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res_lo = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_lo, <4 x double> poison, i8 -1)
+  %res_hi = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val_hi, <4 x double> poison, i8 -1)
   %res = shufflevector <4 x double> %res_lo, <4 x double> %res_hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x double> %res
 }
 declare <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double>, i32)
 define <8 x double> @__rsqrt_varying_double(<8 x double> %v) nounwind readonly alwaysinline {
   ; detect +/-0 and +inf to deal with them differently.
-  %val_lo = shufflevector <8 x double> %v, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %val_hi = shufflevector <8 x double> %v, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %val_lo = shufflevector <8 x double> %v, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %val_hi = shufflevector <8 x double> %v, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %corner_cases_lo = call <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double> %val_lo, i32 14)
   %corner_cases_hi = call <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double> %val_hi, i32 14)
   %corner_cases = shufflevector <4 x i1> %corner_cases_lo, <4 x i1> %corner_cases_hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

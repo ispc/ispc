@@ -258,9 +258,9 @@ define float @__reduce_max_float(<4 x float>) nounwind readnone alwaysinline {
 ;; horizontal double ops
 
 define double @__reduce_add_double(<4 x double>) nounwind readnone alwaysinline {
-  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+  %v0 = shufflevector <4 x double> %0, <4 x double> poison,
                       <2 x i32> <i32 0, i32 1>
-  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+  %v1 = shufflevector <4 x double> %0, <4 x double> poison,
                       <2 x i32> <i32 2, i32 3>
   %sum = fadd <2 x double> %v0, %v1
   %e0 = extractelement <2 x double> %sum, i32 0
@@ -318,8 +318,8 @@ define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
 
 ;; reduction functions
 define i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone alwaysinline {
-  %v1 = shufflevector <4 x i32> %v, <4 x i32> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %v1 = shufflevector <4 x i32> %v, <4 x i32> poison,
+                      <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %m1 = add <4 x i32> %v1, %v
   %m1a = extractelement <4 x i32> %m1, i32 0
   %m1b = extractelement <4 x i32> %m1, i32 1
@@ -348,9 +348,9 @@ define i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone alwaysinline {
 
 ;; reduction functions
 define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
-  %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
+  %v0 = shufflevector <4 x i64> %0, <4 x i64> poison,
                       <2 x i32> <i32 0, i32 1>
-  %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
+  %v1 = shufflevector <4 x i64> %0, <4 x i64> poison,
                       <2 x i32> <i32 2, i32 3>
   %sum = add <2 x i64> %v0, %v1
   %e0 = extractelement <2 x i64> %sum, i32 0
@@ -432,14 +432,14 @@ define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
   ; are actually bitcast <2 x i64> values
   ;
   ; set up the first two 64-bit values
-  %old01  = shufflevector <4 x i64> %oldValue, <4 x i64> undef,
+  %old01  = shufflevector <4 x i64> %oldValue, <4 x i64> poison,
                           <2 x i32> <i32 0, i32 1>
   %old01f = bitcast <2 x i64> %old01 to <4 x float>
-  %new01  = shufflevector <4 x i64> %new, <4 x i64> undef,
+  %new01  = shufflevector <4 x i64> %new, <4 x i64> poison,
                           <2 x i32> <i32 0, i32 1>
   %new01f = bitcast <2 x i64> %new01 to <4 x float>
   ; compute mask--note that the indices 0 and 1 are doubled-up
-  %mask01 = shufflevector <4 x float> %mask, <4 x float> undef,
+  %mask01 = shufflevector <4 x float> %mask, <4 x float> poison,
                           <4 x i32> <i32 0, i32 0, i32 1, i32 1>
   ; and blend the two of the values
   %result01f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old01f,
@@ -448,14 +448,14 @@ define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
   %result01 = bitcast <4 x float> %result01f to <2 x i64>
 
   ; and again
-  %old23  = shufflevector <4 x i64> %oldValue, <4 x i64> undef,
+  %old23  = shufflevector <4 x i64> %oldValue, <4 x i64> poison,
                           <2 x i32> <i32 2, i32 3>
   %old23f = bitcast <2 x i64> %old23 to <4 x float>
-  %new23  = shufflevector <4 x i64> %new, <4 x i64> undef,
+  %new23  = shufflevector <4 x i64> %new, <4 x i64> poison,
                           <2 x i32> <i32 2, i32 3>
   %new23f = bitcast <2 x i64> %new23 to <4 x float>
   ; compute mask--note that the values 2 and 3 are doubled-up
-  %mask23 = shufflevector <4 x float> %mask, <4 x float> undef,
+  %mask23 = shufflevector <4 x float> %mask, <4 x float> poison,
                           <4 x i32> <i32 2, i32 2, i32 3, i32 3>
   ; and blend the two of the values
   %result23f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old23f,

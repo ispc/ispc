@@ -63,10 +63,10 @@ declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>) nounwind readnone
 declare <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float>, i32) nounwind readnone
 
 define <16 x float> @__half_to_float_varying(<16 x i16> %v) nounwind readnone {
-  %r_0 = shufflevector <16 x i16> %v, <16 x i16> undef,
+  %r_0 = shufflevector <16 x i16> %v, <16 x i16> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %vr_0 = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %r_0)
-  %r_1 = shufflevector <16 x i16> %v, <16 x i16> undef,
+  %r_1 = shufflevector <16 x i16> %v, <16 x i16> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %vr_1 = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %r_1)
   %r = shufflevector <8 x float> %vr_0, <8 x float> %vr_1, 
@@ -76,10 +76,10 @@ define <16 x float> @__half_to_float_varying(<16 x i16> %v) nounwind readnone {
 }
 
 define <16 x i16> @__float_to_half_varying(<16 x float> %v) nounwind readnone {
-  %r_0 = shufflevector <16 x float> %v, <16 x float> undef,
+  %r_0 = shufflevector <16 x float> %v, <16 x float> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %vr_0 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %r_0, i32 0)
-  %r_1 = shufflevector <16 x float> %v, <16 x float> undef,
+  %r_1 = shufflevector <16 x float> %v, <16 x float> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %vr_1 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %r_1, i32 0)
   %r = shufflevector <8 x i16> %vr_0, <8 x i16> %vr_1, 
@@ -90,9 +90,9 @@ define <16 x i16> @__float_to_half_varying(<16 x float> %v) nounwind readnone {
 
 define float @__half_to_float_uniform(i16 %v) nounwind readnone {
   %v1 = bitcast i16 %v to <1 x i16>
-  %vv = shufflevector <1 x i16> %v1, <1 x i16> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x i16> %v1, <1 x i16> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   %rv = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %vv)
   %r = extractelement <8 x float> %rv, i32 0
   ret float %r
@@ -100,9 +100,9 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone {
 
 define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %v1 = bitcast float %v to <1 x float>
-  %vv = shufflevector <1 x float> %v1, <1 x float> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x float> %v1, <1 x float> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   ; round to nearest even
   %rv = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %vv, i32 0)
   %r = extractelement <8 x i16> %rv, i32 0
@@ -118,18 +118,18 @@ declare void @llvm.trap() noreturn nounwind
 ; $1: type
 ; $2: var base name
 define(`extract_4s', `
-  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %$2_3 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %$2_4 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %$2_3 = shufflevector <16 x $1> %$2, <16 x $1> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %$2_4 = shufflevector <16 x $1> %$2, <16 x $1> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ')
 
 ; $1: type
 ; $2: var base name
 define(`extract_8s', `
-  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> undef,
+  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> poison,
                     <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> undef,
+  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> poison,
                     <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ')
 
@@ -213,9 +213,9 @@ define <16 x i32> @__gather32_i32(<16 x i32> %ptrs,
   extract_8s(i32, ptrs)
   extract_8s(i32, vecmask)
 
-  %v1 = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> undef, i8 * null,
+  %v1 = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> poison, i8 * null,
                        <8 x i32> %ptrs_1, <8 x i32> %vecmask_1, i8 1)
-  %v2 = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> undef, i8 * null,
+  %v2 = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> poison, i8 * null,
                        <8 x i32> %ptrs_2, <8 x i32> %vecmask_2, i8 1)
 
   assemble_8s(i32, v, v1, v2)
@@ -229,13 +229,13 @@ define <16 x i32> @__gather64_i32(<16 x i64> %ptrs,
   extract_4s(i64, ptrs)
   extract_4s(i32, vecmask)
 
-  %v1 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> undef, i8 * null,
+  %v1 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> poison, i8 * null,
                       <4 x i64> %ptrs_1, <4 x i32> %vecmask_1, i8 1)
-  %v2 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> undef, i8 * null,
+  %v2 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> poison, i8 * null,
                       <4 x i64> %ptrs_2, <4 x i32> %vecmask_2, i8 1)
-  %v3 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> undef, i8 * null,
+  %v3 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> poison, i8 * null,
                       <4 x i64> %ptrs_3, <4 x i32> %vecmask_3, i8 1)
-  %v4 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> undef, i8 * null,
+  %v4 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> poison, i8 * null,
                       <4 x i64> %ptrs_4, <4 x i32> %vecmask_4, i8 1)
 
   assemble_4s(i32, v, v1, v2, v3, v4)
@@ -292,9 +292,9 @@ define <16 x float> @__gather32_float(<16 x i32> %ptrs,
   extract_8s(float, mask)
   extract_8s(i32, ptrs)
 
-  %v1 = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, i8 * null,
+  %v1 = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> poison, i8 * null,
                      <8 x i32> %ptrs_1, <8 x float> %mask_1, i8 1)
-  %v2 = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, i8 * null,
+  %v2 = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> poison, i8 * null,
                      <8 x i32> %ptrs_2, <8 x float> %mask_2, i8 1)
 
   assemble_8s(float, v, v1, v2)
@@ -309,13 +309,13 @@ define <16 x float> @__gather64_float(<16 x i64> %ptrs,
   extract_4s(i64, ptrs)
   extract_4s(float, mask)
 
-  %v1 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, i8 * null,
+  %v1 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> poison, i8 * null,
                       <4 x i64> %ptrs_1, <4 x float> %mask_1, i8 1)
-  %v2 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, i8 * null,
+  %v2 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> poison, i8 * null,
                       <4 x i64> %ptrs_2, <4 x float> %mask_2, i8 1)
-  %v3 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, i8 * null,
+  %v3 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> poison, i8 * null,
                       <4 x i64> %ptrs_3, <4 x float> %mask_3, i8 1)
-  %v4 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, i8 * null,
+  %v4 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> poison, i8 * null,
                       <4 x i64> %ptrs_4, <4 x float> %mask_4, i8 1)
 
   assemble_4s(float, v, v1, v2, v3, v4)
@@ -373,13 +373,13 @@ define <16 x i64> @__gather32_i64(<16 x i32> %ptrs,
   extract_4s(i32, ptrs)
   extract_4s(i64, vecmask)
 
-  %v1 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> undef, i8 * null,
+  %v1 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> poison, i8 * null,
                       <4 x i32> %ptrs_1, <4 x i64> %vecmask_1, i8 1)
-  %v2 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> undef, i8 * null,
+  %v2 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> poison, i8 * null,
                       <4 x i32> %ptrs_2, <4 x i64> %vecmask_2, i8 1)
-  %v3 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> undef, i8 * null,
+  %v3 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> poison, i8 * null,
                       <4 x i32> %ptrs_3, <4 x i64> %vecmask_3, i8 1)
-  %v4 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> undef, i8 * null,
+  %v4 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> poison, i8 * null,
                       <4 x i32> %ptrs_4, <4 x i64> %vecmask_4, i8 1)
 
   assemble_4s(i64, v, v1, v2, v3, v4)
@@ -393,13 +393,13 @@ define <16 x i64> @__gather64_i64(<16 x i64> %ptrs,
   extract_4s(i64, ptrs)
   extract_4s(i64, vecmask)
 
-  %v1 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> undef, i8 * null,
+  %v1 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> poison, i8 * null,
                       <4 x i64> %ptrs_1, <4 x i64> %vecmask_1, i8 1)
-  %v2 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> undef, i8 * null,
+  %v2 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> poison, i8 * null,
                       <4 x i64> %ptrs_2, <4 x i64> %vecmask_2, i8 1)
-  %v3 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> undef, i8 * null,
+  %v3 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> poison, i8 * null,
                       <4 x i64> %ptrs_3, <4 x i64> %vecmask_3, i8 1)
-  %v4 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> undef, i8 * null,
+  %v4 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> poison, i8 * null,
                       <4 x i64> %ptrs_4, <4 x i64> %vecmask_4, i8 1)
 
   assemble_4s(i64, v, v1, v2, v3, v4)
@@ -461,13 +461,13 @@ define <16 x double> @__gather32_double(<16 x i32> %ptrs,
   extract_4s(i32, ptrs)
   extract_4s(double, vecmask)
 
-  %v1 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8 * null,
+  %v1 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> poison, i8 * null,
                       <4 x i32> %ptrs_1, <4 x double> %vecmask_1, i8 1)
-  %v2 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8 * null,
+  %v2 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> poison, i8 * null,
                       <4 x i32> %ptrs_2, <4 x double> %vecmask_2, i8 1)
-  %v3 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8 * null,
+  %v3 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> poison, i8 * null,
                       <4 x i32> %ptrs_3, <4 x double> %vecmask_3, i8 1)
-  %v4 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8 * null,
+  %v4 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> poison, i8 * null,
                       <4 x i32> %ptrs_4, <4 x double> %vecmask_4, i8 1)
 
   assemble_4s(double, v, v1, v2, v3, v4)
@@ -483,13 +483,13 @@ define <16 x double> @__gather64_double(<16 x i64> %ptrs,
   extract_4s(i64, ptrs)
   extract_4s(double, vecmask)
 
-  %v1 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8 * null,
+  %v1 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> poison, i8 * null,
                       <4 x i64> %ptrs_1, <4 x double> %vecmask_1, i8 1)
-  %v2 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8 * null,
+  %v2 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> poison, i8 * null,
                       <4 x i64> %ptrs_2, <4 x double> %vecmask_2, i8 1)
-  %v3 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8 * null,
+  %v3 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> poison, i8 * null,
                       <4 x i64> %ptrs_3, <4 x double> %vecmask_3, i8 1)
-  %v4 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8 * null,
+  %v4 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> poison, i8 * null,
                       <4 x i64> %ptrs_4, <4 x double> %vecmask_4, i8 1)
 
   assemble_4s(double, v, v1, v2, v3, v4)
