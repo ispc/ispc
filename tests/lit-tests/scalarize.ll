@@ -2,11 +2,11 @@
 
 ; CHECK-LABEL: @add
 ; CHECK-NEXT:  %1 = add i32 %a, 1
-; CHECK-NEXT:  %2 = insertelement <4 x i32> undef, i32 %1, i64 0
-; CHECK-NEXT:  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  %2 = insertelement <4 x i32> poison, i32 %1, i64 0
+; CHECK-NEXT:  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  ret <4 x i32> %3
 define <4 x i32> @add(i32 %a) {
-  %op1 = insertelement <4 x i32> undef, i32 %a, i32 0
+  %op1 = insertelement <4 x i32> poison, i32 %a, i32 0
   %sum = add <4 x i32> %op1, <i32 1, i32 poison, i32 poison, i32 poison>
   %shuffled = shufflevector <4 x i32> %sum, <4 x i32> poison, <4 x i32> zeroinitializer
   ret <4 x i32> %shuffled
@@ -14,11 +14,11 @@ define <4 x i32> @add(i32 %a) {
 
 ; CHECK-LABEL: @sub
 ; CHECK-NEXT:  %1 = sub i32 1, %a
-; CHECK-NEXT:  %2 = insertelement <4 x i32> undef, i32 %1, i64 0
-; CHECK-NEXT:  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  %2 = insertelement <4 x i32> poison, i32 %1, i64 0
+; CHECK-NEXT:  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  ret <4 x i32> %3
 define <4 x i32> @sub(i32 %a) {
-  %op1 = insertelement <4 x i32> undef, i32 %a, i32 0
+  %op1 = insertelement <4 x i32> poison, i32 %a, i32 0
   %binop = sub <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>, %op1
   %shuffled = shufflevector <4 x i32> %binop, <4 x i32> poison, <4 x i32> zeroinitializer
   ret <4 x i32> %shuffled
@@ -26,8 +26,8 @@ define <4 x i32> @sub(i32 %a) {
 
 ; CHECK-LABEL: @undef
 ; CHECK-NEXT:  %1 = add i32 %a, 1
-; CHECK-NEXT:  %2 = insertelement <4 x i32> undef, i32 %1, i64 0
-; CHECK-NEXT:  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  %2 = insertelement <4 x i32> poison, i32 %1, i64 0
+; CHECK-NEXT:  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  ret <4 x i32> %3
 define <4 x i32> @undef(i32 %a) {
   %op1 = insertelement <4 x i32> undef, i32 %a, i32 0
@@ -38,8 +38,8 @@ define <4 x i32> @undef(i32 %a) {
 
 ; CHECK-LABEL: @fmul
 ; CHECK-NEXT:   %1 = fmul float 1.000000e+00, %a
-; CHECK-NEXT:   %2 = insertelement <4 x float> undef, float %1, i64 0
-; CHECK-NEXT:   %3 = shufflevector <4 x float> %2, <4 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:   %2 = insertelement <4 x float> poison, float %1, i64 0
+; CHECK-NEXT:   %3 = shufflevector <4 x float> %2, <4 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:   ret <2 x float> %3
 define <2 x float> @fmul(float %a, float %b) {
   %op1 = insertelement <4 x float> undef, float %a, i32 0
