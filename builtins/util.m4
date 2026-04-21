@@ -95,117 +95,117 @@ define(`reduce_func',
 
 
 define(`convert1to8', `
-  $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
-  <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-             i32 undef, i32 undef, i32 undef, i32 undef>
+  $3 = shufflevector <1 x $1> $2, <1 x $1> poison,
+  <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+             i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 
 define(`convert1to16', `
-  $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
-  <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef>
+  $3 = shufflevector <1 x $1> $2, <1 x $1> poison,
+  <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert4to8', `
-  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  $3 = shufflevector <4 x $1> $2, <4 x $1> poison,
   <8 x i32> <i32 0, i32 1, i32 2, i32 3,
-             i32 undef, i32 undef, i32 undef, i32 undef>
+             i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert4to16', `
-  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  $3 = shufflevector <4 x $1> $2, <4 x $1> poison,
   <16 x i32> <i32 0, i32 1, i32 2, i32 3,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef>
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert8to16', `
-  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+  $3 = shufflevector <8 x $1> $2, <8 x $1> poison,
   <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef>
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert4to32', `
-  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  $3 = shufflevector <4 x $1> $2, <4 x $1> poison,
   <32 x i32> <i32 0, i32 1, i32 2, i32 3,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef>
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert8to32', `
-  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  $3 = shufflevector <4 x $1> $2, <4 x $1> poison,
   <32 x i32> <i32 0, i32 1, i32 2, i32 3,
               i32 4, i32 5, i32 6, i32 7,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef>
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert16to32', `
-  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  $3 = shufflevector <4 x $1> $2, <4 x $1> poison,
   <32 x i32> <i32  0, i32 1,  i32  2, i32  3,
               i32  4, i32 5,  i32  6, i32  7,
               i32  8, i32 9,  i32 10, i32 11,
               i32 12, i32 13, i32 14, i32 15
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef,
-              i32 undef, i32 undef, i32 undef, i32 undef>
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison,
+              i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert8to1', `
-  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+  $3 = shufflevector <8 x $1> $2, <8 x $1> poison,
     <1 x i32> <i32 0>
 ')
 
 
 define(`convert16to1', `
-  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+  $3 = shufflevector <16 x $1> $2, <16 x $1> poison,
     <1 x i32> <i32 0>
 ')
 
 define(`convert8to4', `
-  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+  $3 = shufflevector <8 x $1> $2, <8 x $1> poison,
     <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ')
 
 
 define(`convert16to4', `
-  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+  $3 = shufflevector <16 x $1> $2, <16 x $1> poison,
     <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ')
 
 define(`convert16to8', `
-  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+  $3 = shufflevector <16 x $1> $2, <16 x $1> poison,
   <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ')
 
 define(`convert32to4', `
-  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $3 = shufflevector <32 x $1> $2, <32 x $1> poison,
     <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ')
 
 define(`convert32to8', `
-  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $3 = shufflevector <32 x $1> $2, <32 x $1> poison,
     <8 x i32> <i32 0, i32 1, i32 2, i32 3,
                i32 4, i32 5, i32 6, i32 7>
 ')
 
 define(`convert32to16', `
-  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $3 = shufflevector <32 x $1> $2, <32 x $1> poison,
     <16 x i32> <i32  0, i32 1,  i32  2, i32  3,
                 i32  4, i32 5,  i32  6, i32  7,
                 i32  8, i32 9,  i32 10, i32 11,
@@ -213,7 +213,7 @@ define(`convert32to16', `
 ')
 
 define(`convert32to64', `
-  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $3 = shufflevector <32 x $1> $2, <32 x $1> poison,
     <64 x i32> <i32  0, i32 1,  i32  2, i32  3,
                 i32  4, i32 5,  i32  6, i32  7,
                 i32  8, i32 9,  i32 10, i32 11,
@@ -222,18 +222,18 @@ define(`convert32to64', `
                 i32 20, i32 21, i32 22, i32 23,
                 i32 24, i32 25, i32 26, i32 27,
                 i32 28, i32 29, i32 30, i32 31,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison>
 ')
 
 define(`convert64to32', `
-  $3 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $3 = shufflevector <64 x $1> $2, <64 x $1> poison,
     <32 x i32> <i32 0, i32 1, i32 2, i32 3,
                 i32  4, i32 5,  i32  6, i32  7,
                 i32  8, i32 9,  i32 10, i32 11,
@@ -585,29 +585,29 @@ define <16 x i16> @__psubus_vi16(<16 x i16> %a0, <16 x i16> %a1) {
 ;; $4: second 4-wide vector
 
 define(`v8tov4', `
-  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+  $3 = shufflevector <8 x $1> $2, <8 x $1> poison,
     <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  $4 = shufflevector <8 x $1> $2, <8 x $1> undef,
+  $4 = shufflevector <8 x $1> $2, <8 x $1> poison,
     <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ')
 
 define(`v16tov8', `
-  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+  $3 = shufflevector <16 x $1> $2, <16 x $1> poison,
     <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  $4 = shufflevector <16 x $1> $2, <16 x $1> undef,
+  $4 = shufflevector <16 x $1> $2, <16 x $1> poison,
     <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ')
 
 define(`v4tov2', `
-  $3 = shufflevector <4 x $1> $2, <4 x $1> undef, <2 x i32> <i32 0, i32 1>
-  $4 = shufflevector <4 x $1> $2, <4 x $1> undef, <2 x i32> <i32 2, i32 3>
+  $3 = shufflevector <4 x $1> $2, <4 x $1> poison, <2 x i32> <i32 0, i32 1>
+  $4 = shufflevector <4 x $1> $2, <4 x $1> poison, <2 x i32> <i32 2, i32 3>
 ')
 
 define(`v8tov2', `
-  $3 = shufflevector <8 x $1> $2, <8 x $1> undef, <2 x i32> <i32 0, i32 1>
-  $4 = shufflevector <8 x $1> $2, <8 x $1> undef, <2 x i32> <i32 2, i32 3>
-  $5 = shufflevector <8 x $1> $2, <8 x $1> undef, <2 x i32> <i32 4, i32 5>
-  $6 = shufflevector <8 x $1> $2, <8 x $1> undef, <2 x i32> <i32 6, i32 7>
+  $3 = shufflevector <8 x $1> $2, <8 x $1> poison, <2 x i32> <i32 0, i32 1>
+  $4 = shufflevector <8 x $1> $2, <8 x $1> poison, <2 x i32> <i32 2, i32 3>
+  $5 = shufflevector <8 x $1> $2, <8 x $1> poison, <2 x i32> <i32 4, i32 5>
+  $6 = shufflevector <8 x $1> $2, <8 x $1> poison, <2 x i32> <i32 6, i32 7>
 ')
 
 ;; $1: vector element type
@@ -618,19 +618,19 @@ define(`v4tov8', `
 ')
 
 define(`v16tov4', `
-  $3 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  $4 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  $5 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  $6 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  $3 = shufflevector <16 x $1> $2, <16 x $1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  $4 = shufflevector <16 x $1> $2, <16 x $1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  $5 = shufflevector <16 x $1> $2, <16 x $1> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  $6 = shufflevector <16 x $1> $2, <16 x $1> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ')
 
 ;; $1: vector element type
 ;; $2: input 32-wide vector
 ;; $3-$4: 2 output 16-wide vectors
 define(`v32tov16', `
-  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $3 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  $4 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $4 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ')
 
@@ -638,13 +638,13 @@ define(`v32tov16', `
 ;; $2: input 32-wide vector
 ;; $3-$6: 4 output 8-wide vectors
 define(`v32tov8', `
-  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $3 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  $4 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $4 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  $5 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $5 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  $6 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $6 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ')
 
@@ -652,21 +652,21 @@ define(`v32tov8', `
 ;; $2: input 32-wide vector
 ;; $3-$10: 8 output 4-wide vectors
 define(`v32tov4', `
-  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $3 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  $4 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $4 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  $5 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $5 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  $6 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $6 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  $7 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $7 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-  $8 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $8 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <4 x i32> <i32 20, i32 21, i32 22, i32 23>
-  $9 = shufflevector <32 x $1> $2, <32 x $1> undef,
+  $9 = shufflevector <32 x $1> $2, <32 x $1> poison,
           <4 x i32> <i32 24, i32 25, i32 26, i32 27>
-  argn(`10',$@) = shufflevector <32 x $1> $2, <32 x $1> undef,
+  argn(`10',$@) = shufflevector <32 x $1> $2, <32 x $1> poison,
                     <4 x i32> <i32 28, i32 29, i32 30, i32 31>
 ')
 
@@ -674,13 +674,13 @@ define(`v32tov4', `
 ;; $2: input 64-wide vector
 ;; $3-$6: 4 output 16-wide vectors
 define(`v64tov16', `
-  $3 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $3 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  $4 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $4 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  $5 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $5 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <16 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  $6 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $6 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <16 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ')
 
@@ -688,21 +688,21 @@ define(`v64tov16', `
 ;; $2: input 64-wide vector
 ;; $3-$10: 8 output 8-wide vectors
 define(`v64tov8', `
-  $3 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $3 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  $4 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $4 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  $5 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $5 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  $6 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $6 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  $7 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $7 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <8 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39>
-  $8 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $8 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <8 x i32> <i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  $9 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $9 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <8 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-  argn(`10',$@) = shufflevector <64 x $1> $2, <64 x $1> undef,
+  argn(`10',$@) = shufflevector <64 x $1> $2, <64 x $1> poison,
                     <8 x i32> <i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ')
 
@@ -771,10 +771,10 @@ define(`v32tov64', `
 ;; $2: input 64-wide vector
 ;; $3-$4: 2 output 32-wide vectors
 define(`v64tov32', `
-  $3 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $3 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                       i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  $4 = shufflevector <64 x $1> $2, <64 x $1> undef,
+  $4 = shufflevector <64 x $1> $2, <64 x $1> poison,
           <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47,
                       i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ')
@@ -867,19 +867,19 @@ define(`convert_scale_to_const', `
                                                 i32 8, label %on_eight_$1]
 
 on_one_$1:
-  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
   br label %end_bb_$1
 
 on_two_$1:
-  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
   br label %end_bb_$1
 
 on_four_$1:
-  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
   br label %end_bb_$1
 
 on_eight_$1:
-  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
   br label %end_bb_$1
 
 default_$1:
@@ -904,7 +904,7 @@ end_bb_$1:
 ;;  sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
 
 define(`sse_unary_scalar', `
-  %$1_vec = insertelement <$2 x $3> undef, $3 $5, i32 0
+  %$1_vec = insertelement <$2 x $3> poison, $3 $5, i32 0
   %$1_val = call <$2 x $3> $4(<$2 x $3> %$1_vec)
   %$1 = extractelement <$2 x $3> %$1_val, i32 0
 ')
@@ -919,8 +919,8 @@ define(`sse_unary_scalar', `
 ;; $6 : variable name that has the second scalar operand
 
 define(`sse_binary_scalar', `
-  %$1_veca = insertelement <$2 x $3> undef, $3 $5, i32 0
-  %$1_vecb = insertelement <$2 x $3> undef, $3 $6, i32 0
+  %$1_veca = insertelement <$2 x $3> poison, $3 $5, i32 0
+  %$1_vecb = insertelement <$2 x $3> poison, $3 $6, i32 0
   %$1_val = call <$2 x $3> $4(<$2 x $3> %$1_veca, <$2 x $3> %$1_vecb)
   %$1 = extractelement <$2 x $3> %$1_val, i32 0
 ')
@@ -933,8 +933,8 @@ define(`sse_binary_scalar', `
 ;;     the final reduction
 
 define(`reduce4', `
-  %v1 = shufflevector <4 x $1> %0, <4 x $1> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %v1 = shufflevector <4 x $1> %0, <4 x $1> poison,
+                      <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %m1 = call <4 x $1> $2(<4 x $1> %v1, <4 x $1> %0)
   %m1a = extractelement <4 x $1> %m1, i32 0
   %m1b = extractelement <4 x $1> %m1, i32 1
@@ -951,11 +951,11 @@ define(`reduce4', `
 ;;     the final reduction
 
 define(`reduce8', `
-  %v1 = shufflevector <8 x $1> %0, <8 x $1> undef,
-        <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v1 = shufflevector <8 x $1> %0, <8 x $1> poison,
+        <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   %m1 = call <8 x $1> $2(<8 x $1> %v1, <8 x $1> %0)
-  %v2 = shufflevector <8 x $1> %m1, <8 x $1> undef,
-        <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v2 = shufflevector <8 x $1> %m1, <8 x $1> poison,
+        <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m2 = call <8 x $1> $2(<8 x $1> %v2, <8 x $1> %m1)
   %m2a = extractelement <8 x $1> %m2, i32 0
   %m2b = extractelement <8 x $1> %m2, i32 1
@@ -972,22 +972,22 @@ define(`reduce8', `
 ;;     the final reduction
 
 define(`reduce16', `
-  %v1 = shufflevector <16 x $1> %0, <16 x $1> undef,
+  %v1 = shufflevector <16 x $1> %0, <16 x $1> poison,
         <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                    i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef>
+                    i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison>
   %m1 = call <16 x $1> $2(<16 x $1> %v1, <16 x $1> %0)
-  %v2 = shufflevector <16 x $1> %m1, <16 x $1> undef,
+  %v2 = shufflevector <16 x $1> %m1, <16 x $1> poison,
         <16 x i32> <i32 4, i32 5, i32 6, i32 7,
-                    i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef>
+                    i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison>
   %m2 = call <16 x $1> $2(<16 x $1> %v2, <16 x $1> %m1)
-  %v3 = shufflevector <16 x $1> %m2, <16 x $1> undef,
-        <16 x i32> <i32 2, i32 3, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef>
+  %v3 = shufflevector <16 x $1> %m2, <16 x $1> poison,
+        <16 x i32> <i32 2, i32 3, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison>
   %m3 = call <16 x $1> $2(<16 x $1> %v3, <16 x $1> %m2)
 
   %m3a = extractelement <16 x $1> %m3, i32 0
@@ -1005,29 +1005,29 @@ define(`reduce16', `
 ;;     the final reduction
 
 define(`reduce32', `
-  %v1 = shufflevector <32 x $1> %0, <32 x $1> undef,
+  %v1 = shufflevector <32 x $1> %0, <32 x $1> poison,
         <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
                     i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m1 = call <32 x $1> $2(<32 x $1> %v1, <32 x $1> %0)
-  %v2 = shufflevector <32 x $1> %m1, <32 x $1> undef,
+  %v2 = shufflevector <32 x $1> %m1, <32 x $1> poison,
         <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m2 = call <32 x $1> $2(<32 x $1> %v2, <32 x $1> %m1)
-  %v3 = shufflevector <32 x $1> %m2, <32 x $1> undef,
-        <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v3 = shufflevector <32 x $1> %m2, <32 x $1> poison,
+        <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m3 = call <32 x $1> $2(<32 x $1> %v3, <32 x $1> %m2)
-  %v4 = shufflevector <32 x $1> %m3, <32 x $1> undef,
-        <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v4 = shufflevector <32 x $1> %m3, <32 x $1> poison,
+        <32 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m4 = call <32 x $1> $2(<32 x $1> %v4, <32 x $1> %m3)
 
   %m4a = extractelement <32 x $1> %m4, i32 0
@@ -1045,55 +1045,55 @@ define(`reduce32', `
 ;;     the final reduction
 
 define(`reduce64', `
-  %v1 = shufflevector <64 x $1> %0, <64 x $1> undef,
+  %v1 = shufflevector <64 x $1> %0, <64 x $1> poison,
         <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39,
                     i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47,
                     i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55,
                     i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m1 = call <64 x $1> $2(<64 x $1> %v1, <64 x $1> %0)
-  %v2 = shufflevector <64 x $1> %m1, <64 x $1> undef,
+  %v2 = shufflevector <64 x $1> %m1, <64 x $1> poison,
         <64 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
                     i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m2 = call <64 x $1> $2(<64 x $1> %v2, <64 x $1> %m1)
-  %v3 = shufflevector <64 x $1> %m2, <64 x $1> undef,
+  %v3 = shufflevector <64 x $1> %m2, <64 x $1> poison,
         <64 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m3 = call <64 x $1> $2(<64 x $1> %v3, <64 x $1> %m2)
-  %v4 = shufflevector <64 x $1> %m3, <64 x $1> undef,
-        <64 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v4 = shufflevector <64 x $1> %m3, <64 x $1> poison,
+        <64 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m4 = call <64 x $1> $2(<64 x $1> %v4, <64 x $1> %m3)
-  %v5 = shufflevector <64 x $1> %m4, <64 x $1> undef,
-        <64 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %v5 = shufflevector <64 x $1> %m4, <64 x $1> poison,
+        <64 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                    i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %m5 = call <64 x $1> $2(<64 x $1> %v5, <64 x $1> %m4)
 
   %m5a = extractelement <64 x $1> %m5, i32 0
@@ -1115,8 +1115,8 @@ define(`reduce64', `
 define(`reduce8by4', `
   v8tov4($1, %0, %v1, %v2)
   %m1 = call <4 x $1> $2(<4 x $1> %v1, <4 x $1> %v2)
-  %v3 = shufflevector <4 x $1> %m1, <4 x $1> undef,
-        <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %v3 = shufflevector <4 x $1> %m1, <4 x $1> poison,
+        <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %m2 = call <4 x $1> $2(<4 x $1> %v3, <4 x $1> %m1)
   %m2a = extractelement <4 x $1> %m2, i32 0
   %m2b = extractelement <4 x $1> %m2, i32 1
@@ -1133,7 +1133,7 @@ define(`reduce8by4', `
 define(`unary1to4', `
   %v_0 = extractelement <4 x $1> %0, i32 0
   %r_0 = call $1 $2($1 %v_0)
-  %ret_0 = insertelement <4 x $1> undef, $1 %r_0, i32 0
+  %ret_0 = insertelement <4 x $1> poison, $1 %r_0, i32 0
   %v_1 = extractelement <4 x $1> %0, i32 1
   %r_1 = call $1 $2($1 %v_1)
   %ret_1 = insertelement <4 x $1> %ret_0, $1 %r_1, i32 1
@@ -1149,7 +1149,7 @@ define(`unary1to4', `
 define(`unary1to8', `
   %v_0 = extractelement <8 x $1> %0, i32 0
   %r_0 = call $1 $2($1 %v_0)
-  %ret_0 = insertelement <8 x $1> undef, $1 %r_0, i32 0
+  %ret_0 = insertelement <8 x $1> poison, $1 %r_0, i32 0
   %v_1 = extractelement <8 x $1> %0, i32 1
   %r_1 = call $1 $2($1 %v_1)
   %ret_1 = insertelement <8 x $1> %ret_0, $1 %r_1, i32 1
@@ -1183,9 +1183,9 @@ define(`unary1to8', `
 ;; $4: 4-wide operand value
 
 define(`unary2to4', `
-  %$1_0 = shufflevector <4 x $2> $4, <4 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %$1_0 = shufflevector <4 x $2> $4, <4 x $2> poison, <2 x i32> <i32 0, i32 1>
   %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0)
-  %$1_1 = shufflevector <4 x $2> $4, <4 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %$1_1 = shufflevector <4 x $2> $4, <4 x $2> poison, <2 x i32> <i32 2, i32 3>
   %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1)
   %$1 = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1201,11 +1201,11 @@ define(`unary2to4', `
 ;; $5: Second 4-wide operand value
 
 define(`binary2to4', `
-%$1_0a = shufflevector <4 x $2> $4, <4 x $2> undef, <2 x i32> <i32 0, i32 1>
-%$1_0b = shufflevector <4 x $2> $5, <4 x $2> undef, <2 x i32> <i32 0, i32 1>
+%$1_0a = shufflevector <4 x $2> $4, <4 x $2> poison, <2 x i32> <i32 0, i32 1>
+%$1_0b = shufflevector <4 x $2> $5, <4 x $2> poison, <2 x i32> <i32 0, i32 1>
 %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0a, <2 x $2> %$1_0b)
-%$1_1a = shufflevector <4 x $2> $4, <4 x $2> undef, <2 x i32> <i32 2, i32 3>
-%$1_1b = shufflevector <4 x $2> $5, <4 x $2> undef, <2 x i32> <i32 2, i32 3>
+%$1_1a = shufflevector <4 x $2> $4, <4 x $2> poison, <2 x i32> <i32 2, i32 3>
+%$1_1b = shufflevector <4 x $2> $5, <4 x $2> poison, <2 x i32> <i32 2, i32 3>
 %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1a, <2 x $2> %$1_1b)
 %$1 = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1220,9 +1220,9 @@ define(`binary2to4', `
 ;; $4: 8-wide operand value
 
 define(`unary4to8', `
-  %__$1_0 = shufflevector <8 x $2> $4, <8 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %__$1_0 = shufflevector <8 x $2> $4, <8 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %__v$1_0 = call <4 x $2> $3(<4 x $2> %__$1_0)
-  %__$1_1 = shufflevector <8 x $2> $4, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %__$1_1 = shufflevector <8 x $2> $4, <8 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %__v$1_1 = call <4 x $2> $3(<4 x $2> %__$1_1)
   %$1 = shufflevector <4 x $2> %__v$1_0, <4 x $2> %__v$1_1,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1236,9 +1236,9 @@ define(`unary4to8', `
 ;; $5: 8-wide operand value
 
 define(`unary4to8conv', `
-  %$1_0 = shufflevector <8 x $2> $5, <8 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1_0 = shufflevector <8 x $2> $5, <8 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v$1_0 = call <4 x $3> $4(<4 x $2> %$1_0)
-  %$1_1 = shufflevector <8 x $2> $5, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %$1_1 = shufflevector <8 x $2> $5, <8 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v$1_1 = call <4 x $3> $4(<4 x $2> %$1_1)
   %$1 = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1246,13 +1246,13 @@ define(`unary4to8conv', `
 )
 
 define(`unary4to16', `
-  %__$1_0 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %__$1_0 = shufflevector <16 x $2> $4, <16 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %__v$1_0 = call <4 x $2> $3(<4 x $2> %__$1_0)
-  %__$1_1 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %__$1_1 = shufflevector <16 x $2> $4, <16 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %__v$1_1 = call <4 x $2> $3(<4 x $2> %__$1_1)
-  %__$1_2 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %__$1_2 = shufflevector <16 x $2> $4, <16 x $2> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
   %__v$1_2 = call <4 x $2> $3(<4 x $2> %__$1_2)
-  %__$1_3 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %__$1_3 = shufflevector <16 x $2> $4, <16 x $2> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %__v$1_3 = call <4 x $2> $3(<4 x $2> %__$1_3)
 
   %__$1a = shufflevector <4 x $2> %__v$1_0, <4 x $2> %__v$1_1,
@@ -1266,13 +1266,13 @@ define(`unary4to16', `
 )
 
 define(`unary4to16conv', `
-  %$1_0 = shufflevector <16 x $2> $5, <16 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1_0 = shufflevector <16 x $2> $5, <16 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v$1_0 = call <4 x $3> $4(<4 x $2> %$1_0)
-  %$1_1 = shufflevector <16 x $2> $5, <16 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %$1_1 = shufflevector <16 x $2> $5, <16 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v$1_1 = call <4 x $3> $4(<4 x $2> %$1_1)
-  %$1_2 = shufflevector <16 x $2> $5, <16 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %$1_2 = shufflevector <16 x $2> $5, <16 x $2> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
   %v$1_2 = call <4 x $3> $4(<4 x $2> %$1_2)
-  %$1_3 = shufflevector <16 x $2> $5, <16 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %$1_3 = shufflevector <16 x $2> $5, <16 x $2> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %v$1_3 = call <4 x $3> $4(<4 x $2> %$1_3)
 
   %$1a = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1,
@@ -1286,21 +1286,21 @@ define(`unary4to16conv', `
 )
 
 define(`unary4to32conv', `
-  %$1_0 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1_0 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v$1_0 = call <4 x $3> $4(<4 x $2> %$1_0)
-  %$1_1 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %$1_1 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v$1_1 = call <4 x $3> $4(<4 x $2> %$1_1)
-  %$1_2 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %$1_2 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
   %v$1_2 = call <4 x $3> $4(<4 x $2> %$1_2)
-  %$1_3 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %$1_3 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %v$1_3 = call <4 x $3> $4(<4 x $2> %$1_3)
-  %$1_4 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %$1_4 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
   %v$1_4 = call <4 x $3> $4(<4 x $2> %$1_4)
-  %$1_5 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+  %$1_5 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
   %v$1_5 = call <4 x $3> $4(<4 x $2> %$1_5)
-  %$1_6 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
+  %$1_6 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
   %v$1_6 = call <4 x $3> $4(<4 x $2> %$1_6)
-  %$1_7 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
+  %$1_7 = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
   %v$1_7 = call <4 x $3> $4(<4 x $2> %$1_7)
 
   %$1a = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1,
@@ -1332,21 +1332,21 @@ define(`unary4to32conv', `
 ;; $4: 32-wide operand value
 
 define(`unary4to32', `
-  %$1_0 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_0 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$1_1 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_1 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %$1_2 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_2 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %$1_3 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_3 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %$1_4 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_4 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-  %$1_5 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_5 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 20, i32 21, i32 22, i32 23>
-  %$1_6 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_6 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 24, i32 25, i32 26, i32 27>
-  %$1_7 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_7 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <4 x i32> <i32 28, i32 29, i32 30, i32 31>
   %v$1_0 = call <4 x $2> $3(<4 x $2> %$1_0)
   %v$1_1 = call <4 x $2> $3(<4 x $2> %$1_1)
@@ -1383,22 +1383,22 @@ define(`unary4to32', `
 ;; $5: second 32-wide operand value
 
 define(`binary4to32', `
-  %$1_0a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$1_0b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$1_1a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %$1_1b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %$1_2a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %$1_2b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %$1_3a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %$1_3b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %$1_4a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-  %$1_4b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-  %$1_5a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
-  %$1_5b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
-  %$1_6a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
-  %$1_6b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
-  %$1_7a = shufflevector <32 x $2> $4, <32 x $2> undef, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
-  %$1_7b = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
+  %$1_0a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1_0b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1_1a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %$1_1b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %$1_2a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %$1_2b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %$1_3a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %$1_3b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %$1_4a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %$1_4b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %$1_5a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+  %$1_5b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+  %$1_6a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
+  %$1_6b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
+  %$1_7a = shufflevector <32 x $2> $4, <32 x $2> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
+  %$1_7b = shufflevector <32 x $2> $5, <32 x $2> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
   %v$1_0 = call <4 x $2> $3(<4 x $2> %$1_0a, <4 x $2> %$1_0b)
   %v$1_1 = call <4 x $2> $3(<4 x $2> %$1_1a, <4 x $2> %$1_1b)
   %v$1_2 = call <4 x $2> $3(<4 x $2> %$1_2a, <4 x $2> %$1_2b)
@@ -1434,10 +1434,10 @@ define(`binary4to32', `
 ;; $4: 16-wide operand value
 
 define(`unary8to16', `
-  %$1_0 = shufflevector <16 x $2> $4, <16 x $2> undef,
+  %$1_0 = shufflevector <16 x $2> $4, <16 x $2> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0)
-  %$1_1 = shufflevector <16 x $2> $4, <16 x $2> undef,
+  %$1_1 = shufflevector <16 x $2> $4, <16 x $2> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1)
   %$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1,
@@ -1452,13 +1452,13 @@ define(`unary8to16', `
 ;; $4: 32-wide operand value
 
 define(`unary8to32', `
-  %$1_0 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_0 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$1_1 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_1 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_2 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_2 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %$1_3 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_3 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0)
   %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1)
@@ -1482,21 +1482,21 @@ define(`unary8to32', `
 ;; $4: 64-wide operand value
 
 define(`unary8to64', `
-  %$1_0 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_0 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$1_1 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_1 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_2 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_2 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %$1_3 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_3 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_4 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_4 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39>
-  %$1_5 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_5 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  %$1_6 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_6 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-  %$1_7 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_7 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0)
   %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1)
@@ -1539,21 +1539,21 @@ define(`unary8to64', `
 ;; $5: second 32-wide operand value
 
 define(`binary8to32', `
-  %$1_0a = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_0a = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$1_0b = shufflevector <32 x $2> $5, <32 x $2> undef,
+  %$1_0b = shufflevector <32 x $2> $5, <32 x $2> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$1_1a = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_1a = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_1b = shufflevector <32 x $2> $5, <32 x $2> undef,
+  %$1_1b = shufflevector <32 x $2> $5, <32 x $2> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_2a = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_2a = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %$1_2b = shufflevector <32 x $2> $5, <32 x $2> undef,
+  %$1_2b = shufflevector <32 x $2> $5, <32 x $2> poison,
              <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %$1_3a = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_3a = shufflevector <32 x $2> $4, <32 x $2> poison,
              <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_3b = shufflevector <32 x $2> $5, <32 x $2> undef,
+  %$1_3b = shufflevector <32 x $2> $5, <32 x $2> poison,
              <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0a, <8 x $2> %$1_0b)
   %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1a, <8 x $2> %$1_1b)
@@ -1578,37 +1578,37 @@ define(`binary8to32', `
 ;; $5: second 64-wide operand value
 
 define(`binary8to64', `
-  %$1_0a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_0a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$1_0b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_0b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$1_1a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_1a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_1b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_1b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_2a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_2a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %$1_2b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_2b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %$1_3a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_3a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_3b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_3b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_4a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_4a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39>
-  %$1_4b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_4b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39>
-  %$1_5a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_5a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  %$1_5b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_5b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  %$1_6a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_6a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-  %$1_6b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_6b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-  %$1_7a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_7a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <8 x i32> <i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-  %$1_7b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_7b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <8 x i32> <i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0a, <8 x $2> %$1_0b)
   %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1a, <8 x $2> %$1_1b)
@@ -1650,9 +1650,9 @@ define(`binary8to64', `
 ;; $4: 32-wide operand value
 
 define(`unary16to32', `
-  %$1_0 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_0 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_1 = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_1 = shufflevector <32 x $2> $4, <32 x $2> poison,
              <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %v$1_0 = call <16 x $2> $3(<16 x $2> %$1_0)
   %v$1_1 = call <16 x $2> $3(<16 x $2> %$1_1)
@@ -1668,13 +1668,13 @@ define(`unary16to32', `
 ;; $4: 64-wide operand value
 
 define(`unary16to64', `
-  %$1_0 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_0 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_1 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_1 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_2 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_2 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  %$1_3 = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_3 = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   %v$1_0 = call <16 x $2> $3(<16 x $2> %$1_0)
   %v$1_1 = call <16 x $2> $3(<16 x $2> %$1_1)
@@ -1700,13 +1700,13 @@ define(`unary16to64', `
 ;; $4: First 32-wide operand value
 ;; $5: Second 32-wide operand value
 define(`binary16to32', `
-  %$1_0a = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_0a = shufflevector <32 x $2> $4, <32 x $2> poison,
              <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_0b = shufflevector <32 x $2> $5, <32 x $2> undef,
+  %$1_0b = shufflevector <32 x $2> $5, <32 x $2> poison,
              <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_1a = shufflevector <32 x $2> $4, <32 x $2> undef,
+  %$1_1a = shufflevector <32 x $2> $4, <32 x $2> poison,
              <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_1b = shufflevector <32 x $2> $5, <32 x $2> undef,
+  %$1_1b = shufflevector <32 x $2> $5, <32 x $2> poison,
              <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %v$1_0 = call <16 x $2> $3(<16 x $2> %$1_0a, <16 x $2> %$1_0b)
   %v$1_1 = call <16 x $2> $3(<16 x $2> %$1_1a, <16 x $2> %$1_1b)
@@ -1722,21 +1722,21 @@ define(`binary16to32', `
 ;; $4: First 64-wide operand value
 ;; $5: Second 64-wide operand value
 define(`binary16to64', `
-  %$1_0a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_0a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_0b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_0b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %$1_1a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_1a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_1b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_1b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %$1_2a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_2a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  %$1_2b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_2b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <16 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
-  %$1_3a = shufflevector <64 x $2> $4, <64 x $2> undef,
+  %$1_3a = shufflevector <64 x $2> $4, <64 x $2> poison,
              <16 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-  %$1_3b = shufflevector <64 x $2> $5, <64 x $2> undef,
+  %$1_3b = shufflevector <64 x $2> $5, <64 x $2> poison,
              <16 x i32> <i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   %v$1_0 = call <16 x $2> $3(<16 x $2> %$1_0a, <16 x $2> %$1_0b)
   %v$1_1 = call <16 x $2> $3(<16 x $2> %$1_1a, <16 x $2> %$1_1b)
@@ -1765,11 +1765,11 @@ define(`binary16to64', `
 ;; $5: Second 8-wide operand value
 
 define(`binary4to8', `
-%$1_0a = shufflevector <8 x $2> $4, <8 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%$1_0b = shufflevector <8 x $2> $5, <8 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%$1_0a = shufflevector <8 x $2> $4, <8 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%$1_0b = shufflevector <8 x $2> $5, <8 x $2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 %v$1_0 = call <4 x $2> $3(<4 x $2> %$1_0a, <4 x $2> %$1_0b)
-%$1_1a = shufflevector <8 x $2> $4, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-%$1_1b = shufflevector <8 x $2> $5, <8 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%$1_1a = shufflevector <8 x $2> $4, <8 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%$1_1b = shufflevector <8 x $2> $5, <8 x $2> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %v$1_1 = call <4 x $2> $3(<4 x $2> %$1_1a, <4 x $2> %$1_1b)
 %$1 = shufflevector <4 x $2> %v$1_0, <4 x $2> %v$1_1,
          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1777,14 +1777,14 @@ define(`binary4to8', `
 )
 
 define(`binary8to16', `
-%$1_0a = shufflevector <16 x $2> $4, <16 x $2> undef,
+%$1_0a = shufflevector <16 x $2> $4, <16 x $2> poison,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-%$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef,
+%$1_0b = shufflevector <16 x $2> $5, <16 x $2> poison,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0a, <8 x $2> %$1_0b)
-%$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef,
+%$1_1a = shufflevector <16 x $2> $4, <16 x $2> poison,
           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-%$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef,
+%$1_1b = shufflevector <16 x $2> $5, <16 x $2> poison,
           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1a, <8 x $2> %$1_1b)
 %$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1,
@@ -1794,27 +1794,27 @@ define(`binary8to16', `
 )
 
 define(`binary4to16', `
-%$1_0a = shufflevector <16 x $2> $4, <16 x $2> undef,
+%$1_0a = shufflevector <16 x $2> $4, <16 x $2> poison,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef,
+%$1_0b = shufflevector <16 x $2> $5, <16 x $2> poison,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 %r$1_0 = call <4 x $2> $3(<4 x $2> %$1_0a, <4 x $2> %$1_0b)
 
-%$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef,
+%$1_1a = shufflevector <16 x $2> $4, <16 x $2> poison,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-%$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef,
+%$1_1b = shufflevector <16 x $2> $5, <16 x $2> poison,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %r$1_1 = call <4 x $2> $3(<4 x $2> %$1_1a, <4 x $2> %$1_1b)
 
-%$1_2a = shufflevector <16 x $2> $4, <16 x $2> undef,
+%$1_2a = shufflevector <16 x $2> $4, <16 x $2> poison,
           <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-%$1_2b = shufflevector <16 x $2> $5, <16 x $2> undef,
+%$1_2b = shufflevector <16 x $2> $5, <16 x $2> poison,
           <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 %r$1_2 = call <4 x $2> $3(<4 x $2> %$1_2a, <4 x $2> %$1_2b)
 
-%$1_3a = shufflevector <16 x $2> $4, <16 x $2> undef,
+%$1_3a = shufflevector <16 x $2> $4, <16 x $2> poison,
           <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-%$1_3b = shufflevector <16 x $2> $5, <16 x $2> undef,
+%$1_3b = shufflevector <16 x $2> $5, <16 x $2> poison,
           <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 %r$1_3 = call <4 x $2> $3(<4 x $2> %$1_3a, <4 x $2> %$1_3b)
 
@@ -1836,13 +1836,13 @@ define(`binary4to16', `
 ;; $4: 8-wide operand value
 
 define(`unary2to8', `
-  %$1_0 = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %$1_0 = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 0, i32 1>
   %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0)
-  %$1_1 = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %$1_1 = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 2, i32 3>
   %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1)
-  %$1_2 = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 4, i32 5>
+  %$1_2 = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 4, i32 5>
   %v$1_2 = call <2 x $2> $3(<2 x $2> %$1_2)
-  %$1_3 = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 6, i32 7>
+  %$1_3 = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 6, i32 7>
   %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3)
   %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1854,21 +1854,21 @@ define(`unary2to8', `
 )
 
 define(`unary2to16', `
-  %$1_0 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %$1_0 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 0, i32 1>
   %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0)
-  %$1_1 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %$1_1 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 2, i32 3>
   %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1)
-  %$1_2 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 4, i32 5>
+  %$1_2 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 4, i32 5>
   %v$1_2 = call <2 x $2> $3(<2 x $2> %$1_2)
-  %$1_3 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 6, i32 7>
+  %$1_3 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 6, i32 7>
   %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3)
-  %$1_4 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 8, i32 9>
+  %$1_4 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 8, i32 9>
   %v$1_4 = call <2 x $2> $3(<2 x $2> %$1_4)
-  %$1_5 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 10, i32 11>
+  %$1_5 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 10, i32 11>
   %v$1_5 = call <2 x $2> $3(<2 x $2> %$1_5)
-  %$1_6 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 12, i32 13>
+  %$1_6 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 12, i32 13>
   %v$1_6 = call <2 x $2> $3(<2 x $2> %$1_6)
-  %$1_7 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 14, i32 15>
+  %$1_7 = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 14, i32 15>
   %v$1_7 = call <2 x $2> $3(<2 x $2> %$1_7)
   %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1897,17 +1897,17 @@ define(`unary2to16', `
 ;; $5: Second 8-wide operand value
 
 define(`binary2to8', `
-  %$1_0a = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 0, i32 1>
-  %$1_0b = shufflevector <8 x $2> $5, <8 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %$1_0a = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 0, i32 1>
+  %$1_0b = shufflevector <8 x $2> $5, <8 x $2> poison, <2 x i32> <i32 0, i32 1>
   %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0a, <2 x $2> %$1_0b)
-  %$1_1a = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 2, i32 3>
-  %$1_1b = shufflevector <8 x $2> $5, <8 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %$1_1a = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 2, i32 3>
+  %$1_1b = shufflevector <8 x $2> $5, <8 x $2> poison, <2 x i32> <i32 2, i32 3>
   %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1a, <2 x $2> %$1_1b)
-  %$1_2a = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 4, i32 5>
-  %$1_2b = shufflevector <8 x $2> $5, <8 x $2> undef, <2 x i32> <i32 4, i32 5>
+  %$1_2a = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 4, i32 5>
+  %$1_2b = shufflevector <8 x $2> $5, <8 x $2> poison, <2 x i32> <i32 4, i32 5>
   %v$1_2 = call <2 x $2> $3(<2 x $2> %$1_2a, <2 x $2> %$1_2b)
-  %$1_3a = shufflevector <8 x $2> $4, <8 x $2> undef, <2 x i32> <i32 6, i32 7>
-  %$1_3b = shufflevector <8 x $2> $5, <8 x $2> undef, <2 x i32> <i32 6, i32 7>
+  %$1_3a = shufflevector <8 x $2> $4, <8 x $2> poison, <2 x i32> <i32 6, i32 7>
+  %$1_3b = shufflevector <8 x $2> $5, <8 x $2> poison, <2 x i32> <i32 6, i32 7>
   %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3a, <2 x $2> %$1_3b)
 
   %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
@@ -1920,29 +1920,29 @@ define(`binary2to8', `
 )
 
 define(`binary2to16', `
-  %$1_0a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 0, i32 1>
-  %$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %$1_0a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 0, i32 1>
+  %$1_0b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 0, i32 1>
   %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0a, <2 x $2> %$1_0b)
-  %$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 2, i32 3>
-  %$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %$1_1a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 2, i32 3>
+  %$1_1b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 2, i32 3>
   %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1a, <2 x $2> %$1_1b)
-  %$1_2a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 4, i32 5>
-  %$1_2b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 4, i32 5>
+  %$1_2a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 4, i32 5>
+  %$1_2b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 4, i32 5>
   %v$1_2 = call <2 x $2> $3(<2 x $2> %$1_2a, <2 x $2> %$1_2b)
-  %$1_3a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 6, i32 7>
-  %$1_3b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 6, i32 7>
+  %$1_3a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 6, i32 7>
+  %$1_3b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 6, i32 7>
   %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3a, <2 x $2> %$1_3b)
-  %$1_4a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 8, i32 9>
-  %$1_4b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 8, i32 9>
+  %$1_4a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 8, i32 9>
+  %$1_4b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 8, i32 9>
   %v$1_4 = call <2 x $2> $3(<2 x $2> %$1_4a, <2 x $2> %$1_4b)
-  %$1_5a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 10, i32 11>
-  %$1_5b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 10, i32 11>
+  %$1_5a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 10, i32 11>
+  %$1_5b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 10, i32 11>
   %v$1_5 = call <2 x $2> $3(<2 x $2> %$1_5a, <2 x $2> %$1_5b)
-  %$1_6a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 12, i32 13>
-  %$1_6b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 12, i32 13>
+  %$1_6a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 12, i32 13>
+  %$1_6b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 12, i32 13>
   %v$1_6 = call <2 x $2> $3(<2 x $2> %$1_6a, <2 x $2> %$1_6b)
-  %$1_7a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 14, i32 15>
-  %$1_7b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 14, i32 15>
+  %$1_7a = shufflevector <16 x $2> $4, <16 x $2> poison, <2 x i32> <i32 14, i32 15>
+  %$1_7b = shufflevector <16 x $2> $5, <16 x $2> poison, <2 x i32> <i32 14, i32 15>
   %v$1_7 = call <2 x $2> $3(<2 x $2> %$1_7a, <2 x $2> %$1_7b)
 
   %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
@@ -1974,8 +1974,8 @@ define(`binary2to16', `
 ;; which is inconsistent with the macros above
 
 define(`round4to8', `
-%v0 = shufflevector <8 x float> $1, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%v1 = shufflevector <8 x float> $1, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%v0 = shufflevector <8 x float> $1, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%v1 = shufflevector <8 x float> $1, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %r0 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v0, i32 $2)
 %r1 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v1, i32 $2)
 %ret = shufflevector <4 x float> %r0, <4 x float> %r1,
@@ -1985,10 +1985,10 @@ ret <8 x float> %ret
 )
 
 define(`round4to16', `
-%v0 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%v1 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-%v2 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-%v3 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+%v0 = shufflevector <16 x float> $1, <16 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%v1 = shufflevector <16 x float> $1, <16 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%v2 = shufflevector <16 x float> $1, <16 x float> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+%v3 = shufflevector <16 x float> $1, <16 x float> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 %r0 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v0, i32 $2)
 %r1 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v1, i32 $2)
 %r2 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v2, i32 $2)
@@ -2005,9 +2005,9 @@ ret <16 x float> %ret
 )
 
 define(`round8to16', `
-%v0 = shufflevector <16 x float> $1, <16 x float> undef,
+%v0 = shufflevector <16 x float> $1, <16 x float> poison,
         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-%v1 = shufflevector <16 x float> $1, <16 x float> undef,
+%v1 = shufflevector <16 x float> $1, <16 x float> poison,
         <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 %r0 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %v0, i32 $2)
 %r1 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %v1, i32 $2)
@@ -2019,8 +2019,8 @@ ret <16 x float> %ret
 )
 
 define(`round4to8double', `
-%v0 = shufflevector <8 x double> $1, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%v1 = shufflevector <8 x double> $1, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%v0 = shufflevector <8 x double> $1, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%v1 = shufflevector <8 x double> $1, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 %r0 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v0, i32 $2)
 %r1 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v1, i32 $2)
 %ret = shufflevector <4 x double> %r0, <4 x double> %r1,
@@ -2032,8 +2032,8 @@ ret <8 x double> %ret
 ; and similarly for doubles...
 
 define(`round2to4double', `
-%v0 = shufflevector <4 x double> $1, <4 x double> undef, <2 x i32> <i32 0, i32 1>
-%v1 = shufflevector <4 x double> $1, <4 x double> undef, <2 x i32> <i32 2, i32 3>
+%v0 = shufflevector <4 x double> $1, <4 x double> poison, <2 x i32> <i32 0, i32 1>
+%v1 = shufflevector <4 x double> $1, <4 x double> poison, <2 x i32> <i32 2, i32 3>
 %r0 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v0, i32 $2)
 %r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
 %ret = shufflevector <2 x double> %r0, <2 x double> %r1,
@@ -2043,10 +2043,10 @@ ret <4 x double> %ret
 )
 
 define(`round2to8double', `
-%v0 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-%v1 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-%v2 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-%v3 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 6, i32 7>
+%v0 = shufflevector <8 x double> $1, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+%v1 = shufflevector <8 x double> $1, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+%v2 = shufflevector <8 x double> $1, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+%v3 = shufflevector <8 x double> $1, <8 x double> poison, <2 x i32> <i32 6, i32 7>
 %r0 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v0, i32 $2)
 %r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
 %r2 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v2, i32 $2)
@@ -2062,14 +2062,14 @@ ret <8 x double> %ret
 )
 
 define(`round2to16double', `
-%v0 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 0,  i32 1>
-%v1 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 2,  i32 3>
-%v2 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 4,  i32 5>
-%v3 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 6,  i32 7>
-%v4 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 8,  i32 9>
-%v5 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 10, i32 11>
-%v6 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 12, i32 13>
-%v7 = shufflevector <16 x double> $1, <16 x double> undef, <2 x i32> <i32 14, i32 15>
+%v0 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 0,  i32 1>
+%v1 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 2,  i32 3>
+%v2 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 4,  i32 5>
+%v3 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 6,  i32 7>
+%v4 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 8,  i32 9>
+%v5 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 10, i32 11>
+%v6 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 12, i32 13>
+%v7 = shufflevector <16 x double> $1, <16 x double> poison, <2 x i32> <i32 14, i32 15>
 %r0 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v0, i32 $2)
 %r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
 %r2 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v2, i32 $2)
@@ -2098,13 +2098,13 @@ ret <16 x double> %ret
 )
 
 define(`round4to16double', `
-%v0 = shufflevector <16 x double> $1, <16 x double> undef,
+%v0 = shufflevector <16 x double> $1, <16 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-%v1 = shufflevector <16 x double> $1, <16 x double> undef,
+%v1 = shufflevector <16 x double> $1, <16 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-%v2 = shufflevector <16 x double> $1, <16 x double> undef,
+%v2 = shufflevector <16 x double> $1, <16 x double> poison,
          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-%v3 = shufflevector <16 x double> $1, <16 x double> undef,
+%v3 = shufflevector <16 x double> $1, <16 x double> poison,
          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 %r0 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v0, i32 $2)
 %r1 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v1, i32 $2)
@@ -2190,7 +2190,7 @@ forloop(i, 0, eval(WIDTH-1), `
 forloop(i, 0, eval(WIDTH-1), `
   %v_`'i = extractelement <WIDTH x $1> %0, i32 %index_`'i')
 
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
+  %ret_0 = insertelement <WIDTH x $1> poison, $1 %v_0, i32 0
 forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
 ')
   ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
@@ -2247,7 +2247,7 @@ not_const:
 
   %ptr_0 = getelementptr PTR_OP_ARGS(`$1') %baseptr, i32 %index_0
   %val_0 = load PTR_OP_ARGS(`$1 ')  %ptr_0
-  %result_0 = insertelement <WIDTH x $1> undef, $1 %val_0, i32 0
+  %result_0 = insertelement <WIDTH x $1> poison, $1 %val_0, i32 0
 
 forloop(i, 1, eval(WIDTH-1), `
   %ptr_`'i = getelementptr PTR_OP_ARGS(`$1') %baseptr, i32 %index_`'i
@@ -2265,8 +2265,8 @@ forloop(i, 1, eval(WIDTH-1), `
 define(`vector_broadcast', `
 define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %v = extractelement <WIDTH x $1> %0, i32 %1
-  %broadcast_init = insertelement <WIDTH x $1> undef, $1 %v, i32 0
-  %broadcast = shufflevector <WIDTH x $1> %broadcast_init, <WIDTH x $1> undef, <WIDTH x i32> zeroinitializer
+  %broadcast_init = insertelement <WIDTH x $1> poison, $1 %v, i32 0
+  %broadcast = shufflevector <WIDTH x $1> %broadcast_init, <WIDTH x $1> poison, <WIDTH x i32> zeroinitializer
   ret <WIDTH x $1> %broadcast
 }
 ')
@@ -2283,7 +2283,7 @@ forloop(i, 0, eval(WIDTH-1), `
   %delta_clamped_`'i = and i32 %delta_`'i, eval(WIDTH-1)
   %v_`'i = extractelement <WIDTH x $1> %0, i32 %delta_clamped_`'i')
 
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
+  %ret_0 = insertelement <WIDTH x $1> poison, $1 %v_0, i32 0
 forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
 ')
   ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
@@ -2529,7 +2529,7 @@ define <$1 x $3> @__atomic_$2_$4_global(i8 * %ptr, <$1 x $3> %val,
   ; compute an identity vector that is zero in on lanes and has the identiy value
   ; in the off lanes
   %idv1 = bitcast $3 $5 to <1 x $3>
-  %idvec = shufflevector <1 x $3> %idv1, <1 x $3> undef,
+  %idvec = shufflevector <1 x $3> %idv1, <1 x $3> poison,
      <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
   %notmask = xor <$1 x $3> %mask, < forloop(i, 1, eval($1-1), `$3 -1, ') $3 -1 >
   %idoff = and <$1 x $3> %idvec, %notmask
@@ -2541,7 +2541,7 @@ define <$1 x $3> @__atomic_$2_$4_global(i8 * %ptr, <$1 x $3> %val,
   ; %eltvec so that the 0th element is the identity, the first is val0,
   ; the second is (val0 op val1), ..
   %red0 = extractelement <$1 x $3> %valp, i32 0
-  %eltvec0 = insertelement <$1 x $3> undef, $3 $5, i32 0
+  %eltvec0 = insertelement <$1 x $3> poison, $3 $5, i32 0
 
   forloop(i, 1, eval($1-1), `
   %elt`'i = extractelement <$1 x $3> %valp, i32 i
@@ -2556,7 +2556,7 @@ define <$1 x $3> @__atomic_$2_$4_global(i8 * %ptr, <$1 x $3> %val,
   ; actual atomic call across the vector and applying the vector op to the
   ; %eltvec vector computed above..
   %finalv1 = bitcast $3 %final0 to <1 x $3>
-  %final_base = shufflevector <1 x $3> %finalv1, <1 x $3> undef,
+  %final_base = shufflevector <1 x $3> %finalv1, <1 x $3> poison,
      <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
   %r = $2 <$1 x $3> %final_base, %eltvec`'eval($1-1)
 
@@ -2929,7 +2929,7 @@ define void
   store <4 x float> %r1, <4 x float> * %out1, align 4
 
   %t2 = shufflevector <4 x float> %v0, <4 x float> %v1, ; z0 z1 x x
-    <4 x i32> <i32 2, i32 5, i32 undef, i32 undef>
+    <4 x i32> <i32 2, i32 5, i32 poison, i32 poison>
 
   %r2 = shufflevector <4 x float> %t2, <4 x float> %v2, ; z0 z1 z2 z3
     <4 x i32> <i32 0, i32 1, i32 4, i32 7>
@@ -2959,7 +2959,7 @@ define void
   store <4 x float> %r1, <4 x float> * %out1, align 4
 
   %t2 = shufflevector <4 x float> %v0, <4 x float> %v1, ; x3 y3 x x
-    <4 x i32> <i32 3, i32 7, i32 undef, i32 undef>
+    <4 x i32> <i32 3, i32 7, i32 poison, i32 poison>
 
   %r2 = shufflevector <4 x float> %t2, <4 x float> %v2, ; z2 x3 y3 z3
     <4 x i32> <i32 6, i32 0, i32 1, i32 7>
@@ -2985,7 +2985,7 @@ define void
   store <4 x double> %r1, <4 x double> * %out1, align 4
 
   %t2 = shufflevector <4 x double> %v0, <4 x double> %v1, ; z0 z1 x x
-    <4 x i32> <i32 2, i32 5, i32 undef, i32 undef>
+    <4 x i32> <i32 2, i32 5, i32 poison, i32 poison>
 
   %r2 = shufflevector <4 x double> %t2, <4 x double> %v2, ; z0 z1 z2 z3
     <4 x i32> <i32 0, i32 1, i32 4, i32 7>
@@ -3010,7 +3010,7 @@ define void
   store <4 x double> %r1, <4 x double> * %out1, align 4
 
   %t2 = shufflevector <4 x double> %v0, <4 x double> %v1, ; x3 y3 x x
-    <4 x i32> <i32 3, i32 7, i32 undef, i32 undef>
+    <4 x i32> <i32 3, i32 7, i32 poison, i32 poison>
 
   %r2 = shufflevector <4 x double> %t2, <4 x double> %v2, ; z2 x3 y3 z3
     <4 x i32> <i32 6, i32 0, i32 1, i32 7>
@@ -3201,21 +3201,21 @@ define void
         <8 x double> * noalias %out1, <8 x double> * noalias %out2,
         <8 x double> * noalias %out3) nounwind alwaysinline {
   ;; As above, split into 4-vectors and 4-wide outputs...
-  %v0a = shufflevector <8 x double> %v0, <8 x double> undef,
+  %v0a = shufflevector <8 x double> %v0, <8 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <8 x double> %v0, <8 x double> undef,
+  %v0b = shufflevector <8 x double> %v0, <8 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1a = shufflevector <8 x double> %v1, <8 x double> undef,
+  %v1a = shufflevector <8 x double> %v1, <8 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <8 x double> %v1, <8 x double> undef,
+  %v1b = shufflevector <8 x double> %v1, <8 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2a = shufflevector <8 x double> %v2, <8 x double> undef,
+  %v2a = shufflevector <8 x double> %v2, <8 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <8 x double> %v2, <8 x double> undef,
+  %v2b = shufflevector <8 x double> %v2, <8 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v3a = shufflevector <8 x double> %v3, <8 x double> undef,
+  %v3a = shufflevector <8 x double> %v3, <8 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v3b = shufflevector <8 x double> %v3, <8 x double> undef,
+  %v3b = shufflevector <8 x double> %v3, <8 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   %out0a = bitcast <8 x double> * %out0 to <4 x double> *
@@ -3298,9 +3298,9 @@ define void
           <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   store <8 x float> %r1, <8 x float> * %out1, align 4
 
-  ;; t2 = <c0 ... c4 undef ... undef>
+  ;; t2 = <c0 ... c4 poison ... poison>
   %t2 = shufflevector <8 x float> %v0, <8 x float> %v1,
-          <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 undef, i32 undef, i32 undef>
+          <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <8 x float> %t2, <8 x float> %v2,
@@ -3329,9 +3329,9 @@ define void
           <8 x i32> <i32 13, i32 3, i32 9, i32 14, i32 4, i32 10, i32 15, i32 5>
   store <8 x float> %r1, <8 x float> * %out1, align 4
 
-  ;; t2 = <a6 ... a7 b5 ... b7 undef ... undef>
+  ;; t2 = <a6 ... a7 b5 ... b7 poison ... poison>
   %t2 = shufflevector <8 x float> %v0, <8 x float> %v1,
-          <8 x i32> <i32 6, i32 7, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef>
+          <8 x i32> <i32 6, i32 7, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison>
   ;; Produce output vector
   %r2 = shufflevector <8 x float> %t2, <8 x float> %v2,
           <8 x i32> <i32 2, i32 13, i32 0, i32 3, i32 14, i32 1, i32 4, i32 15>
@@ -3344,20 +3344,20 @@ define void
 @__aos_to_soa3_double8(<8 x double> %v0, <8 x double> %v1, <8 x double> %v2,
         <8 x double> * noalias %out0, <8 x double> * noalias %out1,
         <8 x double> * noalias %out2) nounwind alwaysinline {
-  %v0_0 = shufflevector <8 x double> %v0, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0_1 = shufflevector <8 x double> %v0, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1_0 = shufflevector <8 x double> %v1, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1_1 = shufflevector <8 x double> %v1, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2_0 = shufflevector <8 x double> %v2, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2_1 = shufflevector <8 x double> %v2, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v0_0 = shufflevector <8 x double> %v0, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0_1 = shufflevector <8 x double> %v0, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1_0 = shufflevector <8 x double> %v1, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1_1 = shufflevector <8 x double> %v1, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v2_0 = shufflevector <8 x double> %v2, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v2_1 = shufflevector <8 x double> %v2, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   %t0 = shufflevector <4 x double> %v0_0, <4 x double> %v0_1, <4 x i32> <i32 0, i32 3, i32 1, i32 4>
   %t1 = shufflevector <4 x double> %v0_1, <4 x double> %v1_0, <4 x i32> <i32 2, i32 5, i32 3, i32 6>
-  %t2 = shufflevector <4 x double> %v0_0, <4 x double> %v0_1, <4 x i32> <i32 2, i32 5, i32 undef, i32 undef>
+  %t2 = shufflevector <4 x double> %v0_0, <4 x double> %v0_1, <4 x i32> <i32 2, i32 5, i32 poison, i32 poison>
 
   %s0 = shufflevector <4 x double> %v1_1, <4 x double> %v2_0, <4 x i32> <i32 0, i32 3, i32 1, i32 4>
   %s1 = shufflevector <4 x double> %v2_0, <4 x double> %v2_1, <4 x i32> <i32 2, i32 5, i32 3, i32 6>
-  %s2 = shufflevector <4 x double> %v1_1, <4 x double> %v2_0, <4 x i32> <i32 2, i32 5, i32 undef, i32 undef>
+  %s2 = shufflevector <4 x double> %v1_1, <4 x double> %v2_0, <4 x i32> <i32 2, i32 5, i32 poison, i32 poison>
 
   %a0 = shufflevector <4 x double> %t0, <4 x double> %t1, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   %b0 = shufflevector <4 x double> %t0, <4 x double> %t1, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
@@ -3404,9 +3404,9 @@ define void
           <8 x i32> <i32 13, i32 3, i32 9, i32 14, i32 4, i32 10, i32 15, i32 5>
   store <8 x double> %r1, <8 x double> * %out1, align 4
 
-  ;; t2 = <a6 ... a7 b5 ... b7 undef ... undef>
+  ;; t2 = <a6 ... a7 b5 ... b7 poison ... poison>
   %t2 = shufflevector <8 x double> %v0, <8 x double> %v1,
-          <8 x i32> <i32 6, i32 7, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef>
+          <8 x i32> <i32 6, i32 7, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison>
   ;; Produce output vector
   %r2 = shufflevector <8 x double> %t2, <8 x double> %v2,
           <8 x i32> <i32 2, i32 13, i32 0, i32 3, i32 14, i32 1, i32 4, i32 15>
@@ -3639,37 +3639,37 @@ define void
         <16 x double> %v3, <16 x double> * noalias %out0,
         <16 x double> * noalias %out1, <16 x double> * noalias %out2,
         <16 x double> * noalias %out3) nounwind alwaysinline {
-  %v0a = shufflevector <16 x double> %v0, <16 x double> undef,
+  %v0a = shufflevector <16 x double> %v0, <16 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <16 x double> %v0, <16 x double> undef,
+  %v0b = shufflevector <16 x double> %v0, <16 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v0c = shufflevector <16 x double> %v0, <16 x double> undef,
+  %v0c = shufflevector <16 x double> %v0, <16 x double> poison,
          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v0d = shufflevector <16 x double> %v0, <16 x double> undef,
+  %v0d = shufflevector <16 x double> %v0, <16 x double> poison,
          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v1a = shufflevector <16 x double> %v1, <16 x double> undef,
+  %v1a = shufflevector <16 x double> %v1, <16 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <16 x double> %v1, <16 x double> undef,
+  %v1b = shufflevector <16 x double> %v1, <16 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1c = shufflevector <16 x double> %v1, <16 x double> undef,
+  %v1c = shufflevector <16 x double> %v1, <16 x double> poison,
          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v1d = shufflevector <16 x double> %v1, <16 x double> undef,
+  %v1d = shufflevector <16 x double> %v1, <16 x double> poison,
          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v2a = shufflevector <16 x double> %v2, <16 x double> undef,
+  %v2a = shufflevector <16 x double> %v2, <16 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <16 x double> %v2, <16 x double> undef,
+  %v2b = shufflevector <16 x double> %v2, <16 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2c = shufflevector <16 x double> %v2, <16 x double> undef,
+  %v2c = shufflevector <16 x double> %v2, <16 x double> poison,
          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v2d = shufflevector <16 x double> %v2, <16 x double> undef,
+  %v2d = shufflevector <16 x double> %v2, <16 x double> poison,
          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v3a = shufflevector <16 x double> %v3, <16 x double> undef,
+  %v3a = shufflevector <16 x double> %v3, <16 x double> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v3b = shufflevector <16 x double> %v3, <16 x double> undef,
+  %v3b = shufflevector <16 x double> %v3, <16 x double> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v3c = shufflevector <16 x double> %v3, <16 x double> undef,
+  %v3c = shufflevector <16 x double> %v3, <16 x double> poison,
          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v3d = shufflevector <16 x double> %v3, <16 x double> undef,
+  %v3d = shufflevector <16 x double> %v3, <16 x double> poison,
          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 
   %out0a = bitcast <16 x double> * %out0 to <4 x double> *
@@ -3771,10 +3771,10 @@ define void
                       i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   store <16 x float> %r1, <16 x float> * %out1, align 4
 
-  ;; t2 = <c0 ... c9 undef ... undef>
+  ;; t2 = <c0 ... c9 poison ... poison>
   %t2 = shufflevector <16 x float> %v0, <16 x float> %v1,
           <16 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23,
-                      i32 26, i32 29, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 26, i32 29, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <16 x float> %t2, <16 x float> %v2,
@@ -3808,10 +3808,10 @@ define void
                       i32 8, i32 19, i32 30, i32 9, i32 20, i32 31, i32 10, i32 21>
   store <16 x float> %r1, <16 x float> * %out1, align 4
 
-  ;; t2 = <a11 ... a15 b11 ... b15 undef ... undef>
+  ;; t2 = <a11 ... a15 b11 ... b15 poison ... poison>
   %t2 = shufflevector <16 x float> %v0, <16 x float> %v1,
           <16 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 27, i32 28, i32 29,
-                      i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 30, i32 31, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   ;; Produce output vector
   %r2 = shufflevector <16 x float> %t2, <16 x float> %v2,
           <16 x i32> <i32 26, i32 0, i32 5, i32 27, i32 1, i32 6, i32 28, i32 2,
@@ -3844,10 +3844,10 @@ define void
                       i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   store <16 x double> %r1, <16 x double> * %out1, align 4
 
-  ;; t2 = <c0 ... c9 undef ... undef>
+  ;; t2 = <c0 ... c9 poison ... poison>
   %t2 = shufflevector <16 x double> %v0, <16 x double> %v1,
           <16 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23,
-                      i32 26, i32 29, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 26, i32 29, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <16 x double> %t2, <16 x double> %v2,
@@ -3881,10 +3881,10 @@ define void
                       i32 8, i32 19, i32 30, i32 9, i32 20, i32 31, i32 10, i32 21>
   store <16 x double> %r1, <16 x double> * %out1, align 4
 
-  ;; t2 = <a11 ... a15 b11 ... b15 undef ... undef>
+  ;; t2 = <a11 ... a15 b11 ... b15 poison ... poison>
   %t2 = shufflevector <16 x double> %v0, <16 x double> %v1,
           <16 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 27, i32 28, i32 29,
-                      i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 30, i32 31, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   ;; Produce output vector
   %r2 = shufflevector <16 x double> %t2, <16 x double> %v2,
           <16 x i32> <i32 26, i32 0, i32 5, i32 27, i32 1, i32 6, i32 28, i32 2,
@@ -4223,10 +4223,10 @@ define void
                       i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   store <32 x float> %r1, <32 x float> * %out1, align 4
 
-  ;; t2 = <c0 ... c20 undef ... undef>
+  ;; t2 = <c0 ... c20 poison ... poison>
   %t2 = shufflevector <32 x float> %v0, <32 x float> %v1,
           <32 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47,
-                      i32 50, i32 53, i32 56, i32 59, i32 62, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 50, i32 53, i32 56, i32 59, i32 62, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <32 x float> %t2, <32 x float> %v2,
@@ -4268,10 +4268,10 @@ define void
                       i32 16, i32 38, i32 59, i32 17, i32 39, i32 60, i32 18, i32 40, i32 61, i32 19, i32 41, i32 62, i32 20, i32 42, i32 63, i32 21>
   store <32 x float> %r1, <32 x float> * %out1, align 4
 
-  ;; t2 = <a22 ... a31 b21 ... b31 undef ... undef>
+  ;; t2 = <a22 ... a31 b21 ... b31 poison ... poison>
   %t2 = shufflevector <32 x float> %v0, <32 x float> %v1,
           <32 x i32> <i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58,
-                      i32 59, i32 60, i32 61, i32 62, i32 63, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 59, i32 60, i32 61, i32 62, i32 63, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   ;; Produce output vector
   %r2 = shufflevector <32 x float> %t2, <32 x float> %v2,
           <32 x i32> <i32 10, i32 53, i32 0, i32 11, i32 54, i32 1, i32 12, i32 55, i32 2, i32 13, i32 56, i32 3, i32 14, i32 57, i32 4, i32 15,
@@ -4312,10 +4312,10 @@ define void
                       i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   store <32 x double> %r1, <32 x double> * %out1, align 4
 
-  ;; t2 = <c0 ... c20 undef ... undef>
+  ;; t2 = <c0 ... c20 poison ... poison>
   %t2 = shufflevector <32 x double> %v0, <32 x double> %v1,
           <32 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47,
-                      i32 50, i32 53, i32 56, i32 59, i32 62, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 50, i32 53, i32 56, i32 59, i32 62, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <32 x double> %t2, <32 x double> %v2,
@@ -4357,10 +4357,10 @@ define void
                       i32 16, i32 38, i32 59, i32 17, i32 39, i32 60, i32 18, i32 40, i32 61, i32 19, i32 41, i32 62, i32 20, i32 42, i32 63, i32 21>
   store <32 x double> %r1, <32 x double> * %out1, align 4
 
-  ;; t2 = <a22 ... a31 b21 ... b31 undef ... undef>
+  ;; t2 = <a22 ... a31 b21 ... b31 poison ... poison>
   %t2 = shufflevector <32 x double> %v0, <32 x double> %v1,
           <32 x i32> <i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58,
-                      i32 59, i32 60, i32 61, i32 62, i32 63, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 59, i32 60, i32 61, i32 62, i32 63, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   ;; Produce output vector
   %r2 = shufflevector <32 x double> %t2, <32 x double> %v2,
           <32 x i32> <i32 10, i32 53, i32 0, i32 11, i32 54, i32 1, i32 12, i32 55, i32 2, i32 13, i32 56, i32 3, i32 14, i32 57, i32 4, i32 15,
@@ -4780,12 +4780,12 @@ define void
                       i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
   store <64 x float> %r1, <64 x float> * %out1, align 4
 
-  ;; t2 = <c0 ... c41 undef ... undef>
+  ;; t2 = <c0 ... c41 poison ... poison>
   %t2 = shufflevector <64 x float> %v0, <64 x float> %v1,
           <64 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47,
                       i32 50, i32 53, i32 56, i32 59, i32 62, i32 65, i32 68, i32 71, i32 74, i32 77, i32 80, i32 83, i32 86, i32 89, i32 92, i32 95,
-                      i32 98, i32 101, i32 104, i32 107, i32 110, i32 113, i32 116, i32 119, i32 122, i32 125, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 98, i32 101, i32 104, i32 107, i32 110, i32 113, i32 116, i32 119, i32 122, i32 125, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <64 x float> %t2, <64 x float> %v2,
@@ -4838,12 +4838,12 @@ define void
                       i32 80, i32 123, i32 38, i32 81, i32 124, i32 39, i32 82, i32 125, i32 40, i32 83, i32 126, i32 41, i32 84, i32 127, i32 42, i32 85>
   store <64 x float> %r1, <64 x float> * %out1, align 4
 
-  ;; t2 = <a43 ... a63 b43 ... b63 undef ... undef>
+  ;; t2 = <a43 ... a63 b43 ... b63 poison ... poison>
   %t2 = shufflevector <64 x float> %v0, <64 x float> %v1,
           <64 x i32> <i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58,
                       i32 59, i32 60, i32 61, i32 62, i32 63, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117,
-                      i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   ;; Produce output vector
   %r2 = shufflevector <64 x float> %t2, <64 x float> %v2,
           <64 x i32> <i32 106, i32 0, i32 21, i32 107, i32 1, i32 22, i32 108, i32 2, i32 23, i32 109, i32 3, i32 24, i32 110, i32 4, i32 25, i32 111,
@@ -4895,12 +4895,12 @@ define void
                       i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127>
   store <64 x double> %r1, <64 x double> * %out1, align 4
 
-  ;; t3 = <c0 ... c41 undef ... undef>
+  ;; t3 = <c0 ... c41 poison ... poison>
   %t2 = shufflevector <64 x double> %v0, <64 x double> %v1,
           <64 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47,
                       i32 50, i32 53, i32 56, i32 59, i32 62, i32 65, i32 68, i32 71, i32 74, i32 77, i32 80, i32 83, i32 86, i32 89, i32 92, i32 95,
-                      i32 98, i32 101, i32 104, i32 107, i32 110, i32 113, i32 116, i32 119, i32 122, i32 125, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 98, i32 101, i32 104, i32 107, i32 110, i32 113, i32 116, i32 119, i32 122, i32 125, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <64 x double> %t2, <64 x double> %v2,
@@ -4953,12 +4953,12 @@ define void
                       i32 80, i32 123, i32 38, i32 81, i32 124, i32 39, i32 82, i32 125, i32 40, i32 83, i32 126, i32 41, i32 84, i32 127, i32 42, i32 85>
   store <64 x double> %r1, <64 x double> * %out1, align 4
 
-  ;; t2 = <a43 ... a63 b43 ... b63 undef ... undef>
+  ;; t2 = <a43 ... a63 b43 ... b63 poison ... poison>
   %t2 = shufflevector <64 x double> %v0, <64 x double> %v1, ; 21a[43:63] + 21b[43:63]
           <64 x i32> <i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58,
                       i32 59, i32 60, i32 61, i32 62, i32 63, i32 107, i32 108, i32 109, i32 110, i32 111, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117,
-                      i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+                      i32 118, i32 119, i32 120, i32 121, i32 122, i32 123, i32 124, i32 125, i32 126, i32 127, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 
   ;; Produce output vector
   %r2 = shufflevector <64 x double> %t2, <64 x double> %v2, ; 21a[0:20] + 21b[21:41] + 22c[106:127]
@@ -6986,9 +6986,9 @@ domixed:
   %first = call i64 @llvm.cttz.i64(i64 %mm, i1 false)
   %first32 = trunc i64 %first to i32
   %baseval = extractelement <$1 x $2> %v, i32 %first32
-  %basev1 = insertelement <$1 x $2> undef, $2 %baseval, i32 0
+  %basev1 = insertelement <$1 x $2> poison, $2 %baseval, i32 0
   ; get a vector that is that value smeared across all elements
-  %basesmear = shufflevector <$1 x $2> %basev1, <$1 x $2> undef,
+  %basesmear = shufflevector <$1 x $2> %basev1, <$1 x $2> poison,
         <$1 x i32> < forloop(i, 0, eval($1-2), `i32 0, ') i32 0 >
 
   ; now to a blend of that vector with the original vector, such that the
@@ -7074,7 +7074,7 @@ define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
   ; first, set the value of any off lanes to the identity value
   %ptr = alloca <$1 x $2>
   %idvec1 = bitcast $2 $5 to <1 x $2>
-  %idvec = shufflevector <1 x $2> %idvec1, <1 x $2> undef,
+  %idvec = shufflevector <1 x $2> %idvec1, <1 x $2> poison,
       <$1 x i32> < forloop(i, 0, eval($1-2), `i32 0, ') i32 0 >
   store <$1 x $2> %idvec, <$1 x $2> * %ptr
   %ptr`'$3 = bitcast <$1 x $2> * %ptr to <$1 x i`'$3> *
@@ -7097,7 +7097,7 @@ define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
   %s`'i = $4 $2 %s`'eval(i-1), %v`'eval(i-1)')
 
   ; and fill in the result vector
-  %r0 = insertelement <$1 x $2> undef, $2 $5, i32 0  ; 0th element gets identity
+  %r0 = insertelement <$1 x $2> poison, $2 $5, i32 0  ; 0th element gets identity
   forloop(i, 1, eval($1-1), `
   %r`'i = insertelement <$1 x $2> %r`'eval(i-1), $2 %s`'i, i32 i')
 
@@ -7340,7 +7340,7 @@ define <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32
 
   %ret0 = call <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i32> %newDelta,
-                                            <WIDTH x $1> undef, i32 0)
+                                            <WIDTH x $1> poison, i32 0)
   forloop(lane, 1, eval(WIDTH-1),
           `patsubst(patsubst(`%retLANE = call <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr,
                                 <WIDTH x i32> %newOffsets, i32 %offset_scale, <WIDTH x i32> %newDelta,
@@ -7371,7 +7371,7 @@ define <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64
 
   %ret0 = call <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i64> %newDelta,
-                                            <WIDTH x $1> undef, i32 0)
+                                            <WIDTH x $1> poison, i32 0)
   forloop(lane, 1, eval(WIDTH-1),
           `patsubst(patsubst(`%retLANE = call <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr,
                                 <WIDTH x i64> %newOffsets, i32 %offset_scale, <WIDTH x i64> %newDelta,
@@ -7404,7 +7404,7 @@ define <WIDTH x $1>
                            <WIDTH x i32> %offsets,
                            <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %scale_vec = bitcast i32 %offset_scale to <1 x i32>
-  %smear_scale = shufflevector <1 x i32> %scale_vec, <1 x i32> undef,
+  %smear_scale = shufflevector <1 x i32> %scale_vec, <1 x i32> poison,
      <WIDTH x i32> < forloop(i, 1, eval(WIDTH-1), `i32 0, ') i32 0 >
   %scaled_offsets = mul <WIDTH x i32> %smear_scale, %offsets
   %v = call <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32> %scaled_offsets, i32 1,
@@ -7418,7 +7418,7 @@ define <WIDTH x $1>
                             <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %scale64 = zext i32 %offset_scale to i64
   %scale_vec = bitcast i64 %scale64 to <1 x i64>
-  %smear_scale = shufflevector <1 x i64> %scale_vec, <1 x i64> undef,
+  %smear_scale = shufflevector <1 x i64> %scale_vec, <1 x i64> poison,
      <WIDTH x i32> < forloop(i, 1, eval(WIDTH-1), `i32 0, ') i32 0 >
   %scaled_offsets = mul <WIDTH x i64> %smear_scale, %offsets
   %v = call <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64> %scaled_offsets,

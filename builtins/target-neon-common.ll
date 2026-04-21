@@ -57,7 +57,7 @@ declare <4 x float> @NEON_PREFIX.vcvthf2fp(<4 x i16>) nounwind readnone
 
 define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline {
   %v1 = bitcast i16 %v to <1 x i16>
-  %vec = shufflevector <1 x i16> %v1, <1 x i16> undef,
+  %vec = shufflevector <1 x i16> %v1, <1 x i16> poison,
            <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %h = call <4 x float> @NEON_PREFIX.vcvthf2fp(<4 x i16> %vec)
   %r = extractelement <4 x float> %h, i32 0
@@ -66,7 +66,7 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline {
 
 define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline {
   %v1 = bitcast float %v to <1 x float>
-  %vec = shufflevector <1 x float> %v1, <1 x float> undef,
+  %vec = shufflevector <1 x float> %v1, <1 x float> poison,
            <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %h = call <4 x i16> @NEON_PREFIX.vcvtfp2hf(<4 x float> %vec)
   %r = extractelement <4 x i16> %h, i32 0

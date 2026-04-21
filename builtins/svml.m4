@@ -194,9 +194,9 @@ define(`svml_define',`
 ;;define void @__svml_sincosf(<8 x float>, i8 *,
 ;;                                    i8 *) nounwind alwaysinline {
 ;;  ; call svml_sincosf4 two times with the two 4-wide sub-vectors
-;;  %a = shufflevector <8 x float> %0, <8 x float> undef,
+;;  %a = shufflevector <8 x float> %0, <8 x float> poison,
 ;;         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-;;  %b = shufflevector <8 x float> %0, <8 x float> undef,
+;;  %b = shufflevector <8 x float> %0, <8 x float> poison,
 ;;         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ;;
 ;;  %cospa = alloca <4 x float>

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2025, Intel Corporation
+;;  Copyright (c) 2020-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -96,11 +96,11 @@ define double @__doublebits_uniform_int64(i64) nounwind readnone alwaysinline {
 }
 
 define <WIDTH x float> @__undef_varying() nounwind readnone alwaysinline {
-  ret <WIDTH x float> undef
+  ret <WIDTH x float> poison
 }
 
 define float @__undef_uniform() nounwind readnone alwaysinline {
-  ret float undef
+  ret float poison
 }
 
 ;; rcp/rsqrt for double
@@ -591,11 +591,11 @@ define <4 x float> @__max_varying_float(<4 x float> %0, <4 x float> %1) unnamed_
 
 define <4 x double> @__max_varying_double(<4 x double> %a, <4 x double> %b) {
 entry:
-  %vecinit2 = shufflevector <4 x double> %a, <4 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vecinit7 = shufflevector <4 x double> %b, <4 x double> undef, <2 x i32> <i32 0, i32 1>
+  %vecinit2 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vecinit7 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 1>
   %0 = tail call <2 x double> @llvm.maximum.v2f64(<2 x double> %vecinit2, <2 x double> %vecinit7) #5
-  %vecinit12 = shufflevector <4 x double> %a, <4 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vecinit17 = shufflevector <4 x double> %b, <4 x double> undef, <2 x i32> <i32 2, i32 3>
+  %vecinit12 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vecinit17 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 2, i32 3>
   %1 = tail call <2 x double> @llvm.maximum.v2f64(<2 x double> %vecinit12, <2 x double> %vecinit17) #5
   %vecinit6.i = shufflevector <2 x double> %0, <2 x double> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %vecinit6.i
@@ -603,11 +603,11 @@ entry:
 
 define <4 x double> @__min_varying_double(<4 x double> %a, <4 x double> %b) {
 entry:
-  %vecinit2 = shufflevector <4 x double> %a, <4 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vecinit7 = shufflevector <4 x double> %b, <4 x double> undef, <2 x i32> <i32 0, i32 1>
+  %vecinit2 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vecinit7 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 1>
   %0 = tail call <2 x double> @llvm.minimum.v2f64(<2 x double> %vecinit2, <2 x double> %vecinit7) #5
-  %vecinit12 = shufflevector <4 x double> %a, <4 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vecinit17 = shufflevector <4 x double> %b, <4 x double> undef, <2 x i32> <i32 2, i32 3>
+  %vecinit12 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vecinit17 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 2, i32 3>
   %1 = tail call <2 x double> @llvm.minimum.v2f64(<2 x double> %vecinit12, <2 x double> %vecinit17) #5
   %vecinit6.i = shufflevector <2 x double> %0, <2 x double> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %vecinit6.i
@@ -693,8 +693,8 @@ define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
 }
 
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
-  %v1 = shufflevector <4 x float> %v, <4 x float> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %v1 = shufflevector <4 x float> %v, <4 x float> poison,
+                      <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %m1 = fadd <4 x float> %v1, %v
   %m1a = extractelement <4 x float> %m1, i32 0
   %m1b = extractelement <4 x float> %m1, i32 1
@@ -711,8 +711,8 @@ define float @__reduce_max_float(<4 x float>) nounwind readnone {
 }
 
 define i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone alwaysinline {
-  %v1 = shufflevector <4 x i32> %v, <4 x i32> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %v1 = shufflevector <4 x i32> %v, <4 x i32> poison,
+                      <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %m1 = add <4 x i32> %v1, %v
   %m1a = extractelement <4 x i32> %m1, i32 0
   %m1b = extractelement <4 x i32> %m1, i32 1
@@ -721,9 +721,9 @@ define i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone alwaysinline {
 }
 
 define double @__reduce_add_double(<4 x double>) nounwind readnone {
-  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+  %v0 = shufflevector <4 x double> %0, <4 x double> poison,
                       <2 x i32> <i32 0, i32 1>
-  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+  %v1 = shufflevector <4 x double> %0, <4 x double> poison,
                       <2 x i32> <i32 2, i32 3>
   %sum = fadd <2 x double> %v0, %v1
   %e0 = extractelement <2 x double> %sum, i32 0
@@ -833,9 +833,9 @@ define  float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
 }
 
 define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
-  %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
+  %v0 = shufflevector <4 x i64> %0, <4 x i64> poison,
                       <2 x i32> <i32 0, i32 1>
-  %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
+  %v1 = shufflevector <4 x i64> %0, <4 x i64> poison,
                       <2 x i32> <i32 2, i32 3>
   %sum = add <2 x i64> %v0, %v1
   %e0 = extractelement <2 x i64> %sum, i32 0

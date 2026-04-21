@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019-2025, Intel Corporation
+;;  Copyright (c) 2019-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -471,7 +471,7 @@ define i32 @__task_count()  nounwind readnone alwaysinline {
   %l_size_x = trunc i64 %l_size_x_ to i32
   %l_size_y = trunc i64 %l_size_y_ to i32
   %l_size_z = trunc i64 %l_size_z_ to i32
-  %l_size_1 = insertelement <3 x i32> undef, i32 %l_size_x, i32 0
+  %l_size_1 = insertelement <3 x i32> poison, i32 %l_size_x, i32 0
   %l_size_2 = insertelement <3 x i32> %l_size_1, i32 %l_size_y, i32 1
   %l_size_3 = insertelement <3 x i32> %l_size_2, i32 %l_size_z, i32 2
   %gr_count_x_ = call i64 @__spirv_BuiltInNumWorkgroups(i32 0)
@@ -480,7 +480,7 @@ define i32 @__task_count()  nounwind readnone alwaysinline {
   %gr_count_x = trunc i64 %gr_count_x_ to i32
   %gr_count_y = trunc i64 %gr_count_y_ to i32
   %gr_count_z = trunc i64 %gr_count_z_ to i32
-  %gr_count_1 = insertelement <3 x i32> undef, i32 %gr_count_x, i32 0
+  %gr_count_1 = insertelement <3 x i32> poison, i32 %gr_count_x, i32 0
   %gr_count_2 = insertelement <3 x i32> %gr_count_1, i32 %gr_count_y, i32 1
   %gr_count_3 = insertelement <3 x i32> %gr_count_2, i32 %gr_count_z, i32 2
   %size_gr = mul <3 x i32> %l_size_3, %gr_count_3
@@ -699,17 +699,17 @@ define <WIDTH x float> @__ceil_varying_float(<WIDTH x float>) nounwind readonly 
 define <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readonly alwaysinline {
   %float_to_int_bitcast.i.i.i.i = bitcast <WIDTH x double> %0 to <WIDTH x i64>
   ; create vector of literals
-  %vec_lit.i = insertelement <1 x i64> undef, i64 -9223372036854775808, i32 0
-  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <WIDTH x i32> zeroinitializer
+  %vec_lit.i = insertelement <1 x i64> poison, i64 -9223372036854775808, i32 0
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> poison, <WIDTH x i32> zeroinitializer
   %bitop.i.i = and <WIDTH x i64> %float_to_int_bitcast.i.i.i.i, %vec_lit
   %bitop.i = xor <WIDTH x i64> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
   %int_to_float_bitcast.i.i40.i = bitcast <WIDTH x i64> %bitop.i to <WIDTH x double>
   ; create vector of float literals
-  %vec_lit_pos.i = insertelement <1 x double> undef, double 4.5036e+15, i32 0
-  %vec_lit_pos = shufflevector <1 x double> %vec_lit_pos.i, <1 x double> undef, <WIDTH x i32> zeroinitializer
+  %vec_lit_pos.i = insertelement <1 x double> poison, double 4.5036e+15, i32 0
+  %vec_lit_pos = shufflevector <1 x double> %vec_lit_pos.i, <1 x double> poison, <WIDTH x i32> zeroinitializer
   ; create vector of float literals
-  %vec_lit_neg.i = insertelement <1 x double> undef, double -4.5036e+15, i32 0
-  %vec_lit_neg = shufflevector <1 x double> %vec_lit_neg.i, <1 x double> undef, <WIDTH x i32> zeroinitializer
+  %vec_lit_neg.i = insertelement <1 x double> poison, double -4.5036e+15, i32 0
+  %vec_lit_neg = shufflevector <1 x double> %vec_lit_neg.i, <1 x double> poison, <WIDTH x i32> zeroinitializer
   %binop.i = fadd <WIDTH x double> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
   %binop21.i = fadd <WIDTH x double> %binop.i, %vec_lit_neg
   %float_to_int_bitcast.i.i.i = bitcast <WIDTH x double> %binop21.i to <WIDTH x i64>
@@ -723,8 +723,8 @@ define <WIDTH x double> @__floor_varying_double(<WIDTH x double>) nounwind reado
   %bincmp.i = fcmp ogt <WIDTH x double> %calltmp.i, %0
   %val_to_boolvec32.i = sext <WIDTH x i1> %bincmp.i to <WIDTH x i64>
   ; create vector of literals
-  %vec_lit.i = insertelement <1 x i64> undef, i64 -4616189618054758400, i32 0
-  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <WIDTH x i32> zeroinitializer
+  %vec_lit.i = insertelement <1 x i64> poison, i64 -4616189618054758400, i32 0
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> poison, <WIDTH x i32> zeroinitializer
   %bitop.i = and <WIDTH x i64> %val_to_boolvec32.i, %vec_lit
   %int_to_float_bitcast.i.i.i = bitcast <WIDTH x i64> %bitop.i to <WIDTH x double>
   %binop.i = fadd <WIDTH x double> %calltmp.i, %int_to_float_bitcast.i.i.i
@@ -736,8 +736,8 @@ define <WIDTH x double> @__ceil_varying_double(<WIDTH x double>) nounwind readon
   %bincmp.i = fcmp olt <WIDTH x double> %calltmp.i, %0
   %val_to_boolvec32.i = sext <WIDTH x i1> %bincmp.i to <WIDTH x i64>
   ; create vector of literals
-  %vec_lit.i = insertelement <1 x i64> undef, i64 4607182418800017408, i32 0
-  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> undef, <WIDTH x i32> zeroinitializer
+  %vec_lit.i = insertelement <1 x i64> poison, i64 4607182418800017408, i32 0
+  %vec_lit = shufflevector <1 x i64> %vec_lit.i, <1 x i64> poison, <WIDTH x i32> zeroinitializer
   %bitop.i = and <WIDTH x i64> %val_to_boolvec32.i, %vec_lit
   %int_to_float_bitcast.i.i.i = bitcast <WIDTH x i64> %bitop.i to <WIDTH x double>
   %binop.i = fadd <WIDTH x double> %calltmp.i, %int_to_float_bitcast.i.i.i
@@ -972,8 +972,8 @@ xe_masked_store_blend(i64)
 define(`xe_masked_store', `
 define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %ptr = bitcast <WIDTH x $1>* %0 to i8*
-  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
-  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %broadcast_init = insertelement <WIDTH x i32> poison, i32 SIZEOF($1), i32 0
+  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> poison, <WIDTH x i32> zeroinitializer
   %offsets = mul LINEAR_VECTOR(i32), %shuffle
 ifelse(RUNTIME, `32',
 `
@@ -1003,7 +1003,7 @@ define(`xe_masked_load', `
 define <WIDTH x $1> @__masked_load_blend_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %bitptr = bitcast i8* %0 to <WIDTH x $1>*
   %res = load PTR_OP_ARGS(`<WIDTH x $1> ') %bitptr, align SIZEOF($1)
-  %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
+  %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> poison
   ret <WIDTH x $1> %res_masked
 }
 
@@ -1062,8 +1062,8 @@ vload:
 
 
 vgather:
-  %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
-  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %broadcast_init = insertelement <WIDTH x i32> poison, i32 SIZEOF($1), i32 0
+  %shuffle = shufflevector <WIDTH x i32> %broadcast_init, <WIDTH x i32> poison, <WIDTH x i32> zeroinitializer
   %offsets = mul LINEAR_VECTOR(i32), %shuffle
   ifelse(RUNTIME, `32',
   `
@@ -1101,12 +1101,12 @@ ifelse(WIDTH, 32,`
 
 define <WIDTH x $1>
 @__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
-  %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %scale = insertelement <WIDTH x i32> poison, i32 %offset_scale, i32 0
+  %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> poison, <WIDTH x i32> zeroinitializer
   %new_offsets_scaled = mul <WIDTH x i32> %offsets, %scale_shuffle
   %ptr_to_int = ptrtoint i8* %ptr to i32
-  %base = insertelement <WIDTH x i32> undef, i32 %ptr_to_int, i32 0
-  %shuffle = shufflevector <WIDTH x i32> %base, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %base = insertelement <WIDTH x i32> poison, i32 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i32> %base, <WIDTH x i32> poison, <WIDTH x i32> zeroinitializer
   %new_offsets = add <WIDTH x i32> %new_offsets_scaled, %shuffle
   %res = call <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %new_offsets, <WIDTH x MASK> %vecmask)
   ret <WIDTH x $1> %res
@@ -1115,12 +1115,12 @@ define <WIDTH x $1>
 define <WIDTH x $1>
 @__gather_base_offsets64_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %offset_scale64 = zext i32 %offset_scale to i64
-  %scale = insertelement <WIDTH x i64> undef, i64 %offset_scale64, i32 0
-  %scale_shuffle = shufflevector <WIDTH x i64> %scale, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+  %scale = insertelement <WIDTH x i64> poison, i64 %offset_scale64, i32 0
+  %scale_shuffle = shufflevector <WIDTH x i64> %scale, <WIDTH x i64> poison, <WIDTH x i32> zeroinitializer
   %new_offsets_scaled = mul <WIDTH x i64> %offsets, %scale_shuffle
   %ptr_to_int = ptrtoint i8* %ptr to i64
-  %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
-  %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+  %base = insertelement <WIDTH x i64> poison, i64 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> poison, <WIDTH x i32> zeroinitializer
   %new_offsets = add <WIDTH x i64> %new_offsets_scaled, %shuffle
   %res = call <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %new_offsets, <WIDTH x MASK> %vecmask)
   ret <WIDTH x $1> %res
@@ -1136,37 +1136,37 @@ define <WIDTH x $1>
 define <WIDTH x $1>
 @__gather64_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   ifelse(WIDTH,32,`
-   %offsets1 = shufflevector <WIDTH x i64> %offsets, <WIDTH x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-   %offsets2 = shufflevector <WIDTH x i64> %offsets, <WIDTH x i64> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-   %vecmask1 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-   %vecmask2 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+   %offsets1 = shufflevector <WIDTH x i64> %offsets, <WIDTH x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+   %offsets2 = shufflevector <WIDTH x i64> %offsets, <WIDTH x i64> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+   %vecmask1 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+   %vecmask2 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
    ifelse($1, i8,`
-      %res64_1 = call <64 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 64).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %offsets1, <16 x $1> undef)
-      %res_1 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 64).i16(<64 x $1> %res64_1, i32 0, i32 16, i32 4, i16 0, i32 undef)
-      %res64_2 = call <64 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 64).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %offsets2, <16 x $1> undef)
-      %res_2 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 64).i16(<64 x $1> %res64_2, i32 0, i32 16, i32 4, i16 0, i32 undef)
+      %res64_1 = call <64 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 64).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %offsets1, <16 x $1> poison)
+      %res_1 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 64).i16(<64 x $1> %res64_1, i32 0, i32 16, i32 4, i16 0, i32 poison)
+      %res64_2 = call <64 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 64).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %offsets2, <16 x $1> poison)
+      %res_2 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 64).i16(<64 x $1> %res64_2, i32 0, i32 16, i32 4, i16 0, i32 poison)
       %res = shufflevector <16 x $1> %res_1, <16 x $1> %res_2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     ', $1,i16, `
-      %res64_1 = call <32 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 32).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 1, <16 x i64> %offsets1, <16 x $1> undef)
-      %res_1 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 32).i16(<32 x $1> %res64_1, i32 0, i32 16, i32 2, i16 0, i32 undef)
-      %res64_2 = call <32 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 32).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 1, <16 x i64> %offsets2, <16 x $1> undef)
-      %res_2 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 32).i16(<32 x $1> %res64_2, i32 0, i32 16, i32 2, i16 0, i32 undef)
+      %res64_1 = call <32 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 32).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 1, <16 x i64> %offsets1, <16 x $1> poison)
+      %res_1 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 32).i16(<32 x $1> %res64_1, i32 0, i32 16, i32 2, i16 0, i32 poison)
+      %res64_2 = call <32 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 32).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 1, <16 x i64> %offsets2, <16 x $1> poison)
+      %res_2 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 32).i16(<32 x $1> %res64_2, i32 0, i32 16, i32 2, i16 0, i32 poison)
       %res = shufflevector <16 x $1> %res_1, <16 x $1> %res_2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     ',`
-      %res1 = call <16 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1,16).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %offsets1, <16 x $1> undef)
-      %res2 = call <16 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1,16).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %offsets2, <16 x $1> undef)
+      %res1 = call <16 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1,16).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %offsets1, <16 x $1> poison)
+      %res2 = call <16 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1,16).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %offsets2, <16 x $1> poison)
       %res = shufflevector <16 x $1> %res1, <16 x $1> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     ')
       ret <WIDTH x $1> %res
   ',`
     ifelse($1, i8,`
-        %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-        %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
+        %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> poison)
+        %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 poison)
       ', $1,i16, `
-        %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-        %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
+        %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> poison)
+        %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 poison)
       ',`
-        %res = call <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+        %res = call <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> poison)
       ')
       ret <WIDTH x $1> %res
   ')
@@ -1197,12 +1197,12 @@ ifelse(WIDTH, 32,`
 ')
 define void
 @__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
-  %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
-  %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %scale = insertelement <WIDTH x i32> poison, i32 %offset_scale, i32 0
+  %scale_shuffle = shufflevector <WIDTH x i32> %scale, <WIDTH x i32> poison, <WIDTH x i32> zeroinitializer
   %new_offsets_scaled = mul <WIDTH x i32> %offsets, %scale_shuffle
   %ptr_to_int = ptrtoint i8* %ptr to i32
-  %base = insertelement <WIDTH x i32> undef, i32 %ptr_to_int, i32 0
-  %shuffle = shufflevector <WIDTH x i32> %base, <WIDTH x i32> undef, <WIDTH x i32> zeroinitializer
+  %base = insertelement <WIDTH x i32> poison, i32 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i32> %base, <WIDTH x i32> poison, <WIDTH x i32> zeroinitializer
   %new_offsets = add <WIDTH x i32> %new_offsets_scaled, %shuffle
   call void @__scatter32_$1(<WIDTH x i32> %new_offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask)
   ret void
@@ -1211,12 +1211,12 @@ define void
 define void
 @__scatter_base_offsets64_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i64> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
   %offset_scale64 = zext i32 %offset_scale to i64
-  %scale = insertelement <WIDTH x i64> undef, i64 %offset_scale64, i32 0
-  %scale_shuffle = shufflevector <WIDTH x i64> %scale, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+  %scale = insertelement <WIDTH x i64> poison, i64 %offset_scale64, i32 0
+  %scale_shuffle = shufflevector <WIDTH x i64> %scale, <WIDTH x i64> poison, <WIDTH x i32> zeroinitializer
   %new_offsets_scaled = mul <WIDTH x i64> %offsets, %scale_shuffle
   %ptr_to_int = ptrtoint i8* %ptr to i64
-  %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
-  %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
+  %base = insertelement <WIDTH x i64> poison, i64 %ptr_to_int, i32 0
+  %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> poison, <WIDTH x i32> zeroinitializer
   %new_offsets = add <WIDTH x i64> %new_offsets_scaled, %shuffle
   call void @__scatter64_$1(<WIDTH x i64> %new_offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask)
   ret void
@@ -1232,21 +1232,21 @@ define void
 define void
 @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
    ifelse(WIDTH,32,`
-    %ptrs1 = shufflevector <WIDTH x i64> %ptrs, <WIDTH x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %ptrs2 = shufflevector <WIDTH x i64> %ptrs, <WIDTH x i64> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %values1 = shufflevector <WIDTH x $1> %values, <WIDTH x $1> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %values2 = shufflevector <WIDTH x $1> %values, <WIDTH x $1> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %vecmask1 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %vecmask2 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %ptrs1 = shufflevector <WIDTH x i64> %ptrs, <WIDTH x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %ptrs2 = shufflevector <WIDTH x i64> %ptrs, <WIDTH x i64> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %values1 = shufflevector <WIDTH x $1> %values, <WIDTH x $1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %values2 = shufflevector <WIDTH x $1> %values, <WIDTH x $1> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %vecmask1 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %vecmask2 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     ifelse($1,i8, `
-      %res1 = tail call <64 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 64).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<64 x $1> undef, <16 x $1> %values1, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x MASK> %vecmask1)
+      %res1 = tail call <64 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 64).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<64 x $1> poison, <16 x $1> %values1, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x MASK> %vecmask1)
       call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 64)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %ptrs1, <64 x $1> %res1)
-      %res2 = tail call <64 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 64).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<64 x $1> undef, <16 x $1> %values2, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x MASK> %vecmask2)
+      %res2 = tail call <64 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 64).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<64 x $1> poison, <16 x $1> %values2, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x MASK> %vecmask2)
       call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 64)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %ptrs2, <64 x $1> %res2)
     ', $1,i16, `
-      %res1 = tail call <32 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 32).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<32 x $1> undef, <16 x $1> %values1, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x MASK> %vecmask1)
+      %res1 = tail call <32 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 32).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<32 x $1> poison, <16 x $1> %values1, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x MASK> %vecmask1)
       call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 32)(<16 x MASK> %vecmask1, i32 1, <16 x i64> %ptrs1, <32 x $1> %res1)
-      %res2 = tail call <32 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 32).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<32 x $1> undef, <16 x $1> %values2, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x MASK> %vecmask2)
+      %res2 = tail call <32 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 32).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<32 x $1> poison, <16 x $1> %values2, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x MASK> %vecmask2)
       call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 32)(<16 x MASK> %vecmask2, i32 1, <16 x i64> %ptrs2, <32 x $1> %res2)
     ',`
       call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %ptrs1, <16 x $1> %values1)
@@ -1254,10 +1254,10 @@ define void
     ')
   ',`
     ifelse($1,i8, `
-      %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+      %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X4 x $1> poison, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
       call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH_X4 x $1> %res)
     ', $1,i16, `
-      %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+      %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X2 x $1> poison, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
       call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %ptrs, <WIDTH_X2 x $1> %res)
     ',`
       call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
@@ -1310,8 +1310,8 @@ define float @__log_uniform_float(float) nounwind readnone {
 declare <WIDTH x float> @__spirv_ocl_native_log2_DvWIDTHf(<WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone {
   %res2base = call <WIDTH x float> @__spirv_ocl_native_log2_DvWIDTHf(<WIDTH x float> %0)
-  %log2e = insertelement <WIDTH x float> undef, float LOG2E, i32 0
-  %log2e_shuffle = shufflevector <WIDTH x float> %log2e, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
+  %log2e = insertelement <WIDTH x float> poison, float LOG2E, i32 0
+  %log2e_shuffle = shufflevector <WIDTH x float> %log2e, <WIDTH x float> poison, <WIDTH x i32> zeroinitializer
   %res = fdiv <WIDTH x float> %res2base, %log2e_shuffle
   ret <WIDTH x float> %res
 }
@@ -1329,8 +1329,8 @@ define half @__log_uniform_half(half) nounwind readnone {
 declare <WIDTH x half> @__spirv_ocl_native_log2_DvWIDTHDh(<WIDTH x half>) nounwind readnone
 define <WIDTH x half> @__log_varying_half(<WIDTH x half>) nounwind readnone {
   %res2base = call <WIDTH x half> @__spirv_ocl_native_log2_DvWIDTHDh(<WIDTH x half> %0)
-  %log2e = insertelement <WIDTH x half> undef, half LOG2EF16, i32 0
-  %log2e_shuffle = shufflevector <WIDTH x half> %log2e, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
+  %log2e = insertelement <WIDTH x half> poison, half LOG2EF16, i32 0
+  %log2e_shuffle = shufflevector <WIDTH x half> %log2e, <WIDTH x half> poison, <WIDTH x i32> zeroinitializer
   %res = fdiv <WIDTH x half> %res2base, %log2e_shuffle
   ret <WIDTH x half> %res
 }
@@ -1365,8 +1365,8 @@ define float @__exp_uniform_float(float) nounwind readnone {
 }
 
 define <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone {
-  %exp = insertelement <WIDTH x float> undef, float EXP, i32 0
-  %exp_shuffle = shufflevector <WIDTH x float> %exp, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
+  %exp = insertelement <WIDTH x float> poison, float EXP, i32 0
+  %exp_shuffle = shufflevector <WIDTH x float> %exp, <WIDTH x float> poison, <WIDTH x i32> zeroinitializer
   %res = call <WIDTH x float> @__spirv_ocl_native_powr_DvWIDTHf(<WIDTH x float> %exp_shuffle, <WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
@@ -1377,8 +1377,8 @@ define half @__exp_uniform_half(half) nounwind readnone {
 }
 
 define <WIDTH x half> @__exp_varying_half(<WIDTH x half>) nounwind readnone {
-  %exp = insertelement <WIDTH x half> undef, half EXPF16, i32 0
-  %exp_shuffle = shufflevector <WIDTH x half> %exp, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
+  %exp = insertelement <WIDTH x half> poison, half EXPF16, i32 0
+  %exp_shuffle = shufflevector <WIDTH x half> %exp, <WIDTH x half> poison, <WIDTH x i32> zeroinitializer
   %res = call <WIDTH x half> @__spirv_ocl_native_powr_DvWIDTHDh(<WIDTH x half> %exp_shuffle, <WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
@@ -1400,8 +1400,8 @@ ifelse(WIDTH,32,`
 ')
 define <WIDTH x double> @__$1_varying_double(<WIDTH x double>) nounwind readnone {
   ifelse(WIDTH,32,`
-    %in1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %in2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in1 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in2 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %res1 = call <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double> %in1)
     %res2 = call <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double> %in2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -1442,8 +1442,8 @@ define void @__sincos_varying_double(<WIDTH x double>, i8*, i8*) nounwind {
   %ptr1 = bitcast i8* %1 to <WIDTH x double>*
   %ptr2 = bitcast i8* %2 to <WIDTH x double>*
   ifelse(WIDTH,32,`
-    %in0_1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %in0_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in0_1 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in0_2 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %ptr2_16_1 = bitcast <32 x double>* %ptr2 to <16 x double>*
     %ptrtoint = ptrtoint <32 x double>* %ptr2 to i64
     %ptrtoint_add = add i64 %ptrtoint, 128
@@ -1471,10 +1471,10 @@ ifelse(WIDTH,32,`
 ')
 define <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
   ifelse(WIDTH,32,`
-    %in1_1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in1_1 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in1_2 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in2_1 = shufflevector <32 x double> %1, <32 x double> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in2_2 = shufflevector <32 x double> %1, <32 x double> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %res1 = call <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double> %in1_1, <16 x double> %in2_1)
     %res2 = call <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double> %in1_2, <16 x double> %in2_2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -1499,10 +1499,10 @@ ifelse(WIDTH,32,`
 
 define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
   ifelse(WIDTH,32,`
-    %in1_1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-    %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in1_1 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in1_2 = shufflevector <32 x double> %0, <32 x double> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in2_1 = shufflevector <32 x double> %1, <32 x double> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in2_2 = shufflevector <32 x double> %1, <32 x double> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %res1 = call <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double> %in1_1, <16 x double> %in2_1)
     %res2 = call <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double> %in1_2, <16 x double> %in2_2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
