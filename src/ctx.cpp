@@ -1483,7 +1483,7 @@ llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
         // BoolVectorStorageType is to be used only for entites that can be
         // interfaced with C/C++.
         llvm::Type *boolArrayType = llvm::ArrayType::get(LLVMTypes::BoolVectorType, at->getNumElements());
-        llvm::Value *ret = llvm::UndefValue::get(boolArrayType);
+        llvm::Value *ret = llvm::PoisonValue::get(boolArrayType);
 
         for (unsigned int i = 0; i < at->getNumElements(); ++i) {
             llvm::Value *elt = ExtractInst(b, i);
@@ -1830,7 +1830,7 @@ llvm::Value *FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps in
         // If this is an ispc VectorType, apply the binary operator to each
         // of the elements of the array (which in turn should be either
         // scalar types or llvm::VectorTypes.)
-        llvm::Value *ret = llvm::UndefValue::get(type);
+        llvm::Value *ret = llvm::PoisonValue::get(type);
         for (int i = 0; i < arraySize; ++i) {
             llvm::Value *a = ExtractInst(v0, i);
             llvm::Value *b = ExtractInst(v1, i);
@@ -1857,7 +1857,7 @@ llvm::Value *FunctionEmitContext::NotOperator(llvm::Value *v, const llvm::Twine 
         AddDebugPos(binst);
         return binst;
     } else {
-        llvm::Value *ret = llvm::UndefValue::get(type);
+        llvm::Value *ret = llvm::PoisonValue::get(type);
         for (int i = 0; i < arraySize; ++i) {
             llvm::Value *a = ExtractInst(v, i);
             llvm::Value *op = llvm::BinaryOperator::CreateNot(a, name.isTriviallyEmpty() ? "not" : name, bblock);
@@ -1896,7 +1896,7 @@ llvm::Value *FunctionEmitContext::FNegInst(llvm::Value *v, const llvm::Twine &na
         AddDebugPos(fneg);
         return fneg;
     } else {
-        llvm::Value *ret = llvm::UndefValue::get(type);
+        llvm::Value *ret = llvm::PoisonValue::get(type);
         for (int i = 0; i < arraySize; ++i) {
             llvm::Value *a = ExtractInst(v, i);
             llvm::Value *op = llvm::UnaryOperator::CreateFNeg(a, name.isTriviallyEmpty() ? "fneg" : name, bblock);
@@ -1939,7 +1939,7 @@ llvm::Value *FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst, llvm
         return ci;
     } else {
         llvm::Type *boolType = lGetMatchingBoolVectorType(type);
-        llvm::Value *ret = llvm::UndefValue::get(boolType);
+        llvm::Value *ret = llvm::PoisonValue::get(boolType);
         for (int i = 0; i < arraySize; ++i) {
             llvm::Value *a = ExtractInst(v0, i);
             llvm::Value *b = ExtractInst(v1, i);
@@ -2297,7 +2297,7 @@ llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value
     eltTypes.push_back(offset->getType());
     llvm::StructType *st = llvm::StructType::get(*g->ctx, eltTypes);
 
-    llvm::Value *ret = llvm::UndefValue::get(st);
+    llvm::Value *ret = llvm::PoisonValue::get(st);
     ret = InsertInst(ret, ptr, 0, llvm::Twine(ret->getName()) + "_slice_ptr");
     ret = InsertInst(ret, offset, 1, llvm::Twine(ret->getName()) + "_slice_offset");
     return ret;
@@ -2624,7 +2624,7 @@ llvm::Value *FunctionEmitContext::lSwitchBoolSize_1(llvm::Value *value, llvm::Ty
     if (at) {
         // We're given an array of vectors (short vector).
         llvm::Type *eltType = at->getElementType();
-        llvm::Value *ret = llvm::UndefValue::get(toType);
+        llvm::Value *ret = llvm::PoisonValue::get(toType);
         for (unsigned int i = 0; i < at->getNumElements(); ++i) {
             llvm::Value *elt = ExtractInst(value, i);
             llvm::Value *x = lSwitchBoolSize_2(elt, eltType, toStorageType, llvm::Twine(elt->getName()) + "_bv");
@@ -2727,7 +2727,7 @@ llvm::Value *FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Val
         // individual element loads to fill in the result structure since
         // the SOA slice of values we need isn't contiguous in memory...
         llvm::Type *llvmReturnType = unifType->LLVMType(g->ctx);
-        llvm::Value *retValue = llvm::UndefValue::get(llvmReturnType);
+        llvm::Value *retValue = llvm::PoisonValue::get(llvmReturnType);
 
         for (int i = 0; i < ct->GetElementCount(); ++i) {
             const PointerType *eltPtrType = nullptr;
@@ -2847,7 +2847,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
     if (collectionType != nullptr) {
         // For collections, recursively gather element wise to find the
         // result.
-        llvm::Value *retValue = llvm::UndefValue::get(llvmReturnType);
+        llvm::Value *retValue = llvm::PoisonValue::get(llvmReturnType);
 
         const CollectionType *returnCollectionType = CastType<CollectionType>(returnType->GetBaseType());
 
@@ -3587,12 +3587,12 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
     Assert(ty && ty->getElementType() == v->getType());
 
     // Generate the following sequence:
-    //   %name_init.i = insertelement <4 x i32> undef, i32 %val, i32 0
-    //   %name.i = shufflevector <4 x i32> %name_init.i, <4 x i32> undef,
+    //   %name_init.i = insertelement <4 x i32> poison, i32 %val, i32 0
+    //   %name.i = shufflevector <4 x i32> %name_init.i, <4 x i32> poison,
     //                                              <4 x i32> zeroinitializer
 
-    llvm::Value *undef1 = llvm::UndefValue::get(vecType);
-    llvm::Value *undef2 = llvm::UndefValue::get(vecType);
+    llvm::Value *undef1 = llvm::PoisonValue::get(vecType);
+    llvm::Value *undef2 = llvm::PoisonValue::get(vecType);
 
     // InsertElement
     llvm::Value *insert =
