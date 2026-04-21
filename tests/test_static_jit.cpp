@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2025-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -34,6 +34,18 @@
 #include <vector>
 #if defined ISPC_IS_LINUX || defined ISPC_IS_WASM
 #include <malloc.h>
+#endif
+
+#if defined(__linux__) && defined(__x86_64__)
+#include <errno.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#ifndef ARCH_REQ_XCOMP_PERM
+#define ARCH_REQ_XCOMP_PERM 0x1023
+#endif
+#ifndef XFEATURE_XTILEDATA
+#define XFEATURE_XTILEDATA 18
+#endif
 #endif
 
 #include "ispc/ispc.h"
@@ -129,6 +141,11 @@ bool createTemporaryISPCFile(const std::string &filename, const std::string &con
 }
 
 int main(int argc, char *argv[]) {
+#if defined(__linux__) && defined(__x86_64__)
+    if (syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA) != 0) {
+        printf("Warning: failed to request XFEATURE_XTILEDATA permission (errno=%d); AMX tests may SIGILL\n", errno);
+    }
+#endif
     if (argc < 2) {
         printf("Usage: %s <ispc_source_file> [target]\n", argv[0]);
         return 1;
