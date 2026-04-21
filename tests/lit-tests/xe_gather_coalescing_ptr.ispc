@@ -2,8 +2,8 @@
 // Current implementation produces the following code sequence 9 times:
 // %ptr209 = getelementptr float, float* %self_load3_color6_mem31.i184278, i64 %scaled_offset208
 // %self_load = load float, float* %ptr209, align 4
-// %self_load_insert = insertelement <8 x float> undef, float %self_load, i32 X
-// %self_load_insert_shuffle = shufflevector <8 x float> %self_load_insert, <8 x float> undef, <8 x i32> zeroinitializer
+// %self_load_insert = insertelement <8 x float> poison, float %self_load, i32 X
+// %self_load_insert_shuffle = shufflevector <8 x float> %self_load_insert, <8 x float> poison, <8 x i32> zeroinitializer
 
 // The optimization should optimize memory access by combining each 3 loads to one plus EEI:
 // %vectorized_ld = call <3 x float> @llvm.genx.svm.block.ld.unaligned.v8f32.i64(i64 %vectorized_address)
