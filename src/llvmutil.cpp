@@ -1701,7 +1701,7 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
     llvm::Constant *shufVec[ISPC_MAX_NVEC];
     for (int i = 0; i < shufSize; ++i) {
         if (shuf[i] == -1) {
-            shufVec[i] = llvm::UndefValue::get(LLVMTypes::Int32Type);
+            shufVec[i] = llvm::PoisonValue::get(LLVMTypes::Int32Type);
         } else {
             shufVec[i] = LLVMInt32(shuf[i]);
         }

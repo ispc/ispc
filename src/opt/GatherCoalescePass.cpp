@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -487,7 +487,7 @@ static llvm::Value *lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load
 static llvm::Value *lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, const int64_t offsets[4],
                                      llvm::Instruction *insertBefore) {
     llvm::Type *returnType = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
-    llvm::Value *result = llvm::UndefValue::get(returnType);
+    llvm::Value *result = llvm::PoisonValue::get(returnType);
 
     Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" PRId64 " %" PRId64 "].", offsets[0],
           offsets[1], offsets[2], offsets[3]);
@@ -616,7 +616,7 @@ static llvm::Value *lApplyLoad12s(llvm::Value *result, const std::vector<Coalesc
 static llvm::Value *lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, const int64_t offsets[4],
                                      llvm::Instruction *insertBefore) {
     llvm::Type *returnType = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
-    llvm::Value *result = llvm::UndefValue::get(returnType);
+    llvm::Value *result = llvm::PoisonValue::get(returnType);
 
     Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" PRId64 " %" PRId64 "].", offsets[0],
           offsets[1], offsets[2], offsets[3]);
