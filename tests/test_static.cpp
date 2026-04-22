@@ -31,9 +31,7 @@
 #if defined ISPC_IS_LINUX || defined ISPC_IS_WASM
 #include <malloc.h>
 #endif
-
 #if defined(__linux__) && defined(__x86_64__)
-#include <errno.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #ifndef ARCH_REQ_XCOMP_PERM
@@ -136,9 +134,7 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 
 int main(int argc, char *argv[]) {
 #if defined(__linux__) && defined(__x86_64__)
-    if (syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA) != 0) {
-        printf("Warning: failed to request XFEATURE_XTILEDATA permission (errno=%d); AMX tests may SIGILL\n", errno);
-    }
+    syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
 #endif
     int w = width();
     assert(w <= 64);
