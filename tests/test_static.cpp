@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -30,6 +30,16 @@
 #include <string.h>
 #if defined ISPC_IS_LINUX || defined ISPC_IS_WASM
 #include <malloc.h>
+#endif
+#if defined(__linux__) && defined(__x86_64__)
+#include <sys/syscall.h>
+#include <unistd.h>
+#ifndef ARCH_REQ_XCOMP_PERM
+#define ARCH_REQ_XCOMP_PERM 0x1023
+#endif
+#ifndef XFEATURE_XTILEDATA
+#define XFEATURE_XTILEDATA 18
+#endif
 #endif
 
 #if (TEST_SIG == 7)
@@ -123,6 +133,9 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 #endif
 
 int main(int argc, char *argv[]) {
+#if defined(__linux__) && defined(__x86_64__)
+    syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
+#endif
     int w = width();
     assert(w <= 64);
 
