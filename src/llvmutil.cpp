@@ -1074,6 +1074,18 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
         return (splat != nullptr);
     }
 
+    // Handle ConstantFP with vector type (LLVM can represent FP vector splats this way)
+    if (llvm::ConstantFP *cfp = llvm::dyn_cast<llvm::ConstantFP>(v)) {
+        if (llvm::isa<llvm::FixedVectorType>(cfp->getType())) {
+            // ConstantFP with vector type is always a splat by construction
+            if (splatValue) {
+                llvm::Type *elementType = llvm::cast<llvm::FixedVectorType>(cfp->getType())->getElementType();
+                *splatValue = llvm::ConstantFP::get(elementType, cfp->getValueAPF());
+            }
+            return true;
+        }
+    }
+
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != nullptr) {
         // Easy case: both operands are all equal -> return true
@@ -1130,7 +1142,10 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
         return false;
     }
 
-    Assert(!llvm::isa<llvm::Constant>(v));
+    // Conservative fallback for unhandled constant types (prevents crashes from new LLVM constant types)
+    if (llvm::isa<llvm::Constant>(v)) {
+        return false;
+    }
 
     if (llvm::isa<llvm::CallInst>(v) || llvm::isa<llvm::LoadInst>(v) || !llvm::isa<llvm::Instruction>(v)) {
         return false;
@@ -1538,6 +1553,13 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
     }
     if (llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v)) {
         return cdv->getElementAsConstant(0);
+    }
+    // Handle ConstantFP with vector type (LLVM can represent FP vector splats this way)
+    if (llvm::ConstantFP *cfp = llvm::dyn_cast<llvm::ConstantFP>(v)) {
+        if (llvm::isa<llvm::FixedVectorType>(cfp->getType())) {
+            llvm::Type *elementType = llvm::cast<llvm::FixedVectorType>(cfp->getType())->getElementType();
+            return llvm::ConstantFP::get(elementType, cfp->getValueAPF());
+        }
     }
 
     // Function argument value is neither constant nor instruction result, so generate
