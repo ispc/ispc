@@ -1142,10 +1142,7 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
         return false;
     }
 
-    // Conservative fallback for unhandled constant types (prevents crashes from new LLVM constant types)
-    if (llvm::isa<llvm::Constant>(v)) {
-        return false;
-    }
+    Assert(!llvm::isa<llvm::Constant>(v));
 
     if (llvm::isa<llvm::CallInst>(v) || llvm::isa<llvm::LoadInst>(v) || !llvm::isa<llvm::Instruction>(v)) {
         return false;
