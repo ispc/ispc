@@ -671,6 +671,18 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // isolation before being expanded into its callers (issue #3804).
         optPM.addModulePass(RestoreInlineAttrPass());
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
+        // The final inliner expands `inline`-qualified callees that were
+        // deferred by RestoreInlineAttrPass. Run a small cleanup so that
+        // caller-context constants and CFG simplifications fold through the
+        // freshly inlined bodies, recovering the cross-procedural
+        // simplifications we would otherwise miss by deferring inlining.
+        optPM.initFunctionPassManager();
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+        optPM.addFunctionPass(llvm::InstCombinePass());
+        optPM.addFunctionPass(InstructionSimplifyPass());
+        optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
+        optPM.addFunctionPass(llvm::ADCEPass());
+        optPM.commitFunctionToModulePassManager();
         optPM.addModulePass(llvm::StripDeadPrototypesPass());
         optPM.addModulePass(RemovePersistentFuncsPass());
         optPM.addModulePass(llvm::GlobalDCEPass());
