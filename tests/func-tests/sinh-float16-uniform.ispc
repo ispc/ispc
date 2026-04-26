@@ -7,10 +7,12 @@ uniform bool ok(uniform float16 x, uniform float16 ref) {
 }
 
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    for (uniform int i = 0; i != programCount; ++i) {
-        uniform float16 ref = sinh((uniform float16)((aFOO[i] / programCount) * 3 - 1.5));
-        uniform float16 res = sinh((aFOO[i] / programCount) * 3 - 1.5);
-        RET[i] = ok(res, ref) ? 0 : 1;
+    const float16 x = aFOO[programIndex];
+    const float16 ref = sinh(x);
+
+    foreach_active(i) {
+        const uniform float16 res = sinh(extract(x, i));
+        RET[i] = ok(res, extract(ref, i)) ? 0 : 1;
     }
 }
 

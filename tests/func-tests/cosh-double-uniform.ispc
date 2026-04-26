@@ -8,10 +8,12 @@ uniform bool ok(uniform double x, uniform double ref) {
 }
 
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    for (uniform int i = 0; i != programCount; ++i) {
-        uniform double ref = cosh((uniform double)((aFOO[i] / programCount) * 3.0d - 1.5d));
-        uniform double res = cosh((aFOO[i] / programCount) * 3.0d - 1.5d);
-        RET[i] = ok(res, ref) ? 0 : 1;
+    const double x = aFOO[programIndex];
+    const double ref = cosh(x);
+
+    foreach_active(i) {
+        const uniform double res = cosh(extract(x, i));
+        RET[i] = ok(res, extract(ref, i)) ? 0 : 1;
     }
 }
 
