@@ -4034,6 +4034,81 @@ __declspec(safe) static inline uniform float tan(uniform float x_full) {
     }
 }
 
+__declspec(safe) static inline uniform float atan(uniform float x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan_uniform_float(x_full);
+    } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_atanf(x_full);
+    } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
+
+        // Precision:
+        //  - Default version: <5 ULP
+        //  - Fast version: <15 ULP
+        // All numbers are properly supported in the fast implementation.
+
+        // Implementation notes:
+        // - `atan(-x) = -atan(x)` (so flip from negative to positive first)
+        // - if x > 1 -> atan(x) = Pi/2 - atan(1/x)
+        // - A tiny epsilon is added so to compute subnormal numbers faster
+
+        const uniform float pi_over_two_vec = 1.5707963705;
+        uniform float x_abs = abs(x_full);
+        uniform bool x_gt_1 = x_abs > 1.0;
+        uniform float x = x_gt_1 ? 1.0 / x_abs : x_abs;
+        uniform float x2 = x * x + 1e-30;
+        uniform float result;
+
+        if (__math_lib == __math_lib_ispc_fast) {
+            // Sollya:
+            // r = [0.0;1.0];
+            // fpminimax(atan(x), [|1,3,5,7,9,11,13|], [|single...|], r);
+            const uniform float atan_c00 = +9.9999934430e-01;
+            const uniform float atan_c02 = -3.3326506610e-01;
+            const uniform float atan_c04 = +1.9881419840e-01;
+            const uniform float atan_c06 = -1.3486981390e-01;
+            const uniform float atan_c08 = +8.3867706360e-02;
+            const uniform float atan_c10 = -3.7010200320e-02;
+            const uniform float atan_c12 = +7.8625064340e-03;
+
+            uniform float poly = atan_c12;
+            poly = x2 * poly + atan_c10;
+            poly = x2 * poly + atan_c08;
+            poly = x2 * poly + atan_c06;
+            poly = x2 * poly + atan_c04;
+            poly = x2 * poly + atan_c02;
+            poly = x2 * poly + atan_c00;
+            result = poly * x;
+        } else {
+            // Sollya:
+            // r = [0.0;1.0];
+            // fpminimax(atan(x), [|1,3,5,7,9,11,13,15|], [|single...|], r);
+            const uniform float atan_c00 = +9.9999988079e-01;
+            const uniform float atan_c02 = -3.3331915736e-01;
+            const uniform float atan_c04 = +1.9968920946e-01;
+            const uniform float atan_c06 = -1.4015688002e-01;
+            const uniform float atan_c08 = +9.9050834775e-02;
+            const uniform float atan_c10 = -5.9366498142e-02;
+            const uniform float atan_c12 = +2.4172833189e-02;
+            const uniform float atan_c14 = -4.6721356921e-03;
+
+            uniform float poly = atan_c14;
+            poly = x2 * poly + atan_c12;
+            poly = x2 * poly + atan_c10;
+            poly = x2 * poly + atan_c08;
+            poly = x2 * poly + atan_c06;
+            poly = x2 * poly + atan_c04;
+            poly = x2 * poly + atan_c02;
+            poly = x2 * poly + atan_c00;
+            result = poly * x;
+        }
+
+        result = x_gt_1 ? pi_over_two_vec - result : result;
+
+        // Transfer the sign of `x_full` to `result`
+        return floatbits((intbits(x_full) & 0x80000000ul) ^ intbits(result));
+    }
+}
+
 __declspec(safe) static inline float atan(float x_full) {
     if (__have_native_trigonometry && !__is_xe_target) {
         return __atan_varying_float(x_full);
@@ -4047,79 +4122,56 @@ __declspec(safe) static inline float atan(float x_full) {
         }
         return ret;
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        const float pi_over_two_vec = 1.57079637050628662109375;
-        // atan(-x) = -atan(x) (so flip from negative to positive first)
-        // if x > 1 -> atan(x) = Pi/2 - atan(1/x)
-        bool x_neg = x_full < 0;
-        float x_flipped = x_neg ? -x_full : x_full;
 
-        bool x_gt_1 = x_flipped > 1.;
-        float x = x_gt_1 ? 1. / x_flipped : x_flipped;
+        // See the uniform version for more information
 
-        // These coefficients approximate atan(x)/x
-        const float atan_c0 = 0.99999988079071044921875;
-        const float atan_c2 = -0.3333191573619842529296875;
-        const float atan_c4 = 0.199689209461212158203125;
-        const float atan_c6 = -0.14015688002109527587890625;
-        const float atan_c8 = 9.905083477497100830078125e-2;
-        const float atan_c10 = -5.93664981424808502197265625e-2;
-        const float atan_c12 = 2.417283318936824798583984375e-2;
-        const float atan_c14 = -4.6721356920897960662841796875e-3;
+        const float pi_over_two_vec = 1.5707963705;
+        float x_abs = abs(x_full);
+        bool x_gt_1 = x_abs > 1.0;
+        float x = x_gt_1 ? 1.0 / x_abs : x_abs;
+        float x2 = x * x + 1e-30;
+        float result;
 
-        float x2 = x * x;
-        float result = x2 * atan_c14 + atan_c12;
-        result = x2 * result + atan_c10;
-        result = x2 * result + atan_c8;
-        result = x2 * result + atan_c6;
-        result = x2 * result + atan_c4;
-        result = x2 * result + atan_c2;
-        result = x2 * result + atan_c0;
-        result *= x;
+        if (__math_lib == __math_lib_ispc_fast) {
+            const float atan_c00 = +9.9999934430e-01;
+            const float atan_c02 = -3.3326506610e-01;
+            const float atan_c04 = +1.9881419840e-01;
+            const float atan_c06 = -1.3486981390e-01;
+            const float atan_c08 = +8.3867706360e-02;
+            const float atan_c10 = -3.7010200320e-02;
+            const float atan_c12 = +7.8625064340e-03;
 
-        result = x_gt_1 ? pi_over_two_vec - result : result;
-        result = x_neg ? -result : result;
-        return result;
-    }
-}
+            float poly = atan_c12;
+            poly = x2 * poly + atan_c10;
+            poly = x2 * poly + atan_c08;
+            poly = x2 * poly + atan_c06;
+            poly = x2 * poly + atan_c04;
+            poly = x2 * poly + atan_c02;
+            poly = x2 * poly + atan_c00;
+            result = poly * x;
+        } else {
+            const float atan_c00 = +9.9999988079e-01;
+            const float atan_c02 = -3.3331915736e-01;
+            const float atan_c04 = +1.9968920946e-01;
+            const float atan_c06 = -1.4015688002e-01;
+            const float atan_c08 = +9.9050834775e-02;
+            const float atan_c10 = -5.9366498142e-02;
+            const float atan_c12 = +2.4172833189e-02;
+            const float atan_c14 = -4.6721356921e-03;
 
-__declspec(safe) static inline uniform float atan(uniform float x_full) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __atan_uniform_float(x_full);
-    } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
-        return __stdlib_atanf(x_full);
-    } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        const uniform float pi_over_two_vec = 1.57079637050628662109375;
-        // atan(-x) = -atan(x) (so flip from negative to positive first)
-        // if x > 1 -> atan(x) = Pi/2 - atan(1/x)
-        uniform bool x_neg = x_full < 0;
-        uniform float x_flipped = x_neg ? -x_full : x_full;
-
-        uniform bool x_gt_1 = x_flipped > 1.;
-        uniform float x = x_gt_1 ? 1. / x_flipped : x_flipped;
-
-        // These coefficients approximate atan(x)/x
-        const uniform float atan_c0 = 0.99999988079071044921875;
-        const uniform float atan_c2 = -0.3333191573619842529296875;
-        const uniform float atan_c4 = 0.199689209461212158203125;
-        const uniform float atan_c6 = -0.14015688002109527587890625;
-        const uniform float atan_c8 = 9.905083477497100830078125e-2;
-        const uniform float atan_c10 = -5.93664981424808502197265625e-2;
-        const uniform float atan_c12 = 2.417283318936824798583984375e-2;
-        const uniform float atan_c14 = -4.6721356920897960662841796875e-3;
-
-        uniform float x2 = x * x;
-        uniform float result = x2 * atan_c14 + atan_c12;
-        result = x2 * result + atan_c10;
-        result = x2 * result + atan_c8;
-        result = x2 * result + atan_c6;
-        result = x2 * result + atan_c4;
-        result = x2 * result + atan_c2;
-        result = x2 * result + atan_c0;
-        result *= x;
+            float poly = atan_c14;
+            poly = x2 * poly + atan_c12;
+            poly = x2 * poly + atan_c10;
+            poly = x2 * poly + atan_c08;
+            poly = x2 * poly + atan_c06;
+            poly = x2 * poly + atan_c04;
+            poly = x2 * poly + atan_c02;
+            poly = x2 * poly + atan_c00;
+            result = poly * x;
+        }
 
         result = x_gt_1 ? pi_over_two_vec - result : result;
-        result = x_neg ? -result : result;
-        return result;
+        return floatbits((intbits(x_full) & 0x80000000) ^ intbits(result));
     }
 }
 
