@@ -1,16 +1,5 @@
 #include "test_static.isph"
 
-static float float4(uniform float a, uniform float b, uniform float c, uniform float d) {
-    float ret = 0;
-    for (uniform int i = 0; i < programCount; i += 4) {
-        ret = insert(ret, i + 0, a);
-        ret = insert(ret, i + 1, b);
-        ret = insert(ret, i + 2, c);
-        ret = insert(ret, i + 3, d);
-    }
-    return ret;
-}
-
 bool ok(float x, float ref) {
     // erfc is meant to be much more precise than erf for x>1
     // so the absolute precision threshold must be much smaller.
@@ -18,39 +7,42 @@ bool ok(float x, float ref) {
 }
 
 task void f_v(uniform float RET[]) {
-    float x, ref, res;
+    const uniform float x[] = {
+        0.27, 0.99,
+        1.17, 2.67,
+        4e-2, 3e-4,
+        2e-6, 1e-8,
+        5.0, 7.0,
+        9.0, 11.0,
+        -11.0, -3.0,
+        -1e-2, -1e-8,
+        -0.0, +0.0,
+        -1e25, 1e25
+    };
+
+    const uniform float ref[] = {
+        +7.0258176327e-01, +1.6149193048e-01,
+        +9.7999610007e-02, +1.5939876903e-04,
+        +9.5488888025e-01, +9.9966150522e-01,
+        +9.9999773502e-01, +1.0000000000e+00,
+        +1.5374598296e-12, +4.1838257317e-23,
+        +4.1370317081e-37, +0.0000000000e+00,
+        +2.0000000000e+00, +1.9999779463e+00,
+        +1.0112833977e+00, +1.0000000000e+00,
+        +1.0000000000e+00, +1.0000000000e+00,
+        +2.0000000000e+00, +0.0000000000e+00
+    };
+
+    const uniform count = sizeof(x) / sizeof(x[0]);
+    assert(count == sizeof(ref) / sizeof(ref[0]));
 
     RET[programIndex] = 0;
 
-    // Case 1: Basic values
-    x = float4(0.27, 0.99, 1.17, 2.67);
-    ref = float4(0.70258176, 0.16149193, 0.09799961, 0.00015939877);
-    res = erfc(x);
-    RET[programIndex] += ok(res, ref) ? 0 : 1;
-
-    // Case 2: Small values
-    x = float4(4e-2, 3e-4, 2e-6, 1e-8);
-    ref = float4(0.9548889, 0.9996615, 0.99999774, 1.0);
-    res = erfc(x);
-    RET[programIndex] += ok(res, ref) ? 0 : 1;
-
-    // Case 3: Big values
-    x = float4(5.0, 7.0, 9.0, 11.0);
-    ref = float4(1.5374598e-12, 4.1838257e-23, 4.1370317e-37, 0.0000000e+00);
-    res = erfc(x);
-    RET[programIndex] += ok(res, ref) ? 0 : 1;
-
-    // Case 4: Negative values
-    x = float4(-11.0, -3.0, -1e-2, -1e-8);
-    ref = float4(2.0, 1.999978, 1.0112834, 1.0);
-    res = erfc(x);
-    RET[programIndex] += ok(res, ref) ? 0 : 1;
-
-    // Case 5: Special and extreme values
-    x = float4(-0.0, +0.0, -1e25, 1e25);
-    ref = float4(1.0, 1.0, 2.0, 0.0);
-    res = erfc(x);
-    RET[programIndex] += ok(res, ref) ? 0 : 1;
+    foreach(i = 0...count)
+    {
+        const float res = erfc(x[i]);
+        RET[programIndex] += ok(res, ref[i]) ? 0 : 1;
+    }
 }
 
 task void result(uniform float RET[]) { RET[programIndex] = 0; }
