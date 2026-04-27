@@ -5,10 +5,12 @@ uniform bool ok(uniform float x, uniform float ref) {
 }
 
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    for (uniform int i = 0; i != programCount; ++i) {
-        uniform float ref = tanh((uniform float)((aFOO[i] / programCount) * 3 - 1.5));
-        uniform float res = tanh((aFOO[i] / programCount) * 3 - 1.5);
-        RET[i] = ok(res, ref) ? 0 : 1;
+    const float x = aFOO[programIndex];
+    const float ref = tanh(x);
+
+    foreach_active(i) {
+        const uniform float res = tanh(extract(x, i));
+        RET[i] = ok(res, extract(ref, i)) ? 0 : 1;
     }
 }
 
