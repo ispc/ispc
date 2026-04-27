@@ -586,6 +586,8 @@ list(APPEND OPT_SOURCES
     src/opt/PeepholePass.h
     src/opt/RemovePersistentFuncs.cpp
     src/opt/RemovePersistentFuncs.h
+    src/opt/RestoreInlineAttrPass.cpp
+    src/opt/RestoreInlineAttrPass.h
     src/opt/ReplaceMaskedMemOps.cpp
     src/opt/ReplaceMaskedMemOps.h
     src/opt/ReplacePseudoMemoryOps.cpp

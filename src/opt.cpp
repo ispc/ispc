@@ -347,6 +347,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
         optPM.commitFunctionToModulePassManager();
 
+        // Convert the deferred ispc-defer-alwaysinline marker to LLVM alwaysinline so
+        // the inliner that runs next will honor `inline`-qualified functions.
+        optPM.addModulePass(RestoreInlineAttrPass());
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
         optPM.addModulePass(RemovePersistentFuncsPass());
 
@@ -661,7 +664,25 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(ScalarizePass());
         optPM.addFunctionPass(llvm::ADCEPass());
         optPM.commitFunctionToModulePassManager();
+        // Convert ispc-defer-alwaysinline (set on `inline`-qualified functions at
+        // parse time) to alwaysinline now that all function-level passes have
+        // run. The next inliner is the final one in the pipeline; deferring
+        // forced inlining until here lets each callee be optimized in
+        // isolation before being expanded into its callers (issue #3804).
+        optPM.addModulePass(RestoreInlineAttrPass());
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
+        // The final inliner expands `inline`-qualified callees that were
+        // deferred by RestoreInlineAttrPass. Run a small cleanup so that
+        // caller-context constants and CFG simplifications fold through the
+        // freshly inlined bodies, recovering the cross-procedural
+        // simplifications we would otherwise miss by deferring inlining.
+        optPM.initFunctionPassManager();
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+        optPM.addFunctionPass(llvm::InstCombinePass());
+        optPM.addFunctionPass(InstructionSimplifyPass());
+        optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
+        optPM.addFunctionPass(llvm::ADCEPass());
+        optPM.commitFunctionToModulePassManager();
         optPM.addModulePass(llvm::StripDeadPrototypesPass());
         optPM.addModulePass(RemovePersistentFuncsPass());
         optPM.addModulePass(llvm::GlobalDCEPass());
