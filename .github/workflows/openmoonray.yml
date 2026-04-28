@@ -86,6 +86,9 @@ jobs:
         su - builder -c "
           git clone --branch openmoonray --single-branch https://github.com/archlinux/aur.git openmoonray
           cd openmoonray
+          # Pin to v2.40.0.1 due to build failure in v3.6.0.1
+          # See: https://github.com/OpenMoonRay/openmoonray/issues/230
+          git checkout 259a4ecd
 
           # Remove ispc dependency since we have fresh build
           sed -i '/ispc/d' PKGBUILD
