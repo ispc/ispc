@@ -139,8 +139,14 @@ bool createTemporaryISPCFile(const std::string &filename, const std::string &con
 }
 
 int main(int argc, char *argv[]) {
-#if defined(__linux__) && defined(__x86_64__)
-    syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
+#if defined(__linux__) && defined(__x86_64__) && defined(TEST_REQUIRES_AMX)
+    // Request permission to use AMX tile data
+    long result = syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
+    if (result != 0) {
+        fprintf(stderr, "Error: Failed to enable AMX support (syscall returned %ld). "
+                "AMX instructions require kernel permission on Linux 5.16+.\n", result);
+        return 1;
+    }
 #endif
     if (argc < 2) {
         printf("Usage: %s <ispc_source_file> [target]\n", argv[0]);
@@ -187,9 +193,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Set the runtime functions that JIT will use
-    if (!engine->SetJitRuntimeFunction("ISPCLaunch", (void*)ISPCLaunch) ||
-        !engine->SetJitRuntimeFunction("ISPCSync", (void*)ISPCSync) ||
-        !engine->SetJitRuntimeFunction("ISPCAlloc", (void*)ISPCAlloc)) {
+    if (!engine->SetJitRuntimeFunction("ISPCLaunch", (void *)ISPCLaunch) ||
+        !engine->SetJitRuntimeFunction("ISPCSync", (void *)ISPCSync) ||
+        !engine->SetJitRuntimeFunction("ISPCAlloc", (void *)ISPCAlloc)) {
         printf("Failed to set JIT runtime functions\n");
         ispc::Shutdown();
         return 1;

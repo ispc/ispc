@@ -63,7 +63,7 @@
 #else
 // __vectorcall calling convention is off by default.
 #define CALLINGCONV //__vectorcall
-#endif // VECTORCALL_CONV
+#endif              // VECTORCALL_CONV
 #else
 #define CALLINGCONV
 #endif // ISPC_IS_WINDOWS64
@@ -133,8 +133,14 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 #endif
 
 int main(int argc, char *argv[]) {
-#if defined(__linux__) && defined(__x86_64__)
-    syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
+#if defined(__linux__) && defined(__x86_64__) && defined(TEST_REQUIRES_AMX)
+    // Request permission to use AMX tile data
+    long result = syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
+    if (result != 0) {
+        fprintf(stderr, "Error: Failed to enable AMX support (syscall returned %ld). "
+                "AMX instructions require kernel permission on Linux 5.16+.\n", result);
+        return 1;
+    }
 #endif
     int w = width();
     assert(w <= 64);
