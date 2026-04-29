@@ -105,8 +105,6 @@ function (stdlib_to_cpp ispc_name target bit os CPP_LIST BC_LIST)
         COMMAND ${ispc_name} -I ${SRC_INCLUDE_FOLDER} --nostdlib --gen-stdlib --target=${target_for_file} --arch=${canon_arch} --target-os=${canon_os} stdlib/stdlib.ispc --emit-llvm -o ${bc}
         DEPENDS ${ispc_name} ${STDLIB_ISPC_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        JOB_POOL stdlib_generation
-        COMMENT "Generating stdlib bitcode for ${target_for_file}"
     )
 
     string(TOUPPER ${os} OS_UP)
@@ -115,8 +113,6 @@ function (stdlib_to_cpp ispc_name target bit os CPP_LIST BC_LIST)
         COMMAND ${Python3_EXECUTABLE} ${BITCODE2CPP} ${bc} --type=stdlib --runtime=${bit} --os=${OS_UP} ${cpp}
         DEPENDS ${BITCODE2CPP} ${bc}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        JOB_POOL stdlib_generation
-        COMMENT "Converting stdlib bitcode to C++ for ${target}"
     )
 
     set(tmp_list_bc ${${BC_LIST}})

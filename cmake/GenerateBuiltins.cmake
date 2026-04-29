@@ -77,10 +77,10 @@ function(target_ll_to_cpp target bit os CPP_LIST BC_LIST)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND /bin/bash -c "set -euo pipefail && ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input} | \\\"${LLVM_AS_EXECUTABLE}\\\" -o ${bc} && test -s ${bc}"
+        COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input}
+            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input} ${M4_IMPLICIT_DEPENDENCIES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Generating target bitcode for ${target}"
     )
 
     add_custom_command(
@@ -162,10 +162,10 @@ function(builtin_wasm_to_cpp bit os arch)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND /bin/bash -c "set -euo pipefail && ${EMCC_EXECUTABLE} ${flags} ${input} -o - | \\\"${LLVM_AS_EXECUTABLE}\\\" -o ${bc} && test -s ${bc}"
+        COMMAND ${EMCC_EXECUTABLE} ${flags} ${input} -o -
+            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Generating WASM builtin bitcode for ${arch}-${bit}bit"
     )
 
     add_custom_command(
@@ -326,10 +326,10 @@ function(builtin_to_cpp bit os generic_arch)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND /bin/bash -c "set -euo pipefail && ${CLANGPP_EXECUTABLE} ${flags} ${input} -o - | \\\"${LLVM_AS_EXECUTABLE}\\\" -o ${bc} && test -s ${bc}"
+        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
+            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Generating builtin bitcode for ${arch}-${bit}bit-${os}"
     )
 
     add_custom_command(
@@ -362,10 +362,9 @@ function(builtin_xe_to_cpp os)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND /bin/bash -c "set -euo pipefail && cat ${input} | \\\"${LLVM_AS_EXECUTABLE}\\\" -o ${bc} && test -s ${bc}"
+        COMMAND cat ${input} | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Generating XE builtin bitcode for ${arch}-${bit}bit"
         )
 
     add_custom_command(
