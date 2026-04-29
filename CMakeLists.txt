@@ -64,6 +64,10 @@ set(PROJECT_NAME ispc)
 set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})
 
+# Create a job pool to serialize stdlib bitcode generation to avoid race conditions
+# where multiple jobs try to read/write the same .bc file simultaneously
+set_property(GLOBAL PROPERTY JOB_POOLS stdlib_generation=1)
+
 ## Check PIE support
 include(CheckPIESupported)
 check_pie_supported(OUTPUT_VARIABLE CHECK_PIE_OUTPUT LANGUAGES CXX)
