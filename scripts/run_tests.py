@@ -640,9 +640,6 @@ def run_test(testname, host, target, jit_lib_path=None):
                     cc_cmd += " /DVECTORCALL_CONV"
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
-                # Enable AMX syscall for AMX-capable targets (avx512spr and later)
-                if target.target.startswith('avx512spr') or target.target.startswith('avx512gnr'):
-                    cc_cmd += " /DTEST_REQUIRES_AMX"
             else:
                 if target.is_xe():
                     obj_name = "test_xe.bin" if options.ispc_output == "ze" else "test_xe.spv"
