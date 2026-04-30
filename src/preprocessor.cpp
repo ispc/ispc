@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -16,6 +16,7 @@
 #include "util.h"
 #include "version.h"
 
+#include <cstring>
 #include <ctype.h>
 #include <fcntl.h>
 #include <memory>
@@ -44,6 +45,7 @@
 #include <clang/Frontend/Utils.h>
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Lex/HeaderSearchOptions.h>
+#include <clang/Lex/Lexer.h>
 #include <clang/Lex/ModuleLoader.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/PreprocessorOptions.h>
@@ -369,12 +371,79 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
 
 static void lSetLangOptions(clang::LangOptions *opts) { opts->LineComment = 1; }
 
+// Normalize cases like "0...MAXI" before running Clang's preprocessor.
+// Clang treats this as one preprocessing-number token, so MAXI is not
+// expanded as a macro. Insert a space before "..." so the range operator
+// and the macro are tokenized separately.
+//
+// Clang's raw lexer is used to avoid changing comments, strings, or
+// character literals.
+//
+// TODO: This currently only handles the main input file. Included files need separate support.
+static std::string lFixDotDotDotSpacing(const std::string &source) {
+    // Set up LangOptions for raw lexing
+    clang::LangOptions langOpts;
+    lSetLangOptions(&langOpts);
+
+    // Collect offsets of "..." that need a preceding space
+    std::vector<size_t> insertions;
+
+    clang::Lexer lexer(clang::SourceLocation(), langOpts, source.data(), source.data(), source.data() + source.size());
+    clang::Token tok;
+
+    while (!lexer.LexFromRawLexer(tok)) {
+        if (!tok.is(clang::tok::numeric_constant)) {
+            continue;
+        }
+
+        // Get the token text directly from its literal pointer
+        const char *tokStart = tok.getLiteralData();
+        llvm::StringRef spelling(tokStart, tok.getLength());
+
+        // Check if it contains "..." followed by an identifier start character
+        size_t pos = spelling.find("...");
+        while (pos != llvm::StringRef::npos) {
+            if (pos + 3 < spelling.size() &&
+                clang::isAsciiIdentifierStart(static_cast<unsigned char>(spelling[pos + 3]))) {
+                // Found a case like "0...MAXI" - record where to insert space
+                insertions.push_back(static_cast<size_t>(tokStart - source.data()) + pos);
+                break; // Only fix first occurrence in this token
+            }
+            pos = spelling.find("...", pos + 1);
+        }
+    }
+
+    // If no insertions needed, return original source
+    if (insertions.empty()) {
+        return source;
+    }
+
+    // Build result with insertions
+    std::string result;
+    result.reserve(source.size() + insertions.size());
+
+    size_t sourcePos = 0;
+    for (size_t ellipsisOffset : insertions) {
+        // Copy up to the "..."
+        result.append(source, sourcePos, ellipsisOffset - sourcePos);
+
+        // Insert space then "..."
+        result.push_back(' ');
+        result.append(source, ellipsisOffset, 3);
+
+        sourcePos = ellipsisOffset + 3;
+    }
+
+    // Copy remainder
+    result.append(source, sourcePos, source.size() - sourcePos);
+
+    return result;
+}
+
 /** Run the preprocessor on the given file, writing to the output stream.
     Returns the number of diagnostic errors encountered. */
 static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm::raw_string_ostream *ostream,
                              Globals::PreprocessorOutputType preprocessorOutputType) {
-    clang::FrontendInputFile inputFile(infilename, clang::InputKind());
-
     // Create completely isolated diagnostic infrastructure
     // Use a separate error stream for each invocation to avoid shared state
     std::string errorBuffer;
@@ -393,7 +462,7 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
 
     diagEng.setSuppressAllDiagnostics(g->ignoreCPPErrors);
 
-    // Create TargetInfo
+    // Create TargetInfo with RAII to avoid leaks on early returns
     const std::shared_ptr<clang::TargetOptions> tgtOpts = std::make_shared<clang::TargetOptions>();
     llvm::Triple triple(module->getTargetTriple());
     if (triple.getTriple().empty()) {
@@ -401,9 +470,9 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
     }
     tgtOpts->Triple = triple.getTriple();
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
-    clang::TargetInfo *tgtInfo = clang::TargetInfo::CreateTargetInfo(diagEng, *tgtOpts);
+    std::unique_ptr<clang::TargetInfo> tgtInfo(clang::TargetInfo::CreateTargetInfo(diagEng, *tgtOpts));
 #else
-    clang::TargetInfo *tgtInfo = clang::TargetInfo::CreateTargetInfo(diagEng, tgtOpts);
+    std::unique_ptr<clang::TargetInfo> tgtInfo(clang::TargetInfo::CreateTargetInfo(diagEng, tgtOpts));
 #endif
 
     // Create and initialize PreprocessorOutputOptions
@@ -422,17 +491,66 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
     clang::LangOptions langOpts;
     lSetLangOptions(&langOpts);
 
-    // Create and initialize SourceManager
+    // Create and initialize SourceManager and FileManager
     clang::FileSystemOptions fsOpts;
     clang::FileManager fileMgr(fsOpts);
     clang::SourceManager srcMgr(diagEng, fileMgr);
+
+    // Normalize the main input file before preprocessing.
+    // TODO: Apply the same normalization to included files.
+    std::unique_ptr<llvm::MemoryBuffer> stdinBuffer;
+    bool isStdin = (std::strcmp(infilename, "-") == 0);
+    clang::FrontendInputFile inputFile;
+
+    if (isStdin) {
+        // For stdin, use a memory buffer directly
+        auto fileBufferOrError = llvm::MemoryBuffer::getFileOrSTDIN(infilename);
+        if (!fileBufferOrError) {
+            llvm::errs() << "ISPC: error reading stdin\n";
+            return 1;
+        }
+
+        std::string sourceContent = fileBufferOrError.get()->getBuffer().str();
+        std::string fixedContent = lFixDotDotDotSpacing(sourceContent);
+
+        stdinBuffer = llvm::MemoryBuffer::getMemBufferCopy(fixedContent, "<stdin>");
+        inputFile = clang::FrontendInputFile(stdinBuffer->getMemBufferRef(), clang::InputKind());
+    } else {
+        // For normal files, preserve the FileEntry and override contents
+        // to maintain file identity for relative includes
+        auto fileOrError = fileMgr.getFileRef(infilename, true);
+        if (!fileOrError) {
+            auto errCode = llvm::errorToErrorCode(fileOrError.takeError());
+            llvm::errs() << "ISPC: error reading file '" << infilename << "': " << errCode.message() << "\n";
+            return 1;
+        }
+
+        auto fileBufferOrError = fileMgr.getBufferForFile(*fileOrError);
+        if (!fileBufferOrError) {
+            llvm::errs() << "ISPC: error reading file '" << infilename
+                         << "': " << fileBufferOrError.getError().message() << "\n";
+            return 1;
+        }
+
+        std::string sourceContent = (*fileBufferOrError)->getBuffer().str();
+        std::string fixedContent = lFixDotDotDotSpacing(sourceContent);
+
+        std::unique_ptr<llvm::MemoryBuffer> fixedBuffer =
+            llvm::MemoryBuffer::getMemBufferCopy(fixedContent, infilename);
+
+        // Override file contents with normalized version while preserving FileEntry
+        srcMgr.overrideFileContents(*fileOrError, std::move(fixedBuffer));
+
+        inputFile = clang::FrontendInputFile(infilename, clang::InputKind());
+    }
+
     lInitializeSourceManager(inputFile, diagEng, fileMgr, srcMgr);
 
 // Create HeaderSearch and apply HeaderSearchOptions
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
-    clang::HeaderSearch hdrSearch(*hdrSearchOpts, srcMgr, diagEng, langOpts, tgtInfo);
+    clang::HeaderSearch hdrSearch(*hdrSearchOpts, srcMgr, diagEng, langOpts, tgtInfo.get());
 #else
-    clang::HeaderSearch hdrSearch(hdrSearchOpts, srcMgr, diagEng, langOpts, tgtInfo);
+    clang::HeaderSearch hdrSearch(hdrSearchOpts, srcMgr, diagEng, langOpts, tgtInfo.get());
 #endif
     clang::ApplyHeaderSearchOptions(hdrSearch, *hdrSearchOpts, langOpts, triple);
 
@@ -464,7 +582,7 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
 #if ISPC_LLVM_VERSION < ISPC_LLVM_21_0
     diagOptions.reset();
 #endif
-    delete tgtInfo;
+    // tgtInfo is automatically deleted by unique_ptr
 
     // Return preprocessor diagnostic errors after processing
     return static_cast<int>(diagEng.hasErrorOccurred());
