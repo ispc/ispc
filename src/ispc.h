@@ -260,6 +260,9 @@ class Target {
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
+#ifdef ISPC_PPC64_ENABLED
+        VSX,
+#endif
 #ifdef ISPC_RISCV_ENABLED
         RV64GCV,
 #endif
@@ -543,8 +546,9 @@ struct Opt {
     int level;
 
     /** Indicates whether "fast and loose" numerically unsafe optimizations
-        should be performed.  This is false by default. */
-    bool fastMath;
+        should be performed.  This is None by default. */
+    enum class FastMathMode { None, Legacy, Balanced, Aggressive };
+    FastMathMode fastMath;
 
     /** Indicates whether an vector load should be issued for masked loads
         on platforms that don't have a native masked vector load.  (This may

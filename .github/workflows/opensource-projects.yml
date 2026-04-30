@@ -23,43 +23,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-ispc:
-    name: Build ISPC (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  build-ispc-linux:
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      artifact_name: ispc-archive
+      runner: ubuntu-22.04
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            install_deps_args: ""
-            artifact_name: ispc-archive
-            artifact_path: build/ispc-*-linux.tar.gz
-          - os: macos-14
-            install_deps_args: macos-14
-            artifact_name: ispc-macos-arm
-            artifact_path: build/ispc-*-macos.tar.gz
-
-    steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-      with:
-        submodules: true
-
-    - name: Install ISPC build dependencies
-      run: .github/workflows/scripts/install-build-deps.sh ${{ matrix.install_deps_args }}
-
-    - name: Build ISPC
-      run: .github/workflows/scripts/build-ispc.sh
-
-    - name: Upload ISPC artifact
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_path }}
+  build-ispc-macos:
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: macos
+      artifact_name: ispc-macos-arm
+      runner: macos-14
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.8-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
   build-projects:
     name: Build ${{ matrix.project.name }}
-    needs: build-ispc
+    needs: build-ispc-linux
     runs-on: ubuntu-22.04
     container:
       image: archlinux@sha256:2fcdd55448255f87dd337ef5c0fdbd5e4fec432345db1aa5faea4bf2764b4ca8
@@ -129,7 +113,7 @@ jobs:
         pacman -S --needed --noconfirm base-devel git sudo cmake ninja ${{ matrix.project.extra_packages }}
 
     - name: Download ISPC artifact
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: ispc-archive
         path: /tmp/ispc-build
@@ -149,7 +133,7 @@ jobs:
 
   build-projects-with-builder:
     name: Build ${{ matrix.project.name }}
-    needs: build-ispc
+    needs: build-ispc-linux
     runs-on: ubuntu-22.04
     container:
       image: archlinux@sha256:2fcdd55448255f87dd337ef5c0fdbd5e4fec432345db1aa5faea4bf2764b4ca8
@@ -159,26 +143,13 @@ jobs:
       matrix:
         project:
           - name: Leela Chess lc0
-            extra_packages: gtest wget
+            extra_packages: gtest
             build_cmd: |
-              su - builder -c '
+              su - builder -c "
                 git clone --branch lc0 --single-branch https://github.com/archlinux/aur.git lc0
                 cd lc0
-                # Temporary fix to use unofficial download location for weights
-                export SRCDEST=$HOME/pkg_src
-
-                # Make the directory if needed
-                mkdir -p "$SRCDEST"
-
-                # Download the weights file to SRCDEST if not present
-                # Filename must match _weights variable in PKGBUILD (weights_hanse-69722-vf2.gz)
-                weights="weights_hanse-69722-vf2.gz"
-                url="https://derr.pro/lc0/hanse-69722-vf2.gz"
-                if [ ! -f "$SRCDEST/$weights" ]; then
-                  wget -O "$SRCDEST/$weights" "$url"
-                fi
                 makepkg -s --noconfirm
-              '
+              "
 
           # Open3D disabled because open-source default runners don't have enough disk space
           # - name: Open3D
@@ -218,7 +189,7 @@ jobs:
         echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
     - name: Download ISPC artifact
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: ispc-archive
         path: /tmp/ispc-build
@@ -238,17 +209,17 @@ jobs:
 
   build-ispc-downsampler:
     name: Build ispc-downsampler on macOS ARM
-    needs: build-ispc
+    needs: build-ispc-macos
     runs-on: macos-14
 
     steps:
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
+      uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
       with:
         toolchain: stable
         
     - name: Download ISPC artifact
-      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
         name: ispc-macos-arm
         path: /tmp/ispc-build

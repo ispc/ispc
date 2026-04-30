@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 // @file short_vec.isph
@@ -132,14 +132,20 @@ SHORT_VEC_ARG1(sqrt)
 SHORT_VEC_ARG1(rsqrt)
 SHORT_VEC_ARG1(rsqrt_fast)
 SHORT_VEC_ARG1(sin)
+SHORT_VEC_ARG1(sinh)
 SHORT_VEC_ARG1(asin)
 SHORT_VEC_ARG1(cos)
+SHORT_VEC_ARG1(cosh)
 SHORT_VEC_ARG1(acos)
 SHORT_VEC_ARG1(tan)
+SHORT_VEC_ARG1(tanh)
 SHORT_VEC_ARG1(atan)
 SHORT_VEC_ARG1(exp)
+SHORT_VEC_ARG1(expm1)
 SHORT_VEC_ARG1(log)
 SHORT_VEC_ARG1(cbrt)
+SHORT_VEC_ARG1(erf)
+SHORT_VEC_ARG1(erfc)
 
 SHORT_VEC_ARG2(atan2)
 SHORT_VEC_ARG2(pow)

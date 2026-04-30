@@ -268,6 +268,18 @@ New Architecture Support:
   included in official ISPC binaries. To use it, build ISPC from source with
   the `PPC64_ENABLED=ON` CMake option. Usage: `ispc --arch=ppc64le
   --target=generic-i32x4 foo.ispc -o foo.o`.
+* Implementation of two new fast-math modes: ``balanced`` and ``aggressive``.
+  These modes bring more aggressive optimizations compared to the default
+  ``legacy`` mode. The latter was the mode provided so far in previous ISPC
+  versions. It is still available and left unchanged. The fast-math mode can be
+  specified with the option ``--opt=fast-math:<mode>``. See the optimization
+  settings section for more information about the new modes.
+* The Gauss error function ``erf`` and the complementary error function ``erfc``
+  have been added to the standard library.
+* The ``expm1`` function (meant to compute ``exp(x)-1`` accurately) has also 
+  been added to the standard library.
+* The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` has also been added
+  to the standard library.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
@@ -1674,11 +1686,56 @@ Available options:
   memory accesses beyond the end of an array, which could cause undefined
   behavior if not handled carefully.
 
-- ``fast-math``
+- ``fast-math[:<mode>]``
 
   Perform non-IEEE-compliant optimizations of numeric expressions. These
   optimizations may improve performance but can result in less precise results
-  or different behavior compared to IEEE-compliant math.
+  or different behavior compared to IEEE-compliant math. Various fast-math
+  modes are available.
+
+  Available modes:
+
+  - ``legacy`` (default)
+
+    Replace divisions by constants (i.e., ``x / const``) to multiplications by
+    the inverse (i.e., ``x * (1/const)``), and perform reciprocal approximations
+    (i.e., ``x / y`` is replaced with ``x * rcp(y)``). Please read the
+    documentation about ``rcp()`` for more information about its precision.
+    This was the unique implicit mode available in version 1.30 and earlier. 
+    Its behavior is the same in newer versions.
+
+  - ``balanced``
+
+    Enable *imprecise* optimizations. This mode may dramatically change results
+    in floating-point in pathological cases (e.g., up to a point it can produce
+    unexpected infinities or even "not a number" values).
+    It can:
+
+    - Perform algebraically equivalent transformations such as re-association;
+    - Perform floating-point contractions (e.g., fusing a multiply followed
+      by an addition into a fused multiply-and-add);
+    - Treat divisions as multiplications by reciprocals
+      (i.e., consider ``a / b`` to be equivalent to ``a * (1.0 / b)``, and
+      ``a / (b / c)`` to ``a * (c / b)``, and vice versa for both);
+    - Treat the sign of a zero argument or zero result as insignificant.
+
+    As opposed to the ``aggressive`` mode, this one does not produce any
+    *undefined behavior* as such.
+    Technically, this mode currently enables the LLVM's following fast-math
+    flags: ``reassoc``, ``contract``, ``arcp``, ``nsz``. This may change in a
+    future release.
+
+  - ``aggressive``
+
+    Enable *unsafe* optimizations and even more imprecise ones. 
+    In addition to the optimizations enabled by the ``balanced`` mode, this one
+    also assumes there are neither +/- infinities nor "not a number" values in
+    order to perform further optimizations. Codes breaking these assumptions
+    exhibit an *undefined behavior*.
+    This mode can also perform approximations of math functions (e.g., ``sqrt()``)
+    and reciprocals (similar to what ``rcp()`` does).
+    Technically, this mode currently enables all the LLVM's fast-math flags and
+    unexpected values currently produce poison values.
 
 - ``force-aligned-memory``
 
@@ -5452,8 +5509,11 @@ above.
     template <typename T, uint N> T<N> ceil(T<N> a)
     template <typename T, uint N> T<N> trunc(T<N> a)
 
-``rcp()`` computes an approximation to ``1/v``.  The amount of error is
-different on different architectures.
+``rcp()`` computes an approximation to ``1/v``.  The precision is dependent of
+the target CPU architecture. Input/output denormalized numbers may be flushed to
+zeros. For regular numbers, the relative error is usually a few ULPs (unit of
+least precision). Newton-Raphson iterations can be performed to reach such a
+precision.
 
 ::
 
@@ -5835,7 +5895,47 @@ functions:
                 uniform double * uniform c)
 
 
-The usual exponential and logarithmic functions are provided.
+``ispc`` provides a standard variety of calls for hyperbolic functions:
+
+::
+
+    float16 sinh(float16 x)
+    uniform float16 sinh(uniform float16 x)
+    float sinh(float x)
+    uniform float sinh(uniform float x)
+    double sinh(double x)
+    uniform double sinh(uniform double x)
+
+::
+
+    float16 cosh(float16 x)
+    uniform float16 cosh(uniform float16 x)
+    float cosh(float x)
+    uniform float cosh(uniform float x)
+    double cosh(double x)
+    uniform double cosh(uniform double x)
+
+::
+
+    float16 tanh(float16 x)
+    uniform float16 tanh(uniform float16 x)
+    float tanh(float x)
+    uniform float tanh(uniform float x)
+    double tanh(double x)
+    uniform double tanh(uniform double x)
+
+The hyperbolic functions also support short vector types with the basic types
+listed above:
+
+::
+
+  template <typename T, uint N> T<N> sinh(T<N> a)
+  template <typename T, uint N> T<N> cosh(T<N> a)
+  template <typename T, uint N> T<N> tanh(T<N> a)
+
+
+The usual exponential and logarithmic functions are provided. Please note that 
+``expm1`` computes ``exp(x)-1`` accurately.
 
 ::
 
@@ -5845,6 +5945,15 @@ The usual exponential and logarithmic functions are provided.
     uniform float exp(uniform float x)
     double exp(double x)
     uniform double exp(uniform double x)
+
+::
+
+    float16 expm1(float16 x)
+    uniform float16 expm1(uniform float16 x)
+    float expm1(float x)
+    uniform float expm1(uniform float x)
+    double expm1(double x)
+    uniform double expm1(uniform double x)
 
 ::
 
@@ -5870,6 +5979,7 @@ above:
 ::
 
     template <typename T, uint N> T<N> exp(T<N> a)
+    template <typename T, uint N> T<N> expm1(T<N> a)
     template <typename T, uint N> T<N> log(T<N> a)
     template <typename T, uint N> T<N> pow(T<N> a, T<N> b)
 
@@ -5883,6 +5993,30 @@ for short vector of these types:
     double cbrt(double x)
     uniform double cbrt(uniform double x)
     template <typename T, uint N> T<N> cbrt(T<N> a)
+
+The Gauss error function ``erf`` is available:
+
+::
+
+    float16 erf(float16 x)
+    uniform float16 erf(uniform float16 x)
+    float erf(float x)
+    uniform float erf(uniform float x)
+    double erf(double x)
+    uniform double erf(uniform double x)
+    template <typename T, uint N> T<N> erf(T<N> a)
+
+The complementary error function ``erfc`` is also provided:
+
+::
+
+    float16 erfc(float16 x)
+    uniform float16 erfc(uniform float16 x)
+    float erfc(float x)
+    uniform float erfc(uniform float x)
+    double erfc(double x)
+    uniform double erfc(uniform double x)
+    template <typename T, uint N> T<N> erfc(T<N> a)
 
 A few functions that end up doing low-level manipulation of the
 floating-point representation in memory are available.  As in the standard

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       COVERITY_SCAN_BUILD_COMMAND: "cmake --build ${{github.workspace}}/build"
-      COVERITY_SCAN_BRANCH_PATTERN: "main"
+      COVERITY_SCAN_BRANCH_PATTERN: "(main|releases/.*)"
       COVERITY_SCAN_NOTIFICATION_EMAIL: ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
       COVERITY_SCAN_PROJECT_NAME: ${{ secrets.COVERITY_SCAN_PROJECT_NAME }}
       COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
@@ -55,7 +55,7 @@ jobs:
           .github/workflows/scripts/run-coverity.sh
 
       - name: Upload Coverity artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: scm_log.txt
           path: cov-int/scm_log.txt
