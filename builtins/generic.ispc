@@ -658,60 +658,84 @@ EXT READNONE void __memory_barrier() { @llvm.ispc.fence.seq_cst(); }
 // These functions provide entrypoints that call out to the libm
 // implementations of the transcendental functions
 EXT READNONE uniform float sinf(uniform float);
+EXT READNONE uniform float sinhf(uniform float);
 EXT READNONE uniform float cosf(uniform float);
+EXT READNONE uniform float coshf(uniform float);
 EXT void sincosf(uniform float, uniform float *uniform, uniform float *uniform);
 EXT READNONE uniform float asinf(uniform float);
 EXT READNONE uniform float acosf(uniform float);
 EXT READNONE uniform float tanf(uniform float);
+EXT READNONE uniform float tanhf(uniform float);
 EXT READNONE uniform float atanf(uniform float);
 EXT READNONE uniform float atan2f(uniform float, uniform float);
 EXT READNONE uniform float expf(uniform float);
 EXT READNONE uniform float logf(uniform float);
 EXT READNONE uniform float powf(uniform float, uniform float);
 EXT READNONE uniform float cbrtf(uniform float);
+EXT READNONE uniform float erff(uniform float);
+EXT READNONE uniform float erfcf(uniform float);
+EXT READNONE uniform float expm1f(uniform float);
 
 EXT READNONE uniform float __stdlib_sinf(uniform float x) { return sinf(x); }
+EXT READNONE uniform float __stdlib_sinhf(uniform float x) { return sinhf(x); }
 EXT READNONE uniform float __stdlib_cosf(uniform float x) { return cosf(x); }
+EXT READNONE uniform float __stdlib_coshf(uniform float x) { return coshf(x); }
 EXT void __stdlib_sincosf(uniform float x, uniform float *uniform sin_v, uniform float *uniform cos_v) {
     sincosf(x, sin_v, cos_v);
 }
 EXT READNONE uniform float __stdlib_asinf(uniform float x) { return asinf(x); }
 EXT READNONE uniform float __stdlib_acosf(uniform float x) { return acosf(x); }
 EXT READNONE uniform float __stdlib_tanf(uniform float x) { return tanf(x); }
+EXT READNONE uniform float __stdlib_tanhf(uniform float x) { return tanhf(x); }
 EXT READNONE uniform float __stdlib_atanf(uniform float x) { return atanf(x); }
 EXT READNONE uniform float __stdlib_atan2f(uniform float x, uniform float y) { return atan2f(x, y); }
 EXT READNONE uniform float __stdlib_logf(uniform float x) { return logf(x); }
 EXT READNONE uniform float __stdlib_expf(uniform float x) { return expf(x); }
 EXT READNONE uniform float __stdlib_powf(uniform float x, uniform float y) { return powf(x, y); }
 EXT READNONE uniform float __stdlib_cbrtf(uniform float x) { return cbrtf(x); }
+EXT READNONE uniform float __stdlib_erff(uniform float x) { return erff(x); }
+EXT READNONE uniform float __stdlib_erfcf(uniform float x) { return erfcf(x); }
+EXT READNONE uniform float __stdlib_expm1f(uniform float x) { return expm1f(x); }
 
 EXT READNONE uniform double sin(uniform double);
+EXT READNONE uniform double sinh(uniform double);
 EXT READNONE uniform double cos(uniform double);
+EXT READNONE uniform double cosh(uniform double);
 EXT void sincos(uniform double, uniform double *uniform, uniform double *uniform);
 EXT READNONE uniform double asin(uniform double);
 EXT READNONE uniform double acos(uniform double);
 EXT READNONE uniform double tan(uniform double);
+EXT READNONE uniform double tanh(uniform double);
 EXT READNONE uniform double atan(uniform double);
 EXT READNONE uniform double atan2(uniform double, uniform double);
 EXT READNONE uniform double exp(uniform double);
+EXT READNONE uniform double expm1(uniform double);
 EXT READNONE uniform double log(uniform double);
 EXT READNONE uniform double pow(uniform double, uniform double);
 EXT READNONE uniform double cbrt(uniform double);
+EXT READNONE uniform double erf(uniform double);
+EXT READNONE uniform double erfc(uniform double);
 
 EXT READNONE uniform double __stdlib_sin(uniform double x) { return sin(x); }
+EXT READNONE uniform double __stdlib_sinh(uniform double x) { return sinh(x); }
 EXT READNONE uniform double __stdlib_cos(uniform double x) { return cos(x); }
+EXT READNONE uniform double __stdlib_cosh(uniform double x) { return cosh(x); }
 EXT void __stdlib_sincos(uniform double x, uniform double *uniform sin_v, uniform double *uniform cos_v) {
     sincos(x, sin_v, cos_v);
 }
 EXT READNONE uniform double __stdlib_asin(uniform double x) { return asin(x); }
 EXT READNONE uniform double __stdlib_acos(uniform double x) { return acos(x); }
 EXT READNONE uniform double __stdlib_tan(uniform double x) { return tan(x); }
+EXT READNONE uniform double __stdlib_tanh(uniform double x) { return tanh(x); }
 EXT READNONE uniform double __stdlib_atan(uniform double x) { return atan(x); }
 EXT READNONE uniform double __stdlib_atan2(uniform double x, uniform double y) { return atan2(x, y); }
 EXT READNONE uniform double __stdlib_log(uniform double x) { return log(x); }
 EXT READNONE uniform double __stdlib_exp(uniform double x) { return exp(x); }
+EXT READNONE uniform double __stdlib_expm1(uniform double x) { return expm1(x); }
 EXT READNONE uniform double __stdlib_pow(uniform double x, uniform double y) { return pow(x, y); }
 EXT READNONE uniform double __stdlib_cbrt(uniform double x) { return cbrt(x); }
+EXT READNONE uniform double __stdlib_erf(uniform double x) { return erf(x); }
+EXT READNONE uniform double __stdlib_erfc(uniform double x) { return erfc(x); }
 
 EXT READNONE uniform float16 __round_uniform_half(uniform float16 x) { return @llvm.roundeven(x); }
 EXT READNONE varying float16 __round_varying_half(varying float16 x) { return @llvm.roundeven(x); }

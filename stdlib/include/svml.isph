@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2024-2025, Intel Corporation
+// Copyright (c) 2024-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 // @file svml.isph
@@ -13,32 +13,44 @@
 
 // TODO! nounwind readnone alwaysinline
 EXT READNONE inline varying float __svml_sinf(varying float);
+EXT READNONE inline varying float __svml_sinhf(varying float);
 EXT READNONE inline varying float __svml_asinf(varying float);
 EXT READNONE inline varying float __svml_cosf(varying float);
+EXT READNONE inline varying float __svml_coshf(varying float);
 EXT READNONE inline varying float __svml_acosf(varying float);
 EXT inline void __svml_sincosf(varying float, uniform int8 *uniform, uniform int8 *uniform);
 EXT READNONE inline varying float __svml_tanf(varying float);
+EXT READNONE inline varying float __svml_tanhf(varying float);
 EXT READNONE inline varying float __svml_atanf(varying float);
 EXT READNONE inline varying float __svml_atan2f(varying float, varying float);
 EXT READNONE inline varying float __svml_expf(varying float);
 EXT READNONE inline varying float __svml_logf(varying float);
 EXT READNONE inline varying float __svml_powf(varying float, varying float);
 EXT READNONE inline varying float __svml_cbrtf(varying float);
+EXT READNONE inline varying float __svml_erff(varying float);
+EXT READNONE inline varying float __svml_erfcf(varying float);
+EXT READNONE inline varying float __svml_expm1f(varying float);
 EXT READNONE inline varying float __svml_sqrtf(varying float);
 EXT READNONE inline varying float __svml_invsqrtf(varying float);
 
 EXT READNONE inline varying double __svml_sind(varying double);
+EXT READNONE inline varying double __svml_sinhd(varying double);
 EXT READNONE inline varying double __svml_asind(varying double);
 EXT READNONE inline varying double __svml_cosd(varying double);
+EXT READNONE inline varying double __svml_coshd(varying double);
 EXT READNONE inline varying double __svml_acosd(varying double);
 EXT inline void __svml_sincosd(varying double, uniform int8 *uniform, uniform int8 *uniform);
 EXT READNONE inline varying double __svml_tand(varying double);
+EXT READNONE inline varying double __svml_tanhd(varying double);
 EXT READNONE inline varying double __svml_atand(varying double);
 EXT READNONE inline varying double __svml_atan2d(varying double, varying double);
 EXT READNONE inline varying double __svml_expd(varying double);
 EXT READNONE inline varying double __svml_logd(varying double);
 EXT READNONE inline varying double __svml_powd(varying double, varying double);
 EXT READNONE inline varying double __svml_cbrtd(varying double);
+EXT READNONE inline varying double __svml_erfd(varying double);
+EXT READNONE inline varying double __svml_erfcd(varying double);
+EXT READNONE inline varying double __svml_expm1d(varying double);
 EXT READNONE inline varying double __svml_sqrtd(varying double);
 EXT READNONE inline varying double __svml_invsqrtd(varying double);
 

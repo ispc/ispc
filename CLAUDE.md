@@ -66,11 +66,15 @@ functional tests for runtime behavior changes.
 3. Search codebase for relevant files (use `pattern-finder` agent to discover existing patterns and similar implementations)
 4. Create a fix plan
 5. Implement the fix
-6. Write regression tests in `tests/lit-tests/` (use `ispc-lit-tests` skill) and/or functional tests in `tests/func-tests/`
-7. Verify the fix
-8. Run `code-review` agent to review the changes and address its feedback
-9. Run precommit checks (see Precommit Rules below)
-10. Commit with message: `Fix #<issue_number>: <summary>` (for issues) or descriptive summary
+6. Check git history of files/functions you changed to avoid re-introducing previously fixed bugs:
+   - `git log --oneline <file>` — recent commits touching the file
+   - `git log -L<start>,<end>:<file>` — history of a specific line range
+   - `git show <commit>` — full diff and message of a specific commit
+7. Write regression tests in `tests/lit-tests/` (use `ispc-lit-tests` skill) and/or functional tests in `tests/func-tests/`
+8. Verify the fix
+9. Run `code-review` agent to review the changes and address its feedback
+10. Run precommit checks (see Precommit Rules below)
+11. Commit with message: `Fix #<issue_number>: <summary>` (for issues) or descriptive summary
 
 **Debugging a test failure:**
 1. Run the specific test: `TEST=/full/path/test.ispc cmake --build build --target check-one -j $(nproc)`

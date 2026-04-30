@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2024-2025, Intel Corporation
+#  Copyright (c) 2024-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -42,6 +42,12 @@ function(determine_arch_and_os target bit os out_arch out_os)
             set(arch "arm")
         elseif ("${bit}" STREQUAL "64")
             set(arch "aarch64")
+        else()
+            set(arch "error")
+        endif()
+    elseif ("${target}" MATCHES "vsx")
+        if ("${bit}" STREQUAL "64")
+            set(arch "ppc64le")
         else()
             set(arch "error")
         endif()
@@ -197,6 +203,39 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
                         continue()
                     endif()
                     disp_target_stdlib(${func} ${ispc_name} ${target} 32 ${os} ${CPP_LIST} ${BC_LIST})
+                endforeach()
+            endforeach()
+        endif()
+    endif()
+
+    # PPC64 targets (Linux only, 64-bit only)
+    if (PPC64_ENABLED AND ISPC_LINUX_TARGET)
+        if (${func} STREQUAL "stdlib_to_cpp")
+            foreach (os ${os_list})
+                if (${os} STREQUAL "windows")
+                    continue()
+                endif()
+
+                foreach (family ${STDLIB_PPC64_FAMILIES})
+                    process_stdlib_family(${family} ${ispc_name} 64 ${os} ${CPP_LIST} ${BC_LIST})
+                endforeach()
+
+                # Process remaining PPC64 targets not in any family
+                foreach (target ${PPC64_TARGETS})
+                    list(FIND STDLIB_FAMILY_ALL_MEMBERS ${target} idx)
+                    if(idx EQUAL -1)
+                        disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
+                    endif()
+                endforeach()
+            endforeach()
+        else()
+            # For target builtins, compile for each target individually
+            foreach (os ${os_list})
+                if (${os} STREQUAL "windows")
+                    continue()
+                endif()
+                foreach (target ${PPC64_TARGETS})
+                    disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
                 endforeach()
             endforeach()
         endif()

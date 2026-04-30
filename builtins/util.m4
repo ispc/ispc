@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2025, Intel Corporation
+;;  Copyright (c) 2010-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -5860,25 +5860,41 @@ define i64 @__clock() nounwind {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 declare float @sinf(float) nounwind readnone
+declare float @sinhf(float) nounwind readnone
 declare float @cosf(float) nounwind readnone
+declare float @coshf(float) nounwind readnone
 declare void @sincosf(float, float *, float *) nounwind
 declare float @asinf(float) nounwind readnone
 declare float @acosf(float) nounwind readnone
 declare float @tanf(float) nounwind readnone
+declare float @tanhf(float) nounwind readnone
 declare float @atanf(float) nounwind readnone
 declare float @atan2f(float, float) nounwind readnone
 declare float @expf(float) nounwind readnone
 declare float @logf(float) nounwind readnone
 declare float @powf(float, float) nounwind readnone
 declare float @cbrtf(float) nounwind readnone
+declare float @erff(float) nounwind readnone
+declare float @erfcf(float) nounwind readnone
+declare float @expm1f(float) nounwind readnone
 
 define float @__stdlib_sinf(float) nounwind readnone alwaysinline {
   %r = call float @sinf(float %0)
   ret float %r
 }
 
+define float @__stdlib_sinhf(float) nounwind readnone alwaysinline {
+  %r = call float @sinhf(float %0)
+  ret float %r
+}
+
 define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
   %r = call float @cosf(float %0)
+  ret float %r
+}
+
+define float @__stdlib_coshf(float) nounwind readnone alwaysinline {
+  %r = call float @coshf(float %0)
   ret float %r
 }
 
@@ -5901,6 +5917,11 @@ define float @__stdlib_acosf(float) nounwind readnone alwaysinline {
 
 define float @__stdlib_tanf(float) nounwind readnone alwaysinline {
   %r = call float @tanf(float %0)
+  ret float %r
+}
+
+define float @__stdlib_tanhf(float) nounwind readnone alwaysinline {
+  %r = call float @tanhf(float %0)
   ret float %r
 }
 
@@ -5934,20 +5955,47 @@ define float @__stdlib_cbrtf(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define float @__stdlib_erff(float) nounwind readnone alwaysinline {
+  %r = call float @erff(float %0)
+  ret float %r
+}
+
+define float @__stdlib_erfcf(float) nounwind readnone alwaysinline {
+  %r = call float @erfcf(float %0)
+  ret float %r
+}
+
+define float @__stdlib_expm1f(float) nounwind readnone alwaysinline {
+  %r = call float @expm1f(float %0)
+  ret float %r
+}
+
 declare double @sin(double) nounwind readnone
+declare double @sinh(double) nounwind readnone
 declare double @asin(double) nounwind readnone
+declare double @acos(double) nounwind readnone
 declare double @cos(double) nounwind readnone
+declare double @cosh(double) nounwind readnone
 declare void @sincos(double, double *, double *) nounwind
 declare double @tan(double) nounwind readnone
+declare double @tanh(double) nounwind readnone
 declare double @atan(double) nounwind readnone
 declare double @atan2(double, double) nounwind readnone
 declare double @exp(double) nounwind readnone
+declare double @expm1(double) nounwind readnone
 declare double @log(double) nounwind readnone
 declare double @pow(double, double) nounwind readnone
 declare double @cbrt(double) nounwind readnone
+declare double @erf(double) nounwind readnone
+declare double @erfc(double) nounwind readnone
 
 define double @__stdlib_sin(double) nounwind readnone alwaysinline {
   %r = call double @sin(double %0)
+  ret double %r
+}
+
+define double @__stdlib_sinh(double) nounwind readnone alwaysinline {
+  %r = call double @sinh(double %0)
   ret double %r
 }
 
@@ -5956,8 +6004,18 @@ define double @__stdlib_asin(double) nounwind readnone alwaysinline {
   ret double %r
 }
 
+define double @__stdlib_acos(double) nounwind readnone alwaysinline {
+  %r = call double @acos(double %0)
+  ret double %r
+}
+
 define double @__stdlib_cos(double) nounwind readnone alwaysinline {
   %r = call double @cos(double %0)
+  ret double %r
+}
+
+define double @__stdlib_cosh(double) nounwind readnone alwaysinline {
+  %r = call double @cosh(double %0)
   ret double %r
 }
 
@@ -5970,6 +6028,11 @@ define void @__stdlib_sincos(double, i8 *, i8 *) nounwind alwaysinline {
 
 define double @__stdlib_tan(double) nounwind readnone alwaysinline {
   %r = call double @tan(double %0)
+  ret double %r
+}
+
+define double @__stdlib_tanh(double) nounwind readnone alwaysinline {
+  %r = call double @tanh(double %0)
   ret double %r
 }
 
@@ -5993,6 +6056,11 @@ define double @__stdlib_exp(double) nounwind readnone alwaysinline {
   ret double %r
 }
 
+define double @__stdlib_expm1(double) nounwind readnone alwaysinline {
+  %r = call double @expm1(double %0)
+  ret double %r
+}
+
 define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
   %r = call double @pow(double %0, double %1)
   ret double %r
@@ -6000,6 +6068,16 @@ define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
 
 define double @__stdlib_cbrt(double) nounwind readnone alwaysinline {
   %r = call double @cbrt(double %0)
+  ret double %r
+}
+
+define double @__stdlib_erf(double) nounwind readnone alwaysinline {
+  %r = call double @erf(double %0)
+  ret double %r
+}
+
+define double @__stdlib_erfc(double) nounwind readnone alwaysinline {
+  %r = call double @erfc(double %0)
   ret double %r
 }
 
@@ -6481,10 +6559,10 @@ load:
 
 loop:
 ifelse(MASK,i1, `
-  %res = call <WIDTH x $1> @llvm.masked.load.TYPE_SUFFIX($1)(<WIDTH x $1>* %ptr, i32 SIZEOF($1), <WIDTH x i1> %mask, <WIDTH x $1> undef)
+  %res = call <WIDTH x $1> @llvm.masked.load.TYPE_SUFFIX($1)(<WIDTH x $1>* %ptr, i32 SIZEOF($1), <WIDTH x i1> %mask, <WIDTH x $1> poison)
 ', `
   %maski1 = trunc <WIDTH x MASK> %mask to <WIDTH x i1>
-  %res = call <WIDTH x $1> @llvm.masked.load.TYPE_SUFFIX($1)(<WIDTH x $1>* %ptr, i32 SIZEOF($1), <WIDTH x i1> %maski1, <WIDTH x $1> undef)
+  %res = call <WIDTH x $1> @llvm.masked.load.TYPE_SUFFIX($1)(<WIDTH x $1>* %ptr, i32 SIZEOF($1), <WIDTH x i1> %maski1, <WIDTH x $1> poison)
 ')
   ret <WIDTH x $1> %res
  }
