@@ -1073,7 +1073,12 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
     if (!isExternCorSYCL && isInline) {
-        function->addFnAttr(llvm::Attribute::AlwaysInline);
+        // Mark with a custom attribute now; it is converted to AlwaysInline
+        // late in the optimization pipeline by RestoreInlineAttrPass. This
+        // defers forced inlining until after function-level optimizations
+        // have run, which produces better code than inlining the function
+        // body before those passes (issue #3804).
+        function->addFnAttr("ispc-defer-alwaysinline");
     }
 
     if (isVectorCall) {
