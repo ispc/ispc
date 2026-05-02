@@ -3367,12 +3367,11 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
     } else if (__math_lib == __math_lib_ispc_fast) {
 
         // Precision: <20 ULP in [-8*pi;+8*pi]
-        // Does not support -0.0 output so sin(-0.0)=0.0.
         // Does not support infinities either.
-        // Subnormal numbers and NaNs are natively supported.
+        // Subnormal numbers, -0.0 and NaNs are natively supported.
 
         const uniform float pi_inv_sp = 3.1830988618e-01;
-        const uniform float k = round(x_full * pi_inv_sp);
+        const uniform float k = round(x_full * pi_inv_sp + 1e-30);
         const uniform uint32 flip_bit = (uniform uint32)(uniform int32)k << 31ul;
 
         const uniform float pi_p1_sp = +3.1415920258e+00;
@@ -3401,8 +3400,9 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
 
         const uniform float pi_inv_sp = 3.1830988618e-01;
 
+        // A tiny epsilon is added so to support -0.0 inputs efficiently
         const uniform float x_abs = abs(x_full);
-        const uniform float k = round(x_full * pi_inv_sp);
+        const uniform float k = round(x_full * pi_inv_sp + 1e-30);
         uniform uint32 flip_bit = (uniform uint32)(uniform int32)k << 31ul;
 
         const uniform float pi_p1_sp = +3.1406250000e+00;
@@ -3456,9 +3456,7 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
         poly *= t;
 
         // Swap the sign bit and then fix the result for -0.0 inputs.
-        uniform float res = floatbits(intbits(poly) ^ flip_bit);
-        res = select(x_full == 0.0, x_full, res);
-        return res;
+        return floatbits(intbits(poly) ^ flip_bit);
     }
 }
 
@@ -3479,7 +3477,7 @@ __declspec(safe) static inline float sin(float x_full) {
         // See the uniform version for more information
 
         const float pi_inv_sp = 3.1830988618e-01;
-        const float k = round(x_full * pi_inv_sp);
+        const float k = round(x_full * pi_inv_sp + 1e-30);
         const uint32 flip_bit = (uint32)(int32)k << 31ul;
 
         const float pi_p1_sp = +3.1415920258e+00;
@@ -3506,7 +3504,7 @@ __declspec(safe) static inline float sin(float x_full) {
         const float pi_inv_sp = 3.1830988618e-01;
 
         const float x_abs = abs(x_full);
-        const float k = round(x_full * pi_inv_sp);
+        const float k = round(x_full * pi_inv_sp + 1e-30);
         uint32 flip_bit = (uint32)(int32)k << 31ul;
 
         const float pi_p1_sp = +3.1406250000e+00;
@@ -3549,9 +3547,7 @@ __declspec(safe) static inline float sin(float x_full) {
         poly = poly * t2 + 1.0;
         poly *= t;
 
-        float res = floatbits(intbits(poly) ^ flip_bit);
-        res = select(x_full == 0.0, x_full, res);
-        return res;
+        return floatbits(intbits(poly) ^ flip_bit);
     }
 }
 
