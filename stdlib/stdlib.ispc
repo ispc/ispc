@@ -3359,8 +3359,106 @@ __declspec(safe) static inline uniform float frexp(uniform float x, uniform int 
     return floatbits(ix);
 }
 
-// Most of the transcendental implementations in ispc code here come from
-// Solomon Boulos's "syrah": https://github.com/boulos/syrah/
+__declspec(safe) static inline uniform float sin(uniform float x_full) {
+    if (__have_native_trigonometry) {
+        return __sin_uniform_float(x_full);
+    } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_sinf(x_full);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision: <20 ULP in [-8*pi;+8*pi]
+        // Does not support infinities either.
+        // Subnormal numbers, -0.0 and NaNs are natively supported.
+
+        const uniform float pi_inv_sp = 3.1830988618e-01;
+        const uniform float k = round(x_full * pi_inv_sp + 1e-30);
+        const uniform uint32 flip_bit = (uniform uint32)(uniform int32)k << 31ul;
+
+        const uniform float pi_p1_sp = +3.1415920258e+00;
+        const uniform float pi_p2_sp = +6.2783295730e-07;
+        const uniform float t = x_full - k * pi_p1_sp - k * pi_p2_sp;
+        const uniform float t2 = t * t + 1e-30;
+
+        // Sollya:
+        // range = [-pi/2-1e-5;pi/2+1e-5];
+        // fpminimax(sin(x)/x, [|0,2,4,6,8|], [|single...|], range);
+        const uniform float c1 = +9.9999904630e-01;
+        const uniform float c3 = -1.6665549576e-01;
+        const uniform float c5 = +8.3118639900e-03;
+        const uniform float c7 = -1.8487322086e-04;
+
+        uniform float poly = c7;
+        poly = poly * t2 + c5;
+        poly = poly * t2 + c3;
+        poly = poly * t2 + c1;
+        poly *= t;
+
+        return floatbits(intbits(poly) ^ flip_bit);
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <4 ULP in [-1e9;1e9], slower outside the range [-96e3;+96e3]
+
+        const uniform float pi_inv_sp = 3.1830988618e-01;
+
+        // A tiny epsilon is added so to support -0.0 inputs efficiently
+        const uniform float x_abs = abs(x_full);
+        const uniform float k = round(x_full * pi_inv_sp + 1e-30);
+        uniform uint32 flip_bit = (uniform uint32)(uniform int32)k << 31ul;
+
+        const uniform float pi_p1_sp = +3.1406250000e+00;
+        const uniform float pi_p2_sp = +9.6702575684e-04;
+        const uniform float pi_p3_sp = +6.2771141529e-07;
+        const uniform float pi_p4_sp = +1.2154201013e-10;
+        uniform float t = x_full - k * pi_p1_sp;
+        t -= k * pi_p2_sp;
+        t -= k * pi_p3_sp;
+        t -= k * pi_p4_sp;
+
+        if (x_abs > 96e3) {
+
+            // Code path for rather (unreasonable) extreme cases.
+            // For input values >1e9, we just return NaN since there is clearly
+            // not enough precision to compute this function accurately anyway.
+            // Indeed, sin(1e9)=0.5458434, while sin(1e9+1ULP)=0.9847707.
+
+            const uniform double pi_hi_dp = +3.141592741012573242e+00d;
+            const uniform double pi_mi_dp = -8.742277657347585773e-08d;
+            const uniform double pi_lo_dp = -3.430248998885765612e-15d;
+
+            const uniform double pi_inv_dp = 3.183098861837906715e-01d;
+            const uniform double k_dp = round(x_full * pi_inv_dp);
+            flip_bit = (uniform uint32)(uniform int32)k_dp << 31ul;
+            uniform double t_dp = x_full - k_dp * pi_hi_dp;
+            t_dp -= k_dp * pi_mi_dp;
+            t_dp -= k_dp * pi_lo_dp;
+            t = t_dp;
+
+            const uniform float pnan = floatbits(0x7FC00000);
+            t = select(x_abs > 1e9, pnan, t);
+        }
+
+        // A tiny epsilon is added so to compute subnormal numbers faster.
+        const uniform float t2 = t * t + 1e-30;
+
+        // Sollya:
+        // range = [-pi/2-1e-5;pi/2+1e-5];
+        // fpminimax(sin(x)/x, [|0,2,4,6,8|], [|single...|], range);
+        const uniform float c3 = -1.6666659710e-01;
+        const uniform float c5 = +8.3330692720e-03;
+        const uniform float c7 = -1.9809778314e-04;
+        const uniform float c9 = +2.6061034080e-06;
+
+        uniform float poly = c9;
+        poly = poly * t2 + c7;
+        poly = poly * t2 + c5;
+        poly = poly * t2 + c3;
+        poly = poly * t2 + 1.0;
+        poly *= t;
+
+        // Swap the sign bit and then fix the result for -0.0 inputs.
+        return floatbits(intbits(poly) ^ flip_bit);
+    }
+}
 
 __declspec(safe) static inline float sin(float x_full) {
     if (__have_native_trigonometry) {
@@ -3374,112 +3472,82 @@ __declspec(safe) static inline float sin(float x_full) {
             ret = insert(ret, i, r);
         }
         return ret;
-    } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        static const float pi_over_two_vec = 1.57079637050628662109375;
-        static const float two_over_pi_vec = 0.636619746685028076171875;
-        float scaled = x_full * two_over_pi_vec;
-        float k_real = floor(scaled);
-        int k = (int)k_real;
+    } else if (__math_lib == __math_lib_ispc_fast) {
 
-        // Reduced range version of x
-        float x = x_full - k_real * pi_over_two_vec;
-        int k_mod4 = k & 3;
-        bool sin_usecos = (k_mod4 == 1 || k_mod4 == 3);
-        bool flip_sign = (k_mod4 > 1);
+        // See the uniform version for more information
 
-        // These coefficients are from sollya with fpminimax(sin(x)/x, [|0, 2,
-        // 4, 6, 8, 10|], [|single...|], [0;Pi/2]);
-        static const float sin_c2 = -0.16666667163372039794921875;
-        static const float sin_c4 = 8.333347737789154052734375e-3;
-        static const float sin_c6 = -1.9842604524455964565277099609375e-4;
-        static const float sin_c8 = 2.760012648650445044040679931640625e-6;
-        static const float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+        const float pi_inv_sp = 3.1830988618e-01;
+        const float k = round(x_full * pi_inv_sp + 1e-30);
+        const uint32 flip_bit = (uint32)(int32)k << 31ul;
 
-        static const float cos_c2 = -0.5;
-        static const float cos_c4 = 4.166664183139801025390625e-2;
-        static const float cos_c6 = -1.388833043165504932403564453125e-3;
-        static const float cos_c8 = 2.47562347794882953166961669921875e-5;
-        static const float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+        const float pi_p1_sp = +3.1415920258e+00;
+        const float pi_p2_sp = +6.2783295730e-07;
+        const float t = x_full - k * pi_p1_sp - k * pi_p2_sp;
+        const float t2 = t * t + 1e-30;
 
-        float outside = sin_usecos ? 1 : x;
-        float c2 = sin_usecos ? cos_c2 : sin_c2;
-        float c4 = sin_usecos ? cos_c4 : sin_c4;
-        float c6 = sin_usecos ? cos_c6 : sin_c6;
-        float c8 = sin_usecos ? cos_c8 : sin_c8;
-        float c10 = sin_usecos ? cos_c10 : sin_c10;
+        const float c1 = +9.9999904630e-01;
+        const float c3 = -1.6665549576e-01;
+        const float c5 = +8.3118639900e-03;
+        const float c7 = -1.8487322086e-04;
 
-        float x2 = x * x;
-        float formula = x2 * c10 + c8;
-        formula = x2 * formula + c6;
-        formula = x2 * formula + c4;
-        formula = x2 * formula + c2;
-        formula = x2 * formula + 1;
-        formula *= outside;
+        float poly = c7;
+        poly = poly * t2 + c5;
+        poly = poly * t2 + c3;
+        poly = poly * t2 + c1;
+        poly *= t;
 
-        formula = flip_sign ? -formula : formula;
-        return formula;
-    }
-}
+        return floatbits(intbits(poly) ^ flip_bit);
+    } else if (__math_lib == __math_lib_ispc) {
 
-__declspec(safe) static inline uniform float sin(uniform float x_full) {
-    if (__have_native_trigonometry) {
-        return __sin_uniform_float(x_full);
-    } else if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
-        return __stdlib_sinf(x_full);
-    } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
-        static const uniform float pi_over_two_vec = 1.57079637050628662109375;
-        static const uniform float two_over_pi_vec = 0.636619746685028076171875;
-        uniform float scaled = x_full * two_over_pi_vec;
-        uniform float k_real = floor(scaled);
-        uniform int k = (int)k_real;
+        // See the uniform version for more information
 
-        // Reduced range version of x
-        uniform float x = x_full - k_real * pi_over_two_vec;
-        uniform int k_mod4 = k & 3;
-        uniform bool sin_usecos = (k_mod4 == 1 || k_mod4 == 3);
-        uniform bool flip_sign = (k_mod4 > 1);
+        const float pi_inv_sp = 3.1830988618e-01;
 
-        // These coefficients are from sollya with fpminimax(sin(x)/x, [|0, 2,
-        // 4, 6, 8, 10|], [|single...|], [0;Pi/2]);
-        static const uniform float sin_c2 = -0.16666667163372039794921875;
-        static const uniform float sin_c4 = 8.333347737789154052734375e-3;
-        static const uniform float sin_c6 = -1.9842604524455964565277099609375e-4;
-        static const uniform float sin_c8 = 2.760012648650445044040679931640625e-6;
-        static const uniform float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+        const float x_abs = abs(x_full);
+        const float k = round(x_full * pi_inv_sp + 1e-30);
+        uint32 flip_bit = (uint32)(int32)k << 31ul;
 
-        static const uniform float cos_c2 = -0.5;
-        static const uniform float cos_c4 = 4.166664183139801025390625e-2;
-        static const uniform float cos_c6 = -1.388833043165504932403564453125e-3;
-        static const uniform float cos_c8 = 2.47562347794882953166961669921875e-5;
-        static const uniform float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+        const float pi_p1_sp = +3.1406250000e+00;
+        const float pi_p2_sp = +9.6702575684e-04;
+        const float pi_p3_sp = +6.2771141529e-07;
+        const float pi_p4_sp = +1.2154201013e-10;
+        float t = x_full - k * pi_p1_sp;
+        t -= k * pi_p2_sp;
+        t -= k * pi_p3_sp;
+        t -= k * pi_p4_sp;
 
-        uniform float outside, c2, c4, c6, c8, c10;
-        if (sin_usecos) {
-            outside = 1.;
-            c2 = cos_c2;
-            c4 = cos_c4;
-            c6 = cos_c6;
-            c8 = cos_c8;
-            c10 = cos_c10;
-        } else {
-            outside = x;
-            c2 = sin_c2;
-            c4 = sin_c4;
-            c6 = sin_c6;
-            c8 = sin_c8;
-            c10 = sin_c10;
+        cif(x_abs > 96e3) {
+            const double pi_hi_dp = +3.141592741012573242e+00d;
+            const double pi_mi_dp = -8.742277657347585773e-08d;
+            const double pi_lo_dp = -3.430248998885765612e-15d;
+
+            const double pi_inv_dp = 3.183098861837906715e-01d;
+            const double k_dp = round(x_full * pi_inv_dp);
+            flip_bit = (uint32)(int32)k_dp << 31ul;
+            double t_dp = x_full - k_dp * pi_hi_dp;
+            t_dp -= k_dp * pi_mi_dp;
+            t_dp -= k_dp * pi_lo_dp;
+            t = t_dp;
+
+            const float pnan = floatbits(0x7FC00000);
+            t = select(x_abs > 1e9, pnan, t);
         }
 
-        uniform float x2 = x * x;
-        uniform float formula = x2 * c10 + c8;
-        formula = x2 * formula + c6;
-        formula = x2 * formula + c4;
-        formula = x2 * formula + c2;
-        formula = x2 * formula + 1.;
-        formula *= outside;
+        const float t2 = t * t + 1e-30;
 
-        formula = flip_sign ? -formula : formula;
-        return formula;
+        const float c3 = -1.6666659710e-01;
+        const float c5 = +8.3330692720e-03;
+        const float c7 = -1.9809778314e-04;
+        const float c9 = +2.6061034080e-06;
+
+        float poly = c9;
+        poly = poly * t2 + c7;
+        poly = poly * t2 + c5;
+        poly = poly * t2 + c3;
+        poly = poly * t2 + 1.0;
+        poly *= t;
+
+        return floatbits(intbits(poly) ^ flip_bit);
     }
 }
 
