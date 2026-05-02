@@ -1,4 +1,4 @@
-;;  Copyright (c) 2024-2025, Intel Corporation
+;;  Copyright (c) 2024-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -11,6 +11,53 @@ define(`WIDTH',`16')
 define(`MASK',`i32')
 include(`util.m4')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Macros
+
+; $1: type
+; $2: var base name
+define(`extract_4s', `
+  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %$2_3 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %$2_4 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+')
+
+; $1: type
+; $2: var base name
+define(`extract_8s', `
+  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> undef,
+                    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> undef,
+                    <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+')
+
+; $1: element type
+; $2: ret name
+; $3: v1
+; $4: v2
+define(`assemble_8s', `
+  %$2 = shufflevector <8 x $1> %$3, <8 x $1> %$4,
+                      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                  i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+')
+
+; $1: element type
+; $2: ret name
+; $3: v1
+; $4: v2
+; $5: v3
+; $6: v4
+define(`assemble_4s', `
+  %$2_1 = shufflevector <4 x $1> %$3, <4 x $1> %$4,
+                    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$2_2 = shufflevector <4 x $1> %$5, <4 x $1> %$6,
+                    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  assemble_8s($1, $2, $2_1, $2_2)
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 declare void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
                                       <16 x i32>) nounwind alwaysinline
 declare void @__masked_store_blend_i64(<16 x i64>* nocapture %ptr, <16 x i64> %newi64, 
@@ -22,6 +69,95 @@ declare i1 @__is_compile_time_constant_uniform_int32(i32)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 
 rdrand_definition()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; optimized shuf version
+
+shuffle1(i8)
+shuffle1(i16)
+shuffle1(half)
+shuffle1(double)
+shuffle1(i64)
+
+declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>)
+define <16 x i32> @__shuffle_i32(<16 x i32> %v, <16 x i32> %i) nounwind readnone alwaysinline {
+  extract_8s(i32, v)
+  extract_8s(i32, i)
+
+  %perm_1 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %v_1, <8 x i32> %i_1)
+  %perm_2 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %v_2, <8 x i32> %i_1)
+  %mask_1 = icmp slt <8 x i32> %i_1, <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  %res_1 = select <8 x i1> %mask_1, <8 x i32> %perm_1, <8 x i32> %perm_2
+
+  %perm_3 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %v_1, <8 x i32> %i_2)
+  %perm_4 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %v_2, <8 x i32> %i_2)
+  %mask_2 = icmp slt <8 x i32> %i_2, <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  %res_2 = select <8 x i1> %mask_2, <8 x i32> %perm_3, <8 x i32> %perm_4
+
+  assemble_8s(i32, res, res_1, res_2)
+  ret <16 x i32> %res
+}
+
+declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>)
+define <16 x float> @__shuffle_float(<16 x float> %v, <16 x i32> %i) nounwind readnone alwaysinline {
+  extract_8s(float, v)
+  extract_8s(i32, i)
+
+  %perm_1 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %v_1, <8 x i32> %i_1)
+  %perm_2 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %v_2, <8 x i32> %i_1)
+  %mask_1 = icmp slt <8 x i32> %i_1, <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  %res_1 = select <8 x i1> %mask_1, <8 x float> %perm_1, <8 x float> %perm_2
+
+  %perm_3 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %v_1, <8 x i32> %i_2)
+  %perm_4 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %v_2, <8 x i32> %i_2)
+  %mask_2 = icmp slt <8 x i32> %i_2, <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  %res_2 = select <8 x i1> %mask_2, <8 x float> %perm_3, <8 x float> %perm_4
+
+  assemble_8s(float, res, res_1, res_2)
+  ret <16 x float> %res
+}
+
+define_shuffle2_const()
+
+shuffle2(i8)
+shuffle2(i16)
+shuffle2(half)
+shuffle2(double)
+shuffle2(i64)
+
+define <WIDTH x i32> @__shuffle2_i32(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x i32> @__shuffle2_const_i32(<WIDTH x i32> %0, <WIDTH x i32> %1, <WIDTH x i32> %2)
+  ret <WIDTH x i32> %res_const
+
+not_const:
+  %v1 = call <WIDTH x i32> @__shuffle_i32(<WIDTH x i32> %0, <WIDTH x i32> %2)
+  %perm2 = sub <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %v2 = call <WIDTH x i32> @__shuffle_i32(<WIDTH x i32> %1, <WIDTH x i32> %perm2)
+  %mask = icmp slt <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %res = select <WIDTH x i1> %mask, <WIDTH x i32> %v1, <WIDTH x i32> %v2
+  ret <WIDTH x i32> %res
+}
+
+define <WIDTH x float> @__shuffle2_float(<WIDTH x float>, <WIDTH x float>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x float> @__shuffle2_const_float(<WIDTH x float> %0, <WIDTH x float> %1, <WIDTH x i32> %2)
+  ret <WIDTH x float> %res_const
+
+not_const:
+  %v1 = call <WIDTH x float> @__shuffle_float(<WIDTH x float> %0, <WIDTH x i32> %2)
+  %perm2 = sub <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %v2 = call <WIDTH x float> @__shuffle_float(<WIDTH x float> %1, <WIDTH x i32> %perm2)
+  %mask = icmp slt <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %res = select <WIDTH x i1> %mask, <WIDTH x float> %v1, <WIDTH x float> %v2
+  ret <WIDTH x float> %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
@@ -114,48 +250,6 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
 ;; gather
 
 declare void @llvm.trap() noreturn nounwind
-
-; $1: type
-; $2: var base name
-define(`extract_4s', `
-  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %$2_3 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %$2_4 = shufflevector <16 x $1> %$2, <16 x $1> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-')
-
-; $1: type
-; $2: var base name
-define(`extract_8s', `
-  %$2_1 = shufflevector <16 x $1> %$2, <16 x $1> undef,
-                    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$2_2 = shufflevector <16 x $1> %$2, <16 x $1> undef,
-                    <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-')
-
-; $1: element type
-; $2: ret name
-; $3: v1
-; $4: v2
-define(`assemble_8s', `
-  %$2 = shufflevector <8 x $1> %$3, <8 x $1> %$4,
-                      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                  i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-')
-
-; $1: element type
-; $2: ret name
-; $3: v1
-; $4: v2
-; $5: v3
-; $6: v4
-define(`assemble_4s', `
-  %$2_1 = shufflevector <4 x $1> %$3, <4 x $1> %$4,
-                    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %$2_2 = shufflevector <4 x $1> %$5, <4 x $1> %$6,
-                    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  assemble_8s($1, $2, $2_1, $2_2)
-')
 
 ;; We need factored generic implementations when --opt=disable-gathers is used.
 ;; The util functions for gathers already include factored implementations,

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2024-2025, Intel Corporation
+;;  Copyright (c) 2024-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -62,12 +62,12 @@ is_const:
   ret <WIDTH x i32> %res_const
 
 not_const:
-  %v1 = call <8 x i32> @__shuffle_i32(<8 x i32> %0, <WIDTH x i32> %2)
-  %perm2 = sub <8 x i32> %2, const_vector(i32, 8)
-  %v2 = call <8 x i32> @__shuffle_i32(<8 x i32> %1, <8 x i32> %perm2)
-  %mask = icmp slt <8 x i32> %2, const_vector(i32, 8)
-  %res = select <8 x i1> %mask, <8 x i32> %v1, <8 x i32> %v2
-  ret <8 x i32> %res
+  %v1 = call <WIDTH x i32> @__shuffle_i32(<WIDTH x i32> %0, <WIDTH x i32> %2)
+  %perm2 = sub <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %v2 = call <WIDTH x i32> @__shuffle_i32(<WIDTH x i32> %1, <WIDTH x i32> %perm2)
+  %mask = icmp slt <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %res = select <WIDTH x i1> %mask, <WIDTH x i32> %v1, <WIDTH x i32> %v2
+  ret <WIDTH x i32> %res
 }
 
 define <WIDTH x float> @__shuffle2_float(<WIDTH x float>, <WIDTH x float>, <WIDTH x i32>) nounwind readnone alwaysinline {
@@ -79,12 +79,12 @@ is_const:
   ret <WIDTH x float> %res_const
 
 not_const:
-  %v1 = call <8 x float> @__shuffle_float(<8 x float> %0, <8 x i32> %2)
-  %perm2 = sub <8 x i32> %2, const_vector(i32, 8)
-  %v2 = call <8 x float> @__shuffle_float(<8 x float> %1, <8 x i32> %perm2)
-  %mask = icmp slt <8 x i32> %2, const_vector(i32, 8)
-  %res = select <8 x i1> %mask, <8 x float> %v1, <8 x float> %v2
-  ret <8 x float> %res
+  %v1 = call <WIDTH x float> @__shuffle_float(<WIDTH x float> %0, <WIDTH x i32> %2)
+  %perm2 = sub <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %v2 = call <WIDTH x float> @__shuffle_float(<WIDTH x float> %1, <WIDTH x i32> %perm2)
+  %mask = icmp slt <WIDTH x i32> %2, const_vector(i32, WIDTH)
+  %res = select <WIDTH x i1> %mask, <WIDTH x float> %v1, <WIDTH x float> %v2
+  ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
