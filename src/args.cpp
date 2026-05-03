@@ -120,6 +120,8 @@ static ArgsParseResult usage() {
     printf("    [-MF <filename>]\t\t\tWhen used with `-M', specifies a file to write the dependencies to\n");
     printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency "
            "generation\n");
+    printf("    [-MQ <filename>]\t\t\tWhen used with `-M', same as -MT but quotes special characters in the "
+           "target name\n");
     printf("    [--nanobind-wrapper=<filename>]\tWrite a nanobind wrapper to given file\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
@@ -1051,8 +1053,16 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
         } else if (!strcmp(argv[i], "-MT")) {
             if (++i != argc) {
                 output.depsTarget = argv[i];
+                output.depsTargetMode = Module::Output::DepTargetMode::MT;
             } else {
                 errorHandler.AddError("No target name specified after -MT option.");
+            }
+        } else if (!strcmp(argv[i], "-MQ")) {
+            if (++i != argc) {
+                output.depsTarget = argv[i];
+                output.depsTargetMode = Module::Output::DepTargetMode::MQ;
+            } else {
+                errorHandler.AddError("No target name specified after -MQ option.");
             }
         } else if (!strcmp(argv[i], "--dev-stub")) {
             if (++i != argc) {
