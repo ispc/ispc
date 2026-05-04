@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -533,7 +533,7 @@ static llvm::Value *lApplyLoad4s(llvm::Value *result, const std::vector<Coalesce
     int32_t firstMatchElements[4] = {-1, -1, -1, -1};
     const CoalescedLoadOp *firstMatch = nullptr;
 
-    Assert(llvm::isa<llvm::UndefValue>(result));
+    Assert(llvm::isa<llvm::PoisonValue>(result) || llvm::isa<llvm::UndefValue>(result));
 
     for (int load = 0; load < (int)loadOps.size(); ++load) {
         const CoalescedLoadOp &loadop = loadOps[load];
@@ -556,7 +556,7 @@ static llvm::Value *lApplyLoad4s(llvm::Value *result, const std::vector<Coalesce
         }
 
         if (anyMatched) {
-            if (llvm::isa<llvm::UndefValue>(result)) {
+            if (llvm::isa<llvm::PoisonValue>(result) || llvm::isa<llvm::UndefValue>(result)) {
                 if (firstMatch == nullptr) {
                     firstMatch = &loadop;
                     for (int i = 0; i < 4; ++i)
@@ -585,7 +585,7 @@ static llvm::Value *lApplyLoad4s(llvm::Value *result, const std::vector<Coalesce
         }
     }
 
-    if (firstMatch != nullptr && llvm::isa<llvm::UndefValue>(result))
+    if (firstMatch != nullptr && (llvm::isa<llvm::PoisonValue>(result) || llvm::isa<llvm::UndefValue>(result)))
         return LLVMShuffleVectors(firstMatch->load, result, firstMatchElements, 4, insertBefore);
     else
         return result;
