@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -138,10 +138,10 @@ declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone
 define i64 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
   ; first do two 4-wide movmsk calls
   %floatmask = bitcast <8 x i32> %0 to <8 x float>
-  %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m0 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v0 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m0) nounwind readnone
-  %m1 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m1 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m1) nounwind readnone
 
@@ -156,10 +156,10 @@ define i64 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
 define i1 @__any(<8 x i32>) nounwind readnone alwaysinline {
   ; first do two 4-wide movmsk calls
   %floatmask = bitcast <8 x i32> %0 to <8 x float>
-  %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m0 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v0 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m0) nounwind readnone
-  %m1 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m1 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m1) nounwind readnone
 
@@ -174,10 +174,10 @@ define i1 @__any(<8 x i32>) nounwind readnone alwaysinline {
 define i1 @__all(<8 x i32>) nounwind readnone alwaysinline {
   ; first do two 4-wide movmsk calls
   %floatmask = bitcast <8 x i32> %0 to <8 x float>
-  %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m0 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v0 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m0) nounwind readnone
-  %m1 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m1 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m1) nounwind readnone
 
@@ -192,10 +192,10 @@ define i1 @__all(<8 x i32>) nounwind readnone alwaysinline {
 define i1 @__none(<8 x i32>) nounwind readnone alwaysinline {
   ; first do two 4-wide movmsk calls
   %floatmask = bitcast <8 x i32> %0 to <8 x float>
-  %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m0 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v0 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m0) nounwind readnone
-  %m1 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+  %m1 = shufflevector <8 x float> %floatmask, <8 x float> poison,
           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %v1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m1) nounwind readnone
 
@@ -415,9 +415,9 @@ truncate()
 declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>) nounwind readnone
 
 define float @__reduce_add_float(<8 x float>) nounwind readonly alwaysinline {
-  %a = shufflevector <8 x float> %0, <8 x float> undef,
+  %a = shufflevector <8 x float> %0, <8 x float> poison,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %b = shufflevector <8 x float> %0, <8 x float> undef,
+  %b = shufflevector <8 x float> %0, <8 x float> poison,
          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %ab = fadd <4 x float> %a, %b
   %hab = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %ab, <4 x float> %ab)
@@ -445,20 +445,20 @@ define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>,
                                       <8 x i32> %mask) nounwind alwaysinline {
   ; do two 4-wide blends with blendvps
   %mask_as_float = bitcast <8 x i32> %mask to <8 x float>
-  %mask_a = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
+  %mask_a = shufflevector <8 x float> %mask_as_float, <8 x float> poison,
                 <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %mask_b = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
+  %mask_b = shufflevector <8 x float> %mask_as_float, <8 x float> poison,
                 <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %oldValue = load PTR_OP_ARGS(`<8 x i32>')  %0, align 4
   %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>
   %newAsFloat = bitcast <8 x i32> %1 to <8 x float>
-  %old_a = shufflevector <8 x float> %oldAsFloat, <8 x float> undef,
+  %old_a = shufflevector <8 x float> %oldAsFloat, <8 x float> poison,
                 <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %old_b = shufflevector <8 x float> %oldAsFloat, <8 x float> undef,
+  %old_b = shufflevector <8 x float> %oldAsFloat, <8 x float> poison,
                 <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %new_a = shufflevector <8 x float> %newAsFloat, <8 x float> undef,
+  %new_a = shufflevector <8 x float> %newAsFloat, <8 x float> poison,
                 <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %new_b = shufflevector <8 x float> %newAsFloat, <8 x float> undef,
+  %new_b = shufflevector <8 x float> %newAsFloat, <8 x float> poison,
                 <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %blend_a = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old_a, <4 x float> %new_a,
                                                        <4 x float> %mask_a)
@@ -481,12 +481,12 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
   %old = load PTR_OP_ARGS(`<8 x i64>')  %ptr, align 8
 
   ; set up the first two 64-bit values
-  %old01 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 0, i32 1>
+  %old01 = shufflevector <8 x i64> %old, <8 x i64> poison, <2 x i32> <i32 0, i32 1>
   %old01f = bitcast <2 x i64> %old01 to <4 x float>
-  %new01  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 0, i32 1>
+  %new01  = shufflevector <8 x i64> %new, <8 x i64> poison, <2 x i32> <i32 0, i32 1>
   %new01f = bitcast <2 x i64> %new01 to <4 x float>
   ; compute mask--note that the values mask0 and mask1 are doubled-up
-  %mask01 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
+  %mask01 = shufflevector <8 x float> %mask_as_float, <8 x float> poison,
                           <4 x i32> <i32 0, i32 0, i32 1, i32 1>
   ; and blend the two of them values
   %result01f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old01f,
@@ -495,33 +495,33 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
   %result01 = bitcast <4 x float> %result01f to <2 x i64>
 
   ; and again
-  %old23 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %old23 = shufflevector <8 x i64> %old, <8 x i64> poison, <2 x i32> <i32 2, i32 3>
   %old23f = bitcast <2 x i64> %old23 to <4 x float>
-  %new23  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 2, i32 3>
+  %new23  = shufflevector <8 x i64> %new, <8 x i64> poison, <2 x i32> <i32 2, i32 3>
   %new23f = bitcast <2 x i64> %new23 to <4 x float>
-  %mask23 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
+  %mask23 = shufflevector <8 x float> %mask_as_float, <8 x float> poison,
                           <4 x i32> <i32 2, i32 2, i32 3, i32 3>
   %result23f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old23f,
                                                          <4 x float> %new23f,
                                                          <4 x float> %mask23)
   %result23 = bitcast <4 x float> %result23f to <2 x i64>
 
-  %old45 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 4, i32 5>
+  %old45 = shufflevector <8 x i64> %old, <8 x i64> poison, <2 x i32> <i32 4, i32 5>
   %old45f = bitcast <2 x i64> %old45 to <4 x float>
-  %new45  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 4, i32 5>
+  %new45  = shufflevector <8 x i64> %new, <8 x i64> poison, <2 x i32> <i32 4, i32 5>
   %new45f = bitcast <2 x i64> %new45 to <4 x float>
-  %mask45 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
+  %mask45 = shufflevector <8 x float> %mask_as_float, <8 x float> poison,
                           <4 x i32> <i32 4, i32 4, i32 5, i32 5>
   %result45f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old45f,
                                                          <4 x float> %new45f,
                                                          <4 x float> %mask45)
   %result45 = bitcast <4 x float> %result45f to <2 x i64>
 
-  %old67 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 6, i32 7>
+  %old67 = shufflevector <8 x i64> %old, <8 x i64> poison, <2 x i32> <i32 6, i32 7>
   %old67f = bitcast <2 x i64> %old67 to <4 x float>
-  %new67  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 6, i32 7>
+  %new67  = shufflevector <8 x i64> %new, <8 x i64> poison, <2 x i32> <i32 6, i32 7>
   %new67f = bitcast <2 x i64> %new67 to <4 x float>
-  %mask67 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
+  %mask67 = shufflevector <8 x float> %mask_as_float, <8 x float> poison,
                           <4 x i32> <i32 6, i32 6, i32 7, i32 7>
   %result67f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old67f,
                                                          <4 x float> %new67f,

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2016-2025, Intel Corporation
+;;  Copyright (c) 2016-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -212,7 +212,7 @@ define <4 x float> @__half_to_float_varying(<4 x i16> %v) nounwind readnone {
 
 define <4 x i16> @__float_to_half_varying(<4 x float> %v) nounwind readnone {
   %r = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %v, i32 0)
-  %res = shufflevector <8 x i16> %r, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = shufflevector <8 x i16> %r, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i16> %res
 }
 
@@ -901,7 +901,7 @@ rcp14_uniform()
 ;; rcp float
 declare <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float>, <4 x float>, i8) nounwind readnone
 define <4 x float> @__rcp_fast_varying_float(<4 x float>) nounwind readonly alwaysinline {
-  %ret = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %0, <4 x float> undef, i8 -1)
+  %ret = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %0, <4 x float> poison, i8 -1)
   ret <4 x float> %ret
 }
 define <4 x float> @__rcp_varying_float(<4 x float>) nounwind readonly alwaysinline {
@@ -918,7 +918,7 @@ define <4 x float> @__rcp_varying_float(<4 x float>) nounwind readonly alwaysinl
 ;; rcp double
 declare <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
 define <4 x double> @__rcp_fast_varying_double(<4 x double> %val) nounwind readonly alwaysinline {
-  %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val, <4 x double> undef, i8 -1)
+  %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %val, <4 x double> poison, i8 -1)
   ret <4 x double> %res
 }
 define <4 x double> @__rcp_varying_double(<4 x double>) nounwind readonly alwaysinline {
@@ -936,7 +936,7 @@ rsqrt14_uniform()
 ;; rsqrt float
 declare <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float>,  <4 x float>,  i8) nounwind readnone
 define <4 x float> @__rsqrt_fast_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
-  %ret = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v,  <4 x float> undef,  i8 -1)
+  %ret = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v,  <4 x float> poison,  i8 -1)
   ret <4 x float> %ret
 }
 define <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
@@ -955,7 +955,7 @@ define <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwa
 ;; rsqrt double
 declare <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double>,  <4 x double>,  i8) nounwind readnone
 define <4 x double> @__rsqrt_fast_varying_double(<4 x double> %val) nounwind readonly alwaysinline {
-  %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val, <4 x double> undef, i8 -1)
+  %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %val, <4 x double> poison, i8 -1)
   ret <4 x double> %res
 }
 declare <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double>, i32)

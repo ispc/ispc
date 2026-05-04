@@ -93,14 +93,14 @@ define <64 x i32> @__shuffle_i32(<64 x i32> %input, <64 x i32> %perm) nounwind r
 
   ; Create base pointer vector for gather operation
   %base_ptr_scalar = bitcast [64 x i32]* %input_alloca to i32*
-  %base_ptr_vec = insertelement <64 x i32*> undef, i32* %base_ptr_scalar, i32 0
+  %base_ptr_vec = insertelement <64 x i32*> poison, i32* %base_ptr_scalar, i32 0
   %base_ptr_broadcast = shufflevector <64 x i32*> %base_ptr_vec, <64 x i32*> zeroinitializer, <64 x i32> zeroinitializer
 
   ; Create pointer vector
   %ptrs = getelementptr i32, <64 x i32*> %base_ptr_broadcast, <64 x i32> %perm
 
   ; Create mask for gather (all true)
-  %true_val = insertelement <64 x i1> undef, i1 true, i32 0
+  %true_val = insertelement <64 x i1> poison, i1 true, i32 0
   %mask_all = shufflevector <64 x i1> %true_val, <64 x i1> zeroinitializer, <64 x i32> zeroinitializer
 
   ; Perform the single gather operation
@@ -125,7 +125,7 @@ define <64 x i64> @__shuffle_i64(<64 x i64> %input, <64 x i32> %perm) nounwind r
 
   ; Create base pointer vector for gather operation
   %base_ptr_scalar = bitcast [64 x i64]* %input_alloca to i64*
-  %base_ptr_vec = insertelement <64 x i64*> undef, i64* %base_ptr_scalar, i32 0
+  %base_ptr_vec = insertelement <64 x i64*> poison, i64* %base_ptr_scalar, i32 0
   %base_ptr_broadcast = shufflevector <64 x i64*> %base_ptr_vec, <64 x i64*> zeroinitializer, <64 x i32> zeroinitializer
 
   ; Create pointer vector
@@ -133,7 +133,7 @@ define <64 x i64> @__shuffle_i64(<64 x i64> %input, <64 x i32> %perm) nounwind r
   %ptrs = getelementptr i64, <64 x i64*> %base_ptr_broadcast, <64 x i64> %perm_i64
 
   ; Create mask for gather (all true)
-  %true_val = insertelement <64 x i1> undef, i1 true, i32 0
+  %true_val = insertelement <64 x i1> poison, i1 true, i32 0
   %mask_all = shufflevector <64 x i1> %true_val, <64 x i1> zeroinitializer, <64 x i32> zeroinitializer
 
   ; Perform the single gather operation
@@ -169,9 +169,9 @@ declare <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float>, i32) nounwind readnone
 
 define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline {
   %v1 = bitcast i16 %v to <1 x i16>
-  %vv = shufflevector <1 x i16> %v1, <1 x i16> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x i16> %v1, <1 x i16> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   %rv = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %vv)
   %r = extractelement <8 x float> %rv, i32 0
   ret float %r
@@ -179,9 +179,9 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline {
 
 define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline {
   %v1 = bitcast float %v to <1 x float>
-  %vv = shufflevector <1 x float> %v1, <1 x float> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x float> %v1, <1 x float> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   ; round to nearest even
   %rv = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %vv, i32 0)
   %r = extractelement <8 x i16> %rv, i32 0
@@ -193,20 +193,20 @@ declare <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %source, i32
 
 define <64 x float> @__half_to_float_varying(<64 x i16> %v) nounwind readnone alwaysinline {
   v64tov16(i16, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v0, <16 x float> undef, i16 -1, i32 4)
-  %r1 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v1, <16 x float> undef, i16 -1, i32 4)
-  %r2 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v2, <16 x float> undef, i16 -1, i32 4)
-  %r3 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v3, <16 x float> undef, i16 -1, i32 4)
+  %r0 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v0, <16 x float> poison, i16 -1, i32 4)
+  %r1 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v1, <16 x float> poison, i16 -1, i32 4)
+  %r2 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v2, <16 x float> poison, i16 -1, i32 4)
+  %r3 = call <16 x float> @llvm.x86.avx512.mask.vcvtph2ps.512(<16 x i16> %v3, <16 x float> poison, i16 -1, i32 4)
   v16tov64(float, %r0, %r1, %r2, %r3, %r)
   ret <64 x float> %r
 }
 
 define <64 x i16> @__float_to_half_varying(<64 x float> %v) nounwind readnone alwaysinline {
   v64tov16(float, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v0, i32 0, <16 x i16> undef, i16 -1)
-  %r1 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v1, i32 0, <16 x i16> undef, i16 -1)
-  %r2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v2, i32 0, <16 x i16> undef, i16 -1)
-  %r3 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v3, i32 0, <16 x i16> undef, i16 -1)
+  %r0 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v0, i32 0, <16 x i16> poison, i16 -1)
+  %r1 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v1, i32 0, <16 x i16> poison, i16 -1)
+  %r2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v2, i32 0, <16 x i16> poison, i16 -1)
+  %r3 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %v3, i32 0, <16 x i16> poison, i16 -1)
   v16tov64(i16, %r0, %r1, %r2, %r3, %r)
   ret <64 x i16> %r
 }

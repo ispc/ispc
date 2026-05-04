@@ -1,5 +1,5 @@
 ;;  Copyright (c) 2013, 2015, Google, Inc.
-;;  Copyright(c) 2019-2024, Intel Corporation
+;;  Copyright(c) 2019-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -449,16 +449,16 @@ gen_scatter(double)
 declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <8 x i8> @__avg_up_uint8(<8 x i8>, <8 x i8>) {
-  %v0 = shufflevector <8 x i8> %0, <8 x i8> undef,
+  %v0 = shufflevector <8 x i8> %0, <8 x i8> poison,
     <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
-  %v1 = shufflevector <8 x i8> %1, <8 x i8> undef,
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison>
+  %v1 = shufflevector <8 x i8> %1, <8 x i8> poison,
     <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
+                i32 poison, i32 poison, i32 poison, i32 poison,
+                i32 poison, i32 poison, i32 poison, i32 poison>
   %r16 = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %v0, <16 x i8> %v1)
-  %r = shufflevector <16 x i8> %r16, <16 x i8> undef,
+  %r = shufflevector <16 x i8> %r16, <16 x i8> poison,
     <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %r
 }

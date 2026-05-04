@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2025, Intel Corporation
+;;  Copyright (c) 2010-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -228,9 +228,9 @@ define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
 declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
 define double @__reduce_add_double(<8 x double>) nounwind readonly alwaysinline {
-  %v0 = shufflevector <8 x double> %0, <8 x double> undef,
+  %v0 = shufflevector <8 x double> %0, <8 x double> poison,
                       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1 = shufflevector <8 x double> %0, <8 x double> undef,
+  %v1 = shufflevector <8 x double> %0, <8 x double> poison,
                       <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %v0, <4 x double> %v1)
   %sum1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %sum0, <4 x double> %sum0)
@@ -385,9 +385,9 @@ define <8 x i32> @__masked_load_i32(i8 *, <8 x i32> %mask) nounwind alwaysinline
 
 define <8 x i64> @__masked_load_i64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
   ; double up masks, bitcast to doubles
-  %mask0 = shufflevector <8 x i32> %mask, <8 x i32> undef,
+  %mask0 = shufflevector <8 x i32> %mask, <8 x i32> poison,
      <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
-  %mask1 = shufflevector <8 x i32> %mask, <8 x i32> undef,
+  %mask1 = shufflevector <8 x i32> %mask, <8 x i32> poison,
      <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
   %mask0d = bitcast <8 x i32> %mask0 to <4 x MdORi64>
   %mask1d = bitcast <8 x i32> %mask1 to <4 x MdORi64>
@@ -428,17 +428,17 @@ define void @__masked_store_i64(<8 x i64>* nocapture, <8 x i64>,
   %ptr = bitcast <8 x i64> * %0 to i8 *
   %val = bitcast <8 x i64> %1 to <8 x double>
 
-  %mask0 = shufflevector <8 x i32> %mask, <8 x i32> undef,
+  %mask0 = shufflevector <8 x i32> %mask, <8 x i32> poison,
      <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
-  %mask1 = shufflevector <8 x i32> %mask, <8 x i32> undef,
+  %mask1 = shufflevector <8 x i32> %mask, <8 x i32> poison,
      <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
 
   %mask0d = bitcast <8 x i32> %mask0 to <4 x MdORi64>
   %mask1d = bitcast <8 x i32> %mask1 to <4 x MdORi64>
 
-  %val0 = shufflevector <8 x double> %val, <8 x double> undef,
+  %val0 = shufflevector <8 x double> %val, <8 x double> poison,
      <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %val1 = shufflevector <8 x double> %val, <8 x double> undef,
+  %val1 = shufflevector <8 x double> %val, <8 x double> poison,
      <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
   call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr, <4 x MdORi64> %mask0d, <4 x double> %val0)
@@ -481,14 +481,14 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
   ; are actually bitcast <4 x i64> values
   ;
   ; set up the first four 64-bit values
-  %old01  = shufflevector <8 x i64> %oldValue, <8 x i64> undef,
+  %old01  = shufflevector <8 x i64> %oldValue, <8 x i64> poison,
                           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %old01f = bitcast <4 x i64> %old01 to <8 x float>
-  %new01  = shufflevector <8 x i64> %new, <8 x i64> undef,
+  %new01  = shufflevector <8 x i64> %new, <8 x i64> poison,
                           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %new01f = bitcast <4 x i64> %new01 to <8 x float>
   ; compute mask--note that the indices are all doubled-up
-  %mask01 = shufflevector <8 x float> %mask, <8 x float> undef,
+  %mask01 = shufflevector <8 x float> %mask, <8 x float> poison,
                           <8 x i32> <i32 0, i32 0, i32 1, i32 1,
                                      i32 2, i32 2, i32 3, i32 3>
   ; and blend them
@@ -498,14 +498,14 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
   %result01 = bitcast <8 x float> %result01f to <4 x i64>
 
   ; and again
-  %old23  = shufflevector <8 x i64> %oldValue, <8 x i64> undef,
+  %old23  = shufflevector <8 x i64> %oldValue, <8 x i64> poison,
                           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %old23f = bitcast <4 x i64> %old23 to <8 x float>
-  %new23  = shufflevector <8 x i64> %new, <8 x i64> undef,
+  %new23  = shufflevector <8 x i64> %new, <8 x i64> poison,
                           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %new23f = bitcast <4 x i64> %new23 to <8 x float>
   ; compute mask--note that the values are doubled-up...
-  %mask23 = shufflevector <8 x float> %mask, <8 x float> undef,
+  %mask23 = shufflevector <8 x float> %mask, <8 x float> poison,
                           <8 x i32> <i32 4, i32 4, i32 5, i32 5,
                                      i32 6, i32 6, i32 7, i32 7>
   ; and blend them

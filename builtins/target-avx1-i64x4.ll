@@ -1,4 +1,4 @@
-;;  Copyright (c) 2013-2025, Intel Corporation
+;;  Copyright (c) 2013-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -357,9 +357,9 @@ define i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone alwaysinline {
 declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
 define double @__reduce_add_double(<4 x double>) nounwind readonly alwaysinline {
-  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+  %v0 = shufflevector <4 x double> %0, <4 x double> poison,
                       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1 = shufflevector <4 x double> <double 0.,double 0.,double 0.,double 0.>, <4 x double> undef,
+  %v1 = shufflevector <4 x double> <double 0.,double 0.,double 0.,double 0.>, <4 x double> poison,
                       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ;;  %v1 = <4 x double> <double 0., double 0., double 0., double 0.>
   %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %v0,   <4 x double> %v1)

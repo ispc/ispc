@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2025, Intel Corporation
+;;  Copyright (c) 2015-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -24,9 +24,9 @@ aossoa()
 
 define float @__half_to_float_uniform(i16 %v) nounwind readnone {
   %v1 = bitcast i16 %v to <1 x i16>
-  %vv = shufflevector <1 x i16> %v1, <1 x i16> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x i16> %v1, <1 x i16> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   %rv = call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %vv)
   %r = extractelement <8 x float> %rv, i32 0
   ret float %r
@@ -34,9 +34,9 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone {
 
 define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %v1 = bitcast float %v to <1 x float>
-  %vv = shufflevector <1 x float> %v1, <1 x float> undef,
-           <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vv = shufflevector <1 x float> %v1, <1 x float> poison,
+           <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   ; round to nearest even
   %rv = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %vv, i32 0)
   %r = extractelement <8 x i16> %rv, i32 0
@@ -105,8 +105,8 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
 define(`rsqrt14_uniform', `
 declare <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %v = insertelement <4 x float> undef, float %0, i32 0
-  %vis = call <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float> %v, <4 x float> %v, <4 x float> undef, i8 -1)
+  %v = insertelement <4 x float> poison, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float> %v, <4 x float> %v, <4 x float> poison, i8 -1)
   %is = extractelement <4 x float> %vis, i32 0
   ret float %is
 }
@@ -126,8 +126,8 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
 
 declare <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
 define double @__rsqrt_fast_uniform_double(double) nounwind readonly alwaysinline {
-  %v = insertelement <2 x double> undef, double %0, i32 0
-  %vis = call <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double> %v, <2 x double> %v, <2 x double> undef, i8 -1)
+  %v = insertelement <2 x double> poison, double %0, i32 0
+  %vis = call <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double> %v, <2 x double> %v, <2 x double> poison, i8 -1)
   %is = extractelement <2 x double> %vis, i32 0
   ret double %is
 }
@@ -135,7 +135,7 @@ define double @__rsqrt_fast_uniform_double(double) nounwind readonly alwaysinlin
 declare i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
 define double @__rsqrt_uniform_double(double %v) nounwind readonly alwaysinline {
   ; detect +/-0 and +inf to deal with them differently.
-  %vec = insertelement <2 x double> undef, double %v, i32 0
+  %vec = insertelement <2 x double> poison, double %v, i32 0
   %corner_cases_i8 = call i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double> %vec, i32 14, i8 -1)
   %corner_cases = icmp ne i8 %corner_cases_i8, 0
   %is = call double @__rsqrt_fast_uniform_double(double %v)
@@ -168,8 +168,8 @@ define double @__rsqrt_uniform_double(double %v) nounwind readonly alwaysinline 
 define(`rcp14_uniform', `
 declare <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
 define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
-  %call = call <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float> %vecval, <4 x float> %vecval, <4 x float> undef, i8 -1)
+  %vecval = insertelement <4 x float> poison, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float> %vecval, <4 x float> %vecval, <4 x float> poison, i8 -1)
   %scall = extractelement <4 x float> %call, i32 0
   ret float %scall
 }
@@ -188,8 +188,8 @@ define float @__rcp_uniform_float(float %v) nounwind readonly alwaysinline {
 
 declare <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
 define double @__rcp_fast_uniform_double(double) nounwind readonly alwaysinline {
-  %vecval = insertelement <2 x double> undef, double %0, i32 0
-  %call = call <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double> %vecval, <2 x double> %vecval, <2 x double> undef, i8 -1)
+  %vecval = insertelement <2 x double> poison, double %0, i32 0
+  %call = call <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double> %vecval, <2 x double> %vecval, <2 x double> poison, i8 -1)
   %scall = extractelement <2 x double> %call, i32 0
   ret double %scall
 }
@@ -230,19 +230,19 @@ define(`convert_scale_to_const_gather', `
                                                 i32 8, label %on_eight_$1]
 
 on_one_$1:
-  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 1)
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 1)
   br label %end_bb_$1
 
 on_two_$1:
-  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 2)
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 2)
   br label %end_bb_$1
 
 on_four_$1:
-  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 4)
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 4)
   br label %end_bb_$1
 
 on_eight_$1:
-  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 8)
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 8)
   br label %end_bb_$1
 
 default_$1:
