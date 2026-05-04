@@ -1,0 +1,8 @@
+#define HEADER_MAX 10
+
+export void test_included_file(uniform int output[]) {
+    // FIXME: This should compile once included files are normalized.
+    foreach (i = 0...HEADER_MAX) {
+        output[i] = i;
+    }
+}
