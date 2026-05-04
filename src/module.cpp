@@ -606,6 +606,17 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         alignment = type->GetAlignment();
     }
 
+    // For uniform const arrays, ensure storage alignment matches the
+    // aligned vector loads that may be emitted by LLVM backend optimizations.
+    if (isConst && type->IsUniformType()) {
+        const ArrayType *arrayType = CastType<ArrayType>(type);
+        if (arrayType != nullptr) {
+            const unsigned int requiredAlignment = static_cast<unsigned int>(g->target->getNativeVectorAlignment());
+
+            alignment = std::max<unsigned int>(alignment, requiredAlignment);
+        }
+    }
+
     if (symbolTable->LookupFunction(name.c_str())) {
         Error(pos, "Global variable \"%s\" shadows previously-declared function.", name.c_str());
         return;
@@ -2185,6 +2196,65 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
 }
 
 /**
+ * Upgrade destination global's alignment to match source if source has stronger alignment.
+ *
+ * In multi-target compilation, target-specific code may emit aligned vector loads
+ * from global const arrays. The dispatcher module owns the actual definitions of
+ * these globals. If alignment is not upgraded when a later target requires stronger
+ * alignment, the final object may have insufficient section alignment, causing runtime
+ * faults (e.g., AVX-512 vmovaps expecting 64-byte alignment on a 16-byte aligned global).
+ *
+ * This helper only modifies alignment, leaving all other attributes unchanged.
+ *
+ * @param dst Destination global variable to upgrade
+ * @param src Source global variable with potentially stronger alignment
+ */
+static void lUpgradeGlobalVariableAlignment(llvm::GlobalVariable *dst, const llvm::GlobalVariable *src) {
+    Assert(dst != nullptr && src != nullptr);
+
+    llvm::MaybeAlign srcAlign = src->getAlign();
+    if (!srcAlign) {
+        return;
+    }
+
+    llvm::MaybeAlign dstAlign = dst->getAlign();
+    if (!dstAlign || dstAlign->value() < srcAlign->value()) {
+        dst->setAlignment(*srcAlign);
+    }
+}
+
+/**
+ * Copy all attributes from source global to destination global, preserving the
+ * maximum alignment between old destination and source.
+ *
+ * When creating a new global in the dispatcher module, we must copy all attributes
+ * from the source global. However, copyAttributesFrom() may overwrite the destination's
+ * alignment in some LLVM versions before we can compare it. This helper explicitly
+ * preserves the strongest alignment.
+ *
+ * @param dst Destination global variable to update
+ * @param src Source global variable to copy attributes from
+ */
+static void lCopyGlobalVariableAttributes(llvm::GlobalVariable *dst, const llvm::GlobalVariable *src) {
+    Assert(dst != nullptr && src != nullptr);
+
+    llvm::MaybeAlign oldDstAlign = dst->getAlign();
+
+    dst->copyAttributesFrom(src);
+
+    // Be explicit about preserving the strongest alignment across LLVM versions
+    // and clone paths.
+    if (oldDstAlign) {
+        llvm::MaybeAlign newDstAlign = dst->getAlign();
+        if (!newDstAlign || newDstAlign->value() < oldDstAlign->value()) {
+            dst->setAlignment(*oldDstAlign);
+        }
+    }
+
+    lUpgradeGlobalVariableAlignment(dst, src);
+}
+
+/**
  * Extract or validate global variables across multiple target modules during
  * multi-target compilation.
  *
@@ -2232,6 +2302,12 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
                             "targets with differing vector widths.",
                             gv->getName().str().c_str());
                 }
+
+                // Upgrade alignment if the source global requires stronger alignment.
+                // This is critical when the first target creates the dispatcher global
+                // with 16-byte alignment, and a later AVX-512 module validates it but
+                // requires 64-byte alignment.
+                lUpgradeGlobalVariableAlignment(exist, gv);
             }
             // Alternatively, create it anew and make it match the original
             else {
@@ -2241,7 +2317,7 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
                 VMap[&*iter] = newGlobal;
 
                 newGlobal->setInitializer(llvm::MapValue(iter->getInitializer(), VMap));
-                newGlobal->copyAttributesFrom(gv);
+                lCopyGlobalVariableAttributes(newGlobal, gv);
             }
         }
     }
