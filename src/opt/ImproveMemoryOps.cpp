@@ -57,15 +57,15 @@ static llvm::Value *lCheckForActualPointer(llvm::Value *v) {
 /** Given a llvm::Value representing a varying pointer, this function
     checks to see if all of the elements of the vector have the same value
     (i.e. there's a common base pointer). If broadcast has been already detected
-    it checks that the first element of the vector is not undef. If one of the conditions
+    it checks that the first element of the vector is not undef/poison. If one of the conditions
     is true, it returns the common pointer value; otherwise it returns nullptr.
  */
 static llvm::Value *lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore, bool broadcastDetected) {
     if (llvm::isa<llvm::InsertElementInst>(v) || llvm::isa<llvm::ShuffleVectorInst>(v)) {
         // If we have already detected broadcast we want to look for
-        // the vector with the first not-undef element
+        // the vector with the first not-undef/poison element
         llvm::Value *element = LLVMFlattenInsertChain(v, g->target->getVectorWidth(), true, false, broadcastDetected);
-        // TODO: it's probably ok to allow undefined elements and return
+        // TODO: it's probably ok to allow undefined or poison elements and return
         // the base pointer if all of the other elements have the same
         // value.
         if (element != nullptr) {
@@ -144,7 +144,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
     }
 
     bool broadcastDetected = false;
-    // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
+    // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> poison, <8 x i32> zeroinitializer
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(ptrs);
     if (shuffle != nullptr) {
         llvm::Value *indices = shuffle->getShuffleMaskForBitcode();
@@ -170,7 +170,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
             if (bop_var != nullptr &&
                 ((bop_var->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop_var))) {
                 // We expect here ConstantVector as
-                // <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
+                // <i64 4, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 poison>
                 llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
                 llvm::Instruction *shuffle_offset = nullptr;
                 if (cv != nullptr) {
@@ -179,12 +179,12 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                                                 false),
                         llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                     // Create offset
-                    shuffle_offset = new llvm::ShuffleVectorInst(cv, llvm::UndefValue::get(cv->getType()), zeroMask,
+                    shuffle_offset = new llvm::ShuffleVectorInst(cv, llvm::PoisonValue::get(cv->getType()), zeroMask,
                                                                  "shuffle", ISPC_INSERTION_POINT_INSTRUCTION(bop_var));
                 } else {
                     // or it binaryoperator can accept another binary operator
                     // that is a result of counting another part of offset:
-                    // %another_bop = bop <16 x i32> %vec, <i32 7, i32 undef, i32 undef, ...>
+                    // %another_bop = bop <16 x i32> %vec, <i32 7, i32 poison, i32 poison, ...>
                     // %offsets = add <16 x i32> %another_bop, %base
                     bop_var = llvm::dyn_cast<llvm::BinaryOperator>(bop_var->getOperand(0));
                     if (bop_var != nullptr) {
@@ -195,7 +195,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                         llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
                             llvm::ElementCount::get(bop_var_type->getNumElements(), false),
                             llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-                        shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::UndefValue::get(bop_var_type),
+                        shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::PoisonValue::get(bop_var_type),
                                                                      zeroMask, "shuffle");
                         shuffle_offset->insertAfter(bop_var);
                     }
@@ -1428,11 +1428,11 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
                 new llvm::LoadInst(scalarType, ptr, callInst->getName(), ISPC_INSERTION_POINT_INSTRUCTION(callInst));
 
             // Generate the following sequence:
-            //   %name123 = insertelement <4 x i32> undef, i32 %val, i32 0
-            //   %name124 = shufflevector <4 x i32> %name123, <4 x i32> undef,
+            //   %name123 = insertelement <4 x i32> poison, i32 %val, i32 0
+            //   %name124 = shufflevector <4 x i32> %name123, <4 x i32> poison,
             //                                              <4 x i32> zeroinitializer
-            llvm::Value *undef1Value = llvm::UndefValue::get(callInst->getType());
-            llvm::Value *undef2Value = llvm::UndefValue::get(callInst->getType());
+            llvm::Value *undef1Value = llvm::PoisonValue::get(callInst->getType());
+            llvm::Value *undef2Value = llvm::PoisonValue::get(callInst->getType());
             llvm::Value *insertVec = llvm::InsertElementInst::Create(undef1Value, scalarValue, LLVMInt32(0), callName,
                                                                      ISPC_INSERTION_POINT_INSTRUCTION(callInst));
             llvm::FixedVectorType *FVT = llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType());
@@ -1450,7 +1450,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             return shufInst;
         } else {
             // A scatter with everyone going to the same location is
-            // undefined (if there's more than one program instance in
+            // undefined or poison (if there's more than one program instance in
             // the gang).  Issue a warning.
             if (g->target->getVectorWidth() > 1) {
                 Warning(pos, "Undefined behavior: all program instances are "
@@ -1617,8 +1617,8 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
         // may in turn lead to being able to optimize out instructions
         // that compute the rvalue...)
         callInst->eraseFromParent();
-        // Return some fake undef value to signal that we did transformation.
-        return llvm::UndefValue::get(LLVMTypes::Int32Type);
+        // Return some fake poison value to signal that we did transformation.
+        return llvm::PoisonValue::get(LLVMTypes::Int32Type);
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular store
         llvm::Instruction *store = nullptr;
@@ -1679,8 +1679,8 @@ static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBloc
 
     MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
-        // Zero mask - no-op, so replace the load with an undef value
-        llvm::Value *undef = llvm::UndefValue::get(callInst->getType());
+        // Zero mask - no-op, so replace the load with a poison value
+        llvm::Value *undef = llvm::PoisonValue::get(callInst->getType());
         ReplaceInstWithValueWrapper(iter, undef);
         return undef;
     } else if (maskStatus == MaskStatus::all_on) {

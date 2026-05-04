@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -72,11 +72,11 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                 continue;
             }
 
-            // If one of the two is undefined, we're allowed to replace
+            // If one of the two is undefined or poison, we're allowed to replace
             // with the value of the other.  (In other words, the only
             // valid case is that the blend factor ends up having a value
             // that only selects from the defined one of the two operands,
-            // otherwise the result is undefined and any value is fine,
+            // otherwise the result is undefined or poison and any value is fine,
             // ergo the defined one is an acceptable result.)
             if (LLVMIsValueUndef(v[0])) {
                 ReplaceInstWithValueWrapper(curIter, v[1]);
@@ -121,10 +121,10 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
             llvm::Value *factor = callInst->getArgOperand(1);
             MaskStatus maskStatus = GetMaskStatusFromValue(factor);
             if (maskStatus == MaskStatus::all_off) {
-                // nothing being loaded, replace with undef value
+                // nothing being loaded, replace with poison value
                 llvm::Type *returnType = callInst->getType();
                 Assert(llvm::isa<llvm::VectorType>(returnType));
-                llvm::Value *undefValue = llvm::UndefValue::get(returnType);
+                llvm::Value *undefValue = llvm::PoisonValue::get(returnType);
                 ReplaceInstWithValueWrapper(curIter, undefValue);
                 modifiedAny = true;
                 continue;
