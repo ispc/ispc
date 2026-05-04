@@ -5091,6 +5091,183 @@ __declspec(safe) static inline float log(float x_full) {
     }
 }
 
+__declspec(safe) static inline uniform float log1p(uniform float x_full) {
+    const uniform float ln2 = 6.931471825e-01;
+    const uniform float pinf = floatbits(0x7F800000);
+    const uniform float ninf = floatbits(0xFF800000);
+    const uniform float pnan = floatbits(0x7FC00000);
+
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_log1pf(x_full);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // Precision: <30 ULP
+        // Does not support the following special input values:
+        // NaNs, numbers <= -1.0, +inf.
+        // Subnormal numbers are correctly supported.
+        // This implementation treat -0.0 as +0.0.
+
+        // Initial Sollya version (then manually improved from it):
+        // range = [-0.5;0.285];
+        // P = fpminimax(log(x+1), [|2,...,10|], [|single...|], range, x);
+        const uniform float c02 = -4.9998131400e-01;
+        const uniform float c03 = +3.3315047620e-01;
+        const uniform float c04 = -2.5166967510e-01;
+        const uniform float c05 = +2.0652699470e-01;
+        const uniform float c06 = -1.2913592160e-01;
+        const uniform float c07 = +1.0059609264e-01;
+        const uniform float c08 = -3.8902461530e-01;
+
+        uniform float reduced;
+        uniform int exponent;
+
+        const uniform bool close_to_zero = abs(x_full) < 0.285;
+
+        __range_reduce_log(1.0 + x_full, &reduced, &exponent);
+
+        const uniform float x = select(close_to_zero, x_full, reduced - 1.0);
+        const uniform float x2 = x * x + 1e-30;
+        uniform float scale = (uniform float)exponent * ln2;
+        scale = select(close_to_zero, 0.0, scale);
+
+        uniform float result = x * c08 + c07;
+        result = x2 * result + (x * c06 + c05);
+        result = x2 * result + (x * c04 + c03);
+        result = x2 * result + (x * c02 + 1.0);
+        result = x * result + scale;
+        return result;
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <5 ULP
+
+        // Initial Sollya version (then manually improved from it):
+        // range = [-0.5;0.295];
+        // P = fpminimax(log(x+1), [|2,...,10|], [|single...|], range, x);
+        const uniform float c02 = -4.9999958280e-01;
+        const uniform float c03 = +3.3335196970e-01;
+        const uniform float c04 = -2.4999302626e-01;
+        const uniform float c05 = +1.9877377150e-01;
+        const uniform float c06 = -1.6865649820e-01;
+        const uniform float c07 = +1.6505996883e-01;
+        const uniform float c08 = -7.5250349940e-02;
+        const uniform float c09 = -2.9322218620e-03;
+        const uniform float c10 = -4.3928396700e-01;
+
+        uniform float reduced;
+        uniform int exponent;
+
+        const uniform bool close_to_zero = abs(x_full) < 0.295;
+
+        __range_reduce_log(1.0 + x_full, &reduced, &exponent);
+
+        const uniform float x = select(close_to_zero, x_full, reduced - 1.0);
+        const uniform float x2 = x * x + 1e-30;
+
+        // The -0.0 is only meant to compute -0.0 input values correctly
+        uniform float scale = (uniform float)exponent * ln2;
+        scale = select(close_to_zero, -0.0, scale);
+
+        uniform float result = x * c10 + c09;
+        result = x2 * result + (x * c08 + c07);
+        result = x2 * result + (x * c06 + c05);
+        result = x2 * result + (x * c04 + c03);
+        result = x2 * result + (x * c02 + 1.0);
+        result = x * result + scale;
+
+        // Correct special values
+        const uniform float tmp = select(x_full == -1.0, ninf, pnan);
+        result = select(x_full > -1.0, result, tmp);
+        result = select(x_full == pinf, pinf, result);
+        return result;
+    }
+}
+
+__declspec(safe) static inline float log1p(float x_full) {
+    const float ln2 = 6.931471825e-01;
+    const float pinf = floatbits(0x7F800000);
+    const float ninf = floatbits(0xFF800000);
+    const float pnan = floatbits(0x7FC00000);
+
+    if (__math_lib == __math_lib_svml) {
+        return __svml_log1pf(x_full);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_log1pf(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast) {
+
+        // See the uniform version for more information
+
+        const float c02 = -4.9998131400e-01;
+        const float c03 = +3.3315047620e-01;
+        const float c04 = -2.5166967510e-01;
+        const float c05 = +2.0652699470e-01;
+        const float c06 = -1.2913592160e-01;
+        const float c07 = +1.0059609264e-01;
+        const float c08 = -3.8902461530e-01;
+
+        float reduced;
+        int exponent;
+
+        const bool close_to_zero = abs(x_full) < 0.285;
+
+        __range_reduce_log(1.0 + x_full, &reduced, &exponent);
+
+        const float x = select(close_to_zero, x_full, reduced - 1.0);
+        const float x2 = x * x + 1e-30;
+        float scale = (float)exponent * ln2;
+        scale = select(close_to_zero, 0.0, scale);
+
+        float result = x * c08 + c07;
+        result = x2 * result + (x * c06 + c05);
+        result = x2 * result + (x * c04 + c03);
+        result = x2 * result + (x * c02 + 1.0);
+        result = x * result + scale;
+        return result;
+    } else if (__math_lib == __math_lib_ispc) {
+
+        // See the uniform version for more information
+
+        const float c02 = -4.9999958280e-01;
+        const float c03 = +3.3335196970e-01;
+        const float c04 = -2.4999302626e-01;
+        const float c05 = +1.9877377150e-01;
+        const float c06 = -1.6865649820e-01;
+        const float c07 = +1.6505996883e-01;
+        const float c08 = -7.5250349940e-02;
+        const float c09 = -2.9322218620e-03;
+        const float c10 = -4.3928396700e-01;
+
+        float reduced;
+        int exponent;
+
+        const bool close_to_zero = abs(x_full) < 0.295;
+
+        __range_reduce_log(1.0 + x_full, &reduced, &exponent);
+
+        const float x = select(close_to_zero, x_full, reduced - 1.0);
+        const float x2 = x * x + 1e-30;
+
+        float scale = (float)exponent * ln2;
+        scale = select(close_to_zero, -0.0, scale);
+
+        float result = x * c10 + c09;
+        result = x2 * result + (x * c08 + c07);
+        result = x2 * result + (x * c06 + c05);
+        result = x2 * result + (x * c04 + c03);
+        result = x2 * result + (x * c02 + 1.0);
+        result = x * result + scale;
+
+        const float tmp = select(x_full == -1.0, ninf, pnan);
+        result = select(x_full > -1.0, result, tmp);
+        result = select(x_full == pinf, pinf, result);
+        return result;
+    }
+}
+
 __declspec(safe) static inline float pow(float a, float b) {
     if (__have_native_transcendentals) {
         return __pow_varying_float(a, b);
@@ -5935,6 +6112,12 @@ __declspec(safe) static inline float16 log(float16 x_full) { return __log_varyin
 
 __declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
 
+__declspec(safe) static inline float16 log1p(float16 x_full) { return (float16)log1p((float)x_full); }
+
+__declspec(safe) static inline uniform float16 log1p(uniform float16 x_full) {
+    return (uniform float16)log1p((uniform float)x_full);
+}
+
 __declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
 
 __declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
@@ -6347,6 +6530,21 @@ __declspec(safe) static inline uniform double log(uniform double x) {
     } else
         return __stdlib_log(x);
 }
+
+__declspec(safe) static inline double log1p(double x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_log1pd(x);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_log1p(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double log1p(uniform double x) { return __stdlib_log1p(x); }
 
 __declspec(safe) static inline double pow(double a, double b) {
     if (__have_native_transcendentals) {
