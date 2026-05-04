@@ -686,6 +686,9 @@ def run_test(testname, host, target, jit_lib_path=None):
                 cc_cmd += ' -fPIE'
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
+                # Enable AMX syscall for AMX-capable targets (avx512spr and later)
+                if target.target.startswith('avx512spr') or target.target.startswith('avx512gnr'):
+                    cc_cmd += " -DTEST_REQUIRES_AMX"
 
                 if target.is_xe():
                     exe_name = "%s.run" % os.path.basename(testname)
