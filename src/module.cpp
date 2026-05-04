@@ -606,6 +606,22 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         alignment = type->GetAlignment();
     }
 
+    // For uniform const arrays, ensure proper alignment for vector access.
+    // When force-aligned-memory is enabled, the compiler may generate aligned vector loads
+    // from these arrays, so they must be aligned to the target's native vector alignment.
+    if (!alignment && isConst && type->IsUniformType()) {
+        const ArrayType *arrayType = CastType<ArrayType>(type);
+        if (arrayType != nullptr) {
+            // Get the base type alignment requirement
+            const Type *baseType = arrayType->GetBaseType();
+            if (baseType != nullptr) {
+                // For arrays that could be accessed with vector operations,
+                // align to the native vector width to avoid crashes with aligned loads
+                alignment = g->target->getNativeVectorAlignment();
+            }
+        }
+    }
+
     if (symbolTable->LookupFunction(name.c_str())) {
         Error(pos, "Global variable \"%s\" shadows previously-declared function.", name.c_str());
         return;
