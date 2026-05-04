@@ -506,7 +506,7 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
         // For stdin, use a memory buffer directly
         auto fileBufferOrError = llvm::MemoryBuffer::getFileOrSTDIN(infilename);
         if (!fileBufferOrError) {
-            llvm::errs() << "ISPC: error reading stdin\n";
+            llvm::errs() << "ISPC: error reading stdin: " << fileBufferOrError.getError().message() << "\n";
             return 1;
         }
 
