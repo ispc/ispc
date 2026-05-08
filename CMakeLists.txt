@@ -493,6 +493,10 @@ endif()
 message(STATUS "BITCODE_FOLDER is ${BITCODE_FOLDER}")
 file(MAKE_DIRECTORY ${BITCODE_FOLDER})
 
+set(LLVMIR_FOLDER ${CMAKE_CURRENT_BINARY_DIR}/llvmir)
+message(STATUS "LLVMIR_FOLDER is ${LLVMIR_FOLDER}")
+file(MAKE_DIRECTORY ${LLVMIR_FOLDER})
+
 # Generate stdlib width families from X86_TARGETS and ARM_TARGETS
 # and C++ code for stdlib target mapping
 define_stdlib_families()

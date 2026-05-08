@@ -30,6 +30,31 @@ function(write_dispatch_bitcode_lib name os)
       "static BitcodeLib ${name}(\"${name}.bc\", TargetOS::${os});\n")
 endfunction()
 
+function(get_source_dependencies target_flags input_src output_var)
+    list(APPEND deps_flags ${target_flags}
+        -I${CMAKE_SOURCE_DIR} -m${bit} -MM -MP
+    )
+
+    execute_process(
+        COMMAND ${CLANGPP_EXECUTABLE} ${deps_flags} ${input_src}
+        OUTPUT_VARIABLE raw_input_deps
+        ERROR_VARIABLE clang_deps_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE clang_deps_retcode
+    )
+
+    if(NOT clang_deps_retcode EQUAL 0)
+        message(FATAL_ERROR "The dependency tracking command failed (${clang_deps_retcode}).\nError: ${clang_deps_error}")
+    endif()
+
+    string(REGEX REPLACE "[\n ]*[a-zA-Z_0-9\\.\\/\\-]+:[\n ]*" "" raw_input_deps "${raw_input_deps}")
+    string(REGEX REPLACE "[\n ]*\\\\[\n ]*" " " raw_input_deps "${raw_input_deps}")
+    string(REGEX REPLACE " +" ";" input_deps "${raw_input_deps}")
+
+    set("${output_var}" "${input_deps}" PARENT_SCOPE)
+endfunction()
+
 find_program(M4_EXECUTABLE m4)
 if (NOT M4_EXECUTABLE)
     message(FATAL_ERROR "Failed to find M4 macro processor" )
@@ -72,14 +97,21 @@ function(target_ll_to_cpp target bit os CPP_LIST BC_LIST)
     string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
+    set(ir ${LLVMIR_FOLDER}/${name}.ll)
 
     write_target_bitcode_lib(${name} ${target} ${os} ${bit})
 
     add_custom_command(
+        OUTPUT ${ir}
+        COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input} > ${ir}
+        DEPENDS ${input_src} ${M4_IMPLICIT_DEPENDENCIES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input}
-            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
-        DEPENDS ${input} ${M4_IMPLICIT_DEPENDENCIES}
+        COMMAND ${LLVM_AS_EXECUTABLE} ${ir} -o ${bc}
+        DEPENDS ${ir}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
@@ -142,7 +174,7 @@ function(generate_dispatcher os)
 endfunction()
 
 function(builtin_wasm_to_cpp bit os arch)
-    set(input builtins/builtins-c-cpu.cpp)
+    set(input_src builtins/builtins-c-cpu.cpp)
     set(name builtins-cpp-${bit}-${os}-${arch})
     string(REPLACE "-" "_" name ${name})
 
@@ -151,6 +183,7 @@ function(builtin_wasm_to_cpp bit os arch)
 
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
+    set(ir ${LLVMIR_FOLDER}/${name}.ll)
 
     write_common_bitcode_lib(${name} ${os} ${arch})
 
@@ -160,11 +193,19 @@ function(builtin_wasm_to_cpp bit os arch)
         list(APPEND flags "-sMEMORY64")
     endif()
 
+    get_source_dependencies("${target_flags}" "${input_src}" input_deps)
+
+    add_custom_command(
+        OUTPUT ${ir}
+        COMMAND ${EMCC_EXECUTABLE} ${flags} ${input_src} -o ${ir}
+        DEPENDS ${input_src} ${input_deps}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${EMCC_EXECUTABLE} ${flags} ${input} -o -
-            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
-        DEPENDS ${input}
+        COMMAND ${LLVM_AS_EXECUTABLE} ${ir} -o ${bc}
+        DEPENDS ${ir}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
@@ -290,7 +331,7 @@ function (get_target_flags os arch out)
 endfunction()
 
 function(builtin_to_cpp bit os generic_arch)
-    set(input builtins/builtins-c-cpu.cpp)
+    set(input_src builtins/builtins-c-cpu.cpp)
     set(include "")
 
     if ("${bit}" STREQUAL "32" AND ${generic_arch} STREQUAL "x86")
@@ -316,19 +357,31 @@ function(builtin_to_cpp bit os generic_arch)
     list(APPEND flags ${target_flags}
         -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm --std=gnu++17
     )
+    list(APPEND deps_flags ${target_flags}
+        -I${CMAKE_SOURCE_DIR} -m${bit} -MM -MP
+    )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
     string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
+    set(ir ${LLVMIR_FOLDER}/${name}.ll)
 
     write_common_bitcode_lib(${name} ${os} ${arch})
 
+    get_source_dependencies("${target_flags}" "${input_src}" input_deps)
+
+    add_custom_command(
+        OUTPUT ${ir}
+        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input_src} -o ${ir}
+        DEPENDS ${input_src} ${input_deps}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
-            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
-        DEPENDS ${input}
+        COMMAND ${LLVM_AS_EXECUTABLE} ${ir} -o ${bc}
+        DEPENDS ${ir}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
@@ -357,12 +410,13 @@ function(builtin_xe_to_cpp os)
     string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
+    set(ir ${LLVMIR_FOLDER}/${name}.ll)
 
     write_common_bitcode_lib(${name} ${os} ${arch})
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND cat ${input} | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
+        COMMAND ${LLVM_AS_EXECUTABLE} ${input} -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
