@@ -35,7 +35,7 @@
 
 // FLOAT16-LABEL: @foo___
 // FLOAT16-NEXT: allocas:
-// FLOAT16-NEXT: ret <4 x half> <half 0xH3C00, half 0xH4000, half 0xH4200, half 0xH4400>
+// FLOAT16-NEXT: ret <4 x half> <half {{0xH3C00|1\.000000e\+00}}, half {{0xH4000|2\.000000e\+00}}, half {{0xH4200|3\.000000e\+00}}, half {{0xH4400|4\.000000e\+00}}>
 
 // FLOAT-LABEL: @foo___
 // FLOAT-NEXT: allocas:

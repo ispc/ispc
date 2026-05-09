@@ -2,7 +2,7 @@
 
 // Tests float16 constant parsing in *e*f16 form.
 //; CHECK: define half @foo0___unh(half
-//; CHECK: fadd half %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 0xH011D
+//; CHECK: fadd half %{{[a-zA-Z_][a-zA-Z0-9_]*}}, {{0xH011D|1\.670837e-05}}
 uniform float16 foo0(uniform float16 arg0) {
     arg0 = arg0 + 1.7e-5f16;
     return arg0;
@@ -10,7 +10,7 @@ uniform float16 foo0(uniform float16 arg0) {
 
 // Tests float16 constant parsing in *.*F16 form.
 //; CHECK: define void @foo1___REFunhun_3C_unh_3E_
-//; CHECK: store half 0xH4252,
+//; CHECK: store half {{0xH4252|3\.160156e\+00}},
 //; CHECK: fmul half %arg
 void foo1(uniform float16 &arg0, uniform float16 *uniform arg1) {
     arg0 = 3.16F16;
@@ -48,10 +48,10 @@ uniform double foo5(uniform float16 arg0) { return arg0; }
 
 // Creates +0, -0, +inf and -inf.
 //; CHECK: define void @foo6
-//; CHECK: store half 0xH0000
-//; CHECK: store half 0xH8000
-//; CHECK: store half 0xH7C00
-//; CHECK: store half 0xHFC00
+//; CHECK: store half {{0xH0000|0\.000000e\+00}}
+//; CHECK: store half {{0xH8000|-0\.000000e\+00}}
+//; CHECK: store half {{0xH7C00|\+inf}}
+//; CHECK: store half {{0xHFC00|-inf}}
 void foo6() {
     uniform float16 pz = +0.f16;
     uniform float16 nz = -0.f16;
