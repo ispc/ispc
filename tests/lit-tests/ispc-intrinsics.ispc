@@ -71,7 +71,7 @@ ATTRS uniform double atomicrmw(uniform int8 *uniform ptr, uniform double val) {
 }
 
 // CHECK-LABEL: @bitcast
-// CHECK-DAG:   %calltmp = call half @llvm.ispc.bitcast.i16.f16(i16 {{%x.*}}, half 0xH0000)
+// CHECK-DAG:   %calltmp = call half @llvm.ispc.bitcast.i16.f16(i16 {{%x.*}}, half {{0xH0000|0\.000000e\+00}})
 ATTRS uniform float16 bitcast(uniform int16 x) {
     return @llvm.ispc.bitcast(x, (uniform float16)0);
 }

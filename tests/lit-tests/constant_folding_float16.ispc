@@ -1,37 +1,37 @@
 // RUN: %{ispc} %s -O2 --target=host --emit-llvm-text --nostdlib --opt=fast-math -o - | FileCheck %s
 
 // CHECK: @retAddF16
-// CHECK: ret half 0xH4500
+// CHECK: ret half {{0xH4500|5\.000000e\+00}}
 uniform float16 retAddF16() {
     return 2.0f16 + 3.0f16;
 }
 
 // CHECK: @retSubF16
-// CHECK: ret half 0xH3800
+// CHECK: ret half {{0xH3800|5\.000000e-01}}
 uniform float16 retSubF16() {
     return 3.0f16 - 2.5f16;
 }
 
 // CHECK: @retMulF16
-// CHECK: ret half 0xH4780
+// CHECK: ret half {{0xH4780|7\.500000e\+00}}
 uniform float16 retMulF16() {
     return 3.0f16 * 2.5f16;
 }
 
 // CHECK: @retDivF16
-// CHECK: ret half 0xH4200
+// CHECK: ret half {{0xH4200|3\.000000e\+00}}
 uniform float16 retDivF16() {
     return 7.5f16 / 2.5f16;
 }
 
 // CHECK: @retNegF16
-// CHECK: ret half 0xHC000
+// CHECK: ret half {{0xHC000|-2\.000000e\+00}}
 uniform float16 retNegF16() {
     return -2.0f16;
 }
 
 // CHECK: @retFastMathF16
-// CHECK: fmul {{((contract|reassoc|arcp|nsz|nnan|ninf|afn|fast) )*}}half %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 0xH3800
+// CHECK: fmul {{((contract|reassoc|arcp|nsz|nnan|ninf|afn|fast) )*}}half %{{[a-zA-Z_][a-zA-Z0-9_]*}}, {{0xH3800|5\.000000e-01}}
 uniform float16 retFastMathF16(uniform float16 arg) {
     return arg / 2.f16;
 }
