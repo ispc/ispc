@@ -63,6 +63,15 @@ if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.2")
         builtins/target-avx10_2-x64-common.ll)
 endif()
 
+# Headers included by builtins/builtins-c-cpu.cpp. Listed explicitly so that
+# add_custom_command rebuilds the bitcode when these headers change. DEPFILE
+# support in add_custom_command is generator-specific for CMake < 3.20, so we
+# follow the same pattern as M4_IMPLICIT_DEPENDENCIES above.
+list(APPEND BUILTINS_C_CPU_HEADER_DEPS
+    builtins/array.hpp
+    builtins/builtins-c-common.hpp
+    src/builtins-info.h)
+
 function(target_ll_to_cpp target bit os CPP_LIST BC_LIST)
     set(input builtins/target-${target}.ll)
     set(include builtins)
@@ -164,7 +173,7 @@ function(builtin_wasm_to_cpp bit os arch)
         OUTPUT ${bc}
         COMMAND ${EMCC_EXECUTABLE} ${flags} ${input} -o -
             | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
-        DEPENDS ${input}
+        DEPENDS ${input} ${BUILTINS_C_CPU_HEADER_DEPS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
@@ -328,7 +337,7 @@ function(builtin_to_cpp bit os generic_arch)
         OUTPUT ${bc}
         COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
             | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
-        DEPENDS ${input}
+        DEPENDS ${input} ${BUILTINS_C_CPU_HEADER_DEPS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
