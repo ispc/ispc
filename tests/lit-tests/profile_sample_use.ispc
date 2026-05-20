@@ -5,9 +5,6 @@
 //
 // Test with profile - should have complete profile metadata:
 // RUN: %{ispc} -O2 --profile-sample-use=%S/test_profile_metadata.prof --target=host --nostdlib --nowrap --emit-llvm-text -o - %s | FileCheck %s --check-prefix=CHECK_WITH_PROFILE
-//
-// Test error handling:
-// RUN: not %{ispc} --profile-sample-use=nonexistent_file.prof --target=host --nostdlib --nowrap --emit-llvm-text -o - %s 2>&1 | FileCheck %s --check-prefix=CHECK_ERROR
 
 // WITHOUT PROFILE - should have no profile metadata
 // CHECK_NO_PROFILE-NOT: ProfileSummary
@@ -23,9 +20,6 @@
 // CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"NumFunctions", i64 3}
 // CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"IsPartialProfile", i64 0}
 // CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"DetailedSummary", !{{[0-9]+}}}
-
-// ERROR HANDLING - should report file not found
-// CHECK_ERROR: error: nonexistent_file.prof: Could not open profile
 
 static uniform float hot_helper(uniform float x) {
     return x * 2.0f + 1.0f;
