@@ -2,7 +2,7 @@
 
 // Tests float16 constant parsing in *e*f16 form.
 //; CHECK: define <{{[0-9]*}} x half> @foo0___vyh(<{{[0-9]*}} x half>
-//; CHECK: fadd <{{[0-9]*}} x half> %{{[a-zA-Z_][a-zA-Z0-9_]*}}, {{<half (0xH011D|1\.670837e-05), half (0xH011D|1\.670837e-05)|splat \(half (0xH011D|1\.670837e-05)\)}}
+//; CHECK: fadd <{{[0-9]*}} x half> %{{[a-zA-Z_][a-zA-Z0-9_]*}}, {{<half (0xH011D|1\.698730e-05), half (0xH011D|1\.698730e-05)|splat \(half (0xH011D|1\.698730e-05)\)}}
 varying float16 foo0(varying float16 arg0) {
     arg0 = arg0 + 1.7e-5f16;
     return arg0;
