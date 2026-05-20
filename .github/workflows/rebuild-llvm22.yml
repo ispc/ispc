@@ -32,7 +32,7 @@ jobs:
     uses: ./.github/workflows/reusable.rebuild.yml
     with:
       version: '22.1'
-      full_version: '22.1.0'
+      full_version: '22.1.6'
       lto: ${{ matrix.lto }}
       asserts: ${{ matrix.asserts }}
       arch: ${{ matrix.arch }}
