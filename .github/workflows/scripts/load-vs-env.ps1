@@ -1,9 +1,13 @@
 if($args[0] -ceq "x86") {
     $arch="x86"
+    # Use 64-bit hosted tools to avoid 32-bit linker memory limitations (LNK1201, LNK1318)
+    $host_arch="x64"
 } elseif($args[0] -ceq "x86-64") {
     $arch="x64"
+    $host_arch="x64"
 } elseif($args[0] -ceq "aarch64") {
     $arch="arm64"
+    $host_arch="arm64"
 } else {
 	Write-Host "Unrecognized architecture - use of these: x86, x86-64."
 	Exit 1
@@ -21,4 +25,4 @@ Write-Output "  <-> VS Install Path: ${VS_INST_PATH}"
 
 # Import DevShell module and enter the dev shell environment
 Import-Module ${VS_INST_PATH}/Common7/Tools/Microsoft.VisualStudio.DevShell.dll
-Enter-VsDevShell -VsInstallPath ${VS_INST_PATH} -SkipAutomaticLocation -DevCmdArguments "-arch=${arch} -no_logo"
+Enter-VsDevShell -VsInstallPath ${VS_INST_PATH} -SkipAutomaticLocation -DevCmdArguments "-arch=${arch} -host_arch=${host_arch} -no_logo"
