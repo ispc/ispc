@@ -9,7 +9,7 @@ if($args[0] -ceq "x86") {
     $arch="arm64"
     $host_arch="arm64"
 } else {
-	Write-Host "Unrecognized architecture - use of these: x86, x86-64."
+	Write-Host "Unrecognized architecture - use one of these: x86, x86-64, aarch64."
 	Exit 1
 }
 
