@@ -608,7 +608,9 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
 
     // For uniform const arrays, ensure storage alignment matches the
     // aligned vector loads that may be emitted by LLVM backend optimizations.
-    if (isConst && type->IsUniformType()) {
+    // Skip extern declarations: ISPC does not own the definition, so we must
+    // not impose a stronger alignment than the definition in another TU provides.
+    if (isConst && type->IsUniformType() && !storageClass.IsExtern()) {
         const ArrayType *arrayType = CastType<ArrayType>(type);
         if (arrayType != nullptr) {
             const unsigned int requiredAlignment = static_cast<unsigned int>(g->target->getNativeVectorAlignment());
