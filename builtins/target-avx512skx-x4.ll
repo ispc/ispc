@@ -390,7 +390,10 @@ define i8 @__reduce_add_int8(<4 x i8>) nounwind readnone alwaysinline {
 }
 
 ; Calling psadbw does not worth it for only 4 items
-@__reduce_add_uint8 = alias i8 (<4 x i8>), ptr @__reduce_add_int8
+define i8 @__reduce_add_uint8(<4 x i8>) nounwind readnone alwaysinline {
+  %res = call i8 @__reduce_add_int8(<4 x i8> %0)
+  ret i8 %res
+}
 
 define internal <4 x i16> @__add_varying_i16(<4 x i16>,
                                   <4 x i16>) nounwind readnone alwaysinline {
@@ -407,7 +410,10 @@ define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
   reduce4(i16, @__add_varying_i16, @__add_uniform_i16)
 }
 
-@__reduce_add_uint16 = alias i16 (<4 x i16>), ptr @__reduce_add_int16
+define i16 @__reduce_add_uint16(<4 x i16>) nounwind readnone alwaysinline {
+  %res = call i16 @__reduce_add_int16(<4 x i16> %0)
+  ret i16 %res
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
@@ -457,7 +463,10 @@ define i32 @__reduce_max_int32(<4 x i32>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint32 ops
 
-@__reduce_add_uint32 = alias i32 (<4 x i32>), ptr @__reduce_add_int32
+define i32 @__reduce_add_uint32(<4 x i32>) nounwind readnone alwaysinline {
+  %res = call i32 @__reduce_add_int32(<4 x i32> %0)
+  ret i32 %res
+}
 
 define i32 @__reduce_min_uint32(<4 x i32>) nounwind readnone alwaysinline {
   reduce4(i32, @__min_varying_uint32, @__min_uniform_uint32)
@@ -516,7 +525,10 @@ define i64 @__reduce_max_int64(<4 x i64>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint64 ops
 
-@__reduce_add_uint64 = alias i64 (<4 x i64>), ptr @__reduce_add_int64
+define i64 @__reduce_add_uint64(<4 x i64>) nounwind readnone alwaysinline {
+  %res = call i64 @__reduce_add_int64(<4 x i64> %0)
+  ret i64 %res
+}
 
 define i64 @__reduce_min_uint64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__min_varying_uint64, @__min_uniform_uint64)

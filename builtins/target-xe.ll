@@ -828,13 +828,19 @@ define i8 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
   reduce_func(i8, @__add_varying_int8, @__add_uniform_int8, %0)
 }
 
-@__reduce_add_uint8 = alias i8 (<WIDTH x i8>), ptr @__reduce_add_int8
+define i8 @__reduce_add_uint8(<WIDTH x i8>) nounwind readnone alwaysinline {
+  %res = call i8 @__reduce_add_int8(<WIDTH x i8> %0)
+  ret i8 %res
+}
 
 define i16 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
   reduce_func(i16, @__add_varying_int16, @__add_uniform_int16, %0)
 }
 
-@__reduce_add_uint16 = alias i16 (<WIDTH x i16>), ptr @__reduce_add_int16
+define i16 @__reduce_add_uint16(<WIDTH x i16>) nounwind readnone alwaysinline {
+  %res = call i16 @__reduce_add_int16(<WIDTH x i16> %0)
+  ret i16 %res
+}
 
 define half @__reduce_add_half(<WIDTH x half>) nounwind readonly alwaysinline {
   reduce_func(half, @__fadd_varying_half, @__fadd_uniform_half, %0)
@@ -844,7 +850,10 @@ define i32 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
   reduce_func(i32, @__add_varying_int32, @__add_uniform_int32, %0)
 }
 
-@__reduce_add_uint32 = alias i32 (<WIDTH x i32>), ptr @__reduce_add_int32
+define i32 @__reduce_add_uint32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %res = call i32 @__reduce_add_int32(<WIDTH x i32> %0)
+  ret i32 %res
+}
 
 define float @__reduce_add_float(<WIDTH x float>) nounwind readonly alwaysinline {
   reduce_func(float, @__fadd_varying_float, @__fadd_uniform_float, %0)
@@ -858,7 +867,10 @@ define i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone {
   reduce_func(i64, @__add_varying_int64, @__add_uniform_int64, %0)
 }
 
-@__reduce_add_uint64 = alias i64 (<WIDTH x i64>), ptr @__reduce_add_int64
+define i64 @__reduce_add_uint64(<WIDTH x i64>) nounwind readnone alwaysinline {
+  %res = call i64 @__reduce_add_int64(<WIDTH x i64> %0)
+  ret i64 %res
+}
 
 define i8 @__reduce_min_int8(<WIDTH x i8>) nounwind readnone {
   reduce_func(i8, @__min_varying_int8, @__min_uniform_int8, %0)
