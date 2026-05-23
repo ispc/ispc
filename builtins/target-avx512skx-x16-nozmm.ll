@@ -334,14 +334,29 @@ define i1 @__none(<WIDTH x MASK> %mask) nounwind readnone alwaysinline {
 
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
 
-define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+define internal <16 x i8> @__add_varying_i8(<16 x i8>,
+                                              <16 x i8>) nounwind readnone alwaysinline {
+  %r = add <16 x i8> %0, %1
+  ret <16 x i8> %r
+}
+
+define internal i8 @__add_uniform_i8(i8, i8) nounwind readnone alwaysinline {
+  %r = add i8 %0, %1
+  ret i8 %r
+}
+
+define i8 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+  reduce16(i8, @__add_varying_i8, @__add_uniform_i8)
+}
+
+define i8 @__reduce_add_uint8(<16 x i8>) nounwind readnone alwaysinline {
   %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %0,
                                               <16 x i8> zeroinitializer)
   %r0 = extractelement <2 x i64> %rv, i32 0
   %r1 = extractelement <2 x i64> %rv, i32 1
   %r = add i64 %r0, %r1
-  %r16 = trunc i64 %r to i16
-  ret i16 %r16
+  %r8 = trunc i64 %r to i8
+  ret i8 %r8
 }
 
 define internal <16 x i16> @__add_varying_i16(<16 x i16>,
@@ -358,6 +373,8 @@ define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline 
 define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
   reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
 }
+
+@__reduce_add_uint16 = alias i16 (<16 x i16>), ptr @__reduce_add_int16
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
@@ -403,6 +420,8 @@ define internal i32 @__add_uniform_int32(i32, i32) nounwind readnone alwaysinlin
 define i32 @__reduce_add_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__add_varying_int32, @__add_uniform_int32)
 }
+
+@__reduce_add_uint32 = alias i32 (<16 x i32>), ptr @__reduce_add_int32
 
 define i32 @__reduce_min_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__min_varying_int32, @__min_uniform_int32)
@@ -473,6 +492,8 @@ define internal i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinlin
 define i64 @__reduce_add_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__add_varying_int64, @__add_uniform_int64)
 }
+
+@__reduce_add_uint64 = alias i64 (<16 x i64>), ptr @__reduce_add_int64
 
 define i64 @__reduce_min_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_int64, @__min_uniform_int64)
