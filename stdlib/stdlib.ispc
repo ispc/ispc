@@ -1477,72 +1477,59 @@ __declspec(safe, cost1) static inline uniform double select(uniform bool cond, u
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// Horizontal ops / reductions
-
-__declspec(safe) static inline uniform int16 reduce_add(int8 x) { return __reduce_add_int8(__mask ? x : (int8)0); }
-
-__declspec(safe) static inline uniform int8 reduce_min(int8 v) {
-    // Set values for non-running lanes to the maximum int8 value so
-    // they don't affect the result.
-    return __reduce_min_int8(__mask ? v : INT8_MAX);
-}
-
-__declspec(safe) static inline uniform int8 reduce_max(int8 v) {
-    // Set values for non-running lanes to the minimum int8 value so
-    // they don't affect the result.
-    return __reduce_max_int8(__mask ? v : INT8_MIN);
-}
-
-__declspec(safe) static inline uniform unsigned int16 reduce_add(unsigned int8 x) {
-    return __reduce_add_int8(__mask ? x : (int8)0);
-}
-
-__declspec(safe) static inline uniform unsigned int8 reduce_min(unsigned int8 v) {
-    // Set values for non-running lanes to the maximum uint8 value so
-    // they don't affect the result.
-    return __reduce_min_uint8(__mask ? v : UINT8_MAX);
-}
-
-__declspec(safe) static inline uniform unsigned int8 reduce_max(unsigned int8 v) {
-    // Set values for non-running lanes to zero so they don't affect the
-    // result.
-    return __reduce_max_uint8(__mask ? v : 0);
-}
-
-__declspec(safe) static inline uniform int32 reduce_add(int16 x) { return __reduce_add_int16(__mask ? x : (int16)0); }
-
-__declspec(safe) static inline uniform int16 reduce_min(int16 v) {
-    // Set values for non-running lanes to the maximum int8 value so
-    // they don't affect the result.
-    return __reduce_min_int16(__mask ? v : INT16_MAX);
-}
-
-__declspec(safe) static inline uniform int16 reduce_max(int16 v) {
-    // Set values for non-running lanes to the minimum int8 value so
-    // they don't affect the result.
-    return __reduce_max_int16(__mask ? v : INT16_MIN);
-}
-
-__declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 x) {
-    return __reduce_add_int16(__mask ? x : (int16)0);
-}
-
-__declspec(safe) static inline uniform unsigned int16 reduce_min(unsigned int16 v) {
-    // Set values for non-running lanes to the maximum uint8 value so
-    // they don't affect the result.
-    return __reduce_min_uint16(__mask ? v : UINT16_MAX);
-}
-
-__declspec(safe) static inline uniform unsigned int16 reduce_max(unsigned int16 v) {
-    // Set values for non-running lanes to zero so they don't affect the
-    // result.
-    return __reduce_max_uint16(__mask ? v : 0);
-}
+// Horizontal reduce_add
 
 __declspec(safe) static inline uniform float16 reduce_add(float16 x) {
     // zero the lanes where the mask is off
     return __reduce_add_half(__mask ? x : 0.0f16);
 }
+
+__declspec(safe) static inline uniform float reduce_add(float x) {
+    // zero the lanes where the mask is off
+    return __reduce_add_float(__mask ? x : 0.);
+}
+
+__declspec(safe) static inline uniform double reduce_add(double x) {
+    // zero the lanes where the mask is off
+    return __reduce_add_double(__mask ? x : 0.);
+}
+
+__declspec(safe) static inline uniform int8 reduce_add(int8 x) { return __reduce_add_int8(__mask ? x : (int8)0); }
+
+__declspec(safe) static inline uniform unsigned int8 reduce_add(unsigned int8 x) {
+    return __reduce_add_uint8(__mask ? x : (unsigned int8)0);
+}
+
+__declspec(safe) static inline uniform int16 reduce_add(int16 x) { return __reduce_add_int16(__mask ? x : (int16)0); }
+
+__declspec(safe) static inline uniform unsigned int16 reduce_add(unsigned int16 x) {
+    return __reduce_add_uint16(__mask ? x : (unsigned int16)0);
+}
+
+__declspec(safe) static inline uniform int32 reduce_add(int32 x) {
+    // Zero out the values for lanes that aren't running
+    return __reduce_add_int32(__mask ? x : 0l);
+}
+
+__declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int32 x) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_add_uint32(__mask ? x : 0ul);
+}
+
+__declspec(safe) static inline uniform int64 reduce_add(int64 x) {
+    // Zero out the values for lanes that aren't running
+    return __reduce_add_int64(__mask ? x : 0ll);
+}
+
+__declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int64 x) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_add_uint64(__mask ? x : 0ull);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal reduce_min
 
 __declspec(safe) static inline uniform float16 reduce_min(float16 v) {
     // For the lanes where the mask is off, replace the given value with
@@ -1556,23 +1543,6 @@ __declspec(safe) static inline uniform float16 reduce_min(float16 v) {
     return result;
 }
 
-__declspec(safe) static inline uniform float16 reduce_max(float16 v) {
-    // For the lanes where the mask is off, replace the given value with
-    // negative infinity, so that it doesn't affect the result.
-    const int16 iflt_neg_max = 0xfc00; // -infinity
-    // unmasked block is needed to make sure that argument for unmasked
-    // function __reduce_max_half() are calculated without a mask.
-    bool test = __mask;
-    uniform float16 result;
-    unmasked { result = __reduce_max_half(test ? v : float16bits(iflt_neg_max)); }
-    return result;
-}
-
-__declspec(safe) static inline uniform float reduce_add(float x) {
-    // zero the lanes where the mask is off
-    return __reduce_add_float(__mask ? x : 0.);
-}
-
 __declspec(safe) static inline uniform float reduce_min(float v) {
     // For the lanes where the mask is off, replace the given value with
     // infinity, so that it doesn't affect the result.
@@ -1582,6 +1552,79 @@ __declspec(safe) static inline uniform float reduce_min(float v) {
     bool test = __mask;
     uniform float result;
     unmasked { result = __reduce_min_float(test ? v : floatbits(iflt_max)); }
+    return result;
+}
+
+__declspec(safe) static inline uniform double reduce_min(double v) {
+    int64 iflt_max = 0x7ff0000000000000; // infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_min_double() are calculated without a mask.
+    bool test = __mask;
+    uniform double result;
+    unmasked { result = __reduce_min_double(test ? v : doublebits(iflt_max)); }
+    return result;
+}
+
+__declspec(safe) static inline uniform int8 reduce_min(int8 v) {
+    // Set values for non-running lanes to the maximum int8 value so
+    // they don't affect the result.
+    return __reduce_min_int8(__mask ? v : INT8_MAX);
+}
+
+__declspec(safe) static inline uniform unsigned int8 reduce_min(unsigned int8 v) {
+    // Set values for non-running lanes to the maximum uint8 value so
+    // they don't affect the result.
+    return __reduce_min_uint8(__mask ? v : UINT8_MAX);
+}
+
+__declspec(safe) static inline uniform int16 reduce_min(int16 v) {
+    // Set values for non-running lanes to the maximum int8 value so
+    // they don't affect the result.
+    return __reduce_min_int16(__mask ? v : INT16_MAX);
+}
+
+__declspec(safe) static inline uniform unsigned int16 reduce_min(unsigned int16 v) {
+    // Set values for non-running lanes to the maximum uint8 value so
+    // they don't affect the result.
+    return __reduce_min_uint16(__mask ? v : UINT16_MAX);
+}
+
+__declspec(safe) static inline uniform int32 reduce_min(int32 v) {
+    // Set values for non-running lanes to the maximum integer value so
+    // they don't affect the result.
+    return __reduce_min_int32(__mask ? v : INT32_MAX);
+}
+
+__declspec(safe) static inline uniform unsigned int32 reduce_min(unsigned int32 v) {
+    // Set values for non-running lanes to the maximum unsigned integer
+    // value so they don't affect the result.
+    return __reduce_min_uint32(__mask ? v : UINT32_MAX);
+}
+
+__declspec(safe) static inline uniform int64 reduce_min(int64 v) {
+    // Set values for non-running lanes to the maximum integer value so
+    // they don't affect the result.
+    return __reduce_min_int64(__mask ? v : INT64_MAX);
+}
+
+__declspec(safe) static inline uniform unsigned int64 reduce_min(unsigned int64 v) {
+    // Set values for non-running lanes to the maximum unsigned integer
+    // value so they don't affect the result.
+    return __reduce_min_uint64(__mask ? v : UINT64_MAX);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal reduce_max
+
+__declspec(safe) static inline uniform float16 reduce_max(float16 v) {
+    // For the lanes where the mask is off, replace the given value with
+    // negative infinity, so that it doesn't affect the result.
+    const int16 iflt_neg_max = 0xfc00; // -infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_max_half() are calculated without a mask.
+    bool test = __mask;
+    uniform float16 result;
+    unmasked { result = __reduce_max_half(test ? v : float16bits(iflt_neg_max)); }
     return result;
 }
 
@@ -1597,56 +1640,6 @@ __declspec(safe) static inline uniform float reduce_max(float v) {
     return result;
 }
 
-__declspec(safe) static inline uniform int64 reduce_add(int32 x) {
-    // Zero out the values for lanes that aren't running
-    return __reduce_add_int32(__mask ? x : 0);
-}
-
-__declspec(safe) static inline uniform int reduce_min(int v) {
-    // Set values for non-running lanes to the maximum integer value so
-    // they don't affect the result.
-    return __reduce_min_int32(__mask ? v : INT32_MAX);
-}
-
-__declspec(safe) static inline uniform int reduce_max(int v) {
-    // Set values for non-running lanes to the minimum integer value so
-    // they don't affect the result.
-    return __reduce_max_int32(__mask ? v : INT32_MIN);
-}
-
-__declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int32 x) {
-    // Set values for non-running lanes to zero so they don't affect the
-    // result.
-    return __reduce_add_int32(__mask ? x : 0);
-}
-
-__declspec(safe) static inline uniform unsigned int reduce_min(unsigned int v) {
-    // Set values for non-running lanes to the maximum unsigned integer
-    // value so they don't affect the result.
-    return __reduce_min_uint32(__mask ? v : UINT32_MAX);
-}
-
-__declspec(safe) static inline uniform unsigned int reduce_max(unsigned int v) {
-    // Set values for non-running lanes to zero so they don't affect the
-    // result.
-    return __reduce_max_uint32(__mask ? v : 0);
-}
-
-__declspec(safe) static inline uniform double reduce_add(double x) {
-    // zero the lanes where the mask is off
-    return __reduce_add_double(__mask ? x : 0.);
-}
-
-__declspec(safe) static inline uniform double reduce_min(double v) {
-    int64 iflt_max = 0x7ff0000000000000; // infinity
-    // unmasked block is needed to make sure that argument for unmasked
-    // function __reduce_min_double() are calculated without a mask.
-    bool test = __mask;
-    uniform double result;
-    unmasked { result = __reduce_min_double(test ? v : doublebits(iflt_max)); }
-    return result;
-}
-
 __declspec(safe) static inline uniform double reduce_max(double v) {
     const int64 iflt_neg_max = 0xfff0000000000000; // -infinity
     // unmasked block is needed to make sure that argument for unmasked
@@ -1657,15 +1650,40 @@ __declspec(safe) static inline uniform double reduce_max(double v) {
     return result;
 }
 
-__declspec(safe) static inline uniform int64 reduce_add(int64 x) {
-    // Zero out the values for lanes that aren't running
-    return __reduce_add_int64(__mask ? x : 0);
+__declspec(safe) static inline uniform int8 reduce_max(int8 v) {
+    // Set values for non-running lanes to the minimum int8 value so
+    // they don't affect the result.
+    return __reduce_max_int8(__mask ? v : INT8_MIN);
 }
 
-__declspec(safe) static inline uniform int64 reduce_min(int64 v) {
-    // Set values for non-running lanes to the maximum integer value so
+__declspec(safe) static inline uniform unsigned int8 reduce_max(unsigned int8 v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint8(__mask ? v : 0);
+}
+
+__declspec(safe) static inline uniform int16 reduce_max(int16 v) {
+    // Set values for non-running lanes to the minimum int8 value so
     // they don't affect the result.
-    return __reduce_min_int64(__mask ? v : INT64_MAX);
+    return __reduce_max_int16(__mask ? v : INT16_MIN);
+}
+
+__declspec(safe) static inline uniform unsigned int16 reduce_max(unsigned int16 v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint16(__mask ? v : 0);
+}
+
+__declspec(safe) static inline uniform int32 reduce_max(int32 v) {
+    // Set values for non-running lanes to the minimum integer value so
+    // they don't affect the result.
+    return __reduce_max_int32(__mask ? v : INT32_MIN);
+}
+
+__declspec(safe) static inline uniform unsigned int32 reduce_max(unsigned int32 v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint32(__mask ? v : 0);
 }
 
 __declspec(safe) static inline uniform int64 reduce_max(int64 v) {
@@ -1674,23 +1692,14 @@ __declspec(safe) static inline uniform int64 reduce_max(int64 v) {
     return __reduce_max_int64(__mask ? v : INT64_MIN);
 }
 
-__declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int64 x) {
-    // Set values for non-running lanes to zero so they don't affect the
-    // result.
-    return __reduce_add_int64(__mask ? x : 0);
-}
-
-__declspec(safe) static inline uniform unsigned int64 reduce_min(unsigned int64 v) {
-    // Set values for non-running lanes to the maximum unsigned integer
-    // value so they don't affect the result.
-    return __reduce_min_uint64(__mask ? v : UINT64_MAX);
-}
-
 __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 v) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
     return __reduce_max_uint64(__mask ? v : 0);
 }
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal reduce_equal
 
 #define REDUCE_EQUAL(TYPE, FUNCTYPE, MASKTYPE)                                                                         \
     __declspec(safe) static inline uniform bool reduce_equal(TYPE v) {                                                 \
@@ -1712,6 +1721,11 @@ REDUCE_EQUAL(float, float, IntMaskType)
 REDUCE_EQUAL(int64, int64, IntMaskType)
 REDUCE_EQUAL(unsigned int64, int64, UIntMaskType)
 REDUCE_EQUAL(double, double, IntMaskType)
+
+#undef REDUCE_EQUAL
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal exclusive_scan_*
 
 static float16 exclusive_scan_add(float16 v) { return __exclusive_scan_add_half(v, __mask); }
 

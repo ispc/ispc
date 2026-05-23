@@ -243,14 +243,29 @@ reduce_equal(16)
 
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
 
-define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+define internal <16 x i8> @__add_varying_i8(<16 x i8>,
+                                              <16 x i8>) nounwind readnone alwaysinline {
+  %r = add <16 x i8> %0, %1
+  ret <16 x i8> %r
+}
+
+define internal i8 @__add_uniform_i8(i8, i8) nounwind readnone alwaysinline {
+  %r = add i8 %0, %1
+  ret i8 %r
+}
+
+define i8 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+  reduce16(i8, @__add_varying_i8, @__add_uniform_i8)
+}
+
+define i8 @__reduce_add_uint8(<16 x i8>) nounwind readnone alwaysinline {
   %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %0,
                                               <16 x i8> zeroinitializer)
   %r0 = extractelement <2 x i64> %rv, i32 0
   %r1 = extractelement <2 x i64> %rv, i32 1
   %r = add i64 %r0, %r1
-  %r16 = trunc i64 %r to i16
-  ret i16 %r16
+  %r8 = trunc i64 %r to i8
+  ret i8 %r8
 }
 
 define internal <16 x i16> @__add_varying_i16(<16 x i16>,
@@ -268,6 +283,8 @@ define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
   reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
 }
 
+@__reduce_add_uint16 = alias i16 (<16 x i16>), ptr @__reduce_add_int16
+
 define <16 x i32> @__add_varying_int32(<16 x i32>,
                                        <16 x i32>) nounwind readnone alwaysinline {
   %s = add <16 x i32> %0, %1
@@ -283,29 +300,26 @@ define i32 @__reduce_add_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__add_varying_int32, @__add_uniform_int32)
 }
 
-
 define i32 @__reduce_min_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__min_varying_int32, @__min_uniform_int32)
 }
-
 
 define i32 @__reduce_max_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__max_varying_int32, @__max_uniform_int32)
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint32 ops
+
+@__reduce_add_uint32 = alias i32 (<16 x i32>), ptr @__reduce_add_int32
 
 define i32 @__reduce_min_uint32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32)
 }
 
-
 define i32 @__reduce_max_uint32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__max_varying_uint32, @__max_uniform_uint32)
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal double ops
@@ -341,7 +355,6 @@ define double @__reduce_max_double(<16 x double>) nounwind readnone alwaysinline
   reduce16(double, @__max_varying_double, @__max_uniform_double)
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int64 ops
 
@@ -360,29 +373,26 @@ define i64 @__reduce_add_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__add_varying_int64, @__add_uniform_int64)
 }
 
-
 define i64 @__reduce_min_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_int64, @__min_uniform_int64)
 }
-
 
 define i64 @__reduce_max_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__max_varying_int64, @__max_uniform_int64)
 }
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint64 ops
+
+@__reduce_add_uint64 = alias i64 (<16 x i64>), ptr @__reduce_add_int64
 
 define i64 @__reduce_min_uint64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64)
 }
 
-
 define i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts

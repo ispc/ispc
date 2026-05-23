@@ -209,7 +209,22 @@ define i1 @__none(<8 x i32>) nounwind readnone alwaysinline {
 
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
 
-define i16 @__reduce_add_int8(<8 x i8>) nounwind readnone alwaysinline {
+define internal <8 x i8> @__add_varying_i8(<8 x i8>,
+                                              <8 x i8>) nounwind readnone alwaysinline {
+  %r = add <8 x i8> %0, %1
+  ret <8 x i8> %r
+}
+
+define internal i8 @__add_uniform_i8(i8, i8) nounwind readnone alwaysinline {
+  %r = add i8 %0, %1
+  ret i8 %r
+}
+
+define i8 @__reduce_add_int8(<8 x i8>) nounwind readnone alwaysinline {
+  reduce8(i8, @__add_varying_i8, @__add_uniform_i8)
+}
+
+define i8 @__reduce_add_uint8(<8 x i8>) nounwind readnone alwaysinline {
   %wide8 = shufflevector <8 x i8> %0, <8 x i8> zeroinitializer,
       <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                   i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
@@ -218,8 +233,8 @@ define i16 @__reduce_add_int8(<8 x i8>) nounwind readnone alwaysinline {
   %r0 = extractelement <2 x i64> %rv, i32 0
   %r1 = extractelement <2 x i64> %rv, i32 1
   %r = add i64 %r0, %r1
-  %r16 = trunc i64 %r to i16
-  ret i16 %r16
+  %r8 = trunc i64 %r to i8
+  ret i8 %r8
 }
 
 define internal <8 x i16> @__add_varying_i16(<8 x i16>,
@@ -236,6 +251,8 @@ define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline 
 define i16 @__reduce_add_int16(<8 x i16>) nounwind readnone alwaysinline {
   reduce8(i16, @__add_varying_i16, @__add_uniform_i16)
 }
+
+@__reduce_add_uint16 = alias i16 (<8 x i16>), ptr @__reduce_add_int16
 
 define float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8by4(float, @llvm.x86.sse.min.ps, @__min_uniform_float)
@@ -261,6 +278,8 @@ define i32 @__add_int32(i32, i32) nounwind readnone alwaysinline {
 define i32 @__reduce_add_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8by4(i32, @__vec4_add_int32, @__add_int32)
 }
+
+@__reduce_add_uint32 = alias i32 (<8 x i32>), ptr @__reduce_add_int32
 
 define i32 @__reduce_min_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8by4(i32, @llvm.x86.sse41.pminsd, @__min_uniform_int32)
@@ -315,6 +334,8 @@ define i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
 define i64 @__reduce_add_int64(<8 x i64>) nounwind readnone {
   reduce8by4(i64, @__add_varying_int64, @__add_uniform_int64)
 }
+
+@__reduce_add_uint64 = alias i64 (<8 x i64>), ptr @__reduce_add_int64
 
 define i64 @__reduce_min_int64(<8 x i64>) nounwind readnone {
   reduce8(i64, @__min_varying_int64, @__min_uniform_int64)

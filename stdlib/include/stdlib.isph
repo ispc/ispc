@@ -266,41 +266,52 @@ __declspec(safe, cost1) inline double select(uniform bool cond, double t, double
 __declspec(safe, cost1) inline uniform double select(uniform bool cond, uniform double t, uniform double f);
 
 ///////////////////////////////////////////////////////////////////////////
-// Horizontal ops / reductions
+// Horizontal reduce_add
 
-__declspec(safe) inline uniform int16 reduce_add(int8 x);
-__declspec(safe) inline uniform int8 reduce_min(int8 x);
-__declspec(safe) inline uniform int8 reduce_max(int8 x);
-__declspec(safe) inline uniform unsigned int16 reduce_add(unsigned int8 x);
-__declspec(safe) inline uniform unsigned int8 reduce_min(unsigned int8 x);
-__declspec(safe) inline uniform unsigned int8 reduce_max(unsigned int8 x);
-__declspec(safe) inline uniform int32 reduce_add(int16 x);
-__declspec(safe) inline uniform int16 reduce_min(int16 x);
-__declspec(safe) inline uniform int16 reduce_max(int16 x);
-__declspec(safe) inline uniform unsigned int32 reduce_add(unsigned int16 x);
-__declspec(safe) inline uniform unsigned int16 reduce_min(unsigned int16 x);
-__declspec(safe) inline uniform unsigned int16 reduce_max(unsigned int16 x);
+__declspec(safe) inline uniform int8 reduce_add(int8 x);
+__declspec(safe) inline uniform unsigned int8 reduce_add(unsigned int8 x);
+__declspec(safe) inline uniform int16 reduce_add(int16 x);
+__declspec(safe) inline uniform unsigned int16 reduce_add(unsigned int16 x);
 __declspec(safe) inline uniform float16 reduce_add(float16 x);
-__declspec(safe) inline uniform float16 reduce_min(float16 v);
-__declspec(safe) inline uniform float16 reduce_max(float16 v);
 __declspec(safe) inline uniform float reduce_add(float x);
-__declspec(safe) inline uniform float reduce_min(float v);
-__declspec(safe) inline uniform float reduce_max(float v);
-__declspec(safe) inline uniform int64 reduce_add(int32 x);
-__declspec(safe) inline uniform int reduce_min(int v);
-__declspec(safe) inline uniform int reduce_max(int v);
-__declspec(safe) inline uniform unsigned int64 reduce_add(unsigned int32 x);
-__declspec(safe) inline uniform unsigned int reduce_min(unsigned int v);
-__declspec(safe) inline uniform unsigned int reduce_max(unsigned int v);
+__declspec(safe) inline uniform int32 reduce_add(int32 x);
+__declspec(safe) inline uniform unsigned int32 reduce_add(unsigned int32 x);
 __declspec(safe) inline uniform double reduce_add(double x);
-__declspec(safe) inline uniform double reduce_min(double v);
-__declspec(safe) inline uniform double reduce_max(double v);
 __declspec(safe) inline uniform int64 reduce_add(int64 x);
-__declspec(safe) inline uniform int64 reduce_min(int64 v);
-__declspec(safe) inline uniform int64 reduce_max(int64 v);
 __declspec(safe) inline uniform unsigned int64 reduce_add(unsigned int64 x);
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal reduce_min
+
+__declspec(safe) inline uniform int8 reduce_min(int8 x);
+__declspec(safe) inline uniform unsigned int8 reduce_min(unsigned int8 x);
+__declspec(safe) inline uniform int16 reduce_min(int16 x);
+__declspec(safe) inline uniform unsigned int16 reduce_min(unsigned int16 x);
+__declspec(safe) inline uniform float16 reduce_min(float16 v);
+__declspec(safe) inline uniform float reduce_min(float v);
+__declspec(safe) inline uniform int32 reduce_min(int32 v);
+__declspec(safe) inline uniform unsigned int32 reduce_min(unsigned int32 v);
+__declspec(safe) inline uniform double reduce_min(double v);
+__declspec(safe) inline uniform int64 reduce_min(int64 v);
 __declspec(safe) inline uniform unsigned int64 reduce_min(unsigned int64 v);
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal reduce_max
+
+__declspec(safe) inline uniform int8 reduce_max(int8 x);
+__declspec(safe) inline uniform unsigned int8 reduce_max(unsigned int8 x);
+__declspec(safe) inline uniform int16 reduce_max(int16 x);
+__declspec(safe) inline uniform unsigned int16 reduce_max(unsigned int16 x);
+__declspec(safe) inline uniform float16 reduce_max(float16 v);
+__declspec(safe) inline uniform float reduce_max(float v);
+__declspec(safe) inline uniform int32 reduce_max(int32 v);
+__declspec(safe) inline uniform unsigned int32 reduce_max(unsigned int32 v);
+__declspec(safe) inline uniform double reduce_max(double v);
+__declspec(safe) inline uniform int64 reduce_max(int64 v);
 __declspec(safe) inline uniform unsigned int64 reduce_max(unsigned int64 v);
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal reduce_equal
 
 #define REDUCE_EQUAL_DECL(TYPE, FUNCTYPE, MASKTYPE)                                                                    \
     __declspec(safe) inline uniform bool reduce_equal(TYPE v);                                                         \
@@ -319,6 +330,9 @@ REDUCE_EQUAL_DECL(unsigned int64, int64, UUIntMaskType)
 REDUCE_EQUAL_DECL(double, double, UIntMaskType)
 
 #undef REDUCE_EQUAL_DECL
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal exclusive_scan_*
 
 inline float16 exclusive_scan_add(float16 v);
 inline int8 exclusive_scan_add(int8 v);

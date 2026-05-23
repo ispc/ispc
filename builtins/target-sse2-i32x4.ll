@@ -152,20 +152,23 @@ define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
   ret i1 %cmp
 }
 
-declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
-
-define i16 @__reduce_add_int8(<4 x i8>) nounwind readnone alwaysinline {
-  %wide8 = shufflevector <4 x i8> %0, <4 x i8> zeroinitializer,
-      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4,
-                  i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
-  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %wide8,
-                                              <16 x i8> zeroinitializer)
-  %r0 = extractelement <2 x i64> %rv, i32 0
-  %r1 = extractelement <2 x i64> %rv, i32 1
-  %r = add i64 %r0, %r1
-  %r16 = trunc i64 %r to i16
-  ret i16 %r16
+define internal <4 x i8> @__add_varying_i8(<4 x i8>,
+                                              <4 x i8>) nounwind readnone alwaysinline {
+  %r = add <4 x i8> %0, %1
+  ret <4 x i8> %r
 }
+
+define internal i8 @__add_uniform_i8(i8, i8) nounwind readnone alwaysinline {
+  %r = add i8 %0, %1
+  ret i8 %r
+}
+
+define i8 @__reduce_add_int8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__add_varying_i8, @__add_uniform_i8)
+}
+
+; Calling psadbw does not worth it for only 4 items
+@__reduce_add_uint8 = alias i8 (<4 x i8>), ptr @__reduce_add_int8
 
 define internal <4 x i16> @__add_varying_i16(<4 x i16>,
                                   <4 x i16>) nounwind readnone alwaysinline {
@@ -181,6 +184,8 @@ define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline 
 define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
   reduce4(i16, @__add_varying_i16, @__add_uniform_i16)
 }
+
+@__reduce_add_uint16 = alias i16 (<4 x i16>), ptr @__reduce_add_int16
 
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
   %v1 = shufflevector <4 x float> %v, <4 x float> undef,
@@ -209,6 +214,8 @@ define i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone {
   %sum = add i32 %m1a, %m1b
   ret i32 %sum
 }
+
+@__reduce_add_uint32 = alias i32 (<4 x i32>), ptr @__reduce_add_int32
 
 define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone {
   reduce4(i32, @__min_varying_int32, @__min_uniform_int32)
@@ -258,6 +265,8 @@ define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone {
   %m = add i64 %e0, %e1
   ret i64 %m
 }
+
+@__reduce_add_uint64 = alias i64 (<4 x i64>), ptr @__reduce_add_int64
 
 define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone {
   reduce4(i64, @__min_varying_int64, @__min_uniform_int64)
