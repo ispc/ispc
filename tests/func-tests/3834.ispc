@@ -2,15 +2,15 @@
 
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
   int8 db = b - 4;
-  int8 iv = (programIndex + db - 19) % 7;
-  int8 m = reduce_add(iv);
+  uint8 iv = (uint8)((programIndex + db - 19) % 7);
+  uint8 m = reduce_add(iv);
   RET[programIndex] = m;
 }
 
 task void result(uniform float RET[]) {
-    uniform int8 x = 0;
+    uniform uint8 x = 0;
     for (uniform int i = 1; i <= programCount; ++i){
-        x += (i - 19) % 7;
+        x += (uint8)((i - 19) % 7);
     }
     RET[programIndex] = x;
 }
