@@ -283,7 +283,10 @@ define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
   reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
 }
 
-@__reduce_add_uint16 = alias i16 (<16 x i16>), ptr @__reduce_add_int16
+define i16 @__reduce_add_uint16(<16 x i16>) nounwind readnone alwaysinline {
+  %res = call i16 @__reduce_add_int16(<16 x i16> %0)
+  ret i16 %res
+}
 
 define <16 x i32> @__add_varying_int32(<16 x i32>,
                                        <16 x i32>) nounwind readnone alwaysinline {
@@ -311,7 +314,10 @@ define i32 @__reduce_max_int32(<16 x i32>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint32 ops
 
-@__reduce_add_uint32 = alias i32 (<16 x i32>), ptr @__reduce_add_int32
+define i32 @__reduce_add_uint32(<16 x i32>) nounwind readnone alwaysinline {
+  %res = call i32 @__reduce_add_int32(<16 x i32> %0)
+  ret i32 %res
+}
 
 define i32 @__reduce_min_uint32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32)
@@ -384,7 +390,10 @@ define i64 @__reduce_max_int64(<16 x i64>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint64 ops
 
-@__reduce_add_uint64 = alias i64 (<16 x i64>), ptr @__reduce_add_int64
+define i64 @__reduce_add_uint64(<16 x i64>) nounwind readnone alwaysinline {
+  %res = call i64 @__reduce_add_int64(<16 x i64> %0)
+  ret i64 %res
+}
 
 define i64 @__reduce_min_uint64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64)
