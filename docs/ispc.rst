@@ -268,12 +268,18 @@ New Architecture Support:
   included in official ISPC binaries. To use it, build ISPC from source with
   the `PPC64_ENABLED=ON` CMake option. Usage: `ispc --arch=ppc64le
   --target=generic-i32x4 foo.ispc -o foo.o`.
+
+New Features:
+
 * Implementation of two new fast-math modes: ``balanced`` and ``aggressive``.
   These modes bring more aggressive optimizations compared to the default
   ``legacy`` mode. The latter was the mode provided so far in previous ISPC
   versions. It is still available and left unchanged. The fast-math mode can be
   specified with the option ``--opt=fast-math:<mode>``. See the optimization
   settings section for more information about the new modes.
+
+Standard Library Changes:
+
 * The Gauss error function ``erf`` and the complementary error function ``erfc``
   have been added to the standard library.
 * The ``expm1`` function (meant to compute ``exp(x)-1`` accurately), and the
@@ -281,6 +287,9 @@ New Architecture Support:
   added to the standard library.
 * The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` have also been added
   to the standard library.
+* The return type of the ``reduce_add()`` functions is now the same than the
+  input type. Users should now cast the inpout to a wider type themselves so to
+  prevent overflows.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
@@ -6675,12 +6684,12 @@ instances are added together by the ``reduce_add()`` function.
 
 ::
 
-    uniform int16 reduce_add(int8 x)
-    uniform unsigned int16 reduce_add(unsigned int8 x)
-    uniform int32 reduce_add(int16 x)
-    uniform unsigned int32 reduce_add(unsigned int16 x)
-    uniform int64 reduce_add(int32 x)
-    uniform unsigned int64 reduce_add(unsigned int32 x)
+    uniform int8 reduce_add(int8 x)
+    uniform unsigned int8 reduce_add(unsigned int8 x)
+    uniform int16 reduce_add(int16 x)
+    uniform unsigned int16 reduce_add(unsigned int16 x)
+    uniform int32 reduce_add(int32 x)
+    uniform unsigned int32 reduce_add(unsigned int32 x)
     uniform int64 reduce_add(int64 x)
     uniform unsigned int64 reduce_add(unsigned int64 x)
 
