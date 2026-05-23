@@ -661,21 +661,22 @@ gen_scatter(double)
 packed_load_and_store(FALSE)
 define_prefetches()
 
-define i16 @__reduce_add_int8(<4 x i8> %v) {
-entry:
-  %vecext = extractelement <4 x i8> %v, i32 0
-  %conv = sext i8 %vecext to i16
-  %vecext.1 = extractelement <4 x i8> %v, i32 1
-  %conv.1 = sext i8 %vecext.1 to i16
-  %add.1 = add nsw i16 %conv, %conv.1
-  %vecext.2 = extractelement <4 x i8> %v, i32 2
-  %conv.2 = sext i8 %vecext.2 to i16
-  %add.2 = add nsw i16 %add.1, %conv.2
-  %vecext.3 = extractelement <4 x i8> %v, i32 3
-  %conv.3 = sext i8 %vecext.3 to i16
-  %add.3 = add nsw i16 %add.2, %conv.3
-  ret i16 %add.3
+define internal <4 x i8> @__add_varying_i8(<4 x i8>,
+                                              <4 x i8>) nounwind readnone alwaysinline {
+  %r = add <4 x i8> %0, %1
+  ret <4 x i8> %r
 }
+
+define internal i8 @__add_uniform_i8(i8, i8) nounwind readnone alwaysinline {
+  %r = add i8 %0, %1
+  ret i8 %r
+}
+
+define i8 @__reduce_add_int8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__add_varying_i8, @__add_uniform_i8)
+}
+
+@__reduce_add_uint8 = alias i8 (<4 x i8>), ptr @__reduce_add_int8
 
 define internal <4 x i16> @__add_varying_i16(<4 x i16>,
                                   <4 x i16>) nounwind readnone alwaysinline {
@@ -691,6 +692,8 @@ define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline 
 define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
   reduce4(i16, @__add_varying_i16, @__add_uniform_i16)
 }
+
+@__reduce_add_uint16 = alias i16 (<4 x i16>), ptr @__reduce_add_int16
 
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
   %v1 = shufflevector <4 x float> %v, <4 x float> undef,
@@ -719,6 +722,8 @@ define i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone alwaysinline {
   %sum = add i32 %m1a, %m1b
   ret i32 %sum
 }
+
+@__reduce_add_uint32 = alias i32 (<4 x i32>), ptr @__reduce_add_int32
 
 define double @__reduce_add_double(<4 x double>) nounwind readnone {
   %v0 = shufflevector <4 x double> %0, <4 x double> undef,
@@ -843,6 +848,8 @@ define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
   %m = add i64 %e0, %e1
   ret i64 %m
 }
+
+@__reduce_add_uint64 = alias i64 (<4 x i64>), ptr @__reduce_add_int64
 
 define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__min_varying_int64, @__min_uniform_int64)

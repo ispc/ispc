@@ -459,36 +459,28 @@ EXT inline void __memmove64(uniform int8 *uniform, uniform int8 *uniform, unifor
 EXT inline void __memset32(uniform int8 *uniform, uniform int8, uniform int32);
 EXT inline void __memset64(uniform int8 *uniform, uniform int8, uniform int64);
 
-// TODO: check types with sign version of functions
 // reduction functions
-EXT inline READNONE uniform double __reduce_add_double(varying double);
-EXT inline READNONE uniform float __reduce_add_float(varying float);
 EXT inline READNONE uniform float16 __reduce_add_half(varying float16);
+EXT inline READNONE uniform float __reduce_add_float(varying float);
+EXT inline READNONE uniform double __reduce_add_double(varying double);
+EXT inline READNONE uniform int8 __reduce_add_int8(varying int8);
 EXT inline READNONE uniform int16 __reduce_add_int16(varying int16);
 EXT inline READNONE uniform int32 __reduce_add_int32(varying int32);
 EXT inline READNONE uniform int64 __reduce_add_int64(varying int64);
-EXT inline READNONE uniform int16 __reduce_add_int8(varying int8);
-EXT inline uniform bool __reduce_equal_double(varying double, uniform int8 *uniform, UIntMaskType);
-EXT inline uniform bool __reduce_equal_float(varying float, uniform int8 *uniform, UIntMaskType);
+EXT inline READNONE uniform uint8 __reduce_add_uint8(varying uint8);
+EXT inline READNONE uniform uint16 __reduce_add_uint16(varying uint16);
+EXT inline READNONE uniform uint32 __reduce_add_uint32(varying uint32);
+EXT inline READNONE uniform uint64 __reduce_add_uint64(varying uint64);
 EXT inline uniform bool __reduce_equal_half(varying float16, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform bool __reduce_equal_float(varying float, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform bool __reduce_equal_double(varying double, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int8(varying int8, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int16(varying int16, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int32(varying int32, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int64(varying int64, uniform int8 *uniform, UIntMaskType);
-EXT inline READNONE uniform double __reduce_max_double(varying double);
-EXT inline READNONE uniform float __reduce_max_float(varying float);
-EXT inline READNONE uniform float16 __reduce_max_half(varying float16);
-EXT inline READNONE uniform int8 __reduce_max_int8(varying int8);
-EXT inline READNONE uniform int16 __reduce_max_int16(varying int16);
-EXT inline READNONE uniform int32 __reduce_max_int32(varying int32);
-EXT inline READNONE uniform int64 __reduce_max_int64(varying int64);
-EXT inline READNONE uniform uint8 __reduce_max_uint8(varying uint8);
-EXT inline READNONE uniform uint16 __reduce_max_uint16(varying uint16);
-EXT inline READNONE uniform uint32 __reduce_max_uint32(varying uint32);
-EXT inline READNONE uniform uint64 __reduce_max_uint64(varying uint64);
-EXT inline READNONE uniform double __reduce_min_double(varying double);
-EXT inline READNONE uniform float __reduce_min_float(varying float);
 EXT inline READNONE uniform float16 __reduce_min_half(varying float16);
+EXT inline READNONE uniform float __reduce_min_float(varying float);
+EXT inline READNONE uniform double __reduce_min_double(varying double);
 EXT inline READNONE uniform int8 __reduce_min_int8(varying int8);
 EXT inline READNONE uniform int16 __reduce_min_int16(varying int16);
 EXT inline READNONE uniform int32 __reduce_min_int32(varying int32);
@@ -497,6 +489,17 @@ EXT inline READNONE uniform uint8 __reduce_min_uint8(varying uint8);
 EXT inline READNONE uniform uint16 __reduce_min_uint16(varying uint16);
 EXT inline READNONE uniform uint32 __reduce_min_uint32(varying uint32);
 EXT inline READNONE uniform uint64 __reduce_min_uint64(varying uint64);
+EXT inline READNONE uniform float16 __reduce_max_half(varying float16);
+EXT inline READNONE uniform float __reduce_max_float(varying float);
+EXT inline READNONE uniform double __reduce_max_double(varying double);
+EXT inline READNONE uniform int8 __reduce_max_int8(varying int8);
+EXT inline READNONE uniform int16 __reduce_max_int16(varying int16);
+EXT inline READNONE uniform int32 __reduce_max_int32(varying int32);
+EXT inline READNONE uniform int64 __reduce_max_int64(varying int64);
+EXT inline READNONE uniform uint8 __reduce_max_uint8(varying uint8);
+EXT inline READNONE uniform uint16 __reduce_max_uint16(varying uint16);
+EXT inline READNONE uniform uint32 __reduce_max_uint32(varying uint32);
+EXT inline READNONE uniform uint64 __reduce_max_uint64(varying uint64);
 
 // TODO: move implementation to stdlib.ispc
 // rdrand
