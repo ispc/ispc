@@ -1601,18 +1601,8 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     // In LLVM 21+, insertDeclare returns DbgRecord* with DebugLoc already set during construction
     m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock);
 #else
-    llvm::Instruction *declareInst =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-        llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
-                                                                    m->diBuilder->createExpression(), diLoc, bblock));
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
-        m->diBuilder
-            ->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock)
-            .get<llvm::Instruction *>();
-#else
-        m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc,
-                                    bblock);
-#endif
+    llvm::Instruction *declareInst = llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(
+        sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock));
     AddDebugPos(declareInst, &sym->pos, scope);
 #endif
 }
@@ -1640,14 +1630,8 @@ void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum
     // In LLVM 21+, insertDeclare returns DbgRecord* with DebugLoc already set during construction
     m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock);
 #else
-    llvm::Instruction *declareInst =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
-        llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
-                                                                    m->diBuilder->createExpression(), diLoc, bblock));
-#else
-        m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc,
-                                    bblock);
-#endif
+    llvm::Instruction *declareInst = llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(
+        sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock));
     AddDebugPos(declareInst, &sym->pos, scope);
 #endif
 }

@@ -435,8 +435,8 @@ if (WASM_ENABLED)
     message(STATUS "EMCC_EXECUTABLE: ${EMCC_EXECUTABLE}")
 endif()
 
-if (${LLVM_VERSION_NUMBER} VERSION_LESS "18.0.0")
-    message(FATAL_ERROR "ISPC requires LLVM 18.0.0 or later")
+if (${LLVM_VERSION_NUMBER} VERSION_LESS "20.0.0")
+    message(FATAL_ERROR "ISPC requires LLVM 20.0.0 or later")
 endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex clangSupport clangASTMatchers)
@@ -904,9 +904,7 @@ if (WIN32)
     # Required after LLVM commit a5ffabc
     list(APPEND LINK_LIBRARIES ws2_32.lib)
     # Required after LLVM commit cb7690a
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "19.1.0")
-        list(APPEND LINK_LIBRARIES ntdll.lib)
-    endif()
+    list(APPEND LINK_LIBRARIES ntdll.lib)
 else()
     run_llvm_config(LLVM_SYSTEM_LIBS "--system-libs")
     if (LLVM_SYSTEM_LIBS MATCHES "pthread")
