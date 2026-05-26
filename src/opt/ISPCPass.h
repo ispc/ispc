@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -34,13 +34,9 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/FunctionAttrs.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-#include <llvm/Transforms/Utils/Instrumentation.h>
-#else
-#include <llvm/Transforms/Instrumentation.h>
-#endif
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/Transforms/Utils/Instrumentation.h>
 #include <llvm/Transforms/Vectorize/LoadStoreVectorizer.h>
 
 #ifdef ISPC_XE_ENABLED

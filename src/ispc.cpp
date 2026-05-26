@@ -258,12 +258,7 @@ static ISPCTarget lGetSystemISA() {
     case Target::ISA::GNR_AVX512:
         return ISPCTarget::avx512gnr_x16;
     case Target::ISA::DMR_AVX10_2:
-        // Return SPR target for LLVM versions < 20.0
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         return ISPCTarget::avx10_2dmr_x16;
-#else
-        return ISPCTarget::avx512gnr_x16;
-#endif
     default:
         Error(SourcePos(), "Detected unsupported x86 ISA. Exiting.");
         exit(1);
@@ -359,17 +354,13 @@ typedef enum {
     CPU_GNR,
     CPU_ARL,
     CPU_LNL,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     CPU_DMR,
-#endif
     // Zen1 to Zen5
     CPU_ZNVER1,
     CPU_ZNVER2,
     CPU_ZNVER3,
     CPU_ZNVER4,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     CPU_ZNVER5,
-#endif
 
 // FIXME: LLVM supports a ton of different ARM CPU variants--not just
 // listed below.  We should be able to handle any of them that also
@@ -478,20 +469,16 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_GNR,
      {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni", "amxtile",
       "amxint8", "amxfp16"}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     {CPU_DMR,
      {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni", "amxtile",
       "amxint8", "amxfp16"}},
-#endif
     {CPU_ARL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_LNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER2, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER4, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     {CPU_ZNVER5, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
-#endif
 // TODO: Add features for remaining CPUs if valid.
 #ifdef ISPC_ARM_ENABLED
     {CPU_CortexA35, {}},
@@ -609,18 +596,14 @@ class AllCPUs {
         names[CPU_ARL].push_back("arl");
         names[CPU_LNL].push_back("lunarlake");
         names[CPU_LNL].push_back("lnl");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         names[CPU_DMR].push_back("diamondrapids");
         names[CPU_DMR].push_back("dmr");
-#endif
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
         names[CPU_ZNVER2].push_back("ps5");
         names[CPU_ZNVER3].push_back("znver3");
         names[CPU_ZNVER4].push_back("znver4");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         names[CPU_ZNVER5].push_back("znver5");
-#endif
 
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA35].push_back("cortex-a35");
@@ -679,11 +662,9 @@ class AllCPUs {
         compat[CPU_GNR] = Set(CPU_GNR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_SPR, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         compat[CPU_DMR] = Set(CPU_DMR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_SPR, CPU_GNR, CPU_None);
-#endif
         compat[CPU_MTL] =
             Set(CPU_MTL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_None);
@@ -705,12 +686,10 @@ class AllCPUs {
         compat[CPU_ICL] =
             Set(CPU_ICL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         compat[CPU_ZNVER5] =
             Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_TGL, CPU_ZNVER1,
                 CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_ZNVER5, CPU_None);
-#endif
         compat[CPU_ZNVER4] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                  CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX,
                                  CPU_ICL, CPU_ZNVER1, CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_None);
@@ -1061,9 +1040,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             break;
 
         case CPU_ZNVER4:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         case CPU_ZNVER5:
-#endif
         case CPU_TGL:
         case CPU_ICX:
         case CPU_ICL:
@@ -1081,11 +1058,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             m_ispc_target = ISPCTarget::avx2vnni_i32x8;
             break;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         case CPU_DMR:
             m_ispc_target = ISPCTarget::avx10_2dmr_x16;
             break;
-#endif
 
         case CPU_ZNVER1:
         case CPU_ZNVER2:
@@ -1700,7 +1675,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx512gnr_x32));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x32) ? CPU_GNR : CPU_SPR;
         break;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     case ISPCTarget::avx10_2dmr_x4:
         this->m_isa = Target::DMR_AVX10_2;
         this->m_nativeVectorWidth = 16;
@@ -1787,15 +1761,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::AmxFp16});
         CPUfromISA = CPU_DMR;
         break;
-#else
-    case ISPCTarget::avx10_2dmr_x4:
-    case ISPCTarget::avx10_2dmr_x8:
-    case ISPCTarget::avx10_2dmr_x16:
-    case ISPCTarget::avx10_2dmr_x32:
-    case ISPCTarget::avx10_2dmr_x64:
-        unsupported_target = true;
-        break;
-#endif
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
@@ -2268,11 +2233,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if ((m_ispc_target == ISPCTarget::generic_i32x16 || m_ispc_target == ISPCTarget::generic_i1x16 ||
          m_ispc_target == ISPCTarget::generic_i1x32 || m_ispc_target == ISPCTarget::generic_i1x64) &&
-        (CPUID == CPU_SKX || CPUID == CPU_ICL || CPUID == CPU_SPR || CPUID == CPU_GNR
-#if LLVM_VERSION >= ISPC_LLVM_20_0
-         || CPUID == CPU_DMR
-#endif
-         )) {
+        (CPUID == CPU_SKX || CPUID == CPU_ICL || CPUID == CPU_SPR || CPUID == CPU_GNR || CPUID == CPU_DMR)) {
         // Support --opt=disable-zmm for generic targets when CPU with avx512 support is specified.
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -2827,10 +2788,8 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512spr";
     case Target::GNR_AVX512:
         return "avx512gnr";
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     case Target::DMR_AVX10_2:
         return "avx10_2dmr";
-#endif
 #ifdef ISPC_XE_ENABLED
     case Target::XELP:
         return "xelp";
@@ -2902,10 +2861,8 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "avx512spr-x16";
     case Target::GNR_AVX512:
         return "avx512gnr-x16";
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     case Target::DMR_AVX10_2:
         return "avx10.2dmr-x16";
-#endif
     default:
         FATAL("Unhandled target in ISAToTargetString()");
     }

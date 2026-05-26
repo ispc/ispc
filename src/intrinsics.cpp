@@ -586,20 +586,12 @@ static std::vector<llvm::Type *> lDeductArgTypes(llvm::Module *module, llvm::Int
 }
 
 static llvm::Intrinsic::ID lLookupIntrinsicID(llvm::StringRef name) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     return llvm::Intrinsic::lookupIntrinsicID(llvm::StringRef(name));
-#else
-    return llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
-#endif
 }
 
 static llvm::Function *lGetFunctionDeclaration(llvm::Module *module, llvm::Intrinsic::ID ID,
                                                std::vector<llvm::Type *> &exprType) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     return llvm::Intrinsic::getOrInsertDeclaration(module, ID, exprType);
-#else
-    return llvm::Intrinsic::getDeclaration(module, ID, exprType);
-#endif
 }
 
 #ifdef ISPC_XE_ENABLED

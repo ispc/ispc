@@ -57,11 +57,6 @@
 #include <llvm/Transforms/IPO/SampleProfile.h>
 #include <llvm/Transforms/IPO/StripDeadPrototypes.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-#include <llvm/Transforms/Utils/Instrumentation.h>
-#else
-#include <llvm/Transforms/Instrumentation.h>
-#endif
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/ADCE.h>
 #include <llvm/Transforms/Scalar/CorrelatedValuePropagation.h>
@@ -88,6 +83,7 @@
 #include <llvm/Transforms/Scalar/SimpleLoopUnswitch.h>
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
 #include <llvm/Transforms/Scalar/TailRecursionElimination.h>
+#include <llvm/Transforms/Utils/Instrumentation.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Vectorize/LoadStoreVectorizer.h>
 #include <llvm/Transforms/Vectorize/SLPVectorizer.h>

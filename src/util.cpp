@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -48,11 +48,7 @@
 // Provide own definition of std::__libcpp_verbose_abort to avoid missing symbols error on macOS with old
 // system libc++.1.dylib. The symbol is there for macOS 13 Ventura and later, but not macOS 12 and earlier.
 // See #3071 for more details.
-void std::__libcpp_verbose_abort(char const *format, ...)
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-    noexcept
-#endif
-{
+void std::__libcpp_verbose_abort(char const *format, ...) noexcept {
     va_list list;
     va_start(list, format);
     vfprintf(stderr, format, list);
