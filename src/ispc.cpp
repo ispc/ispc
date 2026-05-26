@@ -403,9 +403,7 @@ typedef enum {
     // RV64GCV = RV64 base + G (General: IMAFD extensions) + C (Compressed) + V (Vector extension 1.0)
     // Used as default for rvv-x4 target when no specific CPU is provided
     CPU_Generic_RV64GCV,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
     CPU_SpacemiT_X60,
-#endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_PPC64_ENABLED
     CPU_PPC64LE_Pwr8,
@@ -515,9 +513,7 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
 #endif
 #ifdef ISPC_RISCV_ENABLED
     {CPU_Generic_RV64GCV, {}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
     {CPU_SpacemiT_X60, {}},
-#endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_PPC64_ENABLED
     {CPU_PPC64LE_Pwr8, {}},
@@ -647,9 +643,7 @@ class AllCPUs {
 
 #ifdef ISPC_RISCV_ENABLED
         names[CPU_Generic_RV64GCV].push_back("generic-rv64gcv");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
         names[CPU_SpacemiT_X60].push_back("spacemit-x60");
-#endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_PPC64_ENABLED
@@ -770,9 +764,7 @@ class AllCPUs {
 
 #ifdef ISPC_RISCV_ENABLED
         compat[CPU_Generic_RV64GCV] = Set(CPU_Generic_RV64GCV, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
         compat[CPU_SpacemiT_X60] = Set(CPU_SpacemiT_X60, CPU_Generic_RV64GCV, CPU_None);
-#endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_PPC64_ENABLED
@@ -1025,9 +1017,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
 #ifdef ISPC_RISCV_ENABLED
         case CPU_Generic_RV64GCV:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
         case CPU_SpacemiT_X60:
-#endif // ISPC_LLVM_VERSION
             m_ispc_target = ISPCTarget::rvv_x4;
             break;
 #endif // ISPC_RISCV_ENABLED

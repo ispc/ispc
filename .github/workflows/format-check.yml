@@ -15,8 +15,8 @@ jobs:
   check-format:
     runs-on: ubuntu-24.04
     env:
-      LLVM_VERSION: "18.1"
-      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "20.1"
+      LLVM_TAR: llvm-20.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0

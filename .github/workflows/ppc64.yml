@@ -33,19 +33,19 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev \
-          llvm-19-dev clang-19 lld-19 libclang-19-dev
+          llvm-20-dev clang-20 lld-20 libclang-20-dev
 
     - name: Check tools
       run: |
         cmake --version
-        llvm-config-19 --version
-        clang-19 --version
+        llvm-config-20 --version
+        clang-20 --version
         gcc --version
         g++ --version
 
     - name: Build ISPC with PPC64 support
       run: |
-        PATH=/usr/lib/llvm-19/bin:$PATH cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF -DX86_ENABLED=OFF
+        PATH=/usr/lib/llvm-20/bin:$PATH cmake -B build -DPPC64_ENABLED=ON -DARM_ENABLED=OFF -DX86_ENABLED=OFF
         cmake --build build -j"$(nproc)"
 
     - name: Run lit tests
