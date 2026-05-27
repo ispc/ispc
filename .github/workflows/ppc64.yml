@@ -65,7 +65,7 @@ jobs:
     name: PowerPC64LE test (cross-compiled)
     runs-on: ubuntu-24.04
     env:
-      LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.ppc.wasm.tar.xz
+      LLVM_TAR: llvm-22.1.6-ubuntu22.04-Release+Asserts-x86.arm.ppc.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0

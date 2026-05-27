@@ -29,8 +29,8 @@ jobs:
       platform: linux
       artifact_name: ispc-archive
       runner: ubuntu-22.04
-      llvm_version: "21.1"
-      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_version: "22.1"
+      llvm_tar: llvm-22.1.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   build-ispc-macos:
     uses: ./.github/workflows/reusable.ispc.build.yml
@@ -38,8 +38,8 @@ jobs:
       platform: macos
       artifact_name: ispc-macos-arm
       runner: macos-14
-      llvm_version: "21.1"
-      llvm_tar: llvm-21.1.8-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+      llvm_version: "22.1"
+      llvm_tar: llvm-22.1.6-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
   build-projects:
     name: Build ${{ matrix.project.name }}

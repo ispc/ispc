@@ -81,8 +81,8 @@ jobs:
       platform: linux
       artifact_name: ispc_llvm_linux
       runner: ubuntu-22.04
-      llvm_version: "21.1"
-      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_version: "22.1"
+      llvm_tar: llvm-22.1.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
 
   linux-test-llvm:
@@ -125,6 +125,6 @@ jobs:
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       if: failure()
       with:
-        name: fail_db.llvm21.${{matrix.target}}.txt
+        name: fail_db.llvm22.${{matrix.target}}.txt
         path: fail_db.txt
 

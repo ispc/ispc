@@ -340,7 +340,7 @@ def main():
 
     Command Line Args:
         llvm_version (str, optional): LLVM version to use.
-            Default: "21"
+            Default: "22"
 
     Directory Structure Created/Used:
         Working Directory (LLVM_HOME)/
@@ -361,7 +361,7 @@ def main():
         None
 
     Examples:
-        # Build with default LLVM 21
+        # Build with default LLVM 22
         $ python quick-start-build.py
 
         # Build with specific LLVM version
@@ -414,7 +414,7 @@ Environment Variables:
   ARCHIVE_URL    Direct download URL for LLVM package (only if automatic detection fails)
 
 Examples:
-  # Build with default LLVM 21
+  # Build with default LLVM 22
   $ python quick-start-build.py
 
   # Build with specific LLVM version
@@ -431,8 +431,8 @@ Examples:
         """
     )
 
-    parser.add_argument("llvm_version", type=str, nargs="?", default="21",
-                        help="LLVM version to use (default: 21)")
+    parser.add_argument("llvm_version", type=str, nargs="?", default="22",
+                        help="LLVM version to use (default: 22)")
     args = parser.parse_args()
 
     # Set up default values and paths
