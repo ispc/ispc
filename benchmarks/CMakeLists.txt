@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2025, Intel Corporation
+#  Copyright (c) 2020-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -32,7 +32,7 @@ set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORC
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Suppressing benchmark's install" FORCE)
 
 # Suppress C2y extension warnings from LLVM trunk before including Google Benchmark
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "22.0.0")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND ${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "21.0.0")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c2y-extensions")
 endif()
 
