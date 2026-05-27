@@ -3,7 +3,7 @@
 
 # Nightly Linux run.
 
-name: Nightly tests / LLVM 21.1
+name: Nightly tests / LLVM 22.1
 
 permissions: read-all
 
@@ -48,8 +48,8 @@ jobs:
       platform: linux
       artifact_name: ispc_llvm_linux
       runner: ubuntu-22.04
-      llvm_version: "21.1"
-      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_version: "22.1"
+      llvm_tar: llvm-22.1.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-test:
     needs: [define-targets, linux-build-ispc-llvm]
@@ -71,8 +71,8 @@ jobs:
       platform: windows
       artifact_name: ispc_llvm_win
       runner: windows-2022
-      llvm_version: "21.1"
-      llvm_tar: llvm-21.1.8-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_version: "22.1"
+      llvm_tar: llvm-22.1.6-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-test:
     needs: [define-targets, win-build-ispc-llvm]
