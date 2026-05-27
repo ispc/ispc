@@ -281,7 +281,7 @@ else()
 endif()
 
 # LLVM 21+ has stricter warnings about C2y extensions (__COUNTER__ in benchmark library)
-if (NOT WIN32 AND (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 21 OR ${LLVM_VERSION} STREQUAL "trunk"))
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 21 OR ${LLVM_VERSION} STREQUAL "trunk"))
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c2y-extensions")
 endif()
 
