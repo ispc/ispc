@@ -1,0 +1,79 @@
+# Ths patch is backport of https://github.com/llvm/llvm-project/pull/191438 fixing this issue: https://github.com/llvm/llvm-project/issues/171908
+
+diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp b/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
+index a96c77bc6a4e9..3ddc403bc222d 100644
+--- a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
+@@ -4797,8 +4797,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
+   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
+ 
+   EVT VT = N->getValueType(0);
+-  EVT PartResVT = Lo0.getValueType().changeElementType(*DAG.getContext(),
+-                                                       VT.getScalarType());
++  EVT PartResVT = getSetCCResultType(Lo0.getValueType());
+ 
+   if (Opc == ISD::SETCC) {
+     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
+@@ -4823,7 +4822,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
+                         N->getOperand(2), MaskHi, EVLHi);
+   }
+ 
+-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoRes, HiRes);
++  EVT ConcatVT = PartResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
++  SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, LoRes, HiRes);
++  if (VT == ConcatVT)
++    return Con;
++
++  EVT OpVT = N->getOperand(0).getValueType();
++  ISD::NodeType ExtendCode =
++      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
++  return DAG.getExtOrTrunc(Con, DL, VT, ExtendCode);
+ }
+ 
+ 
+diff --git a/llvm/lib/Target/ARM/ARMISelLowering.cpp b/llvm/lib/Target/ARM/ARMISelLowering.cpp
+index 0ad6c07f36868..03af94bab92a1 100644
+--- a/llvm/lib/Target/ARM/ARMISelLowering.cpp
++++ b/llvm/lib/Target/ARM/ARMISelLowering.cpp
+@@ -1502,18 +1502,16 @@ ARMTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
+   return std::make_pair(RRC, Cost);
+ }
+ 
+-EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
++EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &C,
+                                           EVT VT) const {
+   if (!VT.isVector())
+     return getPointerTy(DL);
+ 
+   // MVE has a predicate register.
+-  if ((Subtarget->hasMVEIntegerOps() &&
+-       (VT == MVT::v2i64 || VT == MVT::v4i32 || VT == MVT::v8i16 ||
+-        VT == MVT::v16i8)) ||
+-      (Subtarget->hasMVEFloatOps() &&
+-       (VT == MVT::v2f64 || VT == MVT::v4f32 || VT == MVT::v8f16)))
+-    return MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
++  if ((Subtarget->hasMVEIntegerOps() && VT.isInteger()) ||
++      (Subtarget->hasMVEFloatOps() && VT.isFloatingPoint()))
++    return VT.changeElementType(C, MVT::i1);
++
+   return VT.changeVectorElementTypeToInteger();
+ }
+ 
+diff --git a/llvm/lib/Target/WebAssembly/WebAssemblyISelLowering.cpp b/llvm/lib/Target/WebAssembly/WebAssemblyISelLowering.cpp
+index efa6a61f82e9d..a5db924a79fd9 100644
+--- a/llvm/lib/Target/WebAssembly/WebAssemblyISelLowering.cpp
++++ b/llvm/lib/Target/WebAssembly/WebAssemblyISelLowering.cpp
+@@ -1067,8 +1067,12 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
+ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
+                                                   LLVMContext &C,
+                                                   EVT VT) const {
+-  if (VT.isVector())
++  if (VT.isVector()) {
++    if (VT.getVectorElementType() == MVT::f16 && !Subtarget->hasFP16())
++      return VT.changeElementType(C, MVT::i1);
++
+     return VT.changeVectorElementTypeToInteger();
++  }
+ 
+   // So far, all branch instructions in Wasm take an I32 condition.
+   // The default TargetLowering::getSetCCResultType returns the pointer size,
