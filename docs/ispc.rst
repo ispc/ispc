@@ -281,6 +281,10 @@ New Features:
 
 Standard Library Changes:
 
+* **Breaking change**: the return type of the ``reduce_add()`` functions is now
+  the same than the input type. Users should now cast the inpout to a wider type
+  themselves so to prevent overflows. Any code relying on the widened return
+  type needs to be updated!
 * The Gauss error function ``erf`` and the complementary error function ``erfc``
   have been added to the standard library.
 * The ``expm1`` function (meant to compute ``exp(x)-1`` accurately), and the
@@ -288,9 +292,6 @@ Standard Library Changes:
   added to the standard library.
 * The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` have also been added
   to the standard library.
-* The return type of the ``reduce_add()`` functions is now the same than the
-  input type. Users should now cast the inpout to a wider type themselves so to
-  prevent overflows.
 
 ISPC Targets:
 
