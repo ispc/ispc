@@ -1,4 +1,6 @@
 #include "test_static.isph"
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 
 uniform bool ok(uniform float x, uniform float ref) {
     // See the varying version
