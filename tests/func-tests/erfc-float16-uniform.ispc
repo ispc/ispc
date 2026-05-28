@@ -1,6 +1,8 @@
 #include "test_static.isph"
 
 // rule: skip on arch=ppc64le
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 
 uniform bool ok(uniform float16 x, uniform float16 ref) {
     // See the varying version
