@@ -412,21 +412,6 @@ define i1 @__none(<WIDTH x MASK> %mask) nounwind readnone alwaysinline {
 
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
 
-define internal <8 x i8> @__add_varying_i8(<8 x i8>,
-                                              <8 x i8>) nounwind readnone alwaysinline {
-  %r = add <8 x i8> %0, %1
-  ret <8 x i8> %r
-}
-
-define internal i8 @__add_uniform_i8(i8, i8) nounwind readnone alwaysinline {
-  %r = add i8 %0, %1
-  ret i8 %r
-}
-
-define i8 @__reduce_add_int8(<8 x i8>) nounwind readnone alwaysinline {
-  reduce8(i8, @__add_varying_i8, @__add_uniform_i8)
-}
-
 define i8 @__reduce_add_uint8(<8 x i8>) nounwind readnone alwaysinline {
   %ri = shufflevector <8 x i8> %0, <8 x i8> zeroinitializer,
                          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
@@ -436,26 +421,6 @@ define i8 @__reduce_add_uint8(<8 x i8>) nounwind readnone alwaysinline {
   %r = extractelement <2 x i64> %rv, i32 0
   %r8 = trunc i64 %r to i8
   ret i8 %r8
-}
-
-define internal <8 x i16> @__add_varying_i16(<8 x i16>,
-                                  <8 x i16>) nounwind readnone alwaysinline {
-  %r = add <8 x i16> %0, %1
-  ret <8 x i16> %r
-}
-
-define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
-  %r = add i16 %0, %1
-  ret i16 %r
-}
-
-define i16 @__reduce_add_int16(<8 x i16>) nounwind readnone alwaysinline {
-  reduce8(i16, @__add_varying_i16, @__add_uniform_i16)
-}
-
-define i16 @__reduce_add_uint16(<8 x i16>) nounwind readnone alwaysinline {
-  %res = call i16 @__reduce_add_int16(<8 x i16> %0)
-  ret i16 %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -483,21 +448,6 @@ define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int32 ops
 
-define internal <8 x i32> @__add_varying_int32(<8 x i32>,
-                                       <8 x i32>) nounwind readnone alwaysinline {
-  %s = add <8 x i32> %0, %1
-  ret <8 x i32> %s
-}
-
-define internal i32 @__add_uniform_int32(i32, i32) nounwind readnone alwaysinline {
-  %s = add i32 %0, %1
-  ret i32 %s
-}
-
-define i32 @__reduce_add_int32(<8 x i32>) nounwind readnone alwaysinline {
-  reduce8(i32, @__add_varying_int32, @__add_uniform_int32)
-}
-
 define i32 @__reduce_min_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__min_varying_int32, @__min_uniform_int32)
 }
@@ -508,11 +458,6 @@ define i32 @__reduce_max_int32(<8 x i32>) nounwind readnone alwaysinline {
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint32 ops
-
-define i32 @__reduce_add_uint32(<8 x i32>) nounwind readnone alwaysinline {
-  %res = call i32 @__reduce_add_int32(<8 x i32> %0)
-  ret i32 %res
-}
 
 define i32 @__reduce_min_uint32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__min_varying_uint32, @__min_uniform_uint32)
@@ -551,21 +496,6 @@ define double @__reduce_max_double(<8 x double>) nounwind readnone alwaysinline 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int64 ops
 
-define internal <8 x i64> @__add_varying_int64(<8 x i64>,
-                                                <8 x i64>) nounwind readnone alwaysinline {
-  %s = add <8 x i64> %0, %1
-  ret <8 x i64> %s
-}
-
-define internal i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
-  %s = add i64 %0, %1
-  ret i64 %s
-}
-
-define i64 @__reduce_add_int64(<8 x i64>) nounwind readnone alwaysinline {
-  reduce8(i64, @__add_varying_int64, @__add_uniform_int64)
-}
-
 define i64 @__reduce_min_int64(<8 x i64>) nounwind readnone alwaysinline {
   reduce8(i64, @__min_varying_int64, @__min_uniform_int64)
 }
@@ -576,11 +506,6 @@ define i64 @__reduce_max_int64(<8 x i64>) nounwind readnone alwaysinline {
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint64 ops
-
-define i64 @__reduce_add_uint64(<8 x i64>) nounwind readnone alwaysinline {
-  %res = call i64 @__reduce_add_int64(<8 x i64> %0)
-  ret i64 %res
-}
 
 define i64 @__reduce_min_uint64(<8 x i64>) nounwind readnone alwaysinline {
   reduce8(i64, @__min_varying_uint64, @__min_uniform_uint64)
