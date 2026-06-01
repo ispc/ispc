@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2026, Intel Corporation
+  Copyright (c) 2025-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -379,7 +379,6 @@ static void lSetLangOptions(clang::LangOptions *opts) { opts->LineComment = 1; }
 // Clang's raw lexer is used to avoid changing comments, strings, or
 // character literals.
 //
-// TODO: This currently only handles the main input file. Included files need separate support.
 static std::string lFixDotDotDotSpacing(const std::string &source) {
     // Set up LangOptions for raw lexing
     clang::LangOptions langOpts;
