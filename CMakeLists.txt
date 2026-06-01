@@ -1056,6 +1056,21 @@ else()
     configure_ispc_exe(ispc)
     target_link_libraries(ispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend generic-target)
     add_dependencies(ispc ispc-slim)
+    # On Windows the ispc executable and the libispc_shared DLL both use the
+    # output name "ispc", so by default their MSVC import libraries collide at
+    # build/<config>/ispc.lib. The executable normally produces no import
+    # library, but starting with LLVM 22 some linked-in LLVM symbols are marked
+    # dllexport, which makes MSVC auto-generate one (ispc.lib/ispc.exp) for the
+    # executable too. In a parallel build the executable's stub import library
+    # can then clobber the shared library's real one, breaking consumers that
+    # link against ispc.lib (e.g. the JIT tests). The executable's import
+    # library is an unused byproduct (it is never installed), so redirect it to
+    # a separate directory to avoid the collision. This leaves the distributed
+    # lib/ispc.lib (the libispc_shared import library) unchanged.
+    if (MSVC AND ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
+        set_target_properties(ispc PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ispc-exe-implib")
+    endif()
     message(STATUS "ISPC will be built as a composite binary")
 endif()
 
