@@ -3,7 +3,7 @@
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-FROM fedora:41
+FROM fedora:44
 LABEL maintainer="Nurmukhametov, Aleksei <aleksei.nurmukhametov@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
@@ -14,7 +14,7 @@ ARG SHA=main
 RUN if [ -v http_proxy ]; then echo "proxy=$http_proxy" >> /etc/dnf/dnf.conf; fi
 
 # Packages required to build ISPC.
-# Fedora 41 provides TBB 2021.x (libtbb.so.12) which is compatible with LLVM 21+
+# Fedora 44 provides LLVM 22 and TBB 2021.x (libtbb.so.12) as system libraries
 RUN dnf install -y git cmake python3-setuptools python3-devel wget dnf-plugins-core && \
     dnf install -y clang-devel llvm-devel glibc-devel.i686 && \
     dnf install -y flex bison tbb-devel && \
