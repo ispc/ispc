@@ -28,9 +28,7 @@ static llvm::Value *lMatchAndScalarize(llvm::Instruction *inst) {
     llvm::BinaryOperator::BinaryOps Opc = BO->getOpcode();
     llvm::Value *Op1 = nullptr, *Op2 = nullptr;
     if (match(BO, m_BinOp(m_InsertElt(m_Undef(), m_Value(Op1), m_ZeroInt()), m_Value(Vec))) ||
-        match(BO, m_BinOp(m_InsertElt(m_Poison(), m_Value(Op1), m_ZeroInt()), m_Value(Vec))) ||
-        match(BO, m_BinOp(m_Value(Vec), m_InsertElt(m_Undef(), m_Value(Op2), m_ZeroInt()))) ||
-        match(BO, m_BinOp(m_Value(Vec), m_InsertElt(m_Poison(), m_Value(Op2), m_ZeroInt())))) {
+        match(BO, m_BinOp(m_Value(Vec), m_InsertElt(m_Undef(), m_Value(Op2), m_ZeroInt())))) {
 
         if (llvm::ConstantVector *CV = llvm::dyn_cast<llvm::ConstantVector>(Vec)) {
             unsigned N = CV->getType()->getNumElements();
@@ -50,14 +48,14 @@ static llvm::Value *lMatchAndScalarize(llvm::Instruction *inst) {
                 Assert(Op1 && Op2);
 
                 llvm::Type *VecType = Vec->getType();
-                llvm::Value *UV = llvm::PoisonValue::get(VecType);
+                llvm::Value *PV = llvm::PoisonValue::get(VecType);
                 llvm::IRBuilder<> Builder(inst->getParent()->getParent()->getContext());
 
                 Builder.SetInsertPoint(inst);
 
                 llvm::Value *ScalarBinOp = Builder.CreateBinOp(Opc, Op1, Op2);
-                llvm::Value *newVec = Builder.CreateInsertElement(UV, ScalarBinOp, (uint64_t)0);
-                return Builder.CreateShuffleVector(newVec, UV, OutZeroMask);
+                llvm::Value *newVec = Builder.CreateInsertElement(PV, ScalarBinOp, (uint64_t)0);
+                return Builder.CreateShuffleVector(newVec, PV, OutZeroMask);
             }
         }
     }
