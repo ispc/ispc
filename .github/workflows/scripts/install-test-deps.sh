@@ -30,15 +30,13 @@ done
 pip install nanobind
 
 find /usr -name cdefs.h || echo "Find errors were ignored"
-# Remark about user agent: it might or might now work with default user agent, but
-# from time to time the settings are changed and browser-like user agent is required to make it work.
-# Check if both SDE_MIRROR_ID and USER_AGENT are defined
-if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
-    echo -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
-    wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
+# Download SDE from the ispc.dependencies release mirror.
+if [ -n "$SDE_REPO" ] && [ -n "$SDE_TAR_NAME" ]; then
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 "$SDE_REPO/releases/download/$SDE_TAR_NAME/$SDE_TAR_NAME-lin.tar.xz"
+    file "$SDE_TAR_NAME-lin.tar.xz" | grep -q 'XZ compressed' || { echo "SDE download failed or is not an xz archive"; exit 1; }
     tar xf "$SDE_TAR_NAME"-lin.tar.xz
 else
-    echo "SDE_MIRROR_ID and/or USER_AGENT are not defined, exiting."
+    echo "SDE_REPO and/or SDE_TAR_NAME are not defined, exiting."
     exit 1
 fi
 

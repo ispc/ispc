@@ -75,13 +75,13 @@ do
   fi
 done
 
-# Check if both SDE_MIRROR_ID and USER_AGENT are defined
-if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
-    echo -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
-    wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
+# Download SDE from the ispc.dependencies release mirror.
+if [ -n "$SDE_REPO" ] && [ -n "$SDE_TAR_NAME" ]; then
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 "$SDE_REPO/releases/download/$SDE_TAR_NAME/$SDE_TAR_NAME-lin.tar.xz"
+    file "$SDE_TAR_NAME-lin.tar.xz" | grep -q 'XZ compressed' || { echo "SDE download failed or is not an xz archive"; exit 1; }
     tar xf "$SDE_TAR_NAME"-lin.tar.xz
 else
-    echo "SDE_MIRROR_ID and/or USER_AGENT are not defined. Skipping download."
+    echo "SDE_REPO and/or SDE_TAR_NAME are not defined. Skipping download."
 fi
 
 if [ -n "$INSTALL_COMPUTE_RUNTIME" ]; then
@@ -107,7 +107,7 @@ if [ "$LLVM_VERSION" != "trunk" ]; then
   [ -n "$LLVM_REPO" ] && wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
 fi
 tar xf $LLVM_TAR
-if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
+if [ -n "$SDE_REPO" ] && [ -n "$SDE_TAR_NAME" ]; then
   echo "${GITHUB_WORKSPACE}/$SDE_TAR_NAME-lin" >> $GITHUB_PATH
 fi
 echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
