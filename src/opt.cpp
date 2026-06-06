@@ -605,7 +605,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
         optPM.addFunctionPass(llvm::InferAlignmentPass());
         optPM.addFunctionPass(llvm::InstCombinePass());
-        optPM.addFunctionPass(IsCompileTimeConstantPass(true));
+        // Don't resolve __is_compile_time_constant_* in `inline` functions not
+        // yet inlined: the final inliner below may expose a constant argument.
+        // The post-inline cleanup resolves what is left (#3804).
+        optPM.addFunctionPass(IsCompileTimeConstantPass(true, /*skipDeferredInline=*/true));
         optPM.addFunctionPass(LowerAMXBuiltinsPass());
         optPM.addFunctionPass(IntrinsicsOpt());
         optPM.addFunctionPass(InstructionSimplifyPass());
@@ -673,6 +676,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // freshly inlined bodies, recovering the cross-procedural
         // simplifications we would otherwise miss by deferring inlining.
         optPM.initFunctionPassManager();
+        // Resolve __is_compile_time_constant_* left in the just-inlined bodies
+        // (the marker is gone, so nothing is skipped now). InstCombine/SimplifyCFG
+        // below fold the result.
+        optPM.addFunctionPass(IsCompileTimeConstantPass(true));
         optPM.addFunctionPass(llvm::InferAlignmentPass());
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(InstructionSimplifyPass());
