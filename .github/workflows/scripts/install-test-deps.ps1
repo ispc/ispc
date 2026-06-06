@@ -16,12 +16,12 @@ ls
 $ispcDir = Get-ChildItem -Directory -Filter "ispc-*-windows" | Select-Object -First 1
 echo "$pwd\$($ispcDir.Name)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-# Download and unpack SDE
-if (-not $env:USER_AGENT -or -not $env:SDE_MIRROR_ID) {
-    Write-Error "SDE_MIRROR_ID and/or USER_AGENT are not defined, exiting."
+# Download and unpack SDE from the ispc.dependencies release mirror.
+if (-not $env:SDE_REPO -or -not $env:SDE_TAR_NAME) {
+    Write-Error "SDE_REPO and/or SDE_TAR_NAME are not defined, exiting."
     exit 1
 }
-wget -q -U "${env:USER_AGENT}" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/${env:SDE_MIRROR_ID}/${env:SDE_TAR_NAME}-win.tar.xz
+wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 "${env:SDE_REPO}/releases/download/${env:SDE_TAR_NAME}/${env:SDE_TAR_NAME}-win.tar.xz"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 7z.exe x -txz ${env:SDE_TAR_NAME}-win.tar.xz
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

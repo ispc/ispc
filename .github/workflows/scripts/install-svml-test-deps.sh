@@ -35,11 +35,12 @@ do
 done
 
 find /usr -name cdefs.h || echo "Find errors were ignored"
-if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
-    wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
-    tar xf "$SDE_TAR_NAME"-lin.tar.bz2
+if [ -n "$SDE_REPO" ] && [ -n "$SDE_TAR_NAME" ]; then
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 "$SDE_REPO/releases/download/$SDE_TAR_NAME/$SDE_TAR_NAME-lin.tar.xz"
+    file "$SDE_TAR_NAME-lin.tar.xz" | grep -q 'XZ compressed' || { echo "SDE download failed or is not an xz archive"; exit 1; }
+    tar xf "$SDE_TAR_NAME"-lin.tar.xz
 else
-    echo "SDE_MIRROR_ID and/or USER_AGENT are not defined, exiting."
+    echo "SDE_REPO and/or SDE_TAR_NAME are not defined, exiting."
     exit 1
 fi
 ISPC_TAR=$(ls ispc-*-linux.tar.gz)
