@@ -48,6 +48,7 @@ const char *const isa_strings[] = {
     "ICL",
     "SPR",
     "GNR",
+    "NVL",
     "DMR",
 };
 
@@ -61,7 +62,8 @@ static const char *lGetSystemISA() {
         return "Unknown x86 ISA";
     }
     const char *isa = isa_strings[isa_id];
-    if (isa_id >= SPR_AVX512) {
+    // Only show AMX status for AMX-capable ISAs (SPR, GNR, DMR - not NVL)
+    if (isa_id == SPR_AVX512 || isa_id == GNR_AVX512 || isa_id == DMR_AVX10_2) {
         snprintf(amx_isa_string, sizeof(amx_isa_string), "%s (AMX %s)", isa,
                  __os_enabled_amx_support() ? "on" : "off");
         return amx_isa_string;
