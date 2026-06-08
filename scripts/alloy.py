@@ -360,10 +360,16 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, openmp, from_valid
 
 
 def unsupported_llvm_targets(LLVM_VERSION):
-    prohibited_list = {"6.0":["avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
-                       "7.0":["avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
-                       "8.0":["avx512skx-x64", "avx512skx-x32"],
-                       "9.0":["avx512skx-x64", "avx512skx-x32"]
+    # NVL (Nova Lake) targets are only parsed by ISPC under LLVM 22.0+.
+    nvl_targets = ["avx10.2nvl-x16", "avx10.2nvl-x8", "avx10.2nvl-x4", "avx10.2nvl-x64", "avx10.2nvl-x32"]
+    prohibited_list = {"6.0":["avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"] + nvl_targets,
+                       "7.0":["avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"] + nvl_targets,
+                       "8.0":["avx512skx-x64", "avx512skx-x32"] + nvl_targets,
+                       "9.0":["avx512skx-x64", "avx512skx-x32"] + nvl_targets,
+                       "10.0":nvl_targets, "11.0":nvl_targets, "12.0":nvl_targets,
+                       "13.0":nvl_targets, "14.0":nvl_targets, "15.0":nvl_targets,
+                       "16.0":nvl_targets, "17.0":nvl_targets, "18.1":nvl_targets,
+                       "19.1":nvl_targets, "20.1":nvl_targets, "21.1":nvl_targets,
                        }
     if LLVM_VERSION in prohibited_list:
         return prohibited_list[LLVM_VERSION]
@@ -428,7 +434,9 @@ def check_targets():
       ("GNR",        [["avx512gnr-x16", "avx512gnr-x8", "avx512gnr-x4", "avx512gnr-x64", "avx512gnr-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "GNR"], "-gnr", False]),
       ("DMR",        [["avx10.2dmr-x16", "avx10.2dmr-x8", "avx10.2dmr-x4", "avx10.2dmr-x64", "avx10.2dmr-x32"],
-                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "GNR", "DMR"], "-dmr", False])
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "GNR", "DMR"], "-dmr", False]),
+      ("NVL",        [["avx10.2nvl-x16", "avx10.2nvl-x8", "avx10.2nvl-x4", "avx10.2nvl-x64", "avx10.2nvl-x32"],
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "NVL"], "-nvl", False])
     ])
 
     hw_arch = take_lines(check_isa, "first").split()[1]
