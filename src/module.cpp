@@ -1952,6 +1952,29 @@ static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs
     return resultFuncTy;
 }
 
+/** Emit the predicate deciding whether a system reporting @p systemISA may run
+    the @p candidate variant.
+
+    The base test is the linear "systemISA >= candidate", which assumes the
+    Target::ISA enumerant is a total order in which each ISA is a superset of all
+    lower-numbered ones. Nova Lake (NVL) breaks that: it implements AVX10.2 (so it
+    sorts above SPR/GNR) but, unlike SPR/GNR/DMR, has no AMX. So an NVL system must
+    not select the AMX-bearing SPR/GNR variants -- it falls back to an ICL-or-lower
+    variant (NVL has full AVX-512) or to a present NVL/AVX10.2 variant. DMR (a
+    higher enumerant than NVL) is already excluded from SPR/GNR by the ">=" test,
+    and NVL selecting its own variant is fine. */
+static llvm::Value *lEmitISACompatibilityTest(int candidate, llvm::Value *systemISA, llvm::BasicBlock *bblock) {
+    // "is the system's ISA enumerant value >= the enumerant value of the current candidate?"
+    llvm::Value *ok = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE, systemISA,
+                                            LLVMInt32(candidate), "isa_ok", bblock);
+    if (candidate == Target::SPR_AVX512 || candidate == Target::GNR_AVX512) {
+        llvm::Value *notNVL = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, systemISA,
+                                                    LLVMInt32(Target::NVL_AVX10_2), "not_nvl", bblock);
+        ok = llvm::BinaryOperator::Create(llvm::Instruction::And, ok, notNVL, "isa_ok_nvl", bblock);
+    }
+    return ok;
+}
+
 /** Create the dispatch function for an exported ispc function.
     This function checks to see which vector ISAs the system the
     code is running on supports and calls out to the best available
@@ -2068,12 +2091,12 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
             continue;
         }
 
-        // Emit code to see if the system can run the current candidate
-        // variant successfully--"is the system's ISA enumerant value >=
-        // the enumerant value of the current candidate?"
+        // Emit code to see if the system can run the current candidate variant
+        // successfully. The base test is the linear "systemISA >= candidate", with
+        // an extra guard for NVL on the AMX-bearing SPR/GNR variants (see the
+        // helper for details).
+        llvm::Value *ok = lEmitISACompatibilityTest(i, systemISA, bblock);
 
-        llvm::Value *ok = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE, systemISA,
-                                                LLVMInt32(i), "isa_ok", bblock);
         llvm::BasicBlock *callBBlock = llvm::BasicBlock::Create(*g->ctx, "do_call", dispatchFunc);
         llvm::BasicBlock *nextBBlock = llvm::BasicBlock::Create(*g->ctx, "next_try", dispatchFunc);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0

@@ -282,6 +282,14 @@ New Architecture Support:
 * The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` have also been added
   to the standard library.
 
+ISPC Targets:
+
+* New ``avx10.2nvl-x4``, ``avx10.2nvl-x8``, ``avx10.2nvl-x16``,
+  ``avx10.2nvl-x32``, and ``avx10.2nvl-x64`` targets have been added for Intel
+  Nova Lake processors. These targets implement AVX10.2 with full AVX-512
+  support but, unlike the ``avx10.2dmr`` (Diamond Rapids) targets, they do not
+  include AMX. The corresponding predefined macro is ``ISPC_TARGET_AVX10_2NVL``.
+
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
 
@@ -1316,6 +1324,7 @@ avx512icl     AVX-512                   Intel Icelake (2019), AMD Zen4 (2022)
 avx512spr     AVX-512 + AMX             Intel Sapphire Rapids (2023)
 avx512gnr     AVX-512 + AMX FP16        Intel Granite Rapids (2024)
 avx10.2dmr    AVX10.2 + AMX             Intel Diamond Rapids (2026+)
+avx10.2nvl    AVX10.2                   Intel Nova Lake (2026+)
 neon          ARMv8 NEON                ARM Cortex-A35/A53/A57 (2012-2015)
 ============= ========================= ===========================================================
 
