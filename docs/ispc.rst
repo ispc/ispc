@@ -46,6 +46,7 @@ Contents:
 
 * `Recent Changes to ISPC`_
 
+  + `Updating ISPC Programs For Changes In ISPC 1.31.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.30.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.29.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
@@ -281,6 +282,19 @@ New Architecture Support:
   added to the standard library.
 * The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` have also been added
   to the standard library.
+
+ISPC Targets:
+
+* New ``avx10.2nvl-x4``, ``avx10.2nvl-x8``, ``avx10.2nvl-x16``,
+  ``avx10.2nvl-x32``, and ``avx10.2nvl-x64`` targets have been added for Intel
+  Nova Lake processors. These targets implement AVX10.2 with full AVX-512
+  support but, unlike the ``avx10.2dmr`` (Diamond Rapids) targets, they do not
+  include AMX. The corresponding predefined macro is ``ISPC_TARGET_AVX10_2NVL``.
+* The multi-target runtime dispatcher now selects an AMX-bearing server target
+  variant (``avx512spr``, ``avx512gnr``, ``avx10.2dmr``) only when the system
+  supports AMX, instead of relying solely on the ISA ordering. AMX support is
+  checked the same way AVX-512 already is: the CPU must advertise the feature in
+  CPUID and the OS must manage its XSAVE state.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
@@ -1316,6 +1330,7 @@ avx512icl     AVX-512                   Intel Icelake (2019), AMD Zen4 (2022)
 avx512spr     AVX-512 + AMX             Intel Sapphire Rapids (2023)
 avx512gnr     AVX-512 + AMX FP16        Intel Granite Rapids (2024)
 avx10.2dmr    AVX10.2 + AMX             Intel Diamond Rapids (2026+)
+avx10.2nvl    AVX10.2                   Intel Nova Lake (2026+)
 neon          ARMv8 NEON                ARM Cortex-A35/A53/A57 (2012-2015)
 ============= ========================= ===========================================================
 
@@ -1479,7 +1494,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Enables detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR, AVX512GNR, AVX10_2DMR}
+  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR, AVX512GNR, AVX10_2DMR, AVX10_2NVL}
     - 1
     - One of these will be set, depending on the compilation target
   * - ISPC_POINTER_SIZE
