@@ -459,9 +459,8 @@ bool lIsAliased(const IITDesc &L, const IITDesc &R) {
     if (R.Kind == IITDesc::OneNthEltsVec) {
         return R.getOverloadIndex() == L.getOverloadIndex();
     }
-    // Check if R is argument with MatchType and has the same argument number as L
-    return lIsArgDesc(R) && R.getOverloadKind() == IITDesc::AK_MatchType && R.Kind == IITDesc::Overloaded &&
-           R.getOverloadIndex() == L.getOverloadIndex();
+    // Check if R is a MatchType descriptor with the same argument number as L
+    return R.Kind == IITDesc::Match && R.getOverloadIndex() == L.getOverloadIndex();
 #else
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
     if (R.Kind == IITDesc::OneNthEltsVecArgument) {
