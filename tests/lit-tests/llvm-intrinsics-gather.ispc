@@ -69,13 +69,13 @@ unmangled void scatter(varying uint64 addr, varying int8 val) {
 ATTRS uniform float reduce_add_float(float x) { return @llvm.vector.reduce.fadd(-0.0f, x); }
 
 // CHECK-LABEL: @masked_compressstore
-// CHECK-DAG: tail call void @llvm.masked.compressstore.v[[WIDTH]]i32(<[[WIDTH]] x i32> %val, [[PTR]] %ptr, <[[WIDTH]] x i1> {{%.*}})
+// CHECK-DAG: tail call void @llvm.masked.compressstore.v[[WIDTH]]i32{{(\.p0)?}}(<[[WIDTH]] x i32> %val, [[PTR]] %ptr, <[[WIDTH]] x i1> {{%.*}})
 unmangled void masked_compressstore(uniform int8 *uniform ptr, int val, int mask) {
     @llvm.masked.compressstore(val, ptr, __mask);
 }
 
 // CHECK-LABEL!: @masked_expandload
-// CHECK-DAG: %calltmp = tail call <[[WIDTH]] x i64> @llvm.masked.expandload.v[[WIDTH]]i64([[PTR]] %from, <[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i64> %passthru)
+// CHECK-DAG: %calltmp = tail call <[[WIDTH]] x i64> @llvm.masked.expandload.v[[WIDTH]]i64{{(\.p0)?}}([[PTR]] %from, <[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i64> %passthru)
 unmangled int64 masked_expandload(uniform int8 *uniform from, int64 passthru, UIntMaskType mask) {
     return @llvm.masked.expandload(from, mask, passthru);
 }
