@@ -3,7 +3,7 @@
 # Define some widely used environment variables in one place
 
 SDE_REPO=${SDE_REPO:-"https://github.com/ispc/ispc.dependencies"}
-SDE_TAR_NAME=${SDE_TAR_NAME:-"sde-external-9.58.0-2025-06-16"}
+SDE_TAR_NAME=${SDE_TAR_NAME:-"sde-external-10.8.0-2026-03-15"}
 LLVM_REPO=${LLVM_REPO:-"https://github.com/ispc/ispc.dependencies"}
 LLVM_VERSION=${LLVM_VERSION:-"22.1"}
 echo "LLVM_VERSION=${LLVM_VERSION}" >> "${GITHUB_ENV}"
