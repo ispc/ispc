@@ -5,7 +5,7 @@ if (-not $env:SDE_REPO) {
   echo "SDE_REPO=$env:SDE_REPO" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 }
 if (-not $env:SDE_TAR_NAME) {
-  $env:SDE_TAR_NAME = "sde-external-9.58.0-2025-06-16"
+  $env:SDE_TAR_NAME = "sde-external-10.8.0-2026-03-15"
   echo "SDE_TAR_NAME=$env:SDE_TAR_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 }
 if (-not $env:LLVM_REPO) { $env:LLVM_REPO = "https://github.com/ispc/ispc.dependencies" }
