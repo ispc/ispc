@@ -416,6 +416,7 @@ extern const char *const __srem_i8;
 extern const char *const __srem_i16;
 extern const char *const __srem_i32;
 extern const char *const __srem_i64;
+extern const char *const __system_has_amx;
 extern const char *const __task_count;
 extern const char *const __task_count0;
 extern const char *const __task_count1;

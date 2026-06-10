@@ -269,10 +269,36 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
     return INVALID;
 }
 
+// Return whether the current system supports AMX (tile + int8 + bf16). This is
+// an orthogonal capability axis the single ISA enumerant cannot express:
+// AVX10.2 client silicon (e.g. Nova Lake) sorts above the AMX-bearing SPR/GNR
+// server tiers in the enumerant yet has no AMX. The runtime dispatcher uses
+// this so AMX server variants are selected only on systems that actually have
+// AMX, rather than relying on the ISA ordinal.
+//
+// This reads the same CPUID AMX feature bits that get_x86_isa() uses to
+// separate the AMX server tiers from NVL (avx512_amx_{bf16,tile,int8} above);
+// keeping the two checks on the same signal avoids any disagreement between
+// which ISA is detected and whether it is allowed to run. As there, OS XSAVE
+// state is intentionally not gated here (see __os_has_avx512_support / #1854).
+UNUSED_ATTR static int get_x86_has_amx() {
+#if !defined(MACOS)
+    int info2[4];
+    __cpuidex(info2, 7, 0);
+    int amx_bf16 = (info2[3] & (1 << 22)) != 0;
+    int amx_tile = (info2[3] & (1 << 24)) != 0;
+    int amx_int8 = (info2[3] & (1 << 25)) != 0;
+    return amx_tile && amx_int8 && amx_bf16;
+#else  // !MACOS
+    return 0;
+#endif // !MACOS
+}
+
 #else
 
-// For non-x86 platforms, define a function with trivial implementation.
+// For non-x86 platforms, define functions with trivial implementations.
 UNUSED_ATTR static enum ISA get_x86_isa() { return INVALID; }
+UNUSED_ATTR static int get_x86_has_amx() { return 0; }
 
 #endif // defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 
