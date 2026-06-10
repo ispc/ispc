@@ -84,6 +84,9 @@ static int xgetbv() {
 
 static int __os_has_avx_support() { return (xgetbv() & 6) == 6; }
 
+// Check if the OS has enabled AMX tile state (XTILECFG + XTILEDATA) in XCR0.
+UNUSED_ATTR static int __os_has_amx_support() { return (xgetbv() & 0x60000) == 0x60000; }
+
 static int __os_has_avx512_support() {
 #if !defined(MACOS)
     // Check if the OS saves the XMM, YMM and ZMM registers, i.e. it supports AVX2 and AVX512.
@@ -269,10 +272,45 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
     return INVALID;
 }
 
+// Return whether the current system can run AMX (tile + int8 + bf16). This is
+// an orthogonal capability axis the ISA enumerant cannot express: AVX10.2 client
+// silicon (e.g. Nova Lake) sorts above the AMX-bearing SPR/GNR server tiers yet
+// has no AMX. The dispatcher uses this to select AMX server variants only where
+// AMX is usable, rather than relying on the ISA ordinal.
+//
+// This combines the CPUID AMX bits (the same bits get_x86_isa() uses to separate
+// the AMX server tiers from NVL) with the OS XSAVE AMX-state check, mirroring how
+// get_x86_isa() gates AVX/AVX512 selection on __os_has_avx{,512}_support(): a
+// feature is only usable if both the hardware advertises it and the OS manages
+// its XSAVE state.
+//
+// __os_has_amx_support() reads XCR0 (bits 17/18, XTILECFG/XTILEDATA), which the
+// kernel enables system-wide at boot on AMX-capable hardware (Linux 5.16+,
+// Windows 11). It is NOT per-process and is independent of whether any task has
+// called arch_prctl(ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA): that request
+// toggles the separate per-task IA32_XFD MSR, which is not readable from user
+// space and is the application's responsibility before it executes AMX
+// instructions (see examples/cpu/amx/amx_matmul.cpp). So on a normal AMX system
+// this returns true for SPR/GNR/DMR regardless of prctl; it returns false only
+// where the OS cannot context-switch AMX state (e.g. a pre-5.16 kernel).
+UNUSED_ATTR static int get_x86_has_amx() {
+#if !defined(MACOS)
+    int info2[4];
+    __cpuidex(info2, 7, 0);
+    int amx_bf16 = (info2[3] & (1 << 22)) != 0;
+    int amx_tile = (info2[3] & (1 << 24)) != 0;
+    int amx_int8 = (info2[3] & (1 << 25)) != 0;
+    return amx_tile && amx_int8 && amx_bf16 && __os_has_amx_support();
+#else  // !MACOS
+    return 0;
+#endif // !MACOS
+}
+
 #else
 
-// For non-x86 platforms, define a function with trivial implementation.
+// For non-x86 platforms, define functions with trivial implementations.
 UNUSED_ATTR static enum ISA get_x86_isa() { return INVALID; }
+UNUSED_ATTR static int get_x86_has_amx() { return 0; }
 
 #endif // defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 

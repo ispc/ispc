@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013-2025, Intel Corporation
+  Copyright (c) 2013-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -74,3 +74,12 @@ int __get_system_best_isa() {
 
     return isa;
 }
+
+// Report whether the current system supports AMX. This is an orthogonal
+// capability the single ISA enumerant returned by __get_system_best_isa()
+// cannot express (AVX10.2 client silicon sorts above the AMX server tiers yet
+// has no AMX). The generated dispatcher queries this so it only selects an
+// AMX-bearing variant on a system that actually has AMX. Like
+// __get_system_isa, this is left non-static so it survives until linked with
+// the user code, then internalized in builtins.cpp::LinkDispatcher.
+int __system_has_amx() { return get_x86_has_amx(); }
