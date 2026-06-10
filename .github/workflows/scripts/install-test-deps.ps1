@@ -25,6 +25,11 @@ wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 "$
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 7z.exe x -txz ${env:SDE_TAR_NAME}-win.tar.xz
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-7z.exe x -ttar ${env:SDE_TAR_NAME}-win.tar
+# Extract SDE outside the default workspace ($pwd is D:\a\ispc\ispc). SDE 10.8+
+# fails to start when its install path contains a single-character folder (the
+# "\a\" segment), so unpack it into a path with no single-character component.
+# See https://community.intel.com/t5/Intel-ISA-Extensions/SDE-10-8-fails-to-start-depending-on-the-installation-folder/td-p/1746386
+$SDE_INSTALL_DIR = "C:\projects\sde"
+7z.exe x -ttar ${env:SDE_TAR_NAME}-win.tar -o"$SDE_INSTALL_DIR"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-echo "$pwd\${env:SDE_TAR_NAME}-win" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+echo "$SDE_INSTALL_DIR\${env:SDE_TAR_NAME}-win" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
