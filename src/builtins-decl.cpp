@@ -364,6 +364,7 @@ DECL_BUILTIN_NAME(__srem_i8);
 DECL_BUILTIN_NAME(__srem_i16);
 DECL_BUILTIN_NAME(__srem_i32);
 DECL_BUILTIN_NAME(__srem_i64);
+DECL_BUILTIN_NAME(__system_has_amx);
 DECL_BUILTIN_NAME(__task_count);
 DECL_BUILTIN_NAME(__task_count0);
 DECL_BUILTIN_NAME(__task_count1);

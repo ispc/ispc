@@ -1952,25 +1952,38 @@ static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs
     return resultFuncTy;
 }
 
-/** Emit the predicate deciding whether a system reporting @p systemISA may run
-    the @p candidate variant.
+/** Does running the @p isa variant require the system to have AMX?
 
-    The base test is the linear "systemISA >= candidate", which assumes the
-    Target::ISA enumerant is a total order in which each ISA is a superset of all
-    lower-numbered ones. Nova Lake (NVL) breaks that: it implements AVX10.2 (so it
-    sorts above SPR/GNR) but, unlike SPR/GNR/DMR, has no AMX. So an NVL system must
-    not select the AMX-bearing SPR/GNR variants -- it falls back to an ICL-or-lower
-    variant (NVL has full AVX-512) or to a present NVL/AVX10.2 variant. DMR (a
-    higher enumerant than NVL) is already excluded from SPR/GNR by the ">=" test,
-    and NVL selecting its own variant is fine. */
-static llvm::Value *lEmitISACompatibilityTest(int candidate, llvm::Value *systemISA, llvm::BasicBlock *bblock) {
+    The AMX-bearing server tiers (SPR/GNR and, going forward, every server line)
+    emit AMX instructions, so they may only be selected on a system that actually
+    has AMX. This is a requirement (allowlist) test, not a per-CPU blocklist: a
+    new non-AMX client line automatically fails it with no dispatcher change,
+    because it simply does not advertise AMX. */
+static bool lISARequiresAMX(int isa) {
+    return isa == Target::SPR_AVX512 || isa == Target::GNR_AVX512 || isa == Target::DMR_AVX10_2;
+}
+
+/** Emit the predicate deciding whether a system may run the @p candidate variant.
+
+    The base test is the linear "systemISA >= candidate", which orders the walk by
+    performance preference and assumes the Target::ISA enumerant is a total order
+    in which each ISA is a superset of all lower-numbered ones. AMX breaks that
+    superset assumption: Nova Lake (NVL) implements AVX10.2 (so it sorts above the
+    AMX-bearing SPR/GNR tiers) but has no AMX. Rather than blocklisting NVL on the
+    AMX candidates, the AMX tiers require the orthogonal "system has AMX"
+    capability (@p systemHasAMX, from __system_has_amx()). Any non-AMX line --
+    NVL today, future clients tomorrow -- fails that requirement with no change
+    here. @p systemHasAMX is non-null exactly when some candidate requires AMX. */
+static llvm::Value *lEmitISACompatibilityTest(int candidate, llvm::Value *systemISA, llvm::Value *systemHasAMX,
+                                              llvm::BasicBlock *bblock) {
     // "is the system's ISA enumerant value >= the enumerant value of the current candidate?"
     llvm::Value *ok = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE, systemISA,
                                             LLVMInt32(candidate), "isa_ok", bblock);
-    if (candidate == Target::SPR_AVX512 || candidate == Target::GNR_AVX512) {
-        llvm::Value *notNVL = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, systemISA,
-                                                    LLVMInt32(Target::NVL_AVX10_2), "not_nvl", bblock);
-        ok = llvm::BinaryOperator::Create(llvm::Instruction::And, ok, notNVL, "isa_ok_nvl", bblock);
+    if (lISARequiresAMX(candidate)) {
+        Assert(systemHasAMX);
+        llvm::Value *amxOK = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, systemHasAMX,
+                                                   LLVMInt32(0), "amx_ok", bblock);
+        ok = llvm::BinaryOperator::Create(llvm::Instruction::And, ok, amxOK, "isa_ok_amx", bblock);
     }
     return ok;
 }
@@ -1986,12 +1999,16 @@ static llvm::Value *lEmitISACompatibilityTest(int candidate, llvm::Value *system
                            given module before we get here.) This function returns
                            a value of the Target::ISA enumerant giving the most
                            capable ISA that the system supports.
+    @param hasAMXFunc  Pointer to the __system_has_amx() function (same module),
+                       returning nonzero when the system supports AMX. Used to
+                       gate the AMX-bearing variants; may be null when no variant
+                       requires AMX.
     @param name        Name of the function for which we're generating a
                        dispatch function
     @param funcs       Target-specific variants of the exported function.
 */
-static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBestISAFunc, const std::string &name,
-                                    FunctionTargetVariants &funcs) {
+static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBestISAFunc, llvm::Function *hasAMXFunc,
+                                    const std::string &name, FunctionTargetVariants &funcs) {
     // The llvm::Function pointers in funcs are pointers to functions in
     // different llvm::Modules, so we can't call them directly.  Therefore,
     // we'll start by generating an 'extern' declaration of each one that
@@ -2080,6 +2097,17 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
     // Now we can load the system's ISA enumerant
     llvm::Value *systemISA = llvm::CallInst::Create(getBestISAFunc, "system_isa", bblock);
 
+    // If any present variant requires AMX, query the system's AMX capability
+    // once and thread it into the per-candidate compatibility test below.
+    llvm::Value *systemHasAMX = nullptr;
+    for (int i = 0; i < Target::NUM_ISAS; ++i) {
+        if (targetFuncs[i] != nullptr && lISARequiresAMX(i)) {
+            Assert(hasAMXFunc);
+            systemHasAMX = llvm::CallInst::Create(hasAMXFunc, "system_has_amx", bblock);
+            break;
+        }
+    }
+
     // Now emit code that works backwards though the available variants of
     // the function.  We'll call out to the first one we find that will run
     // successfully on the system the code is running on.  In working
@@ -2093,9 +2121,9 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
 
         // Emit code to see if the system can run the current candidate variant
         // successfully. The base test is the linear "systemISA >= candidate", with
-        // an extra guard for NVL on the AMX-bearing SPR/GNR variants (see the
+        // an AMX requirement added for the AMX-bearing server variants (see the
         // helper for details).
-        llvm::Value *ok = lEmitISACompatibilityTest(i, systemISA, bblock);
+        llvm::Value *ok = lEmitISACompatibilityTest(i, systemISA, systemHasAMX, bblock);
 
         llvm::BasicBlock *callBBlock = llvm::BasicBlock::Create(*g->ctx, "do_call", dispatchFunc);
         llvm::BasicBlock *nextBBlock = llvm::BasicBlock::Create(*g->ctx, "next_try", dispatchFunc);
@@ -2170,11 +2198,13 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
     // Get pointers to things we need below
     llvm::Function *getFunc = module->getFunction(builtin::__get_system_best_isa);
     Assert(getFunc != nullptr);
+    llvm::Function *hasAMXFunc = module->getFunction(builtin::__system_has_amx);
+    Assert(hasAMXFunc != nullptr);
 
     // For each exported function, create the dispatch function
     std::map<std::string, FunctionTargetVariants>::iterator iter;
     for (iter = functions.begin(); iter != functions.end(); ++iter) {
-        lCreateDispatchFunction(module, getFunc, iter->first, iter->second);
+        lCreateDispatchFunction(module, getFunc, hasAMXFunc, iter->first, iter->second);
     }
 
     // Do some rudimentary cleanup of the final result and make sure that
