@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2025, Intel Corporation
+;;  Copyright (c) 2020-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -661,37 +661,6 @@ gen_scatter(double)
 packed_load_and_store(FALSE)
 define_prefetches()
 
-define i16 @__reduce_add_int8(<4 x i8> %v) {
-entry:
-  %vecext = extractelement <4 x i8> %v, i32 0
-  %conv = sext i8 %vecext to i16
-  %vecext.1 = extractelement <4 x i8> %v, i32 1
-  %conv.1 = sext i8 %vecext.1 to i16
-  %add.1 = add nsw i16 %conv, %conv.1
-  %vecext.2 = extractelement <4 x i8> %v, i32 2
-  %conv.2 = sext i8 %vecext.2 to i16
-  %add.2 = add nsw i16 %add.1, %conv.2
-  %vecext.3 = extractelement <4 x i8> %v, i32 3
-  %conv.3 = sext i8 %vecext.3 to i16
-  %add.3 = add nsw i16 %add.2, %conv.3
-  ret i16 %add.3
-}
-
-define internal <4 x i16> @__add_varying_i16(<4 x i16>,
-                                  <4 x i16>) nounwind readnone alwaysinline {
-  %r = add <4 x i16> %0, %1
-  ret <4 x i16> %r
-}
-
-define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
-  %r = add i16 %0, %1
-  ret i16 %r
-}
-
-define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
-  reduce4(i16, @__add_varying_i16, @__add_uniform_i16)
-}
-
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
   %v1 = shufflevector <4 x float> %v, <4 x float> undef,
                       <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
@@ -708,16 +677,6 @@ define float @__reduce_min_float(<4 x float>) nounwind readnone {
 
 define float @__reduce_max_float(<4 x float>) nounwind readnone {
   reduce4(float, @__max_varying_float, @__max_uniform_float)
-}
-
-define i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone alwaysinline {
-  %v1 = shufflevector <4 x i32> %v, <4 x i32> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %m1 = add <4 x i32> %v1, %v
-  %m1a = extractelement <4 x i32> %m1, i32 0
-  %m1b = extractelement <4 x i32> %m1, i32 1
-  %sum = add i32 %m1a, %m1b
-  ret i32 %sum
 }
 
 define double @__reduce_add_double(<4 x double>) nounwind readnone {
@@ -830,18 +789,6 @@ define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 define  float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
   %r = fdiv float 1.,%0
   ret float %r
-}
-
-define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
-  %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
-                      <2 x i32> <i32 0, i32 1>
-  %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
-                      <2 x i32> <i32 2, i32 3>
-  %sum = add <2 x i64> %v0, %v1
-  %e0 = extractelement <2 x i64> %sum, i32 0
-  %e1 = extractelement <2 x i64> %sum, i32 1
-  %m = add i64 %e0, %e1
-  ret i64 %m
 }
 
 define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone alwaysinline {

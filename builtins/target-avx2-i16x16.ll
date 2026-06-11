@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2025, Intel Corporation
+;;  Copyright (c) 2020-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -518,7 +518,7 @@ svml(ISA)
 ;; 8 bit
 declare <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8>, <32 x i8>) nounwind readnone
 
-define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+define i8 @__reduce_add_uint8(<16 x i8>) nounwind readnone alwaysinline {
   %ext = shufflevector <16 x i8> %0, <16 x i8> undef,
       <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
                  i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -527,42 +527,8 @@ define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
   %r0 = extractelement <4 x i64> %rv, i32 0
   %r1 = extractelement <4 x i64> %rv, i32 1
   %r = add i64 %r0, %r1
-  %r16 = trunc i64 %r to i16
-  ret i16 %r16
-}
-
-;; 16 bit
-;; TODO: why returning i16?
-define internal <16 x i16> @__add_varying_i16(<16 x i16>,
-                                              <16 x i16>) nounwind readnone alwaysinline {
-  %r = add <16 x i16> %0, %1
-  ret <16 x i16> %r
-}
-
-define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
-  %r = add i16 %0, %1
-  ret i16 %r
-}
-
-define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
-  reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
-}
-
-;; 32 bit
-;; TODO: why returning i32?
-define internal <16 x i32> @__add_varying_int32(<16 x i32>,
-                                                <16 x i32>) nounwind readnone alwaysinline {
-  %s = add <16 x i32> %0, %1
-  ret <16 x i32> %s
-}
-
-define internal i32 @__add_uniform_int32(i32, i32) nounwind readnone alwaysinline {
-  %s = add i32 %0, %1
-  ret i32 %s
-}
-
-define i32 @__reduce_add_int32(<16 x i32>) nounwind readnone alwaysinline {
-  reduce16(i32, @__add_varying_int32, @__add_uniform_int32)
+  %r8 = trunc i64 %r to i8
+  ret i8 %r8
 }
 
 ;; float
@@ -634,21 +600,6 @@ define double @__reduce_max_double(<16 x double>) nounwind readnone alwaysinline
 }
 
 ;; int64
-
-define internal <16 x i64> @__add_varying_int64(<16 x i64>,
-                                                <16 x i64>) nounwind readnone alwaysinline {
-  %s = add <16 x i64> %0, %1
-  ret <16 x i64> %s
-}
-
-define internal i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
-  %s = add i64 %0, %1
-  ret i64 %s
-}
-
-define i64 @__reduce_add_int64(<16 x i64>) nounwind readnone alwaysinline {
-  reduce16(i64, @__add_varying_int64, @__add_uniform_int64)
-}
 
 define i64 @__reduce_min_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_int64, @__min_uniform_int64)

@@ -1,5 +1,5 @@
-;;  Copyright (c) 2013, 2015, Google, Inc.
-;;  Copyright(c) 2019-2024, Intel Corporation
+;;  Copyright(c) 2013, 2015, Google, Inc.
+;;  Copyright(c) 2019-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -234,29 +234,14 @@ define i1 @__none(<16 x i8>) nounwind readnone alwaysinline {
 
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
 
-define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+define i8 @__reduce_add_uint8(<16 x i8>) nounwind readnone alwaysinline {
   %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %0,
                                               <16 x i8> zeroinitializer)
   %r0 = extractelement <2 x i64> %rv, i32 0
   %r1 = extractelement <2 x i64> %rv, i32 1
   %r = add i64 %r0, %r1
-  %r16 = trunc i64 %r to i16
-  ret i16 %r16
-}
-
-define internal <16 x i16> @__add_varying_i16(<16 x i16>,
-                                  <16 x i16>) nounwind readnone alwaysinline {
-  %r = add <16 x i16> %0, %1
-  ret <16 x i16> %r
-}
-
-define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
-  %r = add i16 %0, %1
-  ret i16 %r
-}
-
-define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
-  reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
+  %r8 = trunc i64 %r to i8
+  ret i8 %r8
 }
 
 define internal <16 x float> @__add_varying_float(<16 x float>, <16 x float>) {
@@ -279,20 +264,6 @@ define float @__reduce_min_float(<16 x float>) nounwind readnone {
 
 define float @__reduce_max_float(<16 x float>) nounwind readnone {
   reduce16(float, @__max_varying_float, @__max_uniform_float)
-}
-
-define internal <16 x i32> @__add_varying_int32(<16 x i32>, <16 x i32>) {
-  %r = add <16 x i32> %0, %1
-  ret <16 x i32> %r
-}
-
-define internal i32 @__add_uniform_int32(i32, i32) {
-  %r = add i32 %0, %1
-  ret i32 %r
-}
-
-define i32 @__reduce_add_int32(<16 x i32>) nounwind readnone {
-  reduce16(i32, @__add_varying_int32, @__add_uniform_int32)
 }
 
 define i32 @__reduce_min_int32(<16 x i32>) nounwind readnone {
@@ -331,20 +302,6 @@ define double @__reduce_min_double(<16 x double>) nounwind readnone {
 
 define double @__reduce_max_double(<16 x double>) nounwind readnone {
   reduce16(double, @__max_varying_double, @__max_uniform_double)
-}
-
-define internal <16 x i64> @__add_varying_int64(<16 x i64>, <16 x i64>) {
-  %r = add <16 x i64> %0, %1
-  ret <16 x i64> %r
-}
-
-define internal i64 @__add_uniform_int64(i64, i64) {
-  %r = add i64 %0, %1
-  ret i64 %r
-}
-
-define i64 @__reduce_add_int64(<16 x i64>) nounwind readnone {
-  reduce16(i64, @__add_varying_int64, @__add_uniform_int64)
 }
 
 define i64 @__reduce_min_int64(<16 x i64>) nounwind readnone {

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2025, Intel Corporation
+;;  Copyright (c) 2010-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -152,36 +152,6 @@ define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
   ret i1 %cmp
 }
 
-declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
-
-define i16 @__reduce_add_int8(<4 x i8>) nounwind readnone alwaysinline {
-  %wide8 = shufflevector <4 x i8> %0, <4 x i8> zeroinitializer,
-      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4,
-                  i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
-  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %wide8,
-                                              <16 x i8> zeroinitializer)
-  %r0 = extractelement <2 x i64> %rv, i32 0
-  %r1 = extractelement <2 x i64> %rv, i32 1
-  %r = add i64 %r0, %r1
-  %r16 = trunc i64 %r to i16
-  ret i16 %r16
-}
-
-define internal <4 x i16> @__add_varying_i16(<4 x i16>,
-                                  <4 x i16>) nounwind readnone alwaysinline {
-  %r = add <4 x i16> %0, %1
-  ret <4 x i16> %r
-}
-
-define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
-  %r = add i16 %0, %1
-  ret i16 %r
-}
-
-define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
-  reduce4(i16, @__add_varying_i16, @__add_uniform_i16)
-}
-
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
   %v1 = shufflevector <4 x float> %v, <4 x float> undef,
                       <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
@@ -198,16 +168,6 @@ define float @__reduce_min_float(<4 x float>) nounwind readnone {
 
 define float @__reduce_max_float(<4 x float>) nounwind readnone {
   reduce4(float, @__max_varying_float, @__max_uniform_float)
-}
-
-define i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone {
-  %v1 = shufflevector <4 x i32> %v, <4 x i32> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %m1 = add <4 x i32> %v1, %v
-  %m1a = extractelement <4 x i32> %m1, i32 0
-  %m1b = extractelement <4 x i32> %m1, i32 1
-  %sum = add i32 %m1a, %m1b
-  ret i32 %sum
 }
 
 define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone {
@@ -245,18 +205,6 @@ define double @__reduce_min_double(<4 x double>) nounwind readnone {
 
 define double @__reduce_max_double(<4 x double>) nounwind readnone {
   reduce4(double, @__max_varying_double, @__max_uniform_double)
-}
-
-define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone {
-  %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
-                      <2 x i32> <i32 0, i32 1>
-  %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
-                      <2 x i32> <i32 2, i32 3>
-  %sum = add <2 x i64> %v0, %v1
-  %e0 = extractelement <2 x i64> %sum, i32 0
-  %e1 = extractelement <2 x i64> %sum, i32 1
-  %m = add i64 %e0, %e1
-  ret i64 %m
 }
 
 define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone {
