@@ -5622,6 +5622,31 @@ const Type *StructMemberExpr::getElementType() const {
     return structType->GetElementType(identifier);
 }
 
+/** If the given UndefinedStructType has since been fully defined, resolve it
+    to the corresponding StructType with matching variability and constness.
+    Returns nullptr if the type is still undefined or can't be resolved. */
+static const StructType *lResolveUndefinedStructType(const UndefinedStructType *ust) {
+    const Type *resolvedType = m->symbolTable->LookupType(ust->GetStructName().c_str());
+    if (resolvedType == nullptr) {
+        return nullptr;
+    }
+    const StructType *st = nullptr;
+    if (ust->IsUniformType()) {
+        st = CastType<StructType>(resolvedType->GetAsUniformType());
+    } else if (ust->IsVaryingType()) {
+        st = CastType<StructType>(resolvedType->GetAsVaryingType());
+    } else {
+        st = CastType<StructType>(resolvedType);
+    }
+    if (st == nullptr || !st->IsDefined()) {
+        return nullptr;
+    }
+    if (ust->IsConstType() && !st->IsConstType()) {
+        st = CastType<StructType>(st->GetAsConstType());
+    }
+    return st;
+}
+
 /** Returns the type of the underlying struct that we're returning a member
     of. */
 const StructType *StructMemberExpr::getStructType() const {
@@ -5666,7 +5691,16 @@ const StructType *StructMemberExpr::getStructType() const {
             AssertPos(pos, m->errorCount > 0);
             return nullptr;
         }
-        return CastType<StructType>(pt->GetBaseType());
+        const StructType *st = CastType<StructType>(pt->GetBaseType());
+        if (st == nullptr) {
+            // The pointer's base type may be an UndefinedStructType from a forward
+            // declaration that has since been fully defined. Try to resolve it.
+            const UndefinedStructType *ust = CastType<UndefinedStructType>(pt->GetBaseType());
+            if (ust != nullptr) {
+                st = lResolveUndefinedStructType(ust);
+            }
+        }
+        return st;
     }
 
     // Direct struct type (for function call results and temporaries)
@@ -5917,6 +5951,16 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
     const PointerType *pointerType = CastType<PointerType>(exprType);
     if (pointerType != nullptr) {
         exprType = pointerType->GetBaseType();
+
+        // If the base type is a forward-declared struct (UndefinedStructType),
+        // check if the struct has since been fully defined and use the defined type.
+        const UndefinedStructType *ust = CastType<UndefinedStructType>(exprType);
+        if (ust != nullptr) {
+            const StructType *resolved = lResolveUndefinedStructType(ust);
+            if (resolved != nullptr) {
+                exprType = resolved;
+            }
+        }
     }
 
     if (derefLValue == true && pointerType == nullptr) {
@@ -5968,7 +6012,18 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
             return nullptr;
         }
         return vmExpr;
-    } else if (CastType<UndefinedStructType>(exprType)) {
+    } else if (const UndefinedStructType *ust = CastType<UndefinedStructType>(exprType)) {
+        // Check if the struct has since been fully defined.
+        const StructType *resolvedSt = lResolveUndefinedStructType(ust);
+        if (resolvedSt != nullptr) {
+            std::string elemName(id);
+            const Type *elemType = resolvedSt->GetElementType(elemName);
+            if (elemType == nullptr) {
+                Error(p, "'%s' has no member named \"%s\"", resolvedSt->GetString().c_str(), id);
+                return nullptr;
+            }
+            return new StructMemberExpr(e, id, p, idpos, derefLValue);
+        }
         Error(p,
               "Member operator \"%s\" can't be applied to declared "
               "but not defined struct type \"%s\".",
