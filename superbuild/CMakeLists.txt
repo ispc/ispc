@@ -212,7 +212,13 @@ string(APPEND LIT_TOOLS_DIR ${GNUWIN32} "/bin")
 unset(LLVM_TAG)
 unset(LLVM_VERSION_DOTTED)
 string(REPLACE "." "_" LLVM_VERSION "${LLVM_VERSION}")
-if (${LLVM_VERSION} STREQUAL 22_1)
+if (${LLVM_VERSION} STREQUAL 23_1)
+    # LLVM 23 is not released yet. We pin to a specific trunk SHA rather than a
+    # release tag because we need recent trunk fixes for proper APX support.
+    # TODO: replace this SHA with the llvmorg-23.1.x release tag once LLVM 23 is
+    # released. Keep this SHA in sync with the LLVM_TAG in scripts/alloy.py.
+    set(LLVM_TAG    9bece3b7dc3bb184ae3e6f1bdc4a864a096a6d68)
+elseif (${LLVM_VERSION} STREQUAL 22_1)
     set(LLVM_TAG    llvmorg-22.1.6)
 elseif (${LLVM_VERSION} STREQUAL 21_1)
     set(LLVM_TAG    llvmorg-21.1.8)
@@ -263,6 +269,11 @@ if (DEFINED LLVM_SHA AND NOT "${LLVM_SHA}" STREQUAL "")
     # Disable shallow clone when a specific SHA is provided to avoid race conditions
     # where the SHA may not be available in a shallow clone if LLVM main has moved forward
     set(LLVM_GIT_SHALLOW OFF)
+elseif (${LLVM_VERSION} STREQUAL 23_1)
+    # LLVM 23 is pinned to a raw trunk SHA (see above). A shallow clone only
+    # fetches the tip of the default branch, which will not contain an arbitrary
+    # historical commit, so the checkout would fail. Disable shallow clone here.
+    set(LLVM_GIT_SHALLOW OFF)
 else()
     set(LLVM_GIT_SHALLOW ON)
 endif()
@@ -271,6 +282,13 @@ if (${LLVM_VERSION} STREQUAL trunk)
     set(LLVM_VERSION_DOTTED main)
     set(LLVM_VERSION_MAJOR 0)
     set(LLVM_VERSION_MINOR 0)
+    set(LLVM_VERSION_PATCH 0)
+elseif (${LLVM_VERSION} STREQUAL 23_1)
+    # LLVM 23 is not released yet; LLVM_TAG is pinned to a specific SHA, so the
+    # version components cannot be parsed out of the tag. Set them explicitly.
+    set(LLVM_VERSION_DOTTED 23.1.0)
+    set(LLVM_VERSION_MAJOR 23)
+    set(LLVM_VERSION_MINOR 1)
     set(LLVM_VERSION_PATCH 0)
 else()
     string(SUBSTRING ${LLVM_TAG} 8 -1 LLVM_VERSION_DOTTED)
