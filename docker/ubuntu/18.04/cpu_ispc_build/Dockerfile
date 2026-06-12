@@ -56,9 +56,9 @@ RUN git clone --depth 1 --branch v2021.13.0 https://github.com/oneapi-src/oneTBB
 # Set TBB_ROOT to point to oneAPI TBB installation
 ENV TBB_ROOT=/opt/intel/oneapi/tbb/latest
 
-# Zlib is required to build Python3
+# Zlib and libffi are required to build Python3
 RUN apt-get -y update && \
-    apt-get -y --no-install-recommends install zlib1g-dev zlib1g && \
+    apt-get -y --no-install-recommends install zlib1g-dev zlib1g libffi-dev && \
     rm -rf /var/lib/apt/lists/*
 ENV PYTHON_VERSION=3.8.19
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
