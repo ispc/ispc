@@ -417,20 +417,16 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string n
 
 bool lIsAnyArgumentKind(const IITDesc &D) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
-    if (D.Kind != IITDesc::Overloaded) {
-        return false;
-    }
-
-    unsigned Kind = D.getOverloadKind();
+    return D.Kind == IITDesc::Overloaded;
 #else
     if (D.Kind != IITDesc::Argument) {
         return false;
     }
 
     unsigned Kind = D.getArgumentKind();
-#endif
     return Kind == IITDesc::AK_Any || Kind == IITDesc::AK_AnyInteger || Kind == IITDesc::AK_AnyFloat ||
            Kind == IITDesc::AK_AnyVector || Kind == IITDesc::AK_AnyPointer;
+#endif
 }
 
 bool lIsArgDesc(const IITDesc &D) {
