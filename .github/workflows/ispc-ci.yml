@@ -42,7 +42,8 @@ env:
                       "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
                       "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
                       "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
-                      "avx512gnr-x4", "avx512gnr-x8", "avx512gnr-x16", "avx512gnr-x64", "avx512gnr-x32"]'
+                      "avx512gnr-x4", "avx512gnr-x8", "avx512gnr-x16", "avx512gnr-x64", "avx512gnr-x32",
+                      "avx10.2dmr-x4", "avx10.2dmr-x8", "avx10.2dmr-x16", "avx10.2dmr-x32", "avx10.2dmr-x64"]'
   TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8", "neon-i8x16", "neon-i16x8", "neon-i8x32", "neon-i16x16"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
   ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
@@ -129,6 +130,9 @@ jobs:
           - version: "22.1"
             full_version: "22.1.6"
             short_version: 22
+          - version: "23.1"
+            full_version: "23.1.0"
+            short_version: 23
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
@@ -197,7 +201,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20, 21, 22]
+        llvm: [20, 21, 22, 23]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
@@ -278,6 +282,24 @@ jobs:
       targets: ${{ matrix.targets }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
+
+  # nvl (Nova Lake) targets require LLVM 22, so they are tested in a dedicated
+  # job on LLVM 22 and 23 and excluded from the LLVM 20/21 test matrix.
+  linux-test-llvm22-plus:
+    needs: [define-flow, linux-build-ispc]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [22, 23]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{ matrix.llvm }}_linux
+      targets: '["avx10.2nvl-x4", "avx10.2nvl-x8", "avx10.2nvl-x16", "avx10.2nvl-x32", "avx10.2nvl-x64"]'
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   linux-test-llvm22-lto:
     needs: [define-flow, linux-build-ispc-llvm22-lto]
@@ -395,6 +417,9 @@ jobs:
           - version: "22.1"
             full_version: "22.1.6"
             short_version: 22
+          - version: "23.1"
+            full_version: "23.1.0"
+            short_version: 23
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: macos
@@ -419,7 +444,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20, 21, 22]
+        llvm: [20, 21, 22, 23]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
@@ -487,6 +512,10 @@ jobs:
             full_version: "22.1.6"
             short_version: 22
             vs_version: "vs2022"
+          - version: "23.1"
+            full_version: "23.1.0"
+            short_version: 23
+            vs_version: "vs2022"
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
@@ -533,7 +562,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20, 21, 22]
+        llvm: [20, 21, 22, 23]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
