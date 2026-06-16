@@ -2415,6 +2415,26 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             featuresString += "+longlong";
         }
 
+        // Disable any x86 APX sub-features the user requested via
+        // --opt=disable-apx. The APX sub-features are enabled by default on
+        // APX-capable targets (e.g. avx10.2dmr, avx10.2nvl) through the CPU
+        // name; appending "-<feature>" to the LLVM feature string turns them
+        // off. They are independent in the LLVM X86 backend, so any
+        // combination can be disabled. This is a no-op on targets that do not
+        // enable APX in the first place. The accepted set is the single source
+        // of truth in Opt::APXFeatureTable().
+        if (g->opt.disableAPX && ISPCTargetIsX86(m_ispc_target)) {
+            for (auto const &f : Opt::APXFeatureTable()) {
+                if (g->opt.disableAPX & f.second) {
+                    if (!featuresString.empty()) {
+                        featuresString += ",";
+                    }
+                    featuresString += "-";
+                    featuresString += f.first;
+                }
+            }
+        }
+
         if (g->opt.disableFMA == false) {
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
         }
@@ -3306,6 +3326,21 @@ bool Target::hasXePrefetch() const {
 ///////////////////////////////////////////////////////////////////////////
 // Opt
 
+const std::vector<std::pair<const char *, Opt::APXFeature>> &Opt::APXFeatureTable() {
+    // All APX sub-features are recognized by the LLVM X86 backend on the LLVM
+    // versions ISPC supports except jmpabs, which is only recognized from
+    // LLVM 23.0 on (so its bit is never set in disableAPX before then).
+    static const std::vector<std::pair<const char *, Opt::APXFeature>> table = {
+        {"egpr", APX_egpr},     {"ndd", APX_ndd},   {"push2pop2", APX_push2pop2},
+        {"ppx", APX_ppx},       {"ccmp", APX_ccmp}, {"cf", APX_cf},
+        {"nf", APX_nf},         {"zu", APX_zu},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+        {"jmpabs", APX_jmpabs},
+#endif
+    };
+    return table;
+}
+
 Opt::Opt() {
     level = 2;
     fastMath = FastMathMode::None;
@@ -3330,6 +3365,7 @@ Opt::Opt() {
     disableUniformMemoryOptimizations = false;
     disableCoalescing = false;
     disableZMM = false;
+    disableAPX = 0;
     resetFTZ_DAZ = false;
 #ifdef ISPC_XE_ENABLED
     disableXeGatherCoalescing = false;

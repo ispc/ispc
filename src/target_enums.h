@@ -137,6 +137,7 @@ ISPCTarget ParseISPCTarget(std::string target);
 std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *target);
 std::string ISPCTargetToString(ISPCTarget target);
 bool ISPCTargetIsX86(ISPCTarget target);
+bool ISPCTargetIsApxCapable(ISPCTarget target);
 bool ISPCTargetIsNeon(ISPCTarget target);
 bool ISPCTargetIsRiscV(ISPCTarget target);
 bool ISPCTargetIsWasm(ISPCTarget target);

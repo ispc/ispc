@@ -890,6 +890,29 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     }
 }
 
+// Targets that enable x86 APX (Advanced Performance Extensions) by default,
+// i.e. the avx10.2dmr and avx10.2nvl families. APX sub-features such as the
+// extended general purpose registers (EGPR, R16-R31) are only emitted for
+// these targets, so APX-specific handling (e.g. --opt=disable-apx and Windows
+// unwind v3) is gated on this set.
+bool ISPCTargetIsApxCapable(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::avx10_2dmr_x4:
+    case ISPCTarget::avx10_2dmr_x8:
+    case ISPCTarget::avx10_2dmr_x16:
+    case ISPCTarget::avx10_2dmr_x32:
+    case ISPCTarget::avx10_2dmr_x64:
+    case ISPCTarget::avx10_2nvl_x4:
+    case ISPCTarget::avx10_2nvl_x8:
+    case ISPCTarget::avx10_2nvl_x16:
+    case ISPCTarget::avx10_2nvl_x32:
+    case ISPCTarget::avx10_2nvl_x64:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool ISPCTargetIsNeon(ISPCTarget target) {
     switch (target) {
     case ISPCTarget::neon_i8x16:

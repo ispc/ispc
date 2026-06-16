@@ -231,6 +231,20 @@ Module::Module(const char *fn) : srcFile(fn) {
     lSetCodeModel(module);
     lSetPICLevel(module);
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    // On Windows x64, code that uses the APX extended general purpose registers
+    // (EGPR, R16-R31) cannot be described by the legacy v1/v2 SEH unwind
+    // encodings, so the LLVM X86 backend errors out unless the module opts in
+    // to unwind v3. EGPR is enabled by default on APX-capable targets (the
+    // avx10.2dmr and avx10.2nvl families) unless the user turned it off via
+    // --opt=disable-apx. Mirror clang by selecting unwind v3 in that case.
+    // The value 3 is llvm::WinX64EHUnwindMode::V3 (only defined on LLVM 23+).
+    if (g->target_os == TargetOS::windows && g->target->getArch() == Arch::x86_64 &&
+        ISPCTargetIsApxCapable(g->target->getISPCTarget()) && !(g->opt.disableAPX & Opt::APX_egpr)) {
+        module->addModuleFlag(llvm::Module::Warning, "winx64-eh-unwind", 3);
+    }
+#endif
+
 #if ISPC_LLVM_VERSION < ISPC_LLVM_21_0
     // LLVM is transitioning to new debug info representation, use "old" style for now.
     module->setIsNewDbgInfoFormat(false);
