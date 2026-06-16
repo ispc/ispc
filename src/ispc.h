@@ -660,6 +660,38 @@ struct Opt {
         Affects only >= 512 bit wide targets and only if avx512vl is available */
     bool disableZMM;
 
+    /** Bitmask of x86 APX (Advanced Performance Extensions) sub-features to
+        disable.  The APX sub-features are enabled by default on APX-capable
+        targets (e.g. avx10.2dmr, avx10.2nvl); setting a bit here appends the
+        corresponding "-<feature>" entry to the LLVM target feature string so
+        that the feature is turned off.  The sub-features are independent in the
+        LLVM X86 backend, so any combination can be disabled.  A value of 0
+        means no APX feature is disabled (the default).  Only meaningful for
+        x86 targets; all sub-features are available on LLVM 20+ except
+        APX_jmpabs, which requires LLVM 23.0+. */
+    enum APXFeature {
+        APX_egpr = 1 << 0,
+        APX_ndd = 1 << 1,
+        APX_push2pop2 = 1 << 2,
+        APX_ppx = 1 << 3,
+        APX_ccmp = 1 << 4,
+        APX_cf = 1 << 5,
+        APX_nf = 1 << 6,
+        APX_zu = 1 << 7,
+        APX_jmpabs = 1 << 8,
+        APX_all = APX_egpr | APX_ndd | APX_push2pop2 | APX_ppx | APX_ccmp | APX_cf | APX_nf |
+                  APX_zu
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+                  // jmpabs is only known to the LLVM X86 backend from 23.0 on.
+                  | APX_jmpabs
+#endif
+    };
+    unsigned int disableAPX;
+
+    /** Mmapping x86 APX sub-feature names (as used by the LLVM X86 backend)
+        to their APXFeature bit. */
+    static const std::vector<std::pair<const char *, APXFeature>> &APXFeatureTable();
+
     /** Set FTZ/DAZ flags on the extern function entrance and restore them.
         upon return to "host" code.*/
     bool resetFTZ_DAZ;

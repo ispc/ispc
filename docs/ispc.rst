@@ -296,6 +296,27 @@ ISPC Targets:
   checked the same way AVX-512 already is: the CPU must advertise the feature in
   CPUID and the OS must manage its XSAVE state.
 
+New Options:
+
+* A new ``--opt=disable-apx[=<list>]`` option allows disabling x86 APX
+  (Advanced Performance Extensions) sub-features, which are enabled by default
+  on APX-capable targets such as ``avx10.2dmr`` and ``avx10.2nvl``. With no
+  list it disables all APX sub-features; otherwise it accepts a comma-separated
+  subset of ``egpr``, ``ndd``, ``push2pop2``, ``ppx``, ``ccmp``, ``cf``,
+  ``nf``, ``zu``, and ``jmpabs``.
+
+Windows x64 Stack Unwinding For APX:
+
+* On Windows x64, code that uses the APX extended general purpose registers
+  (``egpr``, R16-R31) cannot be described by the legacy v1/v2 SEH unwind
+  encodings, which have no register-number field for registers beyond R15.
+  When targeting Windows on an APX-capable target (the ``avx10.2dmr`` and
+  ``avx10.2nvl`` families) with ``egpr`` enabled, ISPC now automatically
+  requests Windows x64 unwind information version 3 by setting the
+  ``winx64-eh-unwind`` module flag, mirroring what Clang does. If you need
+  compatibility with an older unwinder, disable the extended registers with
+  ``--opt=disable-apx=egpr``, which also drops the unwind v3 request.
+
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
 
@@ -1665,6 +1686,21 @@ controlled via command-line flags. These options can be specified using the
 `--opt=<option>` flag. Below is a list of available optimization options:
 
 Available options:
+
+- ``disable-apx[=<list>]``
+
+  Disable x86 APX (Advanced Performance Extensions) sub-features. APX
+  sub-features are enabled by default on APX-capable targets such as
+  ``avx10.2dmr`` and ``avx10.2nvl``. With no list, all APX sub-features are
+  disabled; otherwise the value is a comma-separated subset of the sub-feature
+  names: ``egpr`` (extended general purpose registers R16-R31), ``ndd``
+  (non-destructive destination), ``push2pop2`` (PUSH2/POP2 instructions),
+  ``ppx`` (push-pop acceleration), ``ccmp`` (conditional compare and test),
+  ``cf`` (conditional faulting), ``nf`` (no-flags ALU variants), ``zu``
+  (zero-upper SETcc/IMUL), and ``jmpabs`` (64-bit absolute JMP). The
+  sub-features are independent, so any combination can be disabled. The exact
+  set of sub-features a given ISPC build accepts depends on its LLVM backend;
+  run ``ispc --help`` to see the list supported by your build.
 
 - ``disable-assertions``
 

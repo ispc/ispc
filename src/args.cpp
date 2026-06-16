@@ -50,6 +50,21 @@ static void lPrintVersion() {
 #endif
 }
 
+// Build a comma-separated list of the APX sub-feature names this build accepts,
+// e.g. "egpr, ndd, push2pop2, ppx, ccmp, cf, nf, zu". Used in the help text and
+// in error messages so the advertised set always matches the actual build. The
+// accepted set is the single source of truth in Opt::APXFeatureTable().
+static std::string lAPXFeatureList() {
+    std::string list;
+    for (auto const &f : Opt::APXFeatureTable()) {
+        if (!list.empty()) {
+            list += ", ";
+        }
+        list += f.first;
+    }
+    return list;
+}
+
 static ArgsParseResult usage() {
     lPrintVersion();
     printf("\nusage: ispc\n");
@@ -137,6 +152,9 @@ static ArgsParseResult usage() {
     printf("        disable-loop-unroll\t\tDisable loop unrolling\n");
     printf("        disable-zmm\t\t\tDisable using zmm registers for avx512skx-x16, avx512icl-x16 targets in favor of "
            "ymm. This also affects ABI\n");
+    printf("        disable-apx[=<list>]\t\tDisable x86 APX sub-features (enabled by default on avx10.2dmr, "
+           "avx10.2nvl targets). With no list, disables all; otherwise a comma-separated subset of: %s\n",
+           lAPXFeatureList().c_str());
 #ifdef ISPC_XE_ENABLED
     printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask\n");
     printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow\n");
@@ -564,6 +582,38 @@ static void lParseInclude(const char *path) {
     }
 }
 
+// Parse the value of --opt=disable-apx[=<comma-separated-list>].  An empty list
+// disables all APX sub-features.  Returns true on success; on an unknown
+// sub-feature name it reports an error via errorHandler and returns false.
+static bool lParseDisableAPX(const char *features, ArgErrors &errorHandler) {
+    if (*features == 0) {
+        g->opt.disableAPX |= Opt::APX_all;
+        return true;
+    }
+    bool ok = true;
+    std::stringstream ss(features);
+    for (std::string item; std::getline(ss, item, ',');) {
+        // Tolerate empty tokens from leading/embedded/trailing commas.
+        if (item.empty()) {
+            continue;
+        }
+        bool found = false;
+        for (auto const &f : Opt::APXFeatureTable()) {
+            if (item == f.first) {
+                g->opt.disableAPX |= f.second;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            errorHandler.AddError("Unknown APX sub-feature \"%s\" in --opt=disable-apx. Valid sub-features are: %s.",
+                                  item.c_str(), lAPXFeatureList().c_str());
+            ok = false;
+        }
+    }
+    return ok;
+}
+
 // Forward declarations for functions used in ParseCommandLineArgs
 extern void printBinaryType();
 
@@ -875,6 +925,15 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
                 g->opt.disableFMA = true;
             } else if (!strcmp(opt, "disable-zmm")) {
                 g->opt.disableZMM = true;
+            } else if (!strcmp(opt, "disable-apx") || !strncmp(opt, "disable-apx=", 12)) {
+                const char *apxOpt = opt + 11;
+                if (*apxOpt == 0) {
+                    // No list given: disable all APX sub-features.
+                    g->opt.disableAPX |= Opt::APX_all;
+                } else {
+                    // *apxOpt == '=', so parse the comma-separated list that follows.
+                    lParseDisableAPX(apxOpt + 1, errorHandler);
+                }
             } else if (!strcmp(opt, "force-aligned-memory")) {
                 g->opt.forceAlignedMemory = true;
             } else if (!strcmp(opt, "reset-ftz-daz")) {
@@ -1255,6 +1314,25 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
                         "--opt=disable-zmm can only be used with avx512skx-x16, avx512icl-x16 or generic-i32x16, "
                         "generic-i1x16, generic-i1x32, generic-i1x64 targets.");
             }
+        }
+    }
+
+    // Validate --opt=disable-apx usage. APX sub-features are only enabled on
+    // APX-capable targets (currently the avx10.2dmr and avx10.2nvl families).
+    // The option is meaningful in a multi-target build as long as at least one
+    // such target is present, so warn only when none of the targets is
+    // APX-capable (i.e. the option is entirely ineffective).
+    if (g->opt.disableAPX) {
+        bool anyAPXTarget = false;
+        for (auto target : targets) {
+            if (ISPCTargetIsApxCapable(target)) {
+                anyAPXTarget = true;
+                break;
+            }
+        }
+        if (!anyAPXTarget) {
+            Warning(SourcePos(), "--opt=disable-apx has no effect: none of the selected targets is APX-capable. "
+                                 "APX sub-features are only enabled on targets such as avx10.2dmr and avx10.2nvl.");
         }
     }
 
