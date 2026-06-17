@@ -1,7 +1,7 @@
 // Check compiler diagnostics
 // RUN: not %{ispc} --target=host %s --nowrap 2>&1 | FileCheck %s
-// CHECK: 10:38: Error: Unknown identifier "M" is used to specify the size of a vector type.
-// CHECK: 11:7: Error: syntax error, unexpected TOKEN_TYPE_NAME.
+// CHECK: Error: Undeclared symbol "M". Did you mean "N"?
+// CHECK: Error: syntax error, unexpected TOKEN_TYPE_NAME.
 
 struct S {
     int x;
