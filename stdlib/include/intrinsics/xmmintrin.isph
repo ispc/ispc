@@ -552,6 +552,16 @@ static inline unmasked uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform 
     return *((uniform __m128 * uniform) & _R);
 }
 
+template <int Imm8>
+inline unmasked uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B) {
+    uniform float<4> _R;
+    _R[0] = _A.m128_f32[Imm8 & 0x3];
+    _R[1] = _A.m128_f32[(Imm8 >> 2) & 0x3];
+    _R[2] = _B.m128_f32[(Imm8 >> 4) & 0x3];
+    _R[3] = _B.m128_f32[(Imm8 >> 6) & 0x3];
+    return *((uniform __m128 * uniform) & _R);
+}
+
 static inline unmasked uniform __m128 _mm_unpackhi_ps(uniform __m128 _A, uniform __m128 _B) {
     const uniform float<4> _R = {_A.m128_f32[2], _B.m128_f32[2], _A.m128_f32[3], _B.m128_f32[3]};
     return *((uniform __m128 * uniform) & _R);
@@ -680,6 +690,24 @@ static inline unmasked void _mm_storeu_ps(uniform float *uniform _V, const unifo
 
 static inline unmasked void _mm_prefetch(uniform int8 const *uniform _A, uniform int _Sel) {
     switch (_Sel) {
+    case _MM_HINT_NTA:
+        prefetch_nt((void *uniform)_A);
+        break;
+    case _MM_HINT_T0:
+        prefetch_l1((void *uniform)_A);
+        break;
+    case _MM_HINT_T1:
+        prefetch_l2((void *uniform)_A);
+        break;
+    case _MM_HINT_T2:
+        prefetch_l3((void *uniform)_A);
+        break;
+    }
+}
+
+template <int Sel>
+inline unmasked void _mm_prefetch(uniform int8 const *uniform _A) {
+    switch (Sel) {
     case _MM_HINT_NTA:
         prefetch_nt((void *uniform)_A);
         break;
