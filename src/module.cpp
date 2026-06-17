@@ -2781,6 +2781,27 @@ static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget ta
     return targetOutputs;
 }
 
+// Validate --opt=disable-apx usage against the *resolved* targets. APX
+// sub-features are only enabled on APX-capable targets (currently the
+// avx10.2dmr and avx10.2nvl families). The option is meaningful in a
+// multi-target build as long as at least one such target is present, so warn
+// only when none of the resolved targets is APX-capable (i.e. the option is
+// entirely ineffective). This check must run after target resolution because
+// targets derived from --cpu or --target=host (rather than spelled out via
+// --target) are only known once the Target objects are constructed.
+static void lWarnIfDisableAPXHasNoEffect(const std::vector<ISPCTarget> &resolvedTargets) {
+    if (!g->opt.disableAPX) {
+        return;
+    }
+    for (auto target : resolvedTargets) {
+        if (ISPCTargetIsApxCapable(target)) {
+            return;
+        }
+    }
+    Warning(SourcePos(), "--opt=disable-apx has no effect: none of the selected targets is APX-capable. "
+                         "APX sub-features are only enabled on targets such as avx10.2dmr and avx10.2nvl.");
+}
+
 // Compiles the given source file for multiple target ISAs and creates a dispatch module.
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> &targets,
                                    Output &output) {
@@ -2800,6 +2821,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // when the function returns.
     std::vector<std::unique_ptr<Module>> modules;
     std::vector<std::unique_ptr<Target>> targetsPtrs;
+    std::vector<ISPCTarget> resolvedTargets;
 
     for (unsigned int i = 0; i < targets.size(); ++i) {
         auto targetPtr = Target::Create(arch, cpu, targets[i], output.flags.getPICLevel(), output.flags.getMCModel(),
@@ -2807,6 +2829,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         if (!targetPtr) {
             return 1;
         }
+        resolvedTargets.push_back(targetPtr->getISPCTarget());
 
         // Here, we transfer the ownership of the target to the vector, i.e.,
         // the lifetime of the target objects is tied to the function scope.
@@ -2834,6 +2857,8 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         lResetTargetAndModule();
     }
 
+    lWarnIfDisableAPXHasNoEffect(resolvedTargets);
+
     // Generate the dispatch module
     return GenerateDispatch(srcFile, targets, modules, targetsPtrs, output);
 }
@@ -2859,6 +2884,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (!targetPtr) {
             return 1;
         }
+        lWarnIfDisableAPXHasNoEffect({targetPtr->getISPCTarget()});
         auto modulePtr = Module::Create(srcFile, output);
 
         return m->CompileSingleTarget(arch, cpu, target);

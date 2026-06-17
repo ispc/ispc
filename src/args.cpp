@@ -1317,25 +1317,6 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
         }
     }
 
-    // Validate --opt=disable-apx usage. APX sub-features are only enabled on
-    // APX-capable targets (currently the avx10.2dmr and avx10.2nvl families).
-    // The option is meaningful in a multi-target build as long as at least one
-    // such target is present, so warn only when none of the targets is
-    // APX-capable (i.e. the option is entirely ineffective).
-    if (g->opt.disableAPX) {
-        bool anyAPXTarget = false;
-        for (auto target : targets) {
-            if (ISPCTargetIsApxCapable(target)) {
-                anyAPXTarget = true;
-                break;
-            }
-        }
-        if (!anyAPXTarget) {
-            Warning(SourcePos(), "--opt=disable-apx has no effect: none of the selected targets is APX-capable. "
-                                 "APX sub-features are only enabled on targets such as avx10.2dmr and avx10.2nvl.");
-        }
-    }
-
     if ((output.type == Module::Asm) && (intelAsmSyntax != nullptr)) {
         std::vector<const char *> Args(3);
         Args[0] = "ispc (LLVM option parsing)";

@@ -14,6 +14,14 @@
 // exactly once, not once per target.
 //; RUN: %{ispc} %s --target=sse4-i32x8,avx2-i32x8,avx512skx-x16 --opt=disable-apx --nowrap -o %t.o 2>&1 | FileCheck %s --check-prefix=ONCE
 
+// When the APX-capable target is derived from --cpu rather than spelled out
+// with --target, the option is still effective, so no "no effect" warning is
+// emitted (regression test: the check must run after target resolution).
+//; RUN: %{ispc} %s --cpu=dmr --opt=disable-apx --nowrap -o %t.o 2>&1 | FileCheck %s --check-prefix=CPU-DERIVED --allow-empty
+
+// Conversely, a non-APX target derived from --cpu still warns.
+//; RUN: %{ispc} %s --cpu=skx --opt=disable-apx --nowrap -o %t.o 2>&1 | FileCheck %s --check-prefix=CPU-NOOP
+
 // Empty tokens from leading/embedded commas are tolerated, not rejected.
 //; RUN: %{ispc} %s --target=avx10.2dmr-x16 --opt=disable-apx=,egpr,,nf --print-target -o /dev/null | FileCheck %s --check-prefix=EMPTY-TOK
 
@@ -24,6 +32,10 @@
 // NOOP: Warning: --opt=disable-apx has no effect: none of the selected targets is APX-capable.
 
 // MULTI-NOT: --opt=disable-apx has no effect
+
+// CPU-DERIVED-NOT: --opt=disable-apx has no effect
+
+// CPU-NOOP: Warning: --opt=disable-apx has no effect: none of the selected targets is APX-capable.
 
 // The warning must appear exactly once regardless of how many non-APX targets
 // are selected.
