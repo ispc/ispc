@@ -64,6 +64,7 @@ void ParserInit() {
     tokenToName[TOKEN_CIF] = "cif";
     tokenToName[TOKEN_CWHILE] = "cwhile";
     tokenToName[TOKEN_CONST] = "const";
+    tokenToName[TOKEN_CONSTEXPR] = "constexpr";
     tokenToName[TOKEN_CONTINUE] = "continue";
     tokenToName[TOKEN_DEFAULT] = "default";
     tokenToName[TOKEN_DO] = "do";
@@ -193,6 +194,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_CIF"] = "\'cif\'";
     tokenNameRemap["TOKEN_CWHILE"] = "\'cwhile\'";
     tokenNameRemap["TOKEN_CONST"] = "\'const\'";
+    tokenNameRemap["TOKEN_CONSTEXPR"] = "\'constexpr\'";
     tokenNameRemap["TOKEN_CONTINUE"] = "\'continue\'";
     tokenNameRemap["TOKEN_DEFAULT"] = "\'default\'";
     tokenNameRemap["TOKEN_DO"] = "\'do\'";
@@ -333,6 +335,7 @@ cdo { return TOKEN_CDO; }
 cfor { return TOKEN_CFOR; }
 cif { return TOKEN_CIF; }
 cwhile { return TOKEN_CWHILE; }
+constexpr { return TOKEN_CONSTEXPR; }
 const { return TOKEN_CONST; }
 continue { return TOKEN_CONTINUE; }
 creturn { Warning(yylloc, "\"creturn\" is deprecated. Use \"return\"."); return TOKEN_RETURN; }

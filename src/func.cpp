@@ -10,6 +10,7 @@
 
 #include "func.h"
 #include "builtins-decl.h"
+#include "constexpr.h"
 #include "ctx.h"
 #include "expr.h"
 #include "llvmutil.h"
@@ -240,6 +241,9 @@ void Function::typeCheckAndOptimize() {
         debugPrintHelper(DebugPrintPoint::AfterTypeChecking);
 
         if (code != nullptr) {
+            if (GetType()->IsConstexpr()) {
+                ValidateConstexprFunction(this);
+            }
             code = Optimize(code);
 
             debugPrintHelper(DebugPrintPoint::AfterOptimization);
@@ -258,6 +262,12 @@ const FunctionType *Function::GetType() const {
     Assert(type != nullptr);
     return type;
 }
+
+const std::string &Function::GetName() const { return sym->name; }
+
+const std::vector<Symbol *> &Function::GetParameterSymbols() const { return args; }
+
+const Stmt *Function::GetCode() const { return code; }
 
 /** Parameters for tasks are stored in a big structure; this utility
     function emits code to copy those values out of the task structure into
@@ -805,6 +815,9 @@ void Function::GenerateIR() const {
                     // We use stdlib as library so do not add internal attr for its functions.
                     UpdateLinkage(llvm::GlobalValue::InternalLinkage);
                 }
+            } else if (type->IsConstexpr()) {
+                // Match C++ constexpr function linkage semantics (implicitly inline/ODR).
+                UpdateLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
             }
 
             if (g->target->isXeTarget()) {
@@ -1380,6 +1393,10 @@ Symbol *TemplateInstantiation::InstantiateTemplateSymbol(TemplateSymbol *sym) {
     // Create a function symbol
     Symbol *instSym =
         new Symbol(sym->name, sym->pos, Symbol::SymbolKind::TemplateInstantiation, instType, sym->storageClass);
+    const FunctionType *functionType = CastType<FunctionType>(instType);
+    if (functionType) {
+        instSym->isConstexpr = functionType->IsConstexpr();
+    }
     functionSym = instSym;
 
     // Create llvm::Function and attach to the symbol, so the symbol is complete and ready for use.

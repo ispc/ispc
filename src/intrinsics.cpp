@@ -15,6 +15,7 @@
 #include <string>
 
 #include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Module.h>
@@ -342,6 +343,15 @@ static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTab
         argTypes.push_back(type);
     }
     FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+    if (funcType != nullptr) {
+        llvm::AttributeList attrs = func->getAttributes();
+        unsigned int numParams = func->arg_size();
+        for (unsigned int j = 0; j < numParams; ++j) {
+            if (attrs.hasParamAttr(j, llvm::Attribute::ImmArg)) {
+                funcType->SetParameterImmArg(j, true);
+            }
+        }
+    }
     Debug(noPos, "Created Intrinsic symbol \"%s\" [%s]\n", funcName.c_str(), funcType->GetString().c_str());
     Symbol *sym = new Symbol(funcName, noPos, Symbol::SymbolKind::Function, funcType);
     sym->function = func;

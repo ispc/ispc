@@ -26,7 +26,7 @@ using namespace ispc;
 
 Symbol::Symbol(const std::string &n, SourcePos p, SymbolKind st, const Type *t, StorageClass sc, AttributeList *a)
     : pos(p), name(n), storageInfo(nullptr), function(nullptr), exportedFunction(nullptr), type(t), constValue(nullptr),
-      storageClass(sc), varyingCFDepth(0), parentFunction(nullptr),
+      isConstexpr(false), constEvalPending(false), storageClass(sc), varyingCFDepth(0), parentFunction(nullptr),
       attrs(a != nullptr ? new AttributeList(*a) : nullptr), kind(st) {}
 
 Symbol::~Symbol() {
