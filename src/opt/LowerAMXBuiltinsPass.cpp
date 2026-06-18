@@ -122,7 +122,8 @@ static llvm::CallInst *lLowerAMXTileZeroBuiltin(llvm::CallInst *CI) {
 
     if (auto *CTile = lValidateAMXTileArgument(CI, TileOp)) {
         llvm::SmallVector<llvm::Value *, 1> Ops({CTile});
-        return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), llvm::Intrinsic::x86_tilezero, Ops);
+        return llvm::cast<llvm::CallInst>(
+            builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), llvm::Intrinsic::x86_tilezero, Ops));
     } else {
         return nullptr;
     }
@@ -150,7 +151,8 @@ static llvm::CallInst *lLowerAMXLoadStoreBuiltin(llvm::CallInst *CI) {
     }
 
     llvm::SmallVector<llvm::Value *, 3> Ops({CTile, CI->getArgOperand(1), CI->getArgOperand(2)});
-    return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), LoadStoreID, Ops);
+    return llvm::cast<llvm::CallInst>(
+        builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), LoadStoreID, Ops));
 }
 
 static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
@@ -184,7 +186,8 @@ static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
     }
 
     llvm::SmallVector<llvm::Value *, 3> Ops({DstTile, Src1Tile, Src2Tile});
-    return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), DotProdID, Ops);
+    return llvm::cast<llvm::CallInst>(
+        builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), DotProdID, Ops));
 }
 
 static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
