@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -569,8 +569,8 @@ static inline unmasked uniform int _mm_movemask_pd(uniform __m128d _A) {
 
 static inline unmasked uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B, uniform unsigned int _I) {
     uniform double<2> _R;
-    _R[0] = _A.m128d_f64[_I & 0x3];
-    _R[1] = _B.m128d_f64[(_I >> 2) & 0x3];
+    _R[0] = _A.m128d_f64[_I & 0x1];
+    _R[1] = _B.m128d_f64[(_I >> 1) & 0x1];
     return *((uniform __m128d * uniform) & _R);
 }
 
