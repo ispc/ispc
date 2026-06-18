@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -124,7 +124,9 @@ void AST::AddFunction(Symbol *sym, Stmt *code) {
     if (sym == nullptr) {
         return;
     }
-    functions.push_back(new Function(sym, code));
+    Function *fn = new Function(sym, code);
+    sym->parentFunction = fn;
+    functions.push_back(fn);
 }
 
 void AST::AddFunctionTemplate(TemplateSymbol *templSym, Stmt *code) {

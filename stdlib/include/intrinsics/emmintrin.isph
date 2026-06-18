@@ -569,8 +569,16 @@ static inline unmasked uniform int _mm_movemask_pd(uniform __m128d _A) {
 
 static inline unmasked uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B, uniform unsigned int _I) {
     uniform double<2> _R;
-    _R[0] = _A.m128d_f64[_I & 0x3];
-    _R[1] = _B.m128d_f64[(_I >> 2) & 0x3];
+    _R[0] = _A.m128d_f64[_I & 0x1];
+    _R[1] = _B.m128d_f64[(_I >> 1) & 0x1];
+    return *((uniform __m128d * uniform) & _R);
+}
+
+template <int I>
+inline unmasked uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform double<2> _R;
+    _R[0] = _A.m128d_f64[I & 0x1];
+    _R[1] = _B.m128d_f64[(I >> 1) & 0x1];
     return *((uniform __m128d * uniform) & _R);
 }
 
@@ -1019,6 +1027,16 @@ static inline unmasked uniform __m128i _mm_slli_si128(uniform __m128i _A, unifor
     return *((uniform __m128i * uniform) & Result);
 }
 
+template <int Imm>
+inline unmasked uniform __m128i _mm_slli_si128(uniform __m128i _A) {
+    uniform uint8<16> S0, Result;
+    *((uniform uint8<16> * uniform) & S0) = *((uniform uint8<16> * uniform) & _A);
+    foreach (i = 0 ... 16) {
+        Result[i] = i < (Imm & 0xF) ? 0 : S0[i - (Imm & 0xF)];
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
 #define _mm_bslli_si128 _mm_slli_si128
 
 static inline unmasked uniform __m128i _mm_slli_epi16(uniform __m128i _A, uniform int _Count) {
@@ -1026,6 +1044,14 @@ static inline unmasked uniform __m128i _mm_slli_epi16(uniform __m128i _A, unifor
     *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
     _Count &= 0xFF;
     S0 = (_Count > 15) ? 0 : S0 << _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+template <int Count>
+inline unmasked uniform __m128i _mm_slli_epi16(uniform __m128i _A) {
+    uniform int16<8> S0, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 15) ? 0 : S0 << (Count & 0xFF);
     return *((uniform __m128i * uniform) & S0);
 }
 
@@ -1045,6 +1071,14 @@ static inline unmasked uniform __m128i _mm_slli_epi32(uniform __m128i _A, unifor
     return *((uniform __m128i * uniform) & S0);
 }
 
+template <int Count>
+inline unmasked uniform __m128i _mm_slli_epi32(uniform __m128i _A) {
+    uniform int32<4> S0, Result;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 31) ? 0 : S0 << (Count & 0xFF);
+    return *((uniform __m128i * uniform) & S0);
+}
+
 static inline unmasked uniform __m128i _mm_sll_epi32(uniform __m128i _A, uniform __m128i _Count) {
     uniform int32<4> S0, Result;
     *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
@@ -1058,6 +1092,14 @@ static inline unmasked uniform __m128i _mm_slli_epi64(uniform __m128i _A, unifor
     *((uniform int64<2> * uniform) & S0) = *((uniform int64<2> * uniform) & _A);
     _Count &= 0xFF;
     S0 = (_Count > 63) ? 0 : S0 << _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+template <int Count>
+inline unmasked uniform __m128i _mm_slli_epi64(uniform __m128i _A) {
+    uniform int64<2> S0, Result;
+    *((uniform int64<2> * uniform) & S0) = *((uniform int64<2> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 63) ? 0 : S0 << (Count & 0xFF);
     return *((uniform __m128i * uniform) & S0);
 }
 
@@ -1077,6 +1119,14 @@ static inline unmasked uniform __m128i _mm_srai_epi16(uniform __m128i _A, unifor
     return *((uniform __m128i * uniform) & S0);
 }
 
+template <int Count>
+inline unmasked uniform __m128i _mm_srai_epi16(uniform __m128i _A) {
+    uniform int16<8> S0, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 15) ? (S0 ? 0xFFFF : 0) : S0 >> (Count & 0xFF);
+    return *((uniform __m128i * uniform) & S0);
+}
+
 static inline unmasked uniform __m128i _mm_sra_epi16(uniform __m128i _A, uniform __m128i _Count) {
     uniform int16<8> S0, Result;
     *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
@@ -1090,6 +1140,14 @@ static inline unmasked uniform __m128i _mm_srai_epi32(uniform __m128i _A, unifor
     *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
     _Count &= 0xFF;
     S0 = (_Count > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+template <int Count>
+inline unmasked uniform __m128i _mm_srai_epi32(uniform __m128i _A) {
+    uniform int32<4> S0, Result;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> (Count & 0xFF);
     return *((uniform __m128i * uniform) & S0);
 }
 
@@ -1111,6 +1169,16 @@ static inline unmasked uniform __m128i _mm_srli_si128(uniform __m128i _A, unifor
     return *((uniform __m128i * uniform) & Result);
 }
 
+template <int Imm>
+inline unmasked uniform __m128i _mm_srli_si128(uniform __m128i _A) {
+    uniform uint8<16> S0, Result;
+    *((uniform uint8<16> * uniform) & S0) = *((uniform uint8<16> * uniform) & _A);
+    foreach (i = 0 ... 16) {
+        Result[i] = 16 - i > (Imm & 0xF) ? S0[i + (Imm & 0xF)] : 0;
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
 #define _mm_bsrli_si128 _mm_srli_si128
 
 static inline unmasked uniform __m128i _mm_srli_epi16(uniform __m128i _A, uniform int _Count) {
@@ -1118,6 +1186,14 @@ static inline unmasked uniform __m128i _mm_srli_epi16(uniform __m128i _A, unifor
     *((uniform uint16<8> * uniform) & S0) = *((uniform uint16<8> * uniform) & _A);
     _Count &= 0xFF;
     S0 = (_Count > 15) ? (S0 ? 0xFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+template <int Count>
+inline unmasked uniform __m128i _mm_srli_epi16(uniform __m128i _A) {
+    uniform uint16<8> S0, Result;
+    *((uniform uint16<8> * uniform) & S0) = *((uniform uint16<8> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 15) ? (S0 ? 0xFFFF : 0) : S0 >> (Count & 0xFF);
     return *((uniform __m128i * uniform) & S0);
 }
 
@@ -1137,6 +1213,14 @@ static inline unmasked uniform __m128i _mm_srli_epi32(uniform __m128i _A, unifor
     return *((uniform __m128i * uniform) & S0);
 }
 
+template <int Count>
+inline unmasked uniform __m128i _mm_srli_epi32(uniform __m128i _A) {
+    uniform uint32<4> S0, Result;
+    *((uniform uint32<4> * uniform) & S0) = *((uniform uint32<4> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> (Count & 0xFF);
+    return *((uniform __m128i * uniform) & S0);
+}
+
 static inline unmasked uniform __m128i _mm_srl_epi32(uniform __m128i _A, uniform __m128i _Count) {
     uniform uint32<4> S0, Result;
     *((uniform uint32<4> * uniform) & S0) = *((uniform uint32<4> * uniform) & _A);
@@ -1150,6 +1234,14 @@ static inline unmasked uniform __m128i _mm_srli_epi64(uniform __m128i _A, unifor
     *((uniform uint64<2> * uniform) & S0) = *((uniform uint64<2> * uniform) & _A);
     _Count &= 0xFF;
     S0 = (_Count > 63) ? (S0 ? 0xFFFFFFFFFFFFFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+template <int Count>
+inline unmasked uniform __m128i _mm_srli_epi64(uniform __m128i _A) {
+    uniform uint64<2> S0, Result;
+    *((uniform uint64<2> * uniform) & S0) = *((uniform uint64<2> * uniform) & _A);
+    S0 = ((Count & 0xFF) > 63) ? (S0 ? 0xFFFFFFFFFFFFFFFF : 0) : S0 >> (Count & 0xFF);
     return *((uniform __m128i * uniform) & S0);
 }
 
@@ -1302,10 +1394,24 @@ static inline unmasked uniform int _mm_extract_epi16(uniform __m128i _A, uniform
     return (uniform int)_APtr[_Imm];
 }
 
+template <int Imm>
+inline unmasked uniform int _mm_extract_epi16(uniform __m128i _A) {
+    const uniform int16 *uniform _APtr = (const uniform int16 *uniform) & _A;
+    return (uniform int)_APtr[Imm];
+}
+
 static inline unmasked uniform __m128i _mm_insert_epi16(uniform __m128i _A, uniform int _B, uniform int _Imm) {
     uniform int16<8> S0;
     *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
     S0[_Imm] = (uniform int16)_B;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+template <int Imm>
+inline unmasked uniform __m128i _mm_insert_epi16(uniform __m128i _A, uniform int _B) {
+    uniform int16<8> S0;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    S0[Imm] = (uniform int16)_B;
     return *((uniform __m128i * uniform) & S0);
 }
 
@@ -1329,6 +1435,16 @@ static inline unmasked uniform __m128i _mm_shuffle_epi32(uniform __m128i _A, uni
     return *((uniform __m128i * uniform) & R);
 }
 
+template <int Imm8>
+inline unmasked uniform __m128i _mm_shuffle_epi32(uniform __m128i _A) {
+    uniform int<4> R;
+    R[0] = _A.m128i_i32[Imm8 & 0x3];
+    R[1] = _A.m128i_i32[(Imm8 >> 2) & 0x3];
+    R[2] = _A.m128i_i32[(Imm8 >> 4) & 0x3];
+    R[3] = _A.m128i_i32[(Imm8 >> 6) & 0x3];
+    return *((uniform __m128i * uniform) & R);
+}
+
 static inline unmasked uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
     uniform int16<8> S0, S1;
     *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _A);
@@ -1341,6 +1457,19 @@ static inline unmasked uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A, u
     return *((uniform __m128i * uniform) & S1);
 }
 
+template <int Imm8>
+inline unmasked uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A) {
+    uniform int16<8> S0, S1;
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<4> * uniform) & S0) = *((uniform int16<4> * uniform) & _A.m128i_i32[2]);
+    S0[0] = S0[Imm8 & 0x3];
+    S0[1] = S0[(Imm8 >> 2) & 0x3];
+    S0[2] = S0[(Imm8 >> 4) & 0x3];
+    S0[3] = S0[(Imm8 >> 6) & 0x3];
+    *((uniform int16<4> * uniform) & S1[4]) = *((uniform int16<4> * uniform) & S0);
+    return *((uniform __m128i * uniform) & S1);
+}
+
 static inline unmasked uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
     uniform int16<8> S0;
     *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
@@ -1348,6 +1477,17 @@ static inline unmasked uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A, u
     S0[1] = S0[(_Imm8 >> 2) & 0x3];
     S0[2] = S0[(_Imm8 >> 4) & 0x3];
     S0[3] = S0[(_Imm8 >> 6) & 0x3];
+    return *((uniform __m128i * uniform) & S0);
+}
+
+template <int Imm8>
+inline unmasked uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A) {
+    uniform int16<8> S0;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    S0[0] = S0[Imm8 & 0x3];
+    S0[1] = S0[(Imm8 >> 2) & 0x3];
+    S0[2] = S0[(Imm8 >> 4) & 0x3];
+    S0[3] = S0[(Imm8 >> 6) & 0x3];
     return *((uniform __m128i * uniform) & S0);
 }
 
