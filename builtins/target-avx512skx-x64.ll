@@ -342,32 +342,6 @@ svml(ISA)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
 
-;; 8 bit
-declare <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8>, <64 x i8>) nounwind readnone
-
-; TODO: optimize this further with a shuffle/permute
-define i8 @__reduce_add_uint8(<64 x i8>) nounwind readnone alwaysinline {
-  %rv = call <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8> %0,
-                                                    <64 x i8> zeroinitializer)
-  %r0 = extractelement <8 x i64> %rv, i32 0
-  %r1 = extractelement <8 x i64> %rv, i32 1
-  %r2 = extractelement <8 x i64> %rv, i32 2
-  %r3 = extractelement <8 x i64> %rv, i32 3
-  %r4 = extractelement <8 x i64> %rv, i32 4
-  %r5 = extractelement <8 x i64> %rv, i32 5
-  %r6 = extractelement <8 x i64> %rv, i32 6
-  %r7 = extractelement <8 x i64> %rv, i32 7
-  %r01 = add i64 %r0, %r1
-  %r23 = add i64 %r2, %r3
-  %r45 = add i64 %r4, %r5
-  %r67 = add i64 %r6, %r7
-  %r0123 = add i64 %r01, %r23
-  %r4567 = add i64 %r45, %r67
-  %r = add i64 %r0123, %r4567
-  %r8 = trunc i64 %r to i8
-  ret i8 %r8
-}
-
 ;; float
 ;; TODO: __reduce_add_float may use hadd
 define internal <64 x float> @__add_varying_float(<64 x float>,

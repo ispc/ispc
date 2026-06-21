@@ -408,22 +408,6 @@ define i1 @__none(<WIDTH x MASK> %mask) nounwind readnone alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; horizontal int8/16 ops
-
-declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
-
-define i8 @__reduce_add_uint8(<8 x i8>) nounwind readnone alwaysinline {
-  %ri = shufflevector <8 x i8> %0, <8 x i8> zeroinitializer,
-                         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                         i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %ri,
-                                              <16 x i8> zeroinitializer)
-  %r = extractelement <2 x i64> %rv, i32 0
-  %r8 = trunc i64 %r to i8
-  ret i8 %r8
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
 
 declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind readnone
