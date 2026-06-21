@@ -232,18 +232,6 @@ define i1 @__none(<16 x i8>) nounwind readnone alwaysinline {
   ret i1 %meq
 }
 
-declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
-
-define i8 @__reduce_add_uint8(<16 x i8>) nounwind readnone alwaysinline {
-  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %0,
-                                              <16 x i8> zeroinitializer)
-  %r0 = extractelement <2 x i64> %rv, i32 0
-  %r1 = extractelement <2 x i64> %rv, i32 1
-  %r = add i64 %r0, %r1
-  %r8 = trunc i64 %r to i8
-  ret i8 %r8
-}
-
 define internal <16 x float> @__add_varying_float(<16 x float>, <16 x float>) {
   %r = fadd <16 x float> %0, %1
   ret <16 x float> %r
