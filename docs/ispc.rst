@@ -281,10 +281,16 @@ New Features:
 
 Standard Library Changes:
 
-* **Breaking change**: the return type of the ``reduce_add()`` functions is now
-  the same than the input type. Users should now cast the inpout to a wider type
-  themselves so to prevent overflows. Any code relying on the widened return
-  type needs to be updated!
+* **Breaking change**: ``reduce_add()`` now returns the same type as its
+    input. Previously the signatures widened the result, but the
+    implementation was inconsistent and partially incorrect. The new
+    same-type convention also matches the prevailing convention in other
+    SIMD/SPMD ecosystems and is consistent with ``reduce_min()`` /
+    ``reduce_max()`` in ISPC. For overflow-safe accumulation, cast the
+    input to a wider type explicitly, e.g. ``reduce_add((int32)x)`` for an
+    ``int16`` ``x``. Any code that relied on the previous widened return
+    type must be updated.
+
 * The Gauss error function ``erf`` and the complementary error function ``erfc``
   have been added to the standard library.
 * The ``expm1`` function (meant to compute ``exp(x)-1`` accurately), and the
