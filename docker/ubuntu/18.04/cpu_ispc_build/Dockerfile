@@ -19,7 +19,16 @@ ARG LLVM_DISABLE_ASSERTIONS
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates ninja-build gnupg && \
+# Ubuntu 18.04's default GCC 7.5 is too old to build recent LLVM (>=21) trunk
+# (e.g. CTAD failures in clang's LifetimeSafety), so install GCC 11 from the
+# ubuntu-toolchain-r PPA and make it the default compiler.
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates ninja-build gnupg software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get -y update && apt-get --no-install-recommends install -y gcc-11 g++-11 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 \
+        --slave /usr/bin/g++ g++ /usr/bin/g++-11 && \
+    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-11 100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-11 100 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt
@@ -43,10 +52,16 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
 # Install TBB from source (required for ISPCRT).
 # Build from source to avoid certificate issues with Intel apt repo on Ubuntu 18.04
 # and to avoid enum-constexpr-conversion errors with LLVM 21+
+# Build TBB with the system GCC 7: for GCC >= 11 TBB enables the WAITPKG
+# intrinsics (-mwaitpkg, _tpause), but Ubuntu 18.04's binutils 2.30 assembler
+# does not know the 'tpause' instruction (needs >= 2.32), so a GCC 11 build
+# fails to assemble. GCC 7 does not enable that code path.
 RUN git clone --depth 1 --branch v2021.13.0 https://github.com/oneapi-src/oneTBB.git /tmp/oneTBB && \
     cmake -S /tmp/oneTBB -B /tmp/oneTBB/build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DTBB_TEST=OFF \
+        -DCMAKE_C_COMPILER=gcc-7 \
+        -DCMAKE_CXX_COMPILER=g++-7 \
         -DCMAKE_INSTALL_PREFIX=/opt/intel/oneapi/tbb/2021.13 && \
     cmake --build /tmp/oneTBB/build -j"$(nproc)" && \
     cmake --install /tmp/oneTBB/build && \
