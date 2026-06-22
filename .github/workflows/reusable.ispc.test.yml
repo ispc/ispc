@@ -55,6 +55,11 @@ on:
         required: false
         type: string
         default: ''
+      runner:
+        description: 'Optional runner label override. When empty, a default runner is selected based on platform/architecture.'
+        required: false
+        type: string
+        default: ''
 
 env:
   LLVM_HOME: ${{ inputs.platform == 'windows' && 'C:\\projects\\llvm' || github.workspace }}
@@ -65,7 +70,7 @@ env:
 jobs:
   test:
     name: ${{ inputs.platform }} (${{ inputs.architecture }}, ${{ matrix.target }}, ${{ inputs.optsets }})
-    runs-on: ${{ inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-15-intel') || (inputs.platform == 'windows' && (inputs.architecture == 'aarch64' && 'windows-11-arm' || 'windows-2022')) || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04' }}
+    runs-on: ${{ inputs.runner != '' && inputs.runner || (inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-15-intel') || (inputs.platform == 'windows' && (inputs.architecture == 'aarch64' && 'windows-11-arm' || 'windows-2022')) || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04') }}
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -104,6 +109,15 @@ jobs:
         fi
       env:
         INPUTS_PLATFORM: ${{ inputs.platform }}
+        # The newer SDE (set as the default in init-env) is needed by avx10.2
+        # targets (the -nvl knob) but hangs on basic/avx512 runs. So non-avx10
+        # jobs override SDE_TAR_NAME back to the older 9.58.0 SDE; avx10 jobs
+        # pass an empty override and fall back to the newer default.
+        # install-test-deps honors a pre-set SDE_TAR_NAME.
+        # Note: keep the literal on the truthy side of the ternary. An empty
+        # string is falsy in GitHub Actions expressions, so `cond && '' || X`
+        # would always yield X. Inverting the condition avoids that trap.
+        SDE_TAR_NAME: ${{ !contains(matrix.target, 'avx10') && 'sde-external-9.58.0-2025-06-16' || '' }}
 
     - name: Check environment
       run: |

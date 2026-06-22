@@ -4,6 +4,9 @@ if (-not $env:SDE_REPO) {
   $env:SDE_REPO = "https://github.com/ispc/ispc.dependencies"
   echo "SDE_REPO=$env:SDE_REPO" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 }
+# Default to the newer SDE, which supports avx10.2 targets (e.g. the -nvl knob)
+# needed by the build job's lit tests. The basic/avx512 test matrix jobs override
+# SDE_TAR_NAME to the older 9.58.0 SDE (the newer 10.8 SDE hangs on those runs).
 if (-not $env:SDE_TAR_NAME) {
   $env:SDE_TAR_NAME = "sde-external-10.8.0-2026-03-15"
   echo "SDE_TAR_NAME=$env:SDE_TAR_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
