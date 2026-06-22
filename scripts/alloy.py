@@ -102,7 +102,7 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
         # a release tag because we need recent trunk fixes for proper APX support.
         # TODO: replace this SHA with the llvmorg-23.1.x release tag once LLVM 23
         # is released. Keep this SHA in sync with LLVM_TAG in superbuild/CMakeLists.txt.
-        GIT_TAG="5a52d68d6b030b155580ff03f5f8ad0cc9dc2fd9"
+        GIT_TAG="6be53ab5da701ca6939c818fbe8cdbb633ab2409"
         GIT_TAG_IS_SHA=True
     elif  version_LLVM == "22_1":
         GIT_TAG="llvmorg-22.1.6"

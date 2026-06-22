@@ -217,7 +217,7 @@ if (${LLVM_VERSION} STREQUAL 23_1)
     # release tag because we need recent trunk fixes for proper APX support.
     # TODO: replace this SHA with the llvmorg-23.1.x release tag once LLVM 23 is
     # released. Keep this SHA in sync with the LLVM_TAG in scripts/alloy.py.
-    set(LLVM_TAG    5a52d68d6b030b155580ff03f5f8ad0cc9dc2fd9)
+    set(LLVM_TAG    6be53ab5da701ca6939c818fbe8cdbb633ab2409)
 elseif (${LLVM_VERSION} STREQUAL 22_1)
     set(LLVM_TAG    llvmorg-22.1.6)
 elseif (${LLVM_VERSION} STREQUAL 21_1)
