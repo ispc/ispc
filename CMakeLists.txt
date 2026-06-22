@@ -809,6 +809,13 @@ if (NOT MSVC)
         # The GCC warning issues false positives when one of the allocation and
         # deallocation functions is inlined into its caller but not the other.
         list(APPEND COMPILE_OPTIONS -Wno-mismatched-new-delete)
+        # GCC 13+ -Wdangling-reference issues a false positive on the
+        # ArrayRef::back() idiom in LLVM 23's clang/Lex/Preprocessor.h
+        # (ModuleNameLoc::getEndLoc). Disable it as it is triggered by LLVM
+        # headers, not ISPC code.
+        if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "13.0.0")
+            list(APPEND COMPILE_OPTIONS -Wno-dangling-reference)
+        endif()
     else()
         list(APPEND COMPILE_OPTIONS
             -Wno-c99-extensions
