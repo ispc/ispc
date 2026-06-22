@@ -39,6 +39,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/CodeGen.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -2445,6 +2446,27 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
         // For Xe target we do not need to create target/targetMachine
         if (!isXeTarget()) {
+#if defined(ISPC_ARM_ENABLED) && ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+            // Workaround for an LLVM 23 AArch64 regression. Starting with LLVM
+            // commit ad1a45b903b8 (#174746), optnone/-O0 functions are lowered
+            // with GlobalISel instead of FastISel. The GlobalISel path
+            // miscompiles float16 vector min/max and masked reductions (the
+            // upper vector lanes are wrong), causing -O0 float16 functional
+            // tests to fail on aarch64. Restore the previous (correct) behavior
+            // by disabling "GlobalISel at opt level" via the AArch64 backend's
+            // hidden option, which makes -O0 fall back to FastISel. The option
+            // is consumed in the TargetMachine constructor, so it must be set
+            // before createTargetMachine() below. Scoped to aarch64/arm at -O0;
+            // a no-op for other targets and opt levels. Remove once the
+            // upstream GlobalISel float16 lowering bug is fixed.
+            if ((arch == Arch::aarch64 || arch == Arch::arm) && g->codegenOptLevel == Globals::CodegenOptLevel::None) {
+                auto &optMap = llvm::cl::getRegisteredOptions();
+                auto it = optMap.find("aarch64-enable-global-isel-at-O");
+                if (it != optMap.end()) {
+                    static_cast<llvm::cl::opt<int> *>(it->second)->setValue(-1);
+                }
+            }
+#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
             m_targetMachine =
                 m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel, mcModel);
