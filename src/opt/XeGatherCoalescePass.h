@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -127,6 +127,11 @@ struct MemoryCoalescing : public llvm::PassInfoMixin<MemoryCoalescing> {
 
     // DenseMap helper for complex GEPs
     struct DenseMapInfo {
+        // LLVM 23 rewrote DenseMap to use a per-bucket occupancy bitmap with
+        // tombstone-free deletion, so empty/tombstone sentinel keys are gone:
+        // the key info trait only needs getHashValue and isEqual. Earlier LLVM
+        // versions still require the sentinel methods.
+#if ISPC_LLVM_VERSION < ISPC_LLVM_23_0
         static inline GEPVarOffsetInfo getEmptyKey() {
             return GEPVarOffsetInfo(llvm::DenseMapInfo<llvm::Instruction *>::getEmptyKey());
         }
@@ -136,12 +141,15 @@ struct MemoryCoalescing : public llvm::PassInfoMixin<MemoryCoalescing> {
         static inline bool isSentinel(const GEPVarOffsetInfo &Val) {
             return Val.GEP == getEmptyKey().GEP || Val.GEP == getTombstoneKey().GEP;
         }
+#endif
         static unsigned getHashValue(const GEPVarOffsetInfo &Val) {
             return hash_combine_range(Val.GEP->value_op_begin(), Val.FirstConstUse);
         }
         static bool isEqual(const GEPVarOffsetInfo &LHS, const GEPVarOffsetInfo &RHS) {
+#if ISPC_LLVM_VERSION < ISPC_LLVM_23_0
             if (isSentinel(LHS) || isSentinel(RHS))
                 return LHS.GEP == RHS.GEP;
+#endif
 
             for (auto lhs_it = LHS.GEP->value_op_begin(), rhs_it = RHS.GEP->value_op_begin(), lhs_e = LHS.FirstConstUse,
                       rhs_e = RHS.FirstConstUse;

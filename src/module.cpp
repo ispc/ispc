@@ -1683,6 +1683,16 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     // so turn it off. We may enable it later.
     Opts.setAllowedToUseExtension(SPIRV::ExtensionID::SPV_KHR_untyped_pointers, false);
 
+    // Newer LLVM (23+) SPIR-V translator emits these KHR extensions, but the
+    // compute runtime / IGC shipped in our target environments doesn't yet
+    // recognize them and rejects the module ("unknown extension"). Disable them
+    // until the runtime catches up. These ExtensionID enumerators only exist in
+    // the LLVM 23+ translator, so guard the calls accordingly.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    Opts.setAllowedToUseExtension(SPIRV::ExtensionID::SPV_KHR_poison_freeze, false);
+    Opts.setAllowedToUseExtension(SPIRV::ExtensionID::SPV_KHR_float_controls2, false);
+#endif
+
     Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
     Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
