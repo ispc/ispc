@@ -29,8 +29,8 @@ jobs:
       platform: linux
       artifact_name: ispc-fresh-build
       runner: ubuntu-22.04
-      llvm_version: "22.1"
-      llvm_tar: llvm-22.1.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_version: "23.1"
+      llvm_tar: llvm-23.1.0-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   build-openmoonray:
     name: Build OpenMoonRay AUR package
