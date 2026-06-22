@@ -3380,8 +3380,8 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
         const uniform float t2 = t * t + 1e-30;
 
         // Sollya:
-        // range = [-pi/2-1e-5;pi/2+1e-5];
-        // fpminimax(sin(x)/x, [|0,2,4,6,8|], [|single...|], range);
+        // rng = [-pi/2-1e-7;pi/2+1e-7];
+        // fpminimax(sin(x)/x, [|0,2,4,6|], [|single...|], rng);
         const uniform float c1 = +9.9999904630e-01;
         const uniform float c3 = -1.6665549576e-01;
         const uniform float c5 = +8.3118639900e-03;
@@ -3441,8 +3441,8 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
         const uniform float t2 = t * t + 1e-30;
 
         // Sollya:
-        // range = [-pi/2-1e-5;pi/2+1e-5];
-        // fpminimax(sin(x)/x, [|0,2,4,6,8|], [|single...|], range);
+        // rng = [-pi/2-1e-5;pi/2+1e-5];
+        // fpminimax(sin(x)/x, [|0,2,4,6,8|], [|single...|], rng);
         const uniform float c3 = -1.6666659710e-01;
         const uniform float c5 = +8.3330692720e-03;
         const uniform float c7 = -1.9809778314e-04;
