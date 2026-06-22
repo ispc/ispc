@@ -88,8 +88,8 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %d) nounwind readn
 
 define float @__rsqrt_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
-  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
-          <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %vs = shufflevector <1 x float> %v1, <1 x float> poison,
+          <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
   %vr = call <4 x float> @__rsqrt_varying_float(<4 x float> %vs)
   %r = extractelement <4 x float> %vr, i32 0
   ret float %r
@@ -101,7 +101,7 @@ define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float> %d) nounwind 
 }
 
 define float @__rsqrt_fast_uniform_float(float) nounwind readnone alwaysinline {
-  %vs = insertelement <4 x float> undef, float %0, i32 0
+  %vs = insertelement <4 x float> poison, float %0, i32 0
   %vr = call <4 x float> @__rsqrt_fast_varying_float(<4 x float> %vs)
   %r = extractelement <4 x float> %vr, i32 0
   ret float %r
@@ -109,15 +109,15 @@ define float @__rsqrt_fast_uniform_float(float) nounwind readnone alwaysinline {
 
 define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
-  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
-          <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %vs = shufflevector <1 x float> %v1, <1 x float> poison,
+          <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
   %vr = call <4 x float> @__rcp_varying_float(<4 x float> %vs)
   %r = extractelement <4 x float> %vr, i32 0
   ret float %r
 }
 
 define float @__rcp_fast_uniform_float(float) nounwind readnone alwaysinline {
-  %vs = insertelement <4 x float> undef, float %0, i32 0
+  %vs = insertelement <4 x float> poison, float %0, i32 0
   %vr = call <4 x float> @__rcp_fast_varying_float(<4 x float> %vs)
   %r = extractelement <4 x float> %vr, i32 0
   ret float %r

@@ -113,18 +113,18 @@ define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float> %d) nounwind 
 
 define float @__rsqrt_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
-  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
-          <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vs = shufflevector <1 x float> %v1, <1 x float> poison,
+          <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   %vr = call <16 x float> @__rsqrt_varying_float(<16 x float> %vs)
   %r = extractelement <16 x float> %vr, i32 0
   ret float %r
 }
 
 define float @__rsqrt_fast_uniform_float(float) nounwind readnone alwaysinline {
-  %vs = insertelement <16 x float> undef, float %0, i32 0
+  %vs = insertelement <16 x float> poison, float %0, i32 0
   %vr = call <16 x float> @__rsqrt_fast_varying_float(<16 x float> %vs)
   %r = extractelement <16 x float> %vr, i32 0
   ret float %r
@@ -132,18 +132,18 @@ define float @__rsqrt_fast_uniform_float(float) nounwind readnone alwaysinline {
 
 define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
-  %vs = shufflevector <1 x float> %v1, <1 x float> undef,
-          <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef,
-                      i32 undef, i32 undef, i32 undef, i32 undef>
+  %vs = shufflevector <1 x float> %v1, <1 x float> poison,
+          <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison,
+                      i32 poison, i32 poison, i32 poison, i32 poison>
   %vr = call <16 x float> @__rcp_varying_float(<16 x float> %vs)
   %r = extractelement <16 x float> %vr, i32 0
   ret float %r
 }
 
 define float @__rcp_fast_uniform_float(float) nounwind readnone alwaysinline {
-  %vs = insertelement <16 x float> undef, float %0, i32 0
+  %vs = insertelement <16 x float> poison, float %0, i32 0
   %vr = call <16 x float> @__rcp_fast_varying_float(<16 x float> %vs)
   %r = extractelement <16 x float> %vr, i32 0
   ret float %r

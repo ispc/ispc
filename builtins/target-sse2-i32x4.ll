@@ -153,8 +153,8 @@ define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
 }
 
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
-  %v1 = shufflevector <4 x float> %v, <4 x float> undef,
-                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %v1 = shufflevector <4 x float> %v, <4 x float> poison,
+                      <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %m1 = fadd <4 x float> %v1, %v
   %m1a = extractelement <4 x float> %m1, i32 0
   %m1b = extractelement <4 x float> %m1, i32 1
@@ -188,9 +188,9 @@ define i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone {
 
 
 define double @__reduce_add_double(<4 x double>) nounwind readnone {
-  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+  %v0 = shufflevector <4 x double> %0, <4 x double> poison,
                       <2 x i32> <i32 0, i32 1>
-  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+  %v1 = shufflevector <4 x double> %0, <4 x double> poison,
                       <2 x i32> <i32 2, i32 3>
   %sum = fadd <2 x double> %v0, %v1
   %e0 = extractelement <2 x double> %sum, i32 0
