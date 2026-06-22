@@ -30,8 +30,8 @@ on:
 permissions: {}
 
 env:
-  LLVM_VERSION: "22.1"
-  LLVM_TAR: llvm-22.1.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_VERSION: "23.1"
+  LLVM_TAR: llvm-23.1.0-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
