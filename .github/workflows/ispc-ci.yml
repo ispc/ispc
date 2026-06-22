@@ -29,21 +29,23 @@ env:
   TARGETS_SMOKE_X86: '["avx2-i32x8", "generic-i32x4"]'
   TARGETS_SMOKE_ARM: '["neon-i32x4"]'
   OPTSETS_SMOKE: "-O2"
-  TARGETS_FULL_X86:  '["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
-                      "generic-i8x16", "generic-i8x32",
-                      "generic-i16x8", "generic-i16x16",
-                      "generic-i32x4", "generic-i32x8", "generic-i32x16",
-                      "generic-i64x4",
-                      "sse2-i32x4", "sse2-i32x8",
-                      "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
-                      "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
-                      "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
-                      "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16",
-                      "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
-                      "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
-                      "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
-                      "avx512gnr-x4", "avx512gnr-x8", "avx512gnr-x16", "avx512gnr-x64", "avx512gnr-x32",
-                      "avx10.2dmr-x4", "avx10.2dmr-x8", "avx10.2dmr-x16", "avx10.2dmr-x32", "avx10.2dmr-x64"]'
+  # Full test is split into groups to avoid hitting the 6h job time limit.
+  TARGETS_FULL_X86_BASIC: '["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
+                            "generic-i8x16", "generic-i8x32",
+                            "generic-i16x8", "generic-i16x16",
+                            "generic-i32x4", "generic-i32x8", "generic-i32x16",
+                            "generic-i64x4",
+                            "sse2-i32x4", "sse2-i32x8",
+                            "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
+                            "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+                            "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+                            "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16"]'
+  TARGETS_FULL_X86_AVX512: '["avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
+                             "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
+                             "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
+                             "avx512gnr-x4", "avx512gnr-x8", "avx512gnr-x16", "avx512gnr-x64", "avx512gnr-x32"]'
+  TARGETS_FULL_X86_AVX10: '["avx10.2dmr-x4", "avx10.2dmr-x8", "avx10.2dmr-x16", "avx10.2dmr-x32", "avx10.2dmr-x64",
+                            "avx10.2nvl-x4", "avx10.2nvl-x8", "avx10.2nvl-x16", "avx10.2nvl-x32", "avx10.2nvl-x64"]'
   TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8", "neon-i8x16", "neon-i16x8", "neon-i8x32", "neon-i16x16"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
   ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
@@ -52,7 +54,9 @@ jobs:
   define-flow:
     runs-on: ubuntu-22.04
     outputs:
-      tests_matrix_targets_x86: ${{ steps.set-flow.outputs.matrix_x86 }}
+      tests_matrix_targets_x86_basic: ${{ steps.set-flow.outputs.matrix_x86_basic }}
+      tests_matrix_targets_x86_avx512: ${{ steps.set-flow.outputs.matrix_x86_avx512 }}
+      tests_matrix_targets_x86_avx10: ${{ steps.set-flow.outputs.matrix_x86_avx10 }}
       tests_matrix_targets_arm: ${{ steps.set-flow.outputs.matrix_arm }}
       tests_optsets: ${{ steps.set-flow.outputs.optsets }}
       flow_type: ${{ steps.set-flow.outputs.type }}
@@ -83,11 +87,15 @@ jobs:
         fi
         # set tests matrix depends on flow
         if [[ "$RUN_SMOKE" == "true" ]]; then
-          echo "matrix_x86=${TARGETS_SMOKE_X86}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86_basic=${TARGETS_SMOKE_X86}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86_avx512=${TARGETS_SMOKE_X86}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86_avx10=${TARGETS_SMOKE_X86}" >> "$GITHUB_OUTPUT"
           echo "matrix_arm=${TARGETS_SMOKE_ARM}" >> "$GITHUB_OUTPUT"
         fi
         if [[ "$RUN_FULL" == "true" ]]; then
-          echo "matrix_x86=${TARGETS_FULL_X86}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86_basic=${TARGETS_FULL_X86_BASIC}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86_avx512=${TARGETS_FULL_X86_AVX512}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86_avx10=${TARGETS_FULL_X86_AVX10}" >> "$GITHUB_OUTPUT"
           echo "matrix_arm=${TARGETS_FULL_ARM}" >> "$GITHUB_OUTPUT"
         fi
         # set tests optsets
@@ -115,18 +123,13 @@ jobs:
       llvm_version: ${{ matrix.llvm.version }}
       llvm_tar: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
 
+  # LLVM 20 and 21 are tested daily in llvm-legacy.yml, not here.
   linux-build-ispc:
     needs: [define-flow]
     strategy:
       fail-fast: false
       matrix:
         llvm:
-          - version: "20.1"
-            full_version: "20.1.8"
-            short_version: 20
-          - version: "21.1"
-            full_version: "21.1.8"
-            short_version: 21
           - version: "22.1"
             full_version: "22.1.6"
             short_version: 22
@@ -196,19 +199,35 @@ jobs:
       llvm_tar: llvm-23.1.0-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       enable_riscv: true
 
-  linux-test:
+  linux-test-basic:
     needs: [define-flow, linux-build-ispc]
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20, 21, 22, 23]
+        llvm: [22, 23]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
       artifact_name: ispc_llvm${{ matrix.llvm }}_linux
-      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_basic }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+
+  linux-test-avx512:
+    needs: [define-flow, linux-build-ispc]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [22, 23]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{ matrix.llvm }}_linux
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx512 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   linux-test-flags:
@@ -283,9 +302,7 @@ jobs:
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
-  # nvl (Nova Lake) targets require LLVM 22, so they are tested in a dedicated
-  # job on LLVM 22 and 23 and excluded from the LLVM 20/21 test matrix.
-  linux-test-llvm22-plus:
+  linux-test-avx10:
     needs: [define-flow, linux-build-ispc]
     if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
     strategy:
@@ -298,10 +315,10 @@ jobs:
       platform: linux
       architecture: ${{ matrix.arch }}
       artifact_name: ispc_llvm${{ matrix.llvm }}_linux
-      targets: '["avx10.2nvl-x4", "avx10.2nvl-x8", "avx10.2nvl-x16", "avx10.2nvl-x32", "avx10.2nvl-x64"]'
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx10 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
-  linux-test-llvm23-lto:
+  linux-test-llvm23-lto-basic:
     needs: [define-flow, linux-build-ispc-llvm23-lto]
     strategy:
       fail-fast: false
@@ -312,7 +329,41 @@ jobs:
       platform: linux
       architecture: ${{ matrix.arch }}
       artifact_name: ispc_llvm23_lto_linux
-      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_basic }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      enable_lto: true
+
+  # See linux-test-avx512: avx512 targets run in full flow only.
+  linux-test-llvm23-lto-avx512:
+    needs: [define-flow, linux-build-ispc-llvm23-lto]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm23_lto_linux
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx512 }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      enable_lto: true
+
+  # See linux-test-avx10: avx10.2 targets run in full flow only.
+  linux-test-llvm23-lto-avx10:
+    needs: [define-flow, linux-build-ispc-llvm23-lto]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm23_lto_linux
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx10 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       enable_lto: true
 
@@ -401,6 +452,7 @@ jobs:
       targets: '["wasm-i32x4"]'
       optsets: -O0 -O2
 
+  # LLVM 20 and 21 are tested daily in llvm-legacy.yml, not here.
   macos-build-ispc:
     needs: [define-flow]
     strategy:
@@ -408,12 +460,6 @@ jobs:
       matrix:
         runner: [macos-15-intel, macos-14]
         llvm:
-          - version: "20.1"
-            full_version: "20.1.8"
-            short_version: 20
-          - version: "21.1"
-            full_version: "21.1.8"
-            short_version: 21
           - version: "22.1"
             full_version: "22.1.6"
             short_version: 22
@@ -444,7 +490,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20, 21, 22, 23]
+        llvm: [22, 23]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
@@ -494,20 +540,13 @@ jobs:
       optsets: -O0 -O2
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
+  # LLVM 20 and 21 are tested daily in llvm-legacy.yml, not here.
   win-build-ispc:
     needs: [define-flow]
     strategy:
       fail-fast: false
       matrix:
         llvm:
-          - version: "20.1"
-            full_version: "20.1.8"
-            short_version: 20
-            vs_version: "vs2022"
-          - version: "21.1"
-            full_version: "21.1.8"
-            short_version: 21
-            vs_version: "vs2022"
           - version: "22.1"
             full_version: "22.1.6"
             short_version: 22
@@ -557,19 +596,52 @@ jobs:
       llvm_tar: llvm-23.1.0-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       enable_wasm: true
 
-  win-test:
+  win-test-basic:
     needs: [define-flow, win-build-ispc]
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20, 21, 22, 23]
+        llvm: [22, 23]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
       artifact_name: ispc_llvm${{matrix.llvm}}_win
-      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_basic }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+
+  win-test-avx512:
+    needs: [define-flow, win-build-ispc]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [22, 23]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{matrix.llvm}}_win
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx512 }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+
+  win-test-avx10:
+    needs: [define-flow, win-build-ispc]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [22, 23]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{matrix.llvm}}_win
+      runner: windows-2025
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx10 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   win-test-flags:
@@ -640,7 +712,7 @@ jobs:
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
-  win-test-llvm23-lto:
+  win-test-llvm23-lto-basic:
     needs: [define-flow, win-build-ispc-llvm23-lto]
     strategy:
       fail-fast: false
@@ -651,7 +723,43 @@ jobs:
       platform: windows
       architecture: ${{ matrix.arch }}
       artifact_name: ispc_llvm23_lto_win
-      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_basic }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      enable_lto: true
+
+  # See win-test-avx512: avx512 targets run in full flow only.
+  win-test-llvm23-lto-avx512:
+    needs: [define-flow, win-build-ispc-llvm23-lto]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm23_lto_win
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx512 }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      enable_lto: true
+
+  # See win-test-avx10: avx10.2 targets run in full flow only and require the
+  # VS 2026 (windows-2025) runner image for unwind v3 support.
+  win-test-llvm23-lto-avx10:
+    needs: [define-flow, win-build-ispc-llvm23-lto]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm23_lto_win
+      runner: windows-2025
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86_avx10 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       enable_lto: true
 

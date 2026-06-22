@@ -1,0 +1,192 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Legacy LLVM coverage (LLVM 20 and 21).
+
+name: Legacy LLVM tests
+
+permissions: read-all
+
+on:
+  schedule:
+    # Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
+    - cron:  '0 7 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Gate scheduled runs to the main ispc/ispc repo to avoid unnecessary runs on
+  # forks. Build/test jobs depend on this so they are skipped on forks too.
+  define-flow:
+    if: github.repository == 'ispc/ispc'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Gating scheduled run to ispc/ispc"
+
+  linux-build-ispc:
+    needs: [define-flow]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm:
+          - version: "20.1"
+            full_version: "20.1.8"
+            short_version: 20
+          - version: "21.1"
+            full_version: "21.1.8"
+            short_version: 21
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_linux
+      runner: ubuntu-22.04
+      llvm_version: ${{ matrix.llvm.version }}
+      llvm_tar: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+  linux-test-basic:
+    needs: [define-flow, linux-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [20, 21]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{ matrix.llvm }}_linux
+      targets: >-
+        ["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
+         "generic-i8x16", "generic-i8x32",
+         "generic-i16x8", "generic-i16x16",
+         "generic-i32x4", "generic-i32x8", "generic-i32x16",
+         "generic-i64x4",
+         "sse2-i32x4", "sse2-i32x8",
+         "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
+         "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+         "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+         "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16"]
+      optsets: -O0 -O1 -O2
+
+  linux-test-avx512:
+    needs: [define-flow, linux-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [20, 21]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{ matrix.llvm }}_linux
+      targets: >-
+        ["avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
+         "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
+         "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
+         "avx512gnr-x4", "avx512gnr-x8", "avx512gnr-x16", "avx512gnr-x64", "avx512gnr-x32"]
+      optsets: -O0 -O1 -O2
+
+  macos-build-ispc:
+    needs: [define-flow]
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15-intel]
+        llvm:
+          - version: "20.1"
+            full_version: "20.1.8"
+            short_version: 20
+          - version: "21.1"
+            full_version: "21.1.8"
+            short_version: 21
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: macos
+      artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_${{ matrix.runner }}
+      runner: ${{ matrix.runner }}
+      llvm_version: ${{ matrix.llvm.version }}
+      llvm_tar: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+
+  macos-test-ispc:
+    needs: [define-flow, macos-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [20, 21]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: macos
+      architecture: x86-64
+      artifact_name: ispc_llvm${{matrix.llvm}}_macos-15-intel
+      targets: '["sse2-i32x4", "sse4-i32x4"]'
+      optsets: -O0 -O2
+
+  win-build-ispc:
+    needs: [define-flow]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm:
+          - version: "20.1"
+            full_version: "20.1.8"
+            short_version: 20
+            vs_version: "vs2022"
+          - version: "21.1"
+            full_version: "21.1.8"
+            short_version: 21
+            vs_version: "vs2022"
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: windows
+      artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_win
+      runner: windows-2022
+      llvm_version: ${{ matrix.llvm.version }}
+      llvm_tar: llvm-${{ matrix.llvm.full_version }}-win.${{ matrix.llvm.vs_version }}-Release+Asserts-x86.arm.wasm.tar.7z
+
+  win-test-basic:
+    needs: [define-flow, win-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [20, 21]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{matrix.llvm}}_win
+      targets: >-
+        ["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
+         "generic-i8x16", "generic-i8x32",
+         "generic-i16x8", "generic-i16x16",
+         "generic-i32x4", "generic-i32x8", "generic-i32x16",
+         "generic-i64x4",
+         "sse2-i32x4", "sse2-i32x8",
+         "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
+         "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+         "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+         "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16"]
+      optsets: -O0 -O1 -O2
+
+  win-test-avx512:
+    needs: [define-flow, win-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [20, 21]
+        arch: [x86, x86-64]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{matrix.llvm}}_win
+      targets: >-
+        ["avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
+         "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
+         "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
+         "avx512gnr-x4", "avx512gnr-x8", "avx512gnr-x16", "avx512gnr-x64", "avx512gnr-x32"]
+      optsets: -O0 -O1 -O2
