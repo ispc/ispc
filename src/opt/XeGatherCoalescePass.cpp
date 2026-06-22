@@ -547,7 +547,7 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
 
         //  If the Offset is zero, we generate a LD with default alignment for the target.
         //  If the Offset is non-zero, we should re-align the LD based on its value.
-        if (Offset != nullptr && !Offset->isZeroValue()) {
+        if (Offset != nullptr && !Offset->isNullValue()) {
             const uint64_t offset{llvm::dyn_cast<llvm::ConstantInt>(Offset)->getZExtValue()};
             auto aligned_offset = llvm::bit_floor(offset);
             const uint64_t alignment{llvm::MinAlign(offset, std::min(aligned_offset, static_cast<uint64_t>(OWORD)))};
