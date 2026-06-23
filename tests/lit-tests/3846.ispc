@@ -1,6 +1,6 @@
 // Check the unsigned reduce_add call produces the (v)psadbw instruction on x86 targets.
 
-// RUN: %{ispc} -O2 --target=host %s --emit-asm --x86-asm-syntax=intel -o - | FileCheck %s
+// RUN: %{ispc} -O2 --target=avx2-i32x8 %s --emit-asm --x86-asm-syntax=intel -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 
