@@ -792,7 +792,7 @@ define internal $1 @__add_uniform_$2($1, $1) nounwind readnone alwaysinline {
 }
 ')
 
-xe_add(i16, int8)
+xe_add(i8, int8)
 xe_add(i16, int16)
 xe_add(i32, int32)
 xe_add(i64, int64)
