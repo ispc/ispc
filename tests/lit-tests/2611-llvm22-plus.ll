@@ -7,7 +7,7 @@ declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, <4 x i1>)
 ; CHECK-LABEL: @foo
 ; CHECK-NEXT: [[HL:%.*]] = load <2 x i32>, ptr %a, align 16
 ; CHECK-NEXT: [[VEC:%.*]] = shufflevector <2 x i32> [[HL]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT: [[HS:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT: [[HS:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT: store <2 x i32> [[HS]], ptr %b, align 16
 ; CHECK-NEXT: ret void
 define void @foo(ptr %a, ptr %b) {

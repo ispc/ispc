@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -412,7 +412,7 @@ llvm::Value *MemoryCoalescing::buildEEI(llvm::Value *ExtractFrom, MemoryCoalesci
             Val = CurrIdx++;
         llvm::ArrayRef<unsigned int> ByteIdxsArg(ByteIdxs);
         // Extract bytes via shuffle vector
-        Res = new llvm::ShuffleVectorInst(Res, llvm::UndefValue::get(Res->getType()),
+        Res = new llvm::ShuffleVectorInst(Res, llvm::PoisonValue::get(Res->getType()),
                                           llvm::ConstantDataVector::get(*g->ctx, ByteIdxsArg), "coal_unaligned_loader",
                                           InsertBefore->getIterator());
         // Cast byte vector to scalar value
@@ -454,7 +454,7 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
     } else {
         // Need to get value from several blocks
         llvm::Value *ByteVec =
-            llvm::UndefValue::get(llvm::FixedVectorType::get(LLVMTypes::Int8Type, getScalarTypeSize(DstTy)));
+            llvm::PoisonValue::get(llvm::FixedVectorType::get(LLVMTypes::Int8Type, getScalarTypeSize(DstTy)));
         for (OffsetT CurrOffset = OffsetBytes, TargetOffset = 0; CurrOffset < OffsetBytes + getScalarTypeSize(DstTy);
              ++CurrOffset, ++TargetOffset) {
             unsigned Idx = CurrOffset / BlockSizeInBytes;
@@ -564,7 +564,7 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
             OffsetT Offset = ID.Offsets[0] - MinIdx;
             LI->replaceAllUsesWith(extractValueFromBlock(BlockLDs, Offset, LI->getType(), InsertPoint));
         } else if (auto *Gather = getPseudoGatherConstOffset(ID.Inst)) {
-            llvm::Value *NewVal = llvm::UndefValue::get(Gather->getType());
+            llvm::Value *NewVal = llvm::PoisonValue::get(Gather->getType());
             unsigned CurrElem = 0;
             for (auto Offset : ID.Offsets) {
                 // Adjust offset
