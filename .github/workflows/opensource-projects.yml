@@ -214,7 +214,7 @@ jobs:
 
     steps:
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+      uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537 # master
       with:
         toolchain: stable
         
@@ -236,7 +236,7 @@ jobs:
         echo "ISPC_EXECUTABLE=/usr/local/bin/ispc" >> "$GITHUB_ENV"
 
     - name: Checkout ispc-downsampler
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: Traverse-Research/ispc-downsampler
         path: ispc-downsampler
