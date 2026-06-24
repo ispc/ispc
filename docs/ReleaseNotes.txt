@@ -1,3 +1,146 @@
+=== v1.31.0 === (25 June 2026)
+
+ISPC release featuring new avx10.2nvl targets for Intel Nova Lake processors,
+two new aggressive fast-math modes, expanded standard library math coverage
+(error, hyperbolic, and other functions), and several bug fixes. Based
+on LLVM 23 (pinned to commit 6be53ab).
+
+New Targets:
+
+* New `avx10.2nvl-x4`, `avx10.2nvl-x8`, `avx10.2nvl-x16`, `avx10.2nvl-x32`, and
+  `avx10.2nvl-x64` targets have been added for Intel Nova Lake processors. These
+  targets implement AVX10.2 and APX (Advanced Performance Extensions) but,
+  unlike the `avx10.2dmr` (Diamond Rapids) targets, they do not include AMX. The
+  corresponding predefined macro is `ISPC_TARGET_AVX10_2NVL`.
+
+Dispatcher:
+
+* The multi-target runtime dispatcher now selects an AMX-bearing server target
+  variant (`avx512spr`, `avx512gnr`, `avx10.2dmr`) only when the system supports
+  AMX, instead of relying solely on the ISA ordering. AMX support is checked the
+  same way AVX-512 already is: the CPU must advertise the feature in CPUID and
+  the OS must manage its XSAVE state.
+
+New Options:
+
+* A new `--opt=disable-apx[=<list>]` option allows disabling x86 APX (Advanced
+  Performance Extensions) sub-features, which are enabled by default on
+  APX-capable targets such as `avx10.2dmr` and `avx10.2nvl`. With no list it
+  disables all APX sub-features; otherwise it accepts a comma-separated subset
+  of `egpr`, `ndd`, `push2pop2`, `ppx`, `ccmp`, `cf`, `nf`, `zu`, and `jmpabs`.
+
+Windows x64 Stack Unwinding for APX:
+
+* On Windows x64, code that uses the APX extended general purpose registers
+  (`egpr`, R16-R31) cannot be described by the legacy v1/v2 SEH unwind encodings,
+  which have no register-number field for registers beyond R15. When targeting
+  Windows on an APX-capable target (the `avx10.2dmr` and `avx10.2nvl` families)
+  with `egpr` enabled, ISPC now automatically requests Windows x64 unwind
+  information version 3, mirroring what Clang does. If you need compatibility
+  with an older unwinder, disable the extended registers with
+  `--opt=disable-apx=egpr`, which also drops the unwind v3 request.
+
+New Features:
+
+* Two new fast-math modes have been added: `balanced` and `aggressive`. These
+  modes enable more aggressive optimizations compared to the default `legacy`
+  mode, which was the mode provided in previous ISPC versions and is left
+  unchanged. The fast-math mode can be selected with
+  `--opt=fast-math:<mode>`.
+
+Standard Library:
+
+* **Breaking change**: `reduce_add()` now returns the same type as its input.
+  Previously the signatures widened the result, but the implementation was
+  inconsistent and partially incorrect. The new same-type convention matches
+  the prevailing convention in other SIMD/SPMD ecosystems and is consistent
+  with `reduce_min()` / `reduce_max()` in ISPC. For overflow-safe accumulation,
+  cast the input to a wider type explicitly, e.g. `reduce_add((int32)x)` for an
+  `int16` `x`. Any code that relied on the previous widened return type must be
+  updated.
+
+* The Gauss error function `erf` and the complementary error function `erfc`
+  have been added to the standard library.
+
+* The `expm1` function (computing `exp(x)-1` accurately) and the `log1p`
+  function (computing `log(1+x)` accurately) have been added to the standard
+  library.
+
+* The hyperbolic functions `sinh`, `cosh`, and `tanh` have been added to the
+  standard library.
+
+* Improved the precision and performance of several existing math functions,
+  including `asin` (especially close to 0), `acos`, `atan` (including correct
+  `-0` handling and a new fast variant), and the default `log`.
+
+Experimental PowerPC 64-bit Support:
+
+* Initial support for the PowerPC 64-bit little-endian (ppc64le) architecture
+  has been added using generic targets, along with native VSX targets (e.g.
+  `vsx-i32x4`). The baseline is POWER ISA 2.7 (POWER8+) with VSX. This support
+  is experimental and not included in official ISPC binaries. To use it, build
+  ISPC from source with the `PPC64_ENABLED=ON` CMake option. Usage:
+  `ispc --arch=ppc64le --target=vsx-i32x4 foo.ispc -o foo.o`.
+
+Performance:
+
+* Massively sped up 32-bit shuffles on the `avx2-i32x16` target and varying popcnt
+  on the `avx2-i8x32`, `avx512skx-x32`, and `avx512skx-x64` targets
+
+Bug Fixes:
+
+* Fixed preprocessing of macros in `foreach` ranges without surrounding spaces,
+  e.g. `foreach (i = 0...MAXI)` now expands `MAXI` correctly (#3809).
+
+* Fixed alignment handling for extern declarations and ensured uniform const
+  arrays always get native vector alignment to prevent misaligned access
+  violations.
+
+* Fixed `varying bool<N>` LLVM type to match the mask representation.
+
+* Extended the safe-to-blend analysis to cover struct members, so masked stores
+  to struct fields are now lowered to load-blend-store instead of branchy masked
+  store emulation. This improves codegen for struct assignments on targets
+  without native masked stores, such as NEON and SSE4.
+
+Build System:
+
+* Updated default LLVM version to LLVM 23 (pinned to commit 6be53ab, ahead of
+  the LLVM 23.1.0 release).
+* Added support for building with LLVM 22.1.
+* Dropped support for LLVM 18 and LLVM 19.
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/25.13.33276.16
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel Arc(TM)
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.8250
+   https://www.intel.com/content/www/us/en/download/785597/869290/intel-arc-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - OpenCL(TM) Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/5b7e49f
+ - https://github.com/intel/vc-intrinsics/commit/c9c1011
+ - https://github.com/oneapi-src/level-zero/commit/v1.20.2
+ - https://github.com/llvm/llvm-project/commit/6be53ab
+
 === v1.30.0 === (04 February 2026)
 
 ISPC release featuring Intel AMX (Advanced Matrix Extensions) support in the
