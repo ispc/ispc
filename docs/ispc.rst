@@ -261,56 +261,17 @@ of recent changes to the compiler.
 Updating ISPC Programs For Changes In ISPC 1.31.0
 -------------------------------------------------
 
-New Architecture Support:
-
-* Initial support for the PowerPC 64-bit little-endian (ppc64le) architecture
-  has been added using generic targets (e.g., generic-i32x4). The baseline is
-  POWER ISA 2.7 (POWER8+) with VSX. This support is experimental and not
-  included in official ISPC binaries. To use it, build ISPC from source with
-  the `PPC64_ENABLED=ON` CMake option. Usage: `ispc --arch=ppc64le
-  --target=generic-i32x4 foo.ispc -o foo.o`.
-
-New Features:
-
-* Implementation of two new fast-math modes: ``balanced`` and ``aggressive``.
-  These modes bring more aggressive optimizations compared to the default
-  ``legacy`` mode. The latter was the mode provided so far in previous ISPC
-  versions. It is still available and left unchanged. The fast-math mode can be
-  specified with the option ``--opt=fast-math:<mode>``. See the optimization
-  settings section for more information about the new modes.
-
-Standard Library Changes:
-
-* **Breaking change**: ``reduce_add()`` now returns the same type as its
-    input. Previously the signatures widened the result, but the
-    implementation was inconsistent and partially incorrect. The new
-    same-type convention also matches the prevailing convention in other
-    SIMD/SPMD ecosystems and is consistent with ``reduce_min()`` /
-    ``reduce_max()`` in ISPC. For overflow-safe accumulation, cast the
-    input to a wider type explicitly, e.g. ``reduce_add((int32)x)`` for an
-    ``int16`` ``x``. Any code that relied on the previous widened return
-    type must be updated.
-
-* The Gauss error function ``erf`` and the complementary error function ``erfc``
-  have been added to the standard library.
-* The ``expm1`` function (meant to compute ``exp(x)-1`` accurately), and the
-  ``log1p`` function (meant to compute ``log(1+x)`` accurately) have also been
-  added to the standard library.
-* The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` have also been added
-  to the standard library.
-
 ISPC Targets:
 
 * New ``avx10.2nvl-x4``, ``avx10.2nvl-x8``, ``avx10.2nvl-x16``,
   ``avx10.2nvl-x32``, and ``avx10.2nvl-x64`` targets have been added for Intel
-  Nova Lake processors. These targets implement AVX10.2 with full AVX-512
-  support but, unlike the ``avx10.2dmr`` (Diamond Rapids) targets, they do not
-  include AMX. The corresponding predefined macro is ``ISPC_TARGET_AVX10_2NVL``.
+  Nova Lake processors. These targets implement AVX10.2 and APX (Advanced
+  Performance Extensions) but, unlike the ``avx10.2dmr`` (Diamond Rapids)
+  targets, they do not include AMX. The corresponding predefined macro is
+  ``ISPC_TARGET_AVX10_2NVL``.
 * The multi-target runtime dispatcher now selects an AMX-bearing server target
   variant (``avx512spr``, ``avx512gnr``, ``avx10.2dmr``) only when the system
-  supports AMX, instead of relying solely on the ISA ordering. AMX support is
-  checked the same way AVX-512 already is: the CPU must advertise the feature in
-  CPUID and the OS must manage its XSAVE state.
+  supports AMX, instead of relying solely on the ISA ordering.
 
 New Options:
 
@@ -328,10 +289,52 @@ Windows x64 Stack Unwinding For APX:
   encodings, which have no register-number field for registers beyond R15.
   When targeting Windows on an APX-capable target (the ``avx10.2dmr`` and
   ``avx10.2nvl`` families) with ``egpr`` enabled, ISPC now automatically
-  requests Windows x64 unwind information version 3 by setting the
-  ``winx64-eh-unwind`` module flag, mirroring what Clang does. If you need
+  requests Windows x64 unwind information version 3. If you need
   compatibility with an older unwinder, disable the extended registers with
   ``--opt=disable-apx=egpr``, which also drops the unwind v3 request.
+
+New Features:
+
+* Implementation of two new fast-math modes: ``balanced`` and ``aggressive``.
+  These modes bring more aggressive optimizations compared to the default
+  ``legacy`` mode. The latter was the mode provided so far in previous ISPC
+  versions. It is still available and left unchanged. The fast-math mode can be
+  specified with the option ``--opt=fast-math:<mode>``. See the optimization
+  settings section for more information about the new modes.
+
+Standard Library Changes:
+
+* **Breaking change**: ``reduce_add()`` now returns the same type as its
+  input. Previously the signatures widened the result, but the
+  implementation was inconsistent and partially incorrect. The new
+  same-type convention also matches the prevailing convention in other
+  SIMD/SPMD ecosystems and is consistent with ``reduce_min()`` /
+  ``reduce_max()`` in ISPC. For overflow-safe accumulation, cast the
+  input to a wider type explicitly, e.g. ``reduce_add((int32)x)`` for an
+  ``int16`` ``x``. Any code that relied on the previous widened return
+  type must be updated.
+* The Gauss error function ``erf`` and the complementary error function ``erfc``
+  have been added to the standard library.
+* The ``expm1`` function (meant to compute ``exp(x)-1`` accurately), and the
+  ``log1p`` function (meant to compute ``log(1+x)`` accurately) have also been
+  added to the standard library.
+* The hyperbolic functions ``sinh``, ``cosh`` and ``tanh`` have also been added
+  to the standard library.
+* The precision of several existing math functions has been improved, including
+  ``asin`` (especially close to 0), ``acos``, ``atan`` (which now also handles
+  ``-0`` correctly), and the default ``log``. As a result, the values these
+  functions return may differ slightly from previous ISPC versions. Code that
+  relies on bit-exact results (for example, golden-output comparisons) may need
+  to update its expected values.
+
+New Architecture Support:
+
+* Initial support for the PowerPC 64-bit little-endian (ppc64le) architecture
+  has been added using generic targets (e.g., generic-i32x4). The baseline is
+  POWER ISA 2.7 (POWER8+) with VSX. This support is experimental and not
+  included in official ISPC binaries. To use it, build ISPC from source with
+  the ``PPC64_ENABLED=ON`` CMake option. Usage: ``ispc --arch=ppc64le
+  --target=generic-i32x4 foo.ispc -o foo.o``.
 
 Updating ISPC Programs For Changes In ISPC 1.30.0
 -------------------------------------------------
