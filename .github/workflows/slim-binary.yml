@@ -101,9 +101,10 @@ jobs:
         .github/workflows/scripts/install-build-deps.ps1
 
     - name: Check environment
-      shell: cmd
+      # wmic is removed from the windows-2025 image; use the PowerShell CIM query.
+      shell: pwsh
       run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        Get-CimInstance -ClassName Win32_Processor | Select-Object Caption, DeviceID, Name, NumberOfCores, MaxClockSpeed, Status | Format-Table -AutoSize
 
     - name: Build package
       run: |
