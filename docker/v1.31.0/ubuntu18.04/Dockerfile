@@ -60,19 +60,17 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
 # intrinsics (-mwaitpkg, _tpause), but Ubuntu 18.04's binutils 2.30 assembler
 # does not know the 'tpause' instruction (needs >= 2.32), so a GCC 11 build
 # fails to assemble. GCC 7 does not enable that code path.
-RUN if [ "$XE_DEPS" == "ON" ]; then \
-        git clone --depth 1 --branch v2021.13.0 https://github.com/oneapi-src/oneTBB.git /tmp/oneTBB && \
-        cmake -S /tmp/oneTBB -B /tmp/oneTBB/build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DTBB_TEST=OFF \
-            -DCMAKE_C_COMPILER=gcc-7 \
-            -DCMAKE_CXX_COMPILER=g++-7 \
-            -DCMAKE_INSTALL_PREFIX=/opt/intel/oneapi/tbb/2021.13 && \
-        cmake --build /tmp/oneTBB/build -j"$(nproc)" && \
-        cmake --install /tmp/oneTBB/build && \
-        rm -rf /tmp/oneTBB && \
-        ln -s /opt/intel/oneapi/tbb/2021.13 /opt/intel/oneapi/tbb/latest; \
-    fi
+RUN git clone --depth 1 --branch v2021.13.0 https://github.com/oneapi-src/oneTBB.git /tmp/oneTBB && \
+    cmake -S /tmp/oneTBB -B /tmp/oneTBB/build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DTBB_TEST=OFF \
+        -DCMAKE_C_COMPILER=gcc-7 \
+        -DCMAKE_CXX_COMPILER=g++-7 \
+        -DCMAKE_INSTALL_PREFIX=/opt/intel/oneapi/tbb/2021.13 && \
+    cmake --build /tmp/oneTBB/build -j"$(nproc)" && \
+    cmake --install /tmp/oneTBB/build && \
+    rm -rf /tmp/oneTBB && \
+    ln -s /opt/intel/oneapi/tbb/2021.13 /opt/intel/oneapi/tbb/latest
 
 # Set TBB_ROOT to point to oneAPI TBB installation
 ENV TBB_ROOT=/opt/intel/oneapi/tbb/latest
