@@ -70,7 +70,7 @@ env:
 jobs:
   test:
     name: ${{ inputs.platform }} (${{ inputs.architecture }}, ${{ matrix.target }}, ${{ inputs.optsets }})
-    runs-on: ${{ inputs.runner != '' && inputs.runner || (inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-15-intel') || (inputs.platform == 'windows' && (inputs.architecture == 'aarch64' && 'windows-11-arm' || 'windows-2022')) || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04') }}
+    runs-on: ${{ inputs.runner != '' && inputs.runner || (inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-15-intel') || (inputs.platform == 'windows' && (inputs.architecture == 'aarch64' && 'windows-11-arm' || 'windows-latest')) || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04') }}
     continue-on-error: false
     strategy:
       fail-fast: false
