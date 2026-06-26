@@ -8,7 +8,7 @@ on:
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned]
+    types: [assigned]
   pull_request_review:
     types: [submitted]
   workflow_dispatch:
@@ -62,7 +62,37 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Building LLVM + ISPC adds ~2-5 min and ~500MB to the run. Only do it for
+      # tasks that actually need to compile: a request mentioning "fix" (e.g.
+      # "@claude fix this", "@claude can you fix X"), or the
+      # workflow_dispatch/workflow_call auto-fix chain. Lightweight tasks
+      # (Q&A, code review) skip the build entirely.
+      - name: Determine if build is needed
+        id: build_check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          REVIEW_BODY: ${{ github.event.review.body }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          needed=false
+          case "$EVENT_NAME" in
+            workflow_dispatch|workflow_call)
+              needed=true ;;
+            *)
+              # The job-level if: already guarantees an "@claude" mention, so a
+              # mention of "fix" anywhere in the triggering text means a build
+              # task rather than Q&A/review.
+              if printf '%s\n%s\n%s' "$COMMENT_BODY" "$REVIEW_BODY" "$ISSUE_BODY" \
+                  | grep -qiE '\bfix(es|ed|ing)?\b'; then
+                needed=true
+              fi ;;
+          esac
+          echo "needed=$needed" >> "$GITHUB_OUTPUT"
+          echo "Build needed: $needed"
+
       - name: Install build dependencies
+        if: steps.build_check.outputs.needed == 'true'
         run: |
           echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
           sudo apt-get update
@@ -72,6 +102,7 @@ jobs:
             libtbb-dev libstdc++6
 
       - name: Download LLVM
+        if: steps.build_check.outputs.needed == 'true'
         run: |
           wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 \
             "$LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR"

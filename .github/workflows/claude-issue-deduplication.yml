@@ -15,16 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
       issues: write
       id-token: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-        with:
-          fetch-depth: 1
-
       - name: Check for duplicate issues
         uses: anthropics/claude-code-action@8a1c4371755898f67cd97006ba7c97702d5fc4bf # v1.0.0
         with:
@@ -54,13 +48,21 @@ jobs:
 
             If it's NOT a duplicate:
             - Don't add any comments
+            - Classify the issue and set its issue type using mcp__github__update_issue
+              with the "type" field:
+              - "Bug" if it reports incorrect behavior, a crash, a miscompilation,
+                a build failure, or anything not working as documented
+              - "Enhancement" if it requests a new feature, an API/syntax addition,
+                an optimization, or a documentation improvement
+            - If you genuinely cannot tell which it is, leave the type unset
 
             Use these tools:
             - mcp__github__get_issue: Get issue details
             - mcp__github__search_issues: Search for similar issues
             - mcp__github__list_issues: List recent issues if needed
             - mcp__github__create_issue_comment: Add a comment if duplicate found
-            - mcp__github__update_issue: Add labels
+            - mcp__github__update_issue: Add the "duplicate" label (duplicates) or
+              set the issue type (non-duplicates)
 
             Be thorough but efficient. Focus on finding true duplicates, not just similar issues.
 
