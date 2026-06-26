@@ -1,0 +1,11 @@
+# CODEOWNERS for ISPC
+#
+# Each line is a file pattern followed by one or more owners.
+# Owners listed here are automatically requested for review on matching PRs.
+# See: https://docs.github.com/en/repositories/managing-your-repos-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Additional maintainers who are NOT auto-requested for review are listed in
+# MAINTAINERS.md.
+
+# Default owner for everything in the repo.
+* @aneshlya

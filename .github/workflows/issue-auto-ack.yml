@@ -1,0 +1,44 @@
+## Copyright 2026 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+name: Issue Auto-Acknowledgement
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  acknowledge:
+    # Only run in the main ispc/ispc repo, and skip issues opened by
+    # maintainers and prior contributors (they don't need the triage reminder).
+    if: >-
+      github.repository == 'ispc/ispc' &&
+      github.event.issue.author_association != 'OWNER' &&
+      github.event.issue.author_association != 'MEMBER' &&
+      github.event.issue.author_association != 'COLLABORATOR' &&
+      github.event.issue.author_association != 'CONTRIBUTOR'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+
+    steps:
+      - name: Post acknowledgement comment
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = [
+              `Thanks for filing this issue, @${issue.user.login}! A maintainer will triage it soon.`,
+              ``,
+              `To help us address it faster, please make sure your report follows the ` +
+                `guidelines in [CONTRIBUTING](https://github.com/ispc/ispc/blob/main/CONTRIBUTING.md).`,
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body,
+            });
