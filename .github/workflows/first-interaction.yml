@@ -1,0 +1,36 @@
+## Copyright 2026 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+name: First-Time Contributor Welcome
+
+on:
+  # pull_request_target is required so the action has a token that can comment
+  # on PRs from forks. This is safe here because the workflow checks out NO PR
+  # code and executes nothing from the fork - it only posts a comment via the
+  # GitHub API. Do NOT add a checkout of the PR head or run fork scripts here.
+  pull_request_target: # zizmor: ignore[dangerous-triggers] - no fork code is checked out or executed; comment-only
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  welcome:
+    # Only run in the main ispc/ispc repo.
+    if: github.repository == 'ispc/ispc'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Greet first-time contributors
+        uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-message: >-
+            Thanks for opening your first pull request, and welcome to ISPC! 🎉
+            A maintainer will review your changes soon.
+
+            To help the review go smoothly, please make sure you've read
+            [CONTRIBUTING](https://github.com/ispc/ispc/blob/main/CONTRIBUTING.md),
+            formatted any C/C++ changes with `clang-format`, and that the test
+            suite passes. We appreciate your contribution!
