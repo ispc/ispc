@@ -25,8 +25,14 @@ jobs:
       - name: Greet first-time contributors
         uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          pr-message: >-
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          # issue_message is required by the action even though this workflow
+          # only triggers on pull_request_target; new issues are handled by
+          # issue-auto-ack.yml, so this message is never actually posted.
+          issue_message: >-
+            Thanks for filing your first issue, and welcome to ISPC!
+            A maintainer will triage it soon.
+          pr_message: >-
             Thanks for opening your first pull request, and welcome to ISPC! 🎉
             A maintainer will review your changes soon.
 
