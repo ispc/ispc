@@ -12,8 +12,8 @@
 // Non-APX target: no v3 flag.
 //; RUN: %{ispc} %s --target=avx512skx-x16 --arch=x86-64 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefix=NO-V3
 
-// Linux: unwind v3 is Windows-only, so the flag is never set.
-//; RUN: %{ispc} %s --target=avx10.2dmr-x16 --arch=x86-64 --target-os=linux --emit-llvm-text -o - | FileCheck %s --check-prefix=NO-V3
+// The Linux counterpart (unwind v3 is Windows-only) is verified separately in
+// apx-win-unwindv3-linux.ispc, which is gated on LINUX_ENABLED.
 
 // REQUIRES: X86_ENABLED && WINDOWS_ENABLED && LLVM_23_0+
 
