@@ -2,6 +2,7 @@
 
 ; CHECK-PRINT: Module passes:
 ; CHECK-PRINT-NEXT:   remove-persistent-funcs
+; CHECK-PRINT-NEXT:   restore-inline-attr
 ; CHECK-PRINT-NEXT: Function passes:
 ; CHECK-PRINT-NEXT:   gather-coalesce
 ; CHECK-PRINT-NEXT:   improve-memory-ops
