@@ -447,10 +447,66 @@ EXT READNONE uniform double __floor_uniform_double(uniform double x) { return @l
 EXT READNONE uniform float __floor_uniform_float(uniform float x) { return @llvm.floor(x); }
 EXT READNONE varying double __floor_varying_double(varying double x) { return @llvm.floor(x); }
 EXT READNONE varying float __floor_varying_float(varying float x) { return @llvm.floor(x); }
-EXT READNONE uniform double __round_uniform_double(uniform double x) { return @llvm.roundeven(x); }
-EXT READNONE uniform float __round_uniform_float(uniform float x) { return @llvm.roundeven(x); }
-EXT READNONE varying double __round_varying_double(varying double x) { return @llvm.roundeven(x); }
-EXT READNONE varying float __round_varying_float(varying float x) { return @llvm.roundeven(x); }
+
+// There are not any rounding instructions in SSE2 and the roundeven function
+// (defined in C23) is not defined in the MSVC's CRT yet.
+// Thus, calling llvm.roundeven on SSE2 systems would results in an error. 
+// So we have to emulate the functionality with multiple instructions...
+// This code is initially comming from the SSE2 target file.
+EXT READNONE uniform float __round_uniform_float(uniform float x) {
+    uniform uint32 ix = __intbits_uniform_float(x);
+    const uniform uint32 sign = ix & 0x80000000lu;
+    ix ^= sign;
+    x = __floatbits_uniform_int32(ix);
+    x += 0x1.0p23f;
+    x -= 0x1.0p23f;
+    ix = __intbits_uniform_float(x);
+    ix ^= sign;
+    x = __floatbits_uniform_int32(ix);
+    return x;
+}
+
+// See __round_uniform_float for more information
+EXT READNONE varying float __round_varying_float(varying float x) {
+    uint32 ix = __intbits_varying_float(x);
+    const uint32 sign = ix & 0x80000000lu;
+    ix ^= sign;
+    x = __floatbits_varying_int32(ix);
+    x += 0x1.0p23f;
+    x -= 0x1.0p23f;
+    ix = __intbits_varying_float(x);
+    ix ^= sign;
+    x = __floatbits_varying_int32(ix);
+    return x;
+}
+
+// See __round_uniform_float for more information
+EXT READNONE uniform double __round_uniform_double(uniform double x) {
+    uniform uint64 ix = __intbits_uniform_double(x);
+    const uniform uint64 sign = ix & 0x8000000000000000llu;
+    ix ^= sign;
+    x = __doublebits_uniform_int64(ix);
+    x += 0x1.0p52d;
+    x -= 0x1.0p52d;
+    ix = __intbits_uniform_double(x);
+    ix ^= sign;
+    x = __doublebits_uniform_int64(ix);
+    return x;
+}
+
+// See __round_uniform_float for more information
+EXT READNONE varying double __round_varying_double(varying double x) {
+    uint64 ix = __intbits_varying_double(x);
+    const uint64 sign = ix & 0x8000000000000000llu;
+    ix ^= sign;
+    x = __doublebits_varying_int64(ix);
+    x += 0x1.0p52d;
+    x -= 0x1.0p52d;
+    ix = __intbits_varying_double(x);
+    ix ^= sign;
+    x = __doublebits_varying_int64(ix);
+    return x;
+}
 
 // rcp
 EXT READNONE uniform float __rcp_fast_uniform_float(uniform float x) { return 1 / x; }
