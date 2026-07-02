@@ -156,7 +156,13 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
                 return {};
             }
             using CpuExtensionsType = llvm::AArch64::ExtensionBitset;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+            // LLVM 23 removed CpuInfo::getImpliedExtensions(); access the
+            // DefaultExtensions field directly (llvm/llvm-project#206422).
+            CpuExtensionsType cpuExtensions = cpuInfo->DefaultExtensions;
+#else
             CpuExtensionsType cpuExtensions = cpuInfo->getImpliedExtensions();
+#endif
             llvm::AArch64::getExtensionFeatures(cpuExtensions, targetFeatures);
         } else {
             UNREACHABLE();
