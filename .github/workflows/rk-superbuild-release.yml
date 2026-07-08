@@ -33,7 +33,7 @@ jobs:
         apt -y update && apt -y install git wget tar build-essential cmake ninja-build libglfw3-dev libgl1-mesa-dev libxinerama-dev libxcursor-dev libxi-dev python3-dev
 
     - name: Clone RK superbuild repo
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: RenderKit/superbuild
 
@@ -99,7 +99,7 @@ jobs:
     if: github.repository == 'ispc/ispc'
     steps:
     - name: Clone RK ospray repo
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: ospray/ospray
 
@@ -137,7 +137,7 @@ jobs:
         apt -y update && apt -y install build-essential cmake git git-lfs wget python3 libtbb2-dev
 
     - name: Clone OIDN repo
-      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: RenderKit/oidn
         submodules: true
