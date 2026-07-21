@@ -330,6 +330,19 @@ define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
   ret <WIDTH x float> %r
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; round
+
+define <WIDTH x float> @__round_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x float> @llvm.roundeven(<WIDTH x float> %0)
+  ret <WIDTH x float> %res
+}
+
+define <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x double> @llvm.roundeven(<WIDTH x double> %0)
+  ret <WIDTH x double> %res
+}
+
 ;; sqrt/rsqrt/rcp
 ;; TODO: need to use intrinsics and N-R approximation.
 
