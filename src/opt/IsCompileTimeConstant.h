@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -25,12 +25,16 @@ namespace ispc {
 
 struct IsCompileTimeConstantPass : public llvm::PassInfoMixin<IsCompileTimeConstantPass> {
 
-    IsCompileTimeConstantPass(bool last = false) : isLastTry(last) {}
+    IsCompileTimeConstantPass(bool last = false, bool skipDeferredInline = false)
+        : isLastTry(last), skipDeferredInline(skipDeferredInline) {}
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool isLastTry;
+    // On the last try, don't resolve calls in functions still awaiting forced
+    // inlining; inlining may expose a constant argument (#3804).
+    bool skipDeferredInline;
     bool lowerCompileTimeConstant(llvm::BasicBlock &BB);
 };
 

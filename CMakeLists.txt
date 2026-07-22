@@ -596,6 +596,8 @@ list(APPEND OPT_SOURCES
     src/opt/ReplacePseudoMemoryOps.h
     src/opt/ReplaceStdlibShiftPass.cpp
     src/opt/ReplaceStdlibShiftPass.h
+    src/opt/RestoreInlineAttrPass.cpp
+    src/opt/RestoreInlineAttrPass.h
     src/opt/ScalarizePass.cpp
     src/opt/ScalarizePass.h
     src/opt/FastMath.cpp
