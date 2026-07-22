@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -435,6 +435,44 @@ static bool lIsExternC(const Symbol *sym) {
     return ft->IsExternC();
 }
 
+// Escape a string for use in a make/Ninja depfile rule.
+// Escape order matters: backslash must be escaped first to avoid double-escaping.
+static std::string lEscapeMakeDepfileToken(const std::string &s) {
+    std::string result;
+    result.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+        case '\\':
+            result += "\\\\";
+            break;
+        case ' ':
+            result += "\\ ";
+            break;
+        case ':':
+            result += "\\:";
+            break;
+        case '#':
+            result += "\\#";
+            break;
+        case '$':
+            result += "$$";
+            break;
+        default:
+            result += c;
+            break;
+        }
+    }
+    return result;
+}
+
+// Escape a filesystem path for use as a dependency filename (RHS) in a depfile rule.
+static std::string lEscapeDepfileDependency(const std::string &path) { return lEscapeMakeDepfileToken(path); }
+
+// Escape a target name for use as a Make-quoted target (LHS) in a depfile rule.
+// Matches GCC/Clang -MQ semantics: special characters are literalized.
+// Do NOT use for -MT targets, which must be written raw to preserve Make expressions.
+static std::string lEscapeDepfileQuotedTarget(const std::string &target) { return lEscapeMakeDepfileToken(target); }
+
 static void lUnescapeStringInPlace(std::string &str) {
     // There are many more escape sequences, but since this is a path,
     // we can get away with only supporting the basic ones (i.e. no
@@ -512,10 +550,15 @@ bool Module::writeDeps(Output &CO) {
     }
 
     if (generateMakeRule) {
-        fprintf(file, "%s:", targetName.c_str());
-        // Rules always emit source first.
+        // LHS (target): -MT stays raw; -MQ and implicit targets are Make-escaped.
+        if (CO.depsTargetMode == Module::Output::DepTargetMode::MT) {
+            fprintf(file, "%s:", targetName.c_str());
+        } else {
+            fprintf(file, "%s:", lEscapeDepfileQuotedTarget(targetName).c_str());
+        }
+        // RHS: always escape dependency filenames so parsers treat each path as a single token.
         if (srcFile && !IsStdin(srcFile)) {
-            fprintf(file, " %s", srcFile);
+            fprintf(file, " %s", lEscapeDepfileDependency(srcFile).c_str());
         }
         std::string unescaped;
 
@@ -528,7 +571,7 @@ bool Module::writeDeps(Output &CO) {
                 continue;
             }
             fprintf(file, " \\\n");
-            fprintf(file, " %s", unescaped.c_str());
+            fprintf(file, " %s", lEscapeDepfileDependency(unescaped).c_str());
         }
         fprintf(file, "\n");
     } else {
@@ -537,7 +580,9 @@ bool Module::writeDeps(Output &CO) {
             fprintf(file, "%s\n", it->c_str());
         }
     }
-    fclose(file);
+    if (file != stdout) {
+        fclose(file);
+    }
     return true;
 }
 
