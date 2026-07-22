@@ -5,7 +5,13 @@
 
 void compute(uniform float input[], uniform float output[], uniform int count) {
     foreach (i = 0 ... count) {
-        output[i] = sin(input[i]) + (input[i]);
+        float x = input[i];
+        float r = x;
+        r = r * x + x; r = r * x + x; r = r * x + x; r = r * x + x;
+        r = r * x + x; r = r * x + x; r = r * x + x; r = r * x + x;
+        r = r * x + x; r = r * x + x; r = r * x + x; r = r * x + x;
+        r = r * x + x; r = r * x + x; r = r * x + x; r = r * x + x;
+        output[i] = r;
     }
 }
 
