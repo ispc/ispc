@@ -2785,7 +2785,10 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             AddDebugPos(inst);
             llvm::Value *loadVal = inst;
             // bool type is stored as i8. So, it requires some processing.
-            if (elType->IsBoolType() && (CastType<AtomicType>(elType) != nullptr)) {
+            if (elType->IsBoolType() &&
+                (CastType<AtomicType>(elType) != nullptr ||
+                 (CastType<VectorType>(elType) != nullptr &&
+                  CastType<AtomicType>(CastType<VectorType>(elType)->GetElementType()) != nullptr))) {
                 loadVal = SwitchBoolToMaskType(loadVal, elType->LLVMType(g->ctx));
             }
             return loadVal;
