@@ -3,7 +3,9 @@
 // RUN: %{cc} %t.o %t.c.o -o %t.c.bin
 // RUN: %t.c.bin | FileCheck %s
 
-// REQUIRES: !MACOS_HOST && X86_ENABLED
+// The binary is compiled for avx512skx-x8 and executed on the host, so the host
+// must support AVX-512.
+// REQUIRES: !MACOS_HOST && X86_ENABLED && AVX512_HOST
 
 // The result of round stdlib function should not depend on MXCSR
 // CHECK: rounded 0: [2.000000,
