@@ -456,6 +456,9 @@ class Target {
     /** ISPC target being used */
     ISPCTarget m_ispc_target;
 
+    /** Vector register width in bits of an rvv target (0 for other targets). */
+    int m_rvvVlen;
+
     /** Instruction set being compiled to. */
     ISA m_isa;
 
@@ -932,6 +935,11 @@ struct Globals {
     /** Indicates that alignment in memory allocation routines should be
         forced to have given value. -1 value means natural alignment for the platforms. */
     int forceAlignment;
+
+    /** Target attributes given with --attr. For the RISC-V rvv target,
+        zvl<N>b selects the vector register width and any other attribute
+        is passed to LLVM as a target feature. */
+    std::vector<std::string> targetAttributes;
 
     /** When true, flag non-static functions with dllexport attribute on Windows. */
     bool dllExport;
