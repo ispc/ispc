@@ -2442,9 +2442,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             }
         }
 
+#if ISPC_LLVM_VERSION < ISPC_LLVM_24_0
+        // LLVM 24 removed TargetOptions::AllowFPOpFusion; contraction is now
+        // controlled only by per-instruction fast-math flags.
         if (g->opt.disableFMA == false) {
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
         }
+#endif
 
         if (g->functionSections) {
             options.FunctionSections = true;
