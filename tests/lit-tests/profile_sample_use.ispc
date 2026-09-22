@@ -11,15 +11,15 @@
 // CHECK_NO_PROFILE-NOT: SampleProfile
 
 // WITH PROFILE - should have complete profile metadata
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{i32 1, !"ProfileSummary", !{{[0-9]+}}}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"ProfileFormat", !"SampleProfile"}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"TotalCount", i64 {{[0-9]+}}}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"MaxCount", i64 {{[0-9]+}}}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"MaxFunctionCount", i64 {{[0-9]+}}}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"NumCounts", i64 {{[0-9]+}}}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"NumFunctions", i64 3}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"IsPartialProfile", i64 0}
-// CHECK_WITH_PROFILE: !{{[0-9]+}} = !{!"DetailedSummary", !{{[0-9]+}}}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{i32 1, !"ProfileSummary", !{{[0-9]+}}}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"ProfileFormat", !"SampleProfile"}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"TotalCount", i64 {{[0-9]+}}}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"MaxCount", i64 {{[0-9]+}}}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"MaxFunctionCount", i64 {{[0-9]+}}}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"NumCounts", i64 {{[0-9]+}}}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"NumFunctions", i64 3}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"IsPartialProfile", i64 0}
+// CHECK_WITH_PROFILE-DAG: !{{[0-9]+}} = !{!"DetailedSummary", !{{[0-9]+}}}
 
 static uniform float hot_helper(uniform float x) {
     return x * 2.0f + 1.0f;
