@@ -354,7 +354,10 @@ UNUSED_ATTR static int get_x86_has_apx() {
 
 // Apply AMX and APX requirements to host ISA selection.
 UNUSED_ATTR static enum ISA get_x86_host_isa(enum ISA isa, int amxUsable, int apxUsable, int allAPXDisabled) {
-    if (!amxUsable && (isa == SPR_AVX512 || isa == GNR_AVX512 || isa == DMR_AVX10_2)) {
+    if (!amxUsable && isa == DMR_AVX10_2) {
+        isa = NVL_AVX10_2;
+    }
+    if (!amxUsable && (isa == SPR_AVX512 || isa == GNR_AVX512)) {
         return ICL_AVX512;
     }
     if (apxUsable || allAPXDisabled) {
