@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -53,7 +53,12 @@ bool Function::IsInternal() const {
     bool isInline = false;
     llvm::Function *function = sym->function;
     if (function != nullptr) {
-        isInline = (function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline));
+        const llvm::AttributeSet &fnAttrs = function->getAttributes().getFnAttrs();
+        // ispc-defer-alwaysinline is the deferred form of AlwaysInline used for
+        // user-written `inline`; either marker means the source qualifier was
+        // present.
+        isInline =
+            fnAttrs.hasAttribute(llvm::Attribute::AlwaysInline) || fnAttrs.hasAttribute("ispc-defer-alwaysinline");
     }
     return sc == StorageClass::STATIC || isInline;
 }
@@ -500,10 +505,13 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // entire thing inside code that tests to see if the mask is all
         // on, all off, or mixed.  If this is a simple function, then this
         // isn't worth the code bloat / overhead.
-        bool checkMask =
-            (!g->target->isXeTarget() && type->IsTask() == true) ||
-            ((function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline) == false) &&
-             costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
+        const llvm::AttributeSet &fnAttrs = function->getAttributes().getFnAttrs();
+        // ispc-defer-alwaysinline is the deferred form of alwaysinline used for
+        // user-written `inline`; treat both as "will be inlined".
+        const bool willBeInlined =
+            fnAttrs.hasAttribute(llvm::Attribute::AlwaysInline) || fnAttrs.hasAttribute("ispc-defer-alwaysinline");
+        bool checkMask = (!g->target->isXeTarget() && type->IsTask() == true) ||
+                         (!willBeInlined && costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
         checkMask &= (type->IsUnmasked() == false);
         checkMask &= (g->target->getMaskingIsFree() == false);
         checkMask &= (g->opt.disableCoherentControlFlow == false);
@@ -1326,7 +1334,9 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym) {
     g->target->markFuncWithTargetAttr(function);
 
     if (isInline) {
-        function->addFnAttr(llvm::Attribute::AlwaysInline);
+        // See AddFunctionDeclaration in module.cpp for why we use a custom
+        // attribute here instead of AlwaysInline.
+        function->addFnAttr("ispc-defer-alwaysinline");
     }
     if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
