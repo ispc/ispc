@@ -108,13 +108,21 @@ static int __os_has_avx512_support() {
 // Return of the x86 ISA enumerant values that gives the most capable ISA that
 // the current system can run.
 UNUSED_ATTR static enum ISA get_x86_isa() {
+    int info0[4];
+    __cpuid(info0, 0);
+    int max_level = info0[0];
+    if (max_level < 1) {
+        return INVALID;
+    }
+
     int info[4];
     __cpuid(info, 1);
-    UNUSED_ATTR int max_level = info[0];
 
     // Call cpuid with eax=7, ecx=0
-    int info2[4];
-    __cpuidex(info2, 7, 0);
+    int info2[4] = {0, 0, 0, 0};
+    if (max_level >= 7) {
+        __cpuidex(info2, 7, 0);
+    }
 
     int info3[4] = {0, 0, 0, 0};
     int max_subleaf = info2[0];
@@ -146,9 +154,6 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
     UNUSED_ATTR int amxcomplex =          (info3[3] & (1 << 8)) != 0;
     UNUSED_ATTR int avxvnniint16 =        (info3[3] & (1 << 10)) != 0;
     UNUSED_ATTR int prefetchi =           (info3[3] & (1 << 14)) != 0;
-    // APX feature includes egpr, push2pop2, ppx, ndd, ccmp, nf, cf, zu
-    UNUSED_ATTR int apx =                 (info3[3] & (1 << 21)) != 0;
-
     // clang-format on
 
     // NOTE: the values returned below must be the same as the
@@ -212,18 +217,19 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
             // clang-format off
 
             int info_avx10[4] = {0, 0, 0, 0};
-            if (max_level >= 24) {
+            if (max_level >= 0x24) {
                 __cpuidex(info_avx10, 0x24, 0);
             }
             int avx10_ver = info_avx10[1] & 0xFF;
             int avx10_2 = avx10_ver >= 2;
             // clang-format on
 
-            // Diamond Rapids:         DMR = GNR + AVX10_2 + APX + ... (For the whole list see x86TargetParser.cpp)
-            int dmr = gnr && avx10_2 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 && avxvnniint16 &&
+            // Diamond Rapids:         DMR = GNR + AVX10_2 + ... (For the whole list see x86TargetParser.cpp)
+            int dmr = gnr && avx10_2 && cmpccxadd && avxneconvert && avxifma && avxvnniint8 && avxvnniint16 &&
                       amxcomplex && sha512 && sm3 && sm4;
-            // Nova Lake:              NVL = ARL + AVX10_2 + APX + ...
-            int nvl = arl && avx10_2 && apx && avx512_fp16;
+            // Nova Lake:              NVL = ARL + AVX10_2 + ...
+            // APX is checked separately because both targets support disabling it.
+            int nvl = arl && avx10_2 && avx512_fp16;
 
             if (dmr) {
                 return DMR_AVX10_2;
@@ -295,6 +301,17 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
 // where the OS cannot context-switch AMX state (e.g. a pre-5.16 kernel).
 UNUSED_ATTR static int get_x86_has_amx() {
 #if !defined(MACOS)
+    int info[4];
+    __cpuid(info, 0);
+    if (info[0] < 7) {
+        return 0;
+    }
+
+    __cpuid(info, 1);
+    if ((info[2] & (1 << 27)) == 0) {
+        return 0;
+    }
+
     int info2[4];
     __cpuidex(info2, 7, 0);
     int amx_bf16 = (info2[3] & (1 << 22)) != 0;
@@ -304,6 +321,52 @@ UNUSED_ATTR static int get_x86_has_amx() {
 #else  // !MACOS
     return 0;
 #endif // !MACOS
+}
+
+// Check APX CPU support and XCR0 bit 19.
+UNUSED_ATTR static int get_x86_has_apx() {
+#if !defined(MACOS)
+    int info[4];
+    __cpuid(info, 0);
+    if (info[0] < 7) {
+        return 0;
+    }
+
+    __cpuid(info, 1);
+    if ((info[2] & (1 << 27)) == 0) {
+        return 0;
+    }
+
+    int info2[4];
+    __cpuidex(info2, 7, 0);
+    if (info2[0] < 1) {
+        return 0;
+    }
+
+    int info3[4];
+    __cpuidex(info3, 7, 1);
+    int apx = (info3[3] & (1 << 21)) != 0;
+    return apx && (xgetbv() & (1 << 19)) != 0;
+#else  // !MACOS
+    return 0;
+#endif // !MACOS
+}
+
+// Apply AMX and APX requirements to host ISA selection.
+UNUSED_ATTR static enum ISA get_x86_host_isa(enum ISA isa, int amxUsable, int apxUsable, int allAPXDisabled) {
+    if (!amxUsable && (isa == SPR_AVX512 || isa == GNR_AVX512 || isa == DMR_AVX10_2)) {
+        return ICL_AVX512;
+    }
+    if (apxUsable || allAPXDisabled) {
+        return isa;
+    }
+    if (isa == NVL_AVX10_2) {
+        return ICL_AVX512;
+    }
+    if (isa == DMR_AVX10_2) {
+        return GNR_AVX512;
+    }
+    return isa;
 }
 
 #else
