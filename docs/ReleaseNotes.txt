@@ -1,3 +1,11 @@
+=== v1.32.0 === (unreleased)
+
+Dispatcher:
+
+* NVL/DMR dispatch and host selection require APX unless it is fully disabled;
+  partial disable still requires APX. Full disable allows APX-free NVL/DMR
+  selection, but DMR always requires AMX.
+
 === v1.31.0 === (25 June 2026)
 
 ISPC release featuring new avx10.2nvl targets for Intel Nova Lake processors,

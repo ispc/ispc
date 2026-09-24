@@ -1987,6 +1987,12 @@ static bool lISARequiresAMX(int isa) {
     return isa == Target::SPR_AVX512 || isa == Target::GNR_AVX512 || isa == Target::DMR_AVX10_2;
 }
 
+/** Does running the @p isa variant require APX? Only full disable-apx removes this requirement. */
+static bool lISARequiresAPX(int isa) {
+    bool apxCapableISA = isa == Target::NVL_AVX10_2 || isa == Target::DMR_AVX10_2;
+    return apxCapableISA && !Opt::AllAPXDisabled(g->opt.disableAPX);
+}
+
 /** Emit the predicate deciding whether a system may run the @p candidate variant.
 
     The base test is the linear "systemISA >= candidate", which orders the walk by
@@ -1997,9 +2003,11 @@ static bool lISARequiresAMX(int isa) {
     AMX candidates, the AMX tiers require the orthogonal "system has AMX"
     capability (@p systemHasAMX, from __system_has_amx()). Any non-AMX line --
     NVL today, future clients tomorrow -- fails that requirement with no change
-    here. @p systemHasAMX is non-null exactly when some candidate requires AMX. */
+    here. @p systemHasAMX is non-null exactly when some candidate requires AMX.
+    APX is checked independently in the same way: @p systemHasAPX is non-null
+    exactly when some candidate requires APX. */
 static llvm::Value *lEmitISACompatibilityTest(int candidate, llvm::Value *systemISA, llvm::Value *systemHasAMX,
-                                              llvm::BasicBlock *bblock) {
+                                              llvm::Value *systemHasAPX, llvm::BasicBlock *bblock) {
     // "is the system's ISA enumerant value >= the enumerant value of the current candidate?"
     llvm::Value *ok = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE, systemISA,
                                             LLVMInt32(candidate), "isa_ok", bblock);
@@ -2008,6 +2016,12 @@ static llvm::Value *lEmitISACompatibilityTest(int candidate, llvm::Value *system
         llvm::Value *amxOK = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, systemHasAMX,
                                                    LLVMInt32(0), "amx_ok", bblock);
         ok = llvm::BinaryOperator::Create(llvm::Instruction::And, ok, amxOK, "isa_ok_amx", bblock);
+    }
+    if (lISARequiresAPX(candidate)) {
+        Assert(systemHasAPX);
+        llvm::Value *apxOK = llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, systemHasAPX,
+                                                   LLVMInt32(0), "apx_ok", bblock);
+        ok = llvm::BinaryOperator::Create(llvm::Instruction::And, ok, apxOK, "isa_ok_apx", bblock);
     }
     return ok;
 }
@@ -2027,12 +2041,16 @@ static llvm::Value *lEmitISACompatibilityTest(int candidate, llvm::Value *system
                        returning nonzero when the system supports AMX. Used to
                        gate the AMX-bearing variants; may be null when no variant
                        requires AMX.
+    @param hasAPXFunc  Pointer to the __system_has_apx() function (same module),
+                       returning nonzero when the system supports APX. Used to
+                       gate APX-enabled NVL and DMR variants.
     @param name        Name of the function for which we're generating a
                        dispatch function
     @param funcs       Target-specific variants of the exported function.
 */
 static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBestISAFunc, llvm::Function *hasAMXFunc,
-                                    const std::string &name, FunctionTargetVariants &funcs) {
+                                    llvm::Function *hasAPXFunc, const std::string &name,
+                                    FunctionTargetVariants &funcs) {
     // The llvm::Function pointers in funcs are pointers to functions in
     // different llvm::Modules, so we can't call them directly.  Therefore,
     // we'll start by generating an 'extern' declaration of each one that
@@ -2121,13 +2139,20 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
     // Now we can load the system's ISA enumerant
     llvm::Value *systemISA = llvm::CallInst::Create(getBestISAFunc, "system_isa", bblock);
 
-    // If any present variant requires AMX, query the system's AMX capability
-    // once and thread it into the per-candidate compatibility test below.
+    // Query each required capability once for the per-candidate tests below.
     llvm::Value *systemHasAMX = nullptr;
+    llvm::Value *systemHasAPX = nullptr;
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
         if (targetFuncs[i] != nullptr && lISARequiresAMX(i)) {
             Assert(hasAMXFunc);
             systemHasAMX = llvm::CallInst::Create(hasAMXFunc, "system_has_amx", bblock);
+            break;
+        }
+    }
+    for (int i = 0; i < Target::NUM_ISAS; ++i) {
+        if (targetFuncs[i] != nullptr && lISARequiresAPX(i)) {
+            Assert(hasAPXFunc);
+            systemHasAPX = llvm::CallInst::Create(hasAPXFunc, "system_has_apx", bblock);
             break;
         }
     }
@@ -2145,9 +2170,9 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
 
         // Emit code to see if the system can run the current candidate variant
         // successfully. The base test is the linear "systemISA >= candidate", with
-        // an AMX requirement added for the AMX-bearing server variants (see the
+        // AMX and APX requirements added for the variants that need them (see the
         // helper for details).
-        llvm::Value *ok = lEmitISACompatibilityTest(i, systemISA, systemHasAMX, bblock);
+        llvm::Value *ok = lEmitISACompatibilityTest(i, systemISA, systemHasAMX, systemHasAPX, bblock);
 
         llvm::BasicBlock *callBBlock = llvm::BasicBlock::Create(*g->ctx, "do_call", dispatchFunc);
         llvm::BasicBlock *nextBBlock = llvm::BasicBlock::Create(*g->ctx, "next_try", dispatchFunc);
@@ -2224,11 +2249,13 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
     Assert(getFunc != nullptr);
     llvm::Function *hasAMXFunc = module->getFunction(builtin::__system_has_amx);
     Assert(hasAMXFunc != nullptr);
+    llvm::Function *hasAPXFunc = module->getFunction(builtin::__system_has_apx);
+    Assert(hasAPXFunc != nullptr);
 
     // For each exported function, create the dispatch function
     std::map<std::string, FunctionTargetVariants>::iterator iter;
     for (iter = functions.begin(); iter != functions.end(); ++iter) {
-        lCreateDispatchFunction(module, getFunc, hasAMXFunc, iter->first, iter->second);
+        lCreateDispatchFunction(module, getFunc, hasAMXFunc, hasAPXFunc, iter->first, iter->second);
     }
 
     // Do some rudimentary cleanup of the final result and make sure that
