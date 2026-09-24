@@ -195,16 +195,15 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
 #if !defined(MACOS)
         int clx = skx && avx512_vnni;
         UNUSED_ATTR int cpx = clx && avx512_bf16;
-        // VAES is a crypto ISA, not part of the AMX compute path.
-        // Some BIOS setups disable VAES while leaving AMX, BF16, VNNI, and FP16 enabled.
-        // Keep it out of the SPR/GNR bundle so AMX server CPUs are still detected correctly.
+        // VAES remains part of the full ICL/SPR/GNR target predicates.
+        // AMX availability is exposed separately via get_x86_has_amx() below.
         int icl_without_vaes =
             clx && avx512_vbmi2 && avx512_gfni && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
         int icl = icl_without_vaes && avx512_vaes;
         // Server platforms
         UNUSED_ATTR int tgl = icl && avx512_vp2intersect;
-        int spr = icl_without_vaes && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 &&
-                  avx_vnni && avx512_fp16;
+        int spr =
+            icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
         int gnr = spr && amxfp16 && prefetchi;
         // Client platforms
         UNUSED_ATTR int arl =
