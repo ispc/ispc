@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -261,7 +261,14 @@ class Module {
         OutputType type{};
         OutputFlags flags{};
 
+        enum class DepTargetMode {
+            Implicit, ///< No -MT/-MQ: target is auto-derived and will be escaped.
+            MT,       ///< -MT: target is written raw (no escaping), preserving Make expressions.
+            MQ,       ///< -MQ: target is written escaped (quoted), same as implicit escaping.
+        };
+
         std::string depsTarget{};
+        DepTargetMode depsTargetMode{DepTargetMode::Implicit};
 
         // Output file names
         std::string out{};      /**< Main output file name */
