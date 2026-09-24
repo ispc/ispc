@@ -53,6 +53,15 @@
 #define PRIu64 "llu"
 #endif
 
+// LLVM 24 moved PassInfoMixin into llvm::detail and requires passes to derive
+// from RequiredPassInfoMixin or OptionalPassInfoMixin. None of ISPC's passes
+// defined isRequired(), so the old behaviour is the optional one.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+namespace llvm {
+template <typename DerivedT> using PassInfoMixin = OptionalPassInfoMixin<DerivedT>;
+} // namespace llvm
+#endif
+
 namespace ispc {
 
 // Constant in number of bytes.
