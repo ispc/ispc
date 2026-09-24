@@ -37,6 +37,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/MC/MCSubtargetInfo.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/CommandLine.h>
@@ -232,7 +233,7 @@ static ISPCTarget lGetSystemISA() {
 #if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
     return lGetARMSystemISA();
 #elif defined(ISPC_HOST_IS_RISCV)
-    return ISPCTarget::rvv_x4;
+    return ISPCTarget::rvv_128b;
 #elif defined(ISPC_HOST_IS_PPC64LE)
     return ISPCTarget::vsx_i32x4;
 #elif defined(ISPC_HOST_IS_X86)
@@ -412,7 +413,7 @@ typedef enum {
 #ifdef ISPC_RISCV_ENABLED
     // Not a real CPU, but a special identifier representing -march=rv64gcv:
     // RV64GCV = RV64 base + G (General: IMAFD extensions) + C (Compressed) + V (Vector extension 1.0)
-    // Used as default for rvv-x4 target when no specific CPU is provided
+    // Used as default for rvv targets when no specific CPU is provided
     CPU_Generic_RV64GCV,
     CPU_SpacemiT_X60,
 #endif // ISPC_RISCV_ENABLED
@@ -969,13 +970,127 @@ DeviceType lGetARMDeviceType(Arch arch) {
 }
 #endif
 
+#ifdef ISPC_RISCV_ENABLED
+// Vector register width in bits an rvv-<VLEN>b target is compiled for.
+static int lRVVTargetVlen(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::rvv_128b:
+        return 128;
+    case ISPCTarget::rvv_256b:
+        return 256;
+    case ISPCTarget::rvv_512b:
+        return 512;
+    case ISPCTarget::rvv_1024b:
+        return 1024;
+    case ISPCTarget::rvv_2048b:
+        return 2048;
+    default:
+        FATAL("Not an rvv target");
+        return 0;
+    }
+}
+
+// Vector register width implied by an LLVM RISC-V CPU name, or 0 if the CPU
+// is the generic profile or has no vector extension.
+static int lRVVDeviceVlen(const char *cpu) {
+    if (cpu == nullptr || !strcmp(cpu, "generic-rv64gcv")) {
+        return 0;
+    }
+    for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::targets().begin();
+         iter != llvm::TargetRegistry::targets().end(); ++iter) {
+        if (strcmp(iter->getName(), "riscv64") != 0) {
+            continue;
+        }
+        llvm::Triple triple("riscv64-unknown-linux-gnu");
+        std::unique_ptr<llvm::MCSubtargetInfo> sti(iter->createMCSubtargetInfo(triple, cpu, ""));
+        if (!sti) {
+            return 0;
+        }
+        // zvl65536b is the widest zvl extension LLVM knows about.
+        for (int vlen = 65536; vlen >= 128; vlen /= 2) {
+            if (sti->checkFeatures("+zvl" + std::to_string(vlen) + "b")) {
+                return vlen;
+            }
+        }
+        return 0;
+    }
+    return 0;
+}
+
+// Resolve the rvv target, or check an rvv-<VLEN>b target, against the target
+// attributes and the device. Returns the concrete rvv-<VLEN>b target and sets
+// *vlen to the vector register width the code is compiled for, or returns
+// ISPCTarget::error after reporting the problem.
+static ISPCTarget lResolveRVVTarget(ISPCTarget target, const char *cpu, const std::vector<std::string> &attributes,
+                                    int *vlen) {
+    int attrVlen = 0;
+    for (const std::string &attr : attributes) {
+        if (attr.size() > 4 && attr.compare(0, 3, "zvl") == 0 && attr.back() == 'b') {
+            const std::string digits = attr.substr(3, attr.size() - 4);
+            if (digits.find_first_not_of("0123456789") != std::string::npos) {
+                Error(SourcePos(), "Invalid attribute \"%s\".", attr.c_str());
+                return ISPCTarget::error;
+            }
+            if (attrVlen != 0) {
+                Error(SourcePos(), "Only one zvl<N>b attribute may be given.");
+                return ISPCTarget::error;
+            }
+            attrVlen = atoi(digits.c_str());
+            if (attrVlen < 128 || (attrVlen & (attrVlen - 1)) != 0) {
+                Error(
+                    SourcePos(),
+                    "Invalid attribute \"%s\": the vector register width must be a power of two of at least 128 bits.",
+                    attr.c_str());
+                return ISPCTarget::error;
+            }
+        }
+    }
+
+    if (target == ISPCTarget::rvv) {
+        // rvv is rvv-128b unless a zvl attribute asks for wider registers.
+        *vlen = attrVlen != 0 ? attrVlen : 128;
+        if (*vlen > 2048) {
+            Error(SourcePos(), "Vector registers wider than 2048 bits are not supported (attribute zvl%db).", *vlen);
+            return ISPCTarget::error;
+        }
+    } else {
+        // rvv-<VLEN>b is rvv with zvl<VLEN>b.
+        *vlen = lRVVTargetVlen(target);
+        if (attrVlen != 0 && attrVlen != *vlen) {
+            Error(SourcePos(), "Attribute zvl%db contradicts target %s.", attrVlen, ISPCTargetToString(target).c_str());
+            return ISPCTarget::error;
+        }
+    }
+
+    const int deviceVlen = lRVVDeviceVlen(cpu);
+    if (deviceVlen != 0 && deviceVlen < *vlen) {
+        Error(SourcePos(), "Device \"%s\" has %d-bit vector registers, but the target needs %d bits.", cpu, deviceVlen,
+              *vlen);
+        return ISPCTarget::error;
+    }
+
+    switch (*vlen) {
+    case 128:
+        return ISPCTarget::rvv_128b;
+    case 256:
+        return ISPCTarget::rvv_256b;
+    case 512:
+        return ISPCTarget::rvv_512b;
+    case 1024:
+        return ISPCTarget::rvv_1024b;
+    default:
+        return ISPCTarget::rvv_2048b;
+    }
+}
+#endif // ISPC_RISCV_ENABLED
+
 Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picLevel, MCModel code_model,
                bool printTarget)
     : m_target(nullptr), m_targetMachine(nullptr), m_dataLayout(nullptr), m_valid(false), m_ispc_target(ispc_target),
-      m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
-      m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
-      m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_capabilities(),
-      m_hasGather(false), m_hasScatter(false), m_hasVecPrefetch(false), m_warnings(0) {
+      m_rvvVlen(0), m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""),
+      m_tf_attributes(nullptr), m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1),
+      m_vectorWidth(-1), m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1),
+      m_capabilities(), m_hasGather(false), m_hasScatter(false), m_hasVecPrefetch(false), m_warnings(0) {
     // Set Fp64Support to true by default
     setCapability(TargetCapability::Fp64Support, true);
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
@@ -1033,7 +1148,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #ifdef ISPC_RISCV_ENABLED
         case CPU_Generic_RV64GCV:
         case CPU_SpacemiT_X60:
-            m_ispc_target = ISPCTarget::rvv_x4;
+            m_ispc_target = ISPCTarget::rvv_128b;
             break;
 #endif // ISPC_RISCV_ENABLED
 
@@ -1143,6 +1258,19 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if (m_ispc_target == ISPCTarget::host) {
         m_ispc_target = lGetSystemISA();
+    }
+
+#ifdef ISPC_RISCV_ENABLED
+    if (ISPCTargetIsRiscV(m_ispc_target)) {
+        m_ispc_target = lResolveRVVTarget(m_ispc_target, cpu, g->targetAttributes, &m_rvvVlen);
+        if (m_ispc_target == ISPCTarget::error) {
+            return;
+        }
+    } else
+#endif
+        if (!g->targetAttributes.empty()) {
+        Error(SourcePos(), "Target attributes (--attr) are only supported for the rvv target.");
+        return;
     }
 
     if (arch == Arch::none) {
@@ -2033,12 +2161,23 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         break;
 #endif
 #ifdef ISPC_RISCV_ENABLED
-    case ISPCTarget::rvv_x4:
+    case ISPCTarget::rvv_128b:
+    case ISPCTarget::rvv_256b:
+    case ISPCTarget::rvv_512b:
+    case ISPCTarget::rvv_1024b:
+    case ISPCTarget::rvv_2048b: {
+        // The gang is VLEN/32 lanes, the number of 32-bit elements in one
+        // vector register. A gang of 32-bit values fills one register at
+        // LMUL=1, a gang of 64-bit values needs two consecutive registers at
+        // LMUL=2, and 16- or 8-bit values use half or a quarter of a register
+        // at LMUL=1/2 or 1/4. The natural alignment is one register, VLEN/8
+        // bytes.
+        const int width = lRVVTargetVlen(m_ispc_target) / 32;
         this->m_isa = Target::RV64GCV;
-        this->m_nativeVectorWidth = 4;
-        this->m_nativeVectorAlignment = 16;
+        this->m_nativeVectorWidth = width;
+        this->m_nativeVectorAlignment = width * 4;
         this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 4;
+        this->m_vectorWidth = width;
         this->m_hasScatter = false;
         this->m_hasGather = false;
         this->m_hasVecPrefetch = false;
@@ -2046,8 +2185,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskBitCount = 1;
         CPUfromISA = CPU_Generic_RV64GCV;
         break;
+    }
 #else
-    case ISPCTarget::rvv_x4:
+    case ISPCTarget::rvv_128b:
+    case ISPCTarget::rvv_256b:
+    case ISPCTarget::rvv_512b:
+    case ISPCTarget::rvv_1024b:
+    case ISPCTarget::rvv_2048b:
         unsupported_target = true;
         break;
 #endif
@@ -2408,8 +2552,19 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             // - C: Compressed instructions (16-bit instruction encoding)
             // - V: Vector extension 1.0
             if (m_cpu == "generic-rv64gcv") {
-                featuresString = "+m,+a,+f,+d,+c,+v,+zvl128b";
+                featuresString = "+m,+a,+f,+d,+c,+v";
                 m_cpu = "";
+            }
+            // The vector register width the target was resolved for, plus any
+            // other attribute given with --attr, passed through as features.
+            featuresString += ",+zvl" + std::to_string(m_rvvVlen) + "b";
+            for (const std::string &attr : g->targetAttributes) {
+                if (attr.compare(0, 3, "zvl") != 0) {
+                    featuresString += ",+" + attr;
+                }
+            }
+            if (featuresString[0] == ',') {
+                featuresString.erase(0, 1);
             }
         }
 #endif
@@ -3126,10 +3281,18 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_PPC64_ENABLED
 #ifdef ISPC_RISCV_ENABLED
-    case ISPCTarget::rvv_x4:
+    case ISPCTarget::rvv_128b:
+    case ISPCTarget::rvv_256b:
+    case ISPCTarget::rvv_512b:
+    case ISPCTarget::rvv_1024b:
+    case ISPCTarget::rvv_2048b:
         return Target::ISA::RV64GCV;
 #else  // ISPC_RISCV_ENABLED
-    case ISPCTarget::rvv_x4:
+    case ISPCTarget::rvv_128b:
+    case ISPCTarget::rvv_256b:
+    case ISPCTarget::rvv_512b:
+    case ISPCTarget::rvv_1024b:
+    case ISPCTarget::rvv_2048b:
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_WASM_ENABLED
@@ -3470,6 +3633,7 @@ Globals::Globals() {
     }
 #endif
     forceAlignment = -1;
+    targetAttributes.clear();
     dllExport = false;
 
     // Target OS defaults to host OS.

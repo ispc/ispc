@@ -265,9 +265,19 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::vsx_i32x8) == static_cast<underlying>(ISPCTarget::vsx_i32x4) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::rvv_x4) == static_cast<underlying>(ISPCTarget::vsx_i32x8) + 1,
+    static_assert(static_cast<underlying>(ISPCTarget::rvv_128b) == static_cast<underlying>(ISPCTarget::vsx_i32x8) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::wasm_i32x4) == static_cast<underlying>(ISPCTarget::rvv_x4) + 1,
+    static_assert(static_cast<underlying>(ISPCTarget::rvv_256b) == static_cast<underlying>(ISPCTarget::rvv_128b) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::rvv_512b) == static_cast<underlying>(ISPCTarget::rvv_256b) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::rvv_1024b) == static_cast<underlying>(ISPCTarget::rvv_512b) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::rvv_2048b) == static_cast<underlying>(ISPCTarget::rvv_1024b) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::rvv) == static_cast<underlying>(ISPCTarget::rvv_2048b) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::wasm_i32x4) == static_cast<underlying>(ISPCTarget::rvv) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::xelp_x8) == static_cast<underlying>(ISPCTarget::wasm_i32x4) + 1,
                   "Enum ISPCTarget is not sequential");
@@ -538,8 +548,20 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::vsx_i32x4;
     } else if (target == "vsx-i32x8") {
         return ISPCTarget::vsx_i32x8;
-    } else if (target == "rvv-x4") {
-        return ISPCTarget::rvv_x4;
+    } else if (target == "rvv") {
+        // Resolved to rvv-<VLEN>b from the zvl<VLEN>b attribute (default 128).
+        return ISPCTarget::rvv;
+    } else if (target == "rvv-128b" || target == "rvv-x4") {
+        // rvv-x4 is the legacy name of rvv-128b.
+        return ISPCTarget::rvv_128b;
+    } else if (target == "rvv-256b") {
+        return ISPCTarget::rvv_256b;
+    } else if (target == "rvv-512b") {
+        return ISPCTarget::rvv_512b;
+    } else if (target == "rvv-1024b") {
+        return ISPCTarget::rvv_1024b;
+    } else if (target == "rvv-2048b") {
+        return ISPCTarget::rvv_2048b;
     } else if (target == "wasm-i32x4") {
         return ISPCTarget::wasm_i32x4;
     } else if (target == "xelp-x8") {
@@ -763,8 +785,18 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "vsx-i32x4";
     case ISPCTarget::vsx_i32x8:
         return "vsx-i32x8";
-    case ISPCTarget::rvv_x4:
-        return "rvv-x4";
+    case ISPCTarget::rvv_128b:
+        return "rvv-128b";
+    case ISPCTarget::rvv_256b:
+        return "rvv-256b";
+    case ISPCTarget::rvv_512b:
+        return "rvv-512b";
+    case ISPCTarget::rvv_1024b:
+        return "rvv-1024b";
+    case ISPCTarget::rvv_2048b:
+        return "rvv-2048b";
+    case ISPCTarget::rvv:
+        return "rvv";
     case ISPCTarget::wasm_i32x4:
         return "wasm-i32x4";
     case ISPCTarget::xelp_x8:
@@ -929,7 +961,12 @@ bool ISPCTargetIsNeon(ISPCTarget target) {
 
 bool ISPCTargetIsRiscV(ISPCTarget target) {
     switch (target) {
-    case ISPCTarget::rvv_x4:
+    case ISPCTarget::rvv_128b:
+    case ISPCTarget::rvv_256b:
+    case ISPCTarget::rvv_512b:
+    case ISPCTarget::rvv_1024b:
+    case ISPCTarget::rvv_2048b:
+    case ISPCTarget::rvv:
         return true;
     default:
         return false;

@@ -297,6 +297,12 @@ std::vector<std::string> TargetLibRegistry::checkBitcodeLibs() const {
         return missedFiles;
     }
     for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
+#ifdef ISPC_RISCV_ENABLED
+        // rvv is resolved to an rvv-<VLEN>b target and has no libraries of its own.
+        if (target == ISPCTarget::rvv) {
+            continue;
+        }
+#endif
         for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
             for (Arch arch = Arch::none; arch < Arch::error; arch++) {
                 if (isSupported(target, os, arch)) {
@@ -338,6 +344,12 @@ void TargetLibRegistry::printSupportMatrix() const {
 
     // Fill in the name, one target per the row.
     for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
+#ifdef ISPC_RISCV_ENABLED
+        // rvv is resolved to an rvv-<VLEN>b target and has no libraries of its own.
+        if (target == ISPCTarget::rvv) {
+            continue;
+        }
+#endif
         std::vector<std::string> row;
         row.push_back(ISPCTargetToString(target));
         std::vector<std::string> arch_list_target;
