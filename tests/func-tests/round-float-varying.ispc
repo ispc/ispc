@@ -1,5 +1,4 @@
 #include "test_static.isph"
-// rule: skip on target=generic.*
 // rule: run on OS=!windows
 // rule: skip on arch=ppc64le
 

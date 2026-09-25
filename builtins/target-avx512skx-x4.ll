@@ -311,6 +311,19 @@ define <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; round
+
+define <4 x float> @__round_varying_float(<4 x float>) nounwind readonly alwaysinline {
+  %res = call <4 x float> @llvm.roundeven(<4 x float> %0)
+  ret <4 x float> %res
+}
+
+define <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
+  %res = call <4 x double> @llvm.roundeven(<4 x double> %0)
+  ret <4 x double> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt
 
 declare <4 x float> @llvm.x86.avx512.mask.sqrt.ps.128(<4 x float>, <4 x float>, i8) nounwind readnone
