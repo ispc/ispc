@@ -91,19 +91,10 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     # Identify the version
     # An example of using branch (instead of final tag) is the following (for 16.0):
     # git: "release/16.x"
-    # GIT_TAG_IS_SHA marks GIT_TAG as a raw commit SHA rather than a branch/tag
-    # name. A SHA cannot be passed to "git clone --branch" and is not reachable in
-    # a shallow clone, so such versions are cloned and then checked out explicitly.
-    GIT_TAG_IS_SHA=False
     if  version_LLVM == "trunk":
         GIT_TAG="main"
     elif  version_LLVM == "23_1":
-        # LLVM 23 is not released yet. We pin to a specific trunk SHA rather than
-        # a release tag because we need recent trunk fixes for proper APX support.
-        # TODO: replace this SHA with the llvmorg-23.1.x release tag once LLVM 23
-        # is released. Keep this SHA in sync with LLVM_TAG in superbuild/CMakeLists.txt.
-        GIT_TAG="6be53ab5da701ca6939c818fbe8cdbb633ab2409"
-        GIT_TAG_IS_SHA=True
+        GIT_TAG="llvmorg-23.1.2"
     elif  version_LLVM == "22_1":
         GIT_TAG="llvmorg-22.1.6"
     elif  version_LLVM == "21_1":
@@ -145,19 +136,10 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     else:
         alloy_error("Unsupported llvm version: " + version_LLVM, 1)
 
-    if GIT_TAG_IS_SHA:
-        # A raw SHA is not reachable via "--branch" nor in a shallow clone, so do a
-        # full clone of the default branch and then check the commit out explicitly.
-        git_clone_cmd = f"git clone {GIT_REPO_BASE} {target_dir}"
-        try_do_LLVM(f"clone {component} from {GIT_REPO_BASE} to {target_dir}",
-                    git_clone_cmd, from_validation, verbose)
-        try_do_LLVM(f"checkout {component} at commit {GIT_TAG}",
-                    f"git -C {target_dir} checkout {GIT_TAG}", from_validation, verbose)
-    else:
-        depth = "" if options.full_checkout else "--depth=1 --shallow-submodules"
-        git_clone_cmd = f"git clone {depth} --branch {GIT_TAG} {GIT_REPO_BASE} {target_dir}"
-        try_do_LLVM(f"clone {component} with tag {GIT_TAG} from {GIT_REPO_BASE} to {target_dir}",
-                    git_clone_cmd, from_validation, verbose)
+    depth = "" if options.full_checkout else "--depth=1 --shallow-submodules"
+    git_clone_cmd = f"git clone {depth} --branch {GIT_TAG} {GIT_REPO_BASE} {target_dir}"
+    try_do_LLVM(f"clone {component} with tag {GIT_TAG} from {GIT_REPO_BASE} to {target_dir}",
+                git_clone_cmd, from_validation, verbose)
 
 def get_llvm_disable_assertions_switch(llvm_disable_assertions):
     if llvm_disable_assertions == True:
