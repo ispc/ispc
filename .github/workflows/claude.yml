@@ -112,9 +112,13 @@ jobs:
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@8a1c4371755898f67cd97006ba7c97702d5fc4bf # v1.0.0
+        uses: anthropics/claude-code-action@fccf022fdf80a6c41253d57e99293f208e484626 # v1.0.237
+        env:
+          # Route Claude Code through AWS Bedrock (bearer-token auth)
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          use_bedrock: "true"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call
           track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}

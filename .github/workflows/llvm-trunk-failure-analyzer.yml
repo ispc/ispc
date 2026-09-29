@@ -146,7 +146,10 @@ jobs:
 
     - name: Run Claude Code analyzer
       env:
-        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        # Route Claude Code through AWS Bedrock
+        CLAUDE_CODE_USE_BEDROCK: ${{ secrets.CLAUDE_CODE_USE_BEDROCK }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
         GH_TOKEN: ${{ github.token }}
       run: |
         RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
