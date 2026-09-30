@@ -20,8 +20,13 @@ jobs:
 
     steps:
       - name: Check for duplicate issues
-        uses: anthropics/claude-code-action@8a1c4371755898f67cd97006ba7c97702d5fc4bf # v1.0.0
+        uses: anthropics/claude-code-action@fccf022fdf80a6c41253d57e99293f208e484626 # v1.0.237
+        env:
+          # Route Claude Code through AWS Bedrock (bearer-token auth)
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
         with:
+          use_bedrock: "true"
           prompt: |
             Analyze this new issue and check if it's a duplicate of existing issues in the repository.
 
@@ -66,7 +71,7 @@ jobs:
 
             Be thorough but efficient. Focus on finding true duplicates, not just similar issues.
 
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: |
+            --model us.anthropic.claude-sonnet-5-5
             --allowedTools "mcp__github__get_issue,mcp__github__search_issues,mcp__github__list_issues,mcp__github__create_issue_comment,mcp__github__update_issue,mcp__github__get_issue_comments"
