@@ -20,9 +20,21 @@ jobs:
     timeout-minutes: 5
     permissions:
       pull-requests: write
+      # first-interaction's isFirstIssue() check queries the issues API; without
+      # issues:read the token can't see the author's issues and treats everyone
+      # as a first-timer.
+      issues: read
 
     steps:
       - name: Greet first-time contributors
+        # Only greet genuine newcomers. Gating positively on author_association
+        # avoids first-interaction's isFirstIssue quirk (which welcomes anyone
+        # who has never opened a plain issue, including prolific PR authors and
+        # bots) and does not depend on MEMBER being visible for private org
+        # members (who appear as CONTRIBUTOR/NONE in the webhook context).
+        if: >-
+          github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
+          github.event.pull_request.author_association == 'NONE'
         uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
