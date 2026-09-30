@@ -107,6 +107,27 @@ static int __os_has_avx512_support() {
 
 // Return of the x86 ISA enumerant values that gives the most capable ISA that
 // the current system can run.
+//
+// The reference for this logic is LLVM's own runtime CPU detection:
+//   * compiler-rt/lib/builtins/cpu_model/x86.c
+//       - getAvailableFeatures()          : authoritative CPUID leaf/subleaf/bit
+//                                            positions for each FEATURE_* (mirrored
+//                                            in the reads below).
+//       - getIntelProcessorTypeAndSubtype(): how LLVM actually identifies the CPU
+//                                            at runtime - a switch on family/model
+//                                            bytes, NOT an AND of feature bundles.
+//   * llvm/lib/TargetParser/X86TargetParser.cpp
+//       - FeaturesCascadeLake..FeaturesNovalake : the static "marketing" feature
+//                                            bundles per CPU generation.
+//       - Processors[] (the KeyFeature column)  : the single feature LLVM uses to
+//                                            rank/discriminate each tier for
+//                                            function-multiversioning dispatch.
+//
+// Select each ISA tier using compute features relevant to ISPC-generated code,
+// guided by LLVM's KeyFeature. Do not require crypto or Galois-field features from
+// LLVM's feature bundles: ISPC does not emit those instructions, and firmware can
+// disable them independently. Requiring one could misclassify an otherwise capable
+// CPU, for example by reporting Granite Rapids as Skylake and losing AMX.
 UNUSED_ATTR static enum ISA get_x86_isa() {
     int info[4];
     __cpuid(info, 1);
@@ -167,9 +188,6 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
         int avx512_vl =           (info2[1] & (1 << 31)) != 0;
 #if !defined(MACOS)
         int avx512_vbmi2 =        (info2[2] & (1 << 6))  != 0;
-        int avx512_gfni =         (info2[2] & (1 << 8))  != 0;
-        int avx512_vaes =         (info2[2] & (1 << 9))  != 0;
-        int avx512_vpclmulqdq =   (info2[2] & (1 << 10)) != 0;
         int avx512_vnni =         (info2[2] & (1 << 11)) != 0;
         int avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
         int avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
@@ -186,7 +204,7 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
         // Skylake server:           SKX = F + DQ + CD + BW + VL
         // Cascade Lake server:      CLX = SKX + VNNI
         // Cooper Lake server:       CPX = CLX + BF16
-        // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
+        // Ice Lake client & server: ICL = CLX + VBMI2 + BITALG + VPOPCNTDQ
         // Tiger Lake:               TGL = ICL + VP2INTERSECT
         // Sapphire Rapids:          SPR = ICL + BF16 + AMX_BF16 + AMX_TILE + AMX_INT8 + AVX_VNNI + FP16
         // Granite Rapids:           GNR = SPR + AMX_FP16 + PREFETCHI
@@ -195,16 +213,14 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
 #if !defined(MACOS)
         int clx = skx && avx512_vnni;
         UNUSED_ATTR int cpx = clx && avx512_bf16;
-        int icl =
-            clx && avx512_vbmi2 && avx512_gfni && avx512_vaes && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
+        int icl = clx && avx512_vbmi2 && avx512_bitalg && avx512_vpopcntdq;
         // Server platforms
         UNUSED_ATTR int tgl = icl && avx512_vp2intersect;
         int spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
         int gnr = spr && amxfp16 && prefetchi;
-        // Client platforms
-        UNUSED_ATTR int arl =
-            icl && avxvnniint8 && avxvnniint16 && avxneconvert && sha512 && sm3 && sm4 && avxifma && cmpccxadd;
+        // Client platforms.
+        UNUSED_ATTR int arl = icl && avxvnniint8 && avxvnniint16 && avxneconvert && avxifma && cmpccxadd;
 
         int avx10 = (info3[3] & (1 << 19)) != 0;
 
@@ -219,10 +235,18 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
             int avx10_2 = avx10_ver >= 2;
             // clang-format on
 
-            // Diamond Rapids:         DMR = GNR + AVX10_2 + APX + ... (For the whole list see x86TargetParser.cpp)
+            // Diamond Rapids:         DMR = GNR + AVX10_2 + APX + ... (full list in X86TargetParser.cpp)
             int dmr = gnr && avx10_2 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 && avxvnniint16 &&
-                      amxcomplex && sha512 && sm3 && sm4;
+                      amxcomplex;
             // Nova Lake:              NVL = ARL + AVX10_2 + APX + ...
+            //   FeaturesNovalake in X86TargetParser.cpp lists neither AVX512F nor
+            //   AVX512FP16 literally - it lists AVX10_2 - but LLVM's implied-feature
+            //   closure expands AVX10_2 -> AVX10_1 -> {AVX512FP16, ...} -> AVX512BW ->
+            //   AVX512F, so Nova Lake's FP16 is full AVX512-FP16 and AVX512F is
+            //   implicitly enabled. The avx512_fp16 term below is the discrete
+            //   CPUID.(7,0):EDX[23] bit (declared above): current AVX10 hardware sets
+            //   it because AVX10 v1 includes FP16, so reading that bit is how ISPC
+            //   observes Nova Lake's FP16 (no separate AVX10 FP16 bit is needed).
             int nvl = arl && avx10_2 && apx && avx512_fp16;
 
             if (dmr) {
