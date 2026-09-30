@@ -1,0 +1,50 @@
+## Copyright 2025-2026 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+name: Issue Deduplication
+
+# Detects duplicate issues and applies the "duplicate" label via a narrow helper
+# script. Topic labels are applied separately by the label-issue.yml workflow.
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  deduplicate:
+    # Only run in the main ispc/ispc repo where the secret is available.
+    if: github.repository == 'ispc/ispc'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # Required to check out the helper scripts
+      issues: write # Required to apply the "duplicate" label
+      id-token: write
+
+    steps:
+      - name: Checkout helper scripts
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # Only the triage helper scripts are needed, not the whole repo.
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Detect and label duplicates
+        uses: anthropics/claude-code-action@fccf022fdf80a6c41253d57e99293f208e484626 # v1.0.237
+        env:
+          # Route Claude Code through AWS Bedrock (bearer-token auth)
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+        with:
+          use_bedrock: "true"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: "/dedupe REPO: ${{ github.repository }} ISSUE_NUMBER: ${{ github.event.issue.number }}"
+          # Fail-closed allowlist: the only tools Claude may run are the read-only
+          # gh wrapper and the mark-duplicate script (both bare and ./ forms), so
+          # any other tool is denied by default rather than left to model
+          # judgment. --model is pinned because the action's default changes
+          # between releases.
+          claude_args: |
+            --model us.anthropic.claude-sonnet-5-5
+            --allowedTools "Bash(.github/scripts/gh.sh:*),Bash(./.github/scripts/gh.sh:*),Bash(.github/scripts/mark-duplicate.sh:*),Bash(./.github/scripts/mark-duplicate.sh:*)"
