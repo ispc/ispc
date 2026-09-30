@@ -1719,7 +1719,13 @@ Available options:
   (zero-upper SETcc/IMUL), and ``jmpabs`` (64-bit absolute JMP). The
   sub-features are independent, so any combination can be disabled. The exact
   set of sub-features a given ISPC build accepts depends on its LLVM backend;
-  run ``ispc --help`` to see the list supported by your build.
+  run ``ispc --help`` to see the list supported by your build. The
+  ``avx10.2nvl`` and ``avx10.2dmr`` targets require APX unless all APX
+  sub-features are disabled; partial disable still requires APX. Full disable
+  permits ``--target=host`` to select these targets without usable APX.
+  ``avx10.2dmr`` always requires AMX.
+  This option applies globally, so a single multi-target output cannot contain
+  APX-enabled and APX-disabled variants of the same ISA.
 
 - ``disable-assertions``
 

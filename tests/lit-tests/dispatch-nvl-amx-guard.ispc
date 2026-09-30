@@ -14,7 +14,7 @@
 // RUN: %{ispc} %s -O0 --target=sse2-i32x4,avx512spr-x16 --emit-llvm-text -o %t.ll --nostdlib
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=SPR
 // RUN: %{ispc} %s -O0 --target=sse2-i32x4,avx2-i32x8 --emit-llvm-text -o %t.ll --nostdlib
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=AVX2
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=AVX2 --implicit-check-not=__system_has_apx
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 

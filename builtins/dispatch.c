@@ -83,3 +83,5 @@ int __get_system_best_isa() {
 // __get_system_isa, this is left non-static so it survives until linked with
 // the user code, then internalized in builtins.cpp::LinkDispatcher.
 int __system_has_amx() { return get_x86_has_amx(); }
+
+int __system_has_apx() { return get_x86_has_apx(); }

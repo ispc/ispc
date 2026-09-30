@@ -688,6 +688,8 @@ struct Opt {
     };
     unsigned int disableAPX;
 
+    static bool AllAPXDisabled(unsigned int disabledFeatures) { return (disabledFeatures & APX_all) == APX_all; }
+
     /** Mmapping x86 APX sub-feature names (as used by the LLVM X86 backend)
         to their APXFeature bit. */
     static const std::vector<std::pair<const char *, APXFeature>> &APXFeatureTable();

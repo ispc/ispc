@@ -236,7 +236,11 @@ static ISPCTarget lGetSystemISA() {
 #elif defined(ISPC_HOST_IS_PPC64LE)
     return ISPCTarget::vsx_i32x4;
 #elif defined(ISPC_HOST_IS_X86)
-    enum Target::ISA isa = (enum Target::ISA)dispatch::get_x86_isa();
+    enum dispatch::ISA detectedISA = dispatch::get_x86_isa();
+    bool amxUsable = dispatch::get_x86_has_amx();
+    bool apxUsable = dispatch::get_x86_has_apx();
+    enum Target::ISA isa = (enum Target::ISA)dispatch::get_x86_host_isa(detectedISA, amxUsable, apxUsable,
+                                                                        Opt::AllAPXDisabled(g->opt.disableAPX));
     switch (isa) {
     case Target::ISA::SSE2:
         return ISPCTarget::sse2_i32x4;

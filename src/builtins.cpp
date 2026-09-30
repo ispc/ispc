@@ -402,7 +402,7 @@ void ispc::LinkDispatcher(llvm::Module *module) {
     lAddDeclarationsToModule(dispatchBCModule, module);
     lAddBitcodeToModule(dispatchBCModule, module);
     llvm::StringSet<> dispatchFunctions = {builtin::__get_system_best_isa, builtin::__system_has_amx,
-                                           builtin::__terminate_now};
+                                           builtin::__system_has_apx, builtin::__terminate_now};
     lSetAsInternal(module, dispatchFunctions);
 }
 
