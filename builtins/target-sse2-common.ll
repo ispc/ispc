@@ -236,23 +236,37 @@ define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-declare double @round(double)
-declare double @floor(double)
-declare double @ceil(double)
-
 define double @__round_uniform_double(double) nounwind readonly alwaysinline {
-  %r = call double @round(double %0)
-  ret double %r
+  %double_to_int_bitcast.i.i.i.i = bitcast double %0 to i64
+  %bitop.i.i = and i64 %double_to_int_bitcast.i.i.i.i, -9223372036854775808
+  %bitop.i = xor i64 %bitop.i.i, %double_to_int_bitcast.i.i.i.i
+  %int64_to_double_bitcast.i.i40.i = bitcast i64 %bitop.i to double
+  %binop.i = fadd double %int64_to_double_bitcast.i.i40.i, 0x4330000000000000
+  %binop21.i = fadd double %binop.i, 0xC330000000000000
+  %double_to_int_bitcast.i.i.i = bitcast double %binop21.i to i64
+  %bitop31.i = xor i64 %double_to_int_bitcast.i.i.i, %bitop.i.i
+  %int64_to_double_bitcast.i.i.i = bitcast i64 %bitop31.i to double
+  ret double %int64_to_double_bitcast.i.i.i
 }
 
 define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
-  %r = call double @floor(double %0)
-  ret double %r
+  %calltmp.i = tail call double @__round_uniform_double(double %0) nounwind
+  %bincmp.i = fcmp ogt double %calltmp.i, %0
+  %selectexpr.i = sext i1 %bincmp.i to i64
+  %bitop.i = and i64 %selectexpr.i, -4616189618054758400
+  %int64_to_double_bitcast.i.i.i = bitcast i64 %bitop.i to double
+  %binop.i = fadd double %calltmp.i, %int64_to_double_bitcast.i.i.i
+  ret double %binop.i
 }
 
 define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
-  %r = call double @ceil(double %0)
-  ret double %r
+  %calltmp.i = tail call double @__round_uniform_double(double %0) nounwind
+  %bincmp.i = fcmp olt double %calltmp.i, %0
+  %selectexpr.i = sext i1 %bincmp.i to i64
+  %bitop.i = and i64 %selectexpr.i, 4607182418800017408
+  %int64_to_double_bitcast.i.i.i = bitcast i64 %bitop.i to double
+  %binop.i = fadd double %calltmp.i, %int64_to_double_bitcast.i.i.i
+  ret double %binop.i
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
