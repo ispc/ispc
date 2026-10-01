@@ -59,3 +59,16 @@ jobs:
         uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           category: "/language:c-cpp"
+
+      - name: Generate Security Report
+        uses: rsdmike/github-security-report-action@a3d8cc051bc89f1b622d396adab901aa73857a29 # v4.1.0
+        with:
+          template: report
+          token: ${{ secrets.SECURITY_TOKEN }}
+
+      - name: GitHub Upload Release Artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report
+          path: |
+            ./report.pdf
