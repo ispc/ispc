@@ -21,7 +21,7 @@ jobs:
       artifact_name: ispc_linux_package
       runner: ubuntu-22.04
       llvm_version: "23.1"
-      llvm_tar: llvm-23.1.0-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-23.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   build-ispc-aarch64:
     uses: ./.github/workflows/reusable.ispc.build.yml
@@ -30,7 +30,7 @@ jobs:
       artifact_name: ispc_linux_aarch64_package
       runner: ubuntu-22.04-arm
       llvm_version: "23.1"
-      llvm_tar: llvm-23.1.0-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-23.1.2-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
 
   build-ispc-windows:
     runs-on: windows-2022
