@@ -30,7 +30,7 @@ jobs:
       contents: write  # Needed for release creation/update
 
     env:
-      LLVM_TAR: llvm-23.1.0-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-23.1.2-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -81,7 +81,7 @@ jobs:
       contents: write  # Needed for release creation/update
 
     env:
-      LLVM_TAR: llvm-23.1.0-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-23.1.2-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

@@ -95,13 +95,15 @@ def get_llvm_asset(llvm_version, os_name, arch):
 
     # Find matching release
     matching_release = None
+    release_version = llvm_version.rsplit('.', 1)[0] if llvm_version.count('.') == 2 else llvm_version
+    release_prefix = f"llvm-{release_version}{'-' if '.' in release_version else '.'}"
     for release in releases_json:
-        if release['tag_name'].startswith(f"llvm-{llvm_version}."):
+        if release['tag_name'].startswith(release_prefix):
             matching_release = release['tag_name']
             break
 
     if not matching_release:
-        print(f"No matching release found for llvm-{llvm_version}.*")
+        print(f"No matching release found for {release_prefix}*")
         return None, None, None
 
     print(f"Found release: {matching_release}")
@@ -119,9 +121,9 @@ def get_llvm_asset(llvm_version, os_name, arch):
         raise
 
     # Find matching asset
-    asset_pattern = f"llvm-{llvm_version}.*-{os_name}{arch}-Release.*Asserts-.*\\.tar\\.xz"
+    asset_pattern = f"llvm-{re.escape(llvm_version)}(?:\\.[0-9]+)*-{os_name}{arch}-Release.*Asserts-.*\\.tar\\.xz"
     if os_name == "win":
-        asset_pattern = f"llvm-{llvm_version}.*-{os_name}.*-Release.*Asserts-.*\\.tar\\.7z"
+        asset_pattern = f"llvm-{re.escape(llvm_version)}(?:\\.[0-9]+)*-{os_name}.*-Release.*Asserts-.*\\.tar\\.7z"
     for asset in assets_json['assets']:
         if re.match(asset_pattern, asset['name']) and 'lto' not in asset['name']:
             return asset['name'], asset['browser_download_url'], version
@@ -340,7 +342,7 @@ def main():
 
     Command Line Args:
         llvm_version (str, optional): LLVM version to use.
-            Default: "23"
+            Default: "23.1.2"
 
     Directory Structure Created/Used:
         Working Directory (LLVM_HOME)/
@@ -361,7 +363,7 @@ def main():
         None
 
     Examples:
-        # Build with default LLVM 23
+        # Build with default LLVM 23.1.2
         $ python quick-start-build.py
 
         # Build with specific LLVM version
@@ -414,7 +416,7 @@ Environment Variables:
   ARCHIVE_URL    Direct download URL for LLVM package (only if automatic detection fails)
 
 Examples:
-  # Build with default LLVM 23
+  # Build with default LLVM 23.1.2
   $ python quick-start-build.py
 
   # Build with specific LLVM version
@@ -431,8 +433,8 @@ Examples:
         """
     )
 
-    parser.add_argument("llvm_version", type=str, nargs="?", default="23",
-                        help="LLVM version to use (default: 23)")
+    parser.add_argument("llvm_version", type=str, nargs="?", default="23.1.2",
+                        help="LLVM version to use (default: 23.1.2)")
     args = parser.parse_args()
 
     # Set up default values and paths
@@ -467,7 +469,7 @@ Examples:
             if archive_url:
                 asset_name = os.path.basename(archive_url)
                 asset_url = archive_url
-                version = re.search(f"{llvm_version}\\.[0-9]*", asset_name).group(0)
+                version = re.search(r"llvm-([0-9]+\.[0-9]+)\.[0-9]+-", asset_name).group(1)
             else:
                 print("Error: Failed to deduct and fetch LLVM archives from Github API.")
                 print("Please set ARCHIVE_URL environment variable to the direct download URL of the LLVM package.")

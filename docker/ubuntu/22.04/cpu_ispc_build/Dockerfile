@@ -3,7 +3,7 @@
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-ARG LLVM_VERSION=20.1
+ARG LLVM_VERSION=23.1
 
 FROM ubuntu:22.04 AS llvm_build
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"

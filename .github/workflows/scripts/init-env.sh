@@ -16,13 +16,13 @@ ARCH=$(uname -m)
 case "$OS" in
     Linux*)
       if [ "$ARCH" == "aarch64" ]; then
-        LLVM_TAR=${LLVM_TAR:-"llvm-23.1.0-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz"}
+        LLVM_TAR=${LLVM_TAR:-"llvm-23.1.2-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz"}
       else
-        LLVM_TAR=${LLVM_TAR:-"llvm-23.1.0-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz"}
+        LLVM_TAR=${LLVM_TAR:-"llvm-23.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz"}
       fi
       ;;
     Darwin*)
-      LLVM_TAR=${LLVM_TAR:-"llvm-23.1.0-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz"}
+      LLVM_TAR=${LLVM_TAR:-"llvm-23.1.2-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz"}
       ;;
     *)
       echo "Unsupported OS: $OS"
