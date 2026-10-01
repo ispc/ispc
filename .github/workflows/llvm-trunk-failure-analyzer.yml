@@ -40,7 +40,9 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
-        node-version: '20'
+        # Claude Code >= 2.1.198 requires Node 22; on older Node npx silently
+        # installs 2.1.197, which is too old for current models
+        node-version: '22'
 
     - name: Determine run ID to analyze
       id: get-run-id
