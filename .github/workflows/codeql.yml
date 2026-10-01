@@ -1,0 +1,61 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: CodeQL
+# It runs CodeQL static analysis and uploads results to GitHub code scanning.
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run every day at 22:00 UTC
+    - cron: '0 22 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+  analyze:
+    name: CodeQL (C/C++)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    # Disabling this workflow for non ispc/ispc repo.
+    if: github.repository == 'ispc/ispc'
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Clone the git repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          .github/workflows/scripts/install-build-deps.sh
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          languages: c-cpp
+          build-mode: manual
+          queries: security-and-quality
+
+      # Examples, tests and benchmarks are disabled to keep third-party code
+      # (e.g. googletest) out of the analysis.
+      - name: Build ISPC
+        run: |
+          .github/workflows/scripts/build-ispc.sh -DISPC_INCLUDE_BENCHMARKS=OFF -DISPC_INCLUDE_EXAMPLES=OFF \
+            -DISPC_INCLUDE_TESTS=OFF -DISPCRT_BUILD_TESTS=OFF
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          category: "/language:c-cpp"

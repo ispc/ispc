@@ -4,7 +4,7 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9395/badge)](https://www.bestpractices.dev/projects/9395)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ispc/ispc/badge)](https://securityscorecards.dev/viewer/?uri=github.com/ispc/ispc)
 [![Bandit](https://github.com/ispc/ispc/actions/workflows/bandit.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/bandit.yml)
-[![Coverity](https://scan.coverity.com/projects/30508/badge.svg)](https://scan.coverity.com/projects/intel-ispc)
+[![CodeQL](https://github.com/ispc/ispc/actions/workflows/codeql.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/codeql.yml)
 [![Trivy](https://github.com/ispc/ispc/actions/workflows/trivy.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/trivy.yml)
 [![ClamAV](https://github.com/ispc/ispc/actions/workflows/clamav.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/clamav.yml)
 [![Hardening Checks](https://github.com/ispc/ispc/actions/workflows/hardening-check.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/hardening-check.yml)
