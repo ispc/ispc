@@ -162,8 +162,14 @@ jobs:
         echo "Previous LLVM SHA: $PREVIOUS_SHA"
         echo "=================================="
 
-        # Run Claude Code with the analyzer skill and capture output
+        # Mark the workspace as trusted so permissions.allow from
+        # .claude/settings.json is honored in headless mode
+        echo "{\"projects\":{\"$GITHUB_WORKSPACE\":{\"hasTrustDialogAccepted\":true}}}" > "$HOME/.claude.json"
+
+        # Run Claude Code with the analyzer skill and capture output.
+        # Pin the model: the Bedrock default model is denied by IAM policy.
         if ! npx @anthropic-ai/claude-code --print \
+          --model us.anthropic.claude-opus-5-5 \
           "/analyze-llvm-trunk --run-id $RUN_ID --current-sha $CURRENT_SHA --previous-sha $PREVIOUS_SHA" \
           > analysis_output.txt 2>&1; then
           echo "::error::Claude Code analysis failed"
