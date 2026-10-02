@@ -19,9 +19,10 @@
 #define ISPC_LLVM_21_0 210000
 #define ISPC_LLVM_22_0 220000
 #define ISPC_LLVM_23_0 230000
+#define ISPC_LLVM_24_0 240000
 
 #define OLDEST_SUPPORTED_LLVM ISPC_LLVM_20_0
-#define LATEST_SUPPORTED_LLVM ISPC_LLVM_23_0
+#define LATEST_SUPPORTED_LLVM ISPC_LLVM_24_0
 
 #ifdef __ispc__xstr
 #undef __ispc__xstr
@@ -33,7 +34,7 @@
     __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 20.1 - 22.1 and 23.0 development branch are supported"
+#error "Only LLVM 20.1 - 23.1 and 24.0 development branch are supported"
 #endif
 
 #define ISPC_VERSION_STRING                                                                                            \

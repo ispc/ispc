@@ -1858,6 +1858,31 @@ bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &CO) {
 
     llvm::legacy::PassManager pm;
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // LLVM 24 removed TargetOptions::AllowFPOpFusion (commit 9d4a7d05d2ef).
+    // The backend now forms fused multiply-adds only for instructions that
+    // carry the "contract" fast-math flag. Setting the flag here, right before
+    // code generation, keeps the behaviour of the removed option: it affects
+    // only the machine code, not the IR that --emit-llvm-text produces.
+    if (!g->opt.disableFMA) {
+        for (llvm::Function &F : *M) {
+            for (llvm::BasicBlock &BB : F) {
+                for (llvm::Instruction &I : BB) {
+                    if (llvm::isa<llvm::FPMathOperator>(I)) {
+                        I.setHasAllowContract(true);
+                    }
+                }
+            }
+        }
+    }
+    // LLVM 24 also moved the float ABI from TargetOptions to a module flag.
+    // Set it only for code generation to preserve the emitted LLVM IR.
+    Arch arch = g->target->getArch();
+    if ((arch == Arch::arm || arch == Arch::aarch64) && !M->getModuleFlag("float-abi")) {
+        M->addModuleFlag(llvm::Module::Error, "float-abi", llvm::MDString::get(M->getContext(), "hard"));
+    }
+#endif
+
     {
         llvm::raw_fd_ostream &fos(of->os());
         // Third parameter is for generation of .dwo file, which is separate DWARF

@@ -37,7 +37,8 @@
 // CHECK-FINAL-SVML-NEXT: ret
 
 // CHECK-SYSTEM: @__math_lib = constant i32 3
-// CHECK-FINAL-SYSTEM: call float @sinf(
+// LLVM 24 canonicalizes the libm call to the llvm.sin intrinsic; both lower to sinf.
+// CHECK-FINAL-SYSTEM: call float @{{sinf|llvm.sin.f32}}(
 // TODO! tail call?
 
 float foo(float a) {
