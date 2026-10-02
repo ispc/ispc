@@ -1869,13 +1869,17 @@ bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &CO) {
             for (llvm::BasicBlock &BB : F) {
                 for (llvm::Instruction &I : BB) {
                     if (llvm::isa<llvm::FPMathOperator>(I)) {
-                        llvm::FastMathFlags FMF = I.getFastMathFlags();
-                        FMF.setAllowContract(true);
-                        I.setFastMathFlags(FMF);
+                        I.setHasAllowContract(true);
                     }
                 }
             }
         }
+    }
+    // LLVM 24 also moved the float ABI from TargetOptions to a module flag.
+    // Set it only for code generation to preserve the emitted LLVM IR.
+    Arch arch = g->target->getArch();
+    if ((arch == Arch::arm || arch == Arch::aarch64) && !M->getModuleFlag("float-abi")) {
+        M->addModuleFlag(llvm::Module::Error, "float-abi", llvm::MDString::get(M->getContext(), "hard"));
     }
 #endif
 
