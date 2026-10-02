@@ -375,12 +375,15 @@ typedef enum {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
     CPU_NVL,
 #endif
-    // Zen1 to Zen5
+    // Zen1 to Zen6
     CPU_ZNVER1,
     CPU_ZNVER2,
     CPU_ZNVER3,
     CPU_ZNVER4,
     CPU_ZNVER5,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    CPU_ZNVER6,
+#endif
 
 // FIXME: LLVM supports a ton of different ARM CPU variants--not just
 // listed below.  We should be able to handle any of them that also
@@ -503,6 +506,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER4, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
     {CPU_ZNVER5, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    {CPU_ZNVER6, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+#endif
 // TODO: Add features for remaining CPUs if valid.
 #ifdef ISPC_ARM_ENABLED
     {CPU_CortexA35, {}},
@@ -632,6 +638,9 @@ class AllCPUs {
         names[CPU_ZNVER3].push_back("znver3");
         names[CPU_ZNVER4].push_back("znver4");
         names[CPU_ZNVER5].push_back("znver5");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+        names[CPU_ZNVER6].push_back("znver6");
+#endif
 
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA35].push_back("cortex-a35");
@@ -722,6 +731,12 @@ class AllCPUs {
         compat[CPU_ICL] =
             Set(CPU_ICL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+        compat[CPU_ZNVER6] =
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_TGL, CPU_ZNVER1,
+                CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_ZNVER5, CPU_ZNVER6, CPU_None);
+#endif
         compat[CPU_ZNVER5] =
             Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_TGL, CPU_ZNVER1,
@@ -1077,6 +1092,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
         case CPU_ZNVER4:
         case CPU_ZNVER5:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+        case CPU_ZNVER6:
+#endif
         case CPU_TGL:
         case CPU_ICX:
         case CPU_ICL:
