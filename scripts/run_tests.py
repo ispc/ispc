@@ -1288,8 +1288,10 @@ def run_tests(options1, args, print_version):
     temp_time = (time.time() - start_time)
     elapsed_time = time.strftime('%Hh%Mm%Ssec.', time.gmtime(temp_time))
 
-    while not qret.empty():
-        results.append(qret.get())
+    # Queue.empty() can return True while a worker's result is still being flushed.
+    # Each test queues one result before marking its task done.
+    for _ in range(total_tests):
+        results.append(qret.get(timeout=30))
 
     # populate ex_state test table and run info with testing results
     populate_ex_state(options, target, total_tests, results)
