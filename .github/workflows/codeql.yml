@@ -62,14 +62,20 @@ jobs:
           output: ../results
           upload: never
 
-      # Keep only alerts in ISPC sources under src/. This drops alerts in LLVM
-      # headers, generated files and other third-party code. paths-ignore can't
-      # be used for this, because it doesn't apply to C/C++ built in manual mode.
+      # Keep only error-level alerts in ISPC sources under src/. This drops
+      # warnings and notes, and alerts in LLVM headers, generated files and other
+      # third-party code. paths-ignore can't be used for this, because it doesn't
+      # apply to C/C++ built in manual mode. CodeQL usually doesn't set a level on
+      # each result, so it is taken from the rule's default configuration.
       - name: Filter CodeQL results
         run: |
           for f in ../results/*.sarif; do
-            jq '.runs |= map(.results |= map(select(
-                  ((.locations // [])[0].physicalLocation.artifactLocation.uri // "") | startswith("src/"))))' \
+            jq '.runs |= map(
+                  ([(.tool.driver.rules // [])[], (.tool.extensions // [])[].rules[]?]
+                   | map({key: .id, value: (.defaultConfiguration.level // "warning")}) | from_entries) as $levels
+                  | .results |= map(select(
+                      (((.locations // [])[0].physicalLocation.artifactLocation.uri // "") | startswith("src/"))
+                      and ((.level // $levels[.ruleId] // "warning") == "error"))))' \
               "$f" > "$f.tmp"
             mv "$f.tmp" "$f"
           done
