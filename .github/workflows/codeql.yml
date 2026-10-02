@@ -59,6 +59,26 @@ jobs:
         uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           category: "/language:c-cpp"
+          output: ../results
+          upload: never
+
+      # Keep only alerts in ISPC sources under src/. This drops alerts in LLVM
+      # headers, generated files and other third-party code. paths-ignore can't
+      # be used for this, because it doesn't apply to C/C++ built in manual mode.
+      - name: Filter CodeQL results
+        run: |
+          for f in ../results/*.sarif; do
+            jq '.runs |= map(.results |= map(select(
+                  ((.locations // [])[0].physicalLocation.artifactLocation.uri // "") | startswith("src/"))))' \
+              "$f" > "$f.tmp"
+            mv "$f.tmp" "$f"
+          done
+
+      - name: Upload CodeQL results
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          sarif_file: ../results
+          category: "/language:c-cpp"
 
       - name: Generate Security Report
         uses: rsdmike/github-security-report-action@a3d8cc051bc89f1b622d396adab901aa73857a29 # v4.1.0
