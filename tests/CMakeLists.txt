@@ -38,6 +38,9 @@ list(APPEND LIT_ARGS "-Dispc_lib_enabled=$<IF:$<BOOL:${ISPC_LIBRARY}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dispc_lib_jit_enabled=$<IF:$<BOOL:${ISPC_LIBRARY_JIT}>,ON,OFF>")
 # TODO! generic target bc?
 set(CHECK_ALL_DEPS ispc ispc-opt ${ISPC_DEPS})
+if(TARGET check_isa)
+    list(APPEND CHECK_ALL_DEPS check_isa)
+endif()
 if(TARGET libispc_shared)
     list(APPEND CHECK_ALL_DEPS libispc_shared)
 endif()
@@ -52,7 +55,7 @@ set_target_properties(check-all PROPERTIES FOLDER "Tests")
 string(REPLACE ";" " " LIT_ARGS_STR "${LIT_ARGS}")
 string(REPLACE ";" " " LIT_COMMAND_STR "${LIT_COMMAND}")
 
-add_custom_target(check-one DEPENDS ispc ispc-opt ${ISPC_DEPS}
+add_custom_target(check-one DEPENDS ${CHECK_ALL_DEPS}
     COMMAND bash -c "${LIT_COMMAND_STR} ${LIT_ARGS_STR} \$TEST --verbose"
     COMMENT "Running lit test from $TEST"
     USES_TERMINAL
