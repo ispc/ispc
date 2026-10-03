@@ -142,3 +142,5 @@
 ./tests/func-tests/erfc-float-varying.ispc compfail    xe64      xehpg-x16 dg2   Linux LLVM 23.0 clang++23.0 O2 ze *
 ./tests/func-tests/erfc-float16-varying.ispc compfail    xe64      xehpg-x16 dg2   Linux LLVM 23.0 clang++23.0 O2 ze *
 ./tests/func-tests/popcnt-1.ispc compfail    xe64      xehpg-x16 dg2   Linux LLVM 23.0 clang++23.0 O2 ze *
+.\tests\func-tests\expm1-float16-uniform.ispc runfail     x86  avx512skx-x64 unspec Windows LLVM 23.1         cl O1 obj *
+.\tests\func-tests\expm1-float16-uniform.ispc runfail     x86  avx512icl-x64 unspec Windows LLVM 23.1         cl O1 obj *
