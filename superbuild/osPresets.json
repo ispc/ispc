@@ -17,9 +17,9 @@
         "LLVM_VERSION": "23.1",
         "LLVM_URL": "https://github.com/llvm/llvm-project.git",
         "VC_INTRINSICS_URL": "https://github.com/intel/vc-intrinsics.git",
-        "VC_INTRINSICS_SHA": "c9c1011e61c5aaa30c421d1feaedc7c74a9b67c1",
+        "VC_INTRINSICS_SHA": "e2bb84f509f613b0e36bd131c3a90800b4fe8f88",
         "SPIRV_TRANSLATOR_URL": "https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git",
-        "SPIRV_TRANSLATOR_SHA": "5b7e49f0aebe7a64f2da82a3525d8468b174ba46",
+        "SPIRV_TRANSLATOR_SHA": "e65dde28ce8f12ef7245914fa2850260328669e4",
         "L0_URL": "https://github.com/oneapi-src/level-zero.git",
         "L0_TAG": "v1.20.2",
         "ISPC_CORPUS_URL": "null"
