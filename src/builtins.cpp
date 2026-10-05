@@ -401,7 +401,7 @@ void ispc::LinkDispatcher(llvm::Module *module) {
     llvm::Module *dispatchBCModule = dispatch->getLLVMModule();
     lAddDeclarationsToModule(dispatchBCModule, module);
     lAddBitcodeToModule(dispatchBCModule, module);
-    llvm::StringSet<> dispatchFunctions = {builtin::__get_system_best_isa, builtin::__system_has_amx,
+    llvm::StringSet<> dispatchFunctions = {builtin::__get_system_best_isa, builtin::__cpu_has_amx,
                                            builtin::__terminate_now};
     lSetAsInternal(module, dispatchFunctions);
 }
