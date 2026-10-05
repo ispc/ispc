@@ -19,6 +19,7 @@
 
 #include <llvm/Analysis/ValueTracking.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
 
@@ -1855,6 +1856,28 @@ llvm::GetElementPtrInst *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, ll
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
     return llvm::GetElementPtrInst::Create(ptrElType, ptr, arrayRef, name,
                                            ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+}
+
+llvm::Constant *LLVMConstGEP(llvm::Type *ty, llvm::Constant *ptr, llvm::ArrayRef<llvm::Constant *> idx, bool inBounds) {
+    llvm::GEPNoWrapFlags nw = inBounds ? llvm::GEPNoWrapFlags::inBounds() : llvm::GEPNoWrapFlags::none();
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // ConstantExpr::getGetElementPtr() with a source element type is deprecated
+    // starting LLVM 24. When all indices are constant integers, fold them into
+    // a byte offset and emit "getelementptr i8, ptr, offset" instead.
+    if (llvm::all_of(idx, [](llvm::Constant *c) { return llvm::isa<llvm::ConstantInt>(c); })) {
+        const llvm::DataLayout *DL = g->target->getDataLayout();
+        llvm::SmallVector<llvm::Value *, 4> indices(idx.begin(), idx.end());
+        int64_t offset = DL->getIndexedOffsetInType(ty, indices);
+        llvm::Type *indexTy = DL->getIndexType(ptr->getType());
+        return llvm::ConstantExpr::getPtrAdd(ptr, llvm::ConstantInt::get(indexTy, offset, /* IsSigned */ true), nw);
+    }
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+    llvm::Constant *result = llvm::ConstantExpr::getGetElementPtr(ty, ptr, idx, nw);
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+    return result;
+#else
+    return llvm::ConstantExpr::getGetElementPtr(ty, ptr, idx, nw);
+#endif
 }
 
 /** Given a vector of constant values (int, float, or bool) representing an
