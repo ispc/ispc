@@ -133,9 +133,11 @@ static int __os_has_avx512_support() {
 // disable them independently. Requiring one could misclassify an otherwise capable
 // CPU, for example by reporting Granite Rapids as Skylake and losing AMX.
 UNUSED_ATTR static enum ISA get_x86_isa() {
+    // Leaf 0 EAX is the highest supported basic CPUID leaf.
     int info[4];
-    __cpuid(info, 1);
+    __cpuid(info, 0);
     UNUSED_ATTR int max_level = info[0];
+    __cpuid(info, 1);
 
     // Call cpuid with eax=7, ecx=0
     int info2[4];
@@ -232,7 +234,7 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
             // clang-format off
 
             int info_avx10[4] = {0, 0, 0, 0};
-            if (max_level >= 24) {
+            if (max_level >= 0x24) {
                 __cpuidex(info_avx10, 0x24, 0);
             }
             int avx10_ver = info_avx10[1] & 0xFF;
