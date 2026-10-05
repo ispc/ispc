@@ -28,9 +28,9 @@
 
 // DMR candidate (13) is an AMX server tier and carries the AMX requirement.
 // DMR:      %system_isa = call i32 @__get_system_best_isa()
-// DMR-NEXT: %system_has_amx = call i32 @__system_has_amx()
+// DMR-NEXT: %cpu_has_amx = call i32 @__cpu_has_amx()
 // DMR-NEXT: %isa_ok = icmp sge i32 %system_isa, 13
-// DMR-NEXT: %amx_ok = icmp ne i32 %system_has_amx, 0
+// DMR-NEXT: %amx_ok = icmp ne i32 %cpu_has_amx, 0
 // DMR-NEXT: %isa_ok_amx = and i1 %isa_ok, %amx_ok
 // DMR-NEXT: br i1 %isa_ok_amx, label %do_call, label %next_try
 

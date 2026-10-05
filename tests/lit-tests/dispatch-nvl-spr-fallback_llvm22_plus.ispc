@@ -3,10 +3,10 @@
 // A binary built with an AMX-bearing server variant (avx512spr) but NO
 // avx10.2nvl variant must NOT select the SPR variant on a Nova Lake (NVL)
 // system. NVL implements AVX10.2 and full AVX-512, so the linear ">=" ISA walk
-// alone (NVL=12 >= SPR=10) would select SPR and fault on its AMX instructions.
-// The AMX requirement (__system_has_amx()) makes NVL fail the SPR candidate and
-// fall back to the avx512icl variant instead. On a real SPR system the SPR
-// variant is still selected, since SPR reports AMX.
+// alone (NVL=12 >= SPR=10) would select SPR, which is compiled with AMX enabled.
+// The AMX hardware requirement (__cpu_has_amx()) makes NVL fail the SPR
+// candidate and fall back to the avx512icl variant instead. On a real SPR system
+// the SPR variant is still selected, since SPR reports AMX in CPUID.
 
 // RUN: %{ispc} --pic --target=avx512icl-x4,avx512spr-x4 -h %t.h %s -o %t.o -g
 // RUN: %{cc} -x c -c %s -o %t.c.o --include %t.h -g

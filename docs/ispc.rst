@@ -6277,6 +6277,17 @@ avx10.2dmr     Yes       Yes       Yes       Yes
 
 Using AMX functions on unsupported targets will result in a compile-time error.
 
+**Important**: The application is responsible for ensuring that the operating
+system supports AMX and has granted the process permission to use it before
+any AMX function is executed. On Linux (kernel 5.16 or newer), request
+permission with ``arch_prctl(ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA)``; see
+``examples/cpu/amx/amx_matmul.cpp`` for an example. Neither explicit target
+selection nor the multi-target runtime dispatcher checks this: the dispatcher
+selects ``avx512spr``, ``avx512gnr``, and ``avx10.2dmr`` variants based on the
+CPU's AMX hardware support only, regardless of whether AMX is enabled in the
+operating system. Executing AMX instructions without operating system support
+or permission results in a fault.
+
 **Important**: All tile arguments must be compile-time constants in the range 0-7.
 
 Tile Configuration and Control:
