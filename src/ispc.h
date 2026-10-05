@@ -422,6 +422,13 @@ class Target {
 
     bool hasVecPrefetch() const { return m_hasVecPrefetch; }
 
+    /** Mask of x86 APX sub-features (Opt::APXFeature bits) enabled by the
+        effective LLVM backend configuration for this target. */
+    unsigned int getEnabledAPXFeatures() const;
+
+    /** Does executing code compiled for this target require OS APX support? */
+    bool requiresOSAPXSupport() const { return getEnabledAPXFeatures() != 0; }
+
     /** Check if target has a specific capability */
     bool hasCapability(TargetCapability cap) const { return m_capabilities[static_cast<size_t>(cap)]; }
 
@@ -528,6 +535,10 @@ class Target {
 
     /** Indicates whether the target has hardware instruction for vector prefetch. */
     bool m_hasVecPrefetch;
+
+    /** Mask of disabled APX sub-features (--opt=disable-apx, or all of them
+        for a host target without OS APX support). */
+    unsigned int m_disabledAPX;
 
     /** A bitset of PerfWarningType values indicating the warnings that are relevant for the target. */
     PerfWarningTypeUnderlyingType m_warnings;
@@ -691,6 +702,10 @@ struct Opt {
     /** Mmapping x86 APX sub-feature names (as used by the LLVM X86 backend)
         to their APXFeature bit. */
     static const std::vector<std::pair<const char *, APXFeature>> &APXFeatureTable();
+
+    /** Return the LLVM feature string fragment ("-egpr,-ndd,...") disabling
+        the APX sub-features in @p mask, in APXFeatureTable() order. */
+    static std::string APXDisableFeatureString(unsigned int mask);
 
     /** Set FTZ/DAZ flags on the extern function entrance and restore them.
         upon return to "host" code.*/

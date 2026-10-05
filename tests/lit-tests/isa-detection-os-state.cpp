@@ -3,6 +3,8 @@
 // dispatch decision, and NVL (no AMX) must not select SPR/GNR/DMR variants.
 // dispatch() mirrors module.cpp::lEmitISACompatibilityTest().
 // The AVX10 version leaf 0x24 must be queried only when leaf 0 reports it.
+// get_x86_os_has_apx() must report XCR0 APX state without changing the ISA,
+// and must not execute XGETBV without OSXSAVE.
 
 // RUN: %{cxx} -x c++ -std=c++17 -DISA_H_MOCK_CPUID -I%S/../../src %s -o %t.bin
 // RUN: %t.bin | FileCheck %s
@@ -20,6 +22,11 @@
 // CHECK-NEXT: DMR max_leaf=0x18: isa=11 leaf24_queried=0
 // CHECK-NEXT: DMR max_leaf=0x23: isa=11 leaf24_queried=0
 // CHECK-NEXT: DMR max_leaf=0x24: isa=13 leaf24_queried=1
+// CHECK-NEXT: DMR os_apx=1: isa=13 os_has_apx=1
+// CHECK-NEXT: DMR os_apx=0: isa=13 os_has_apx=0
+// CHECK-NEXT: NVL os_apx=1: isa=12 os_has_apx=1
+// CHECK-NEXT: NVL os_apx=0: isa=12 os_has_apx=0
+// CHECK-NEXT: NVL no-OSXSAVE: os_has_apx=0 xgetbv_called=0
 
 #include <stdio.h>
 #include <string.h>
@@ -29,6 +36,7 @@ static int g_leaf1[4], g_leaf7_0[4], g_leaf7_1[4], g_leaf24[4];
 static int g_xcr0;
 static int g_maxLeaf;
 static bool g_leaf24Queried;
+static bool g_xgetbvCalled;
 
 static void __cpuid(int info[4], int infoType) {
     memset(info, 0, 4 * sizeof(int));
@@ -51,19 +59,23 @@ static void __cpuidex(int info[4], int level, int count) {
     }
 }
 
-static int xgetbv() { return g_xcr0; }
+static int xgetbv() {
+    g_xgetbvCalled = true;
+    return g_xcr0;
+}
 
 #include "isa.h"
 
 enum CPU { CPU_SPR, CPU_GNR, CPU_DMR, CPU_NVL };
 
-static void setCPU(CPU cpu, bool osAMX) {
+static void setCPU(CPU cpu, bool osAMX, bool osAPX = true) {
     memset(g_leaf1, 0, sizeof(g_leaf1));
     memset(g_leaf7_0, 0, sizeof(g_leaf7_0));
     memset(g_leaf7_1, 0, sizeof(g_leaf7_1));
     memset(g_leaf24, 0, sizeof(g_leaf24));
     g_maxLeaf = 0x24;
     g_leaf24Queried = false;
+    g_xgetbvCalled = false;
 
     // Leaf 1: SSE2, SSE4.1/4.2, OSXSAVE, AVX, F16C, RDRAND. EAX (the processor
     // signature) stays 0, so max_level must come from leaf 0.
@@ -109,8 +121,9 @@ static void setCPU(CPU cpu, bool osAMX) {
         break;
     }
 
-    // XCR0: x87/SSE/AVX and AVX-512 state; optionally AMX XTILECFG/XTILEDATA.
-    g_xcr0 = 0xE7 | (osAMX ? 0x60000 : 0);
+    // XCR0: x87/SSE/AVX and AVX-512 state; optionally AMX XTILECFG/XTILEDATA
+    // and APX state.
+    g_xcr0 = 0xE7 | (osAMX ? 0x60000 : 0) | (osAPX ? (1 << 19) : 0);
 }
 
 // Mirror of the dispatcher's walk: the highest compiled candidate with
@@ -150,5 +163,16 @@ int main() {
         int isa = get_x86_isa();
         printf("DMR max_leaf=0x%x: isa=%d leaf24_queried=%d\n", maxLeaf, isa, g_leaf24Queried);
     }
+
+    for (int cpu = CPU_DMR; cpu <= CPU_NVL; ++cpu) {
+        for (int osAPX = 1; osAPX >= 0; --osAPX) {
+            setCPU((CPU)cpu, true, osAPX);
+            printf("%s os_apx=%d: isa=%d os_has_apx=%d\n", names[cpu], osAPX, get_x86_isa(), get_x86_os_has_apx());
+        }
+    }
+    setCPU(CPU_NVL, true);
+    g_leaf1[2] &= ~(1 << 27); // clear OSXSAVE
+    int osHasAPX = get_x86_os_has_apx();
+    printf("NVL no-OSXSAVE: os_has_apx=%d xgetbv_called=%d\n", osHasAPX, g_xgetbvCalled);
     return 0;
 }

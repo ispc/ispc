@@ -8,6 +8,7 @@
 
 // EGPR disabled: no v3 flag is needed.
 //; RUN: %{ispc} %s --target=avx10.2dmr-x16 --arch=x86-64 --target-os=windows --opt=disable-apx=egpr --emit-llvm-text -o - | FileCheck %s --check-prefix=NO-V3
+//; RUN: %{ispc} %s --target=avx10.2dmr-x16 --arch=x86-64 --target-os=windows --opt=disable-apx --emit-llvm-text -o - | FileCheck %s --check-prefix=NO-V3
 
 // Non-APX target: no v3 flag.
 //; RUN: %{ispc} %s --target=avx512skx-x16 --arch=x86-64 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefix=NO-V3
