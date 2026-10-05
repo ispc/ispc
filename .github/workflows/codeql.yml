@@ -62,7 +62,8 @@ jobs:
           output: ../results
           upload: never
 
-      # Keep only error-level alerts in ISPC sources under src/. This drops
+      # Keep only alerts in ISPC sources under src/ that are error-level or have
+      # a high or critical security severity (7.0 or above). This drops other
       # warnings and notes, and alerts in LLVM headers, generated files and other
       # third-party code. paths-ignore can't be used for this, because it doesn't
       # apply to C/C++ built in manual mode. CodeQL usually doesn't set a level on
@@ -72,10 +73,14 @@ jobs:
           for f in ../results/*.sarif; do
             jq '.runs |= map(
                   ([(.tool.driver.rules // [])[], (.tool.extensions // [])[].rules[]?]
-                   | map({key: .id, value: (.defaultConfiguration.level // "warning")}) | from_entries) as $levels
+                   | map({key: .id, value: {
+                       level: (.defaultConfiguration.level // "warning"),
+                       severity: ((.properties["security-severity"] // "0") | tonumber? // 0)}})
+                   | from_entries) as $rules
                   | .results |= map(select(
                       (((.locations // [])[0].physicalLocation.artifactLocation.uri // "") | startswith("src/"))
-                      and ((.level // $levels[.ruleId] // "warning") == "error"))))' \
+                      and (((.level // $rules[.ruleId].level // "warning") == "error")
+                           or (($rules[.ruleId].severity // 0) >= 7.0)))))' \
               "$f" > "$f.tmp"
             mv "$f.tmp" "$f"
           done
