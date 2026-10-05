@@ -319,11 +319,20 @@ UNUSED_ATTR static int get_x86_cpu_has_amx() {
 #endif // !MACOS
 }
 
+// Return whether the OS has enabled APX state in XCR0 (bit 19).
+UNUSED_ATTR static int get_x86_os_has_apx() {
+    int info[4];
+    __cpuid(info, 1);
+    int osxsave = (info[2] & (1 << 27)) != 0;
+    return osxsave && (xgetbv() & (1 << 19)) != 0;
+}
+
 #else
 
 // For non-x86 platforms, define functions with trivial implementations.
 UNUSED_ATTR static enum ISA get_x86_isa() { return INVALID; }
 UNUSED_ATTR static int get_x86_cpu_has_amx() { return 0; }
+UNUSED_ATTR static int get_x86_os_has_apx() { return 0; }
 
 #endif // defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 

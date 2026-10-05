@@ -37,6 +37,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/MC/MCSubtargetInfo.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/CommandLine.h>
@@ -993,12 +994,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
       m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_capabilities(),
-      m_hasGather(false), m_hasScatter(false), m_hasVecPrefetch(false), m_warnings(0) {
+      m_hasGather(false), m_hasScatter(false), m_hasVecPrefetch(false), m_disabledAPX(g->opt.disableAPX),
+      m_warnings(0) {
     // Set Fp64Support to true by default
     setCapability(TargetCapability::Fp64Support, true);
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
+    // Whether the target is detected from the host system.
+    bool hostRequested = m_ispc_target == ISPCTarget::host || (m_ispc_target == ISPCTarget::none && !cpu);
 
     if (cpu) {
         CPUID = a.GetTypeFromName(cpu);
@@ -1165,6 +1169,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     if (m_ispc_target == ISPCTarget::host) {
         m_ispc_target = lGetSystemISA();
     }
+
+#if defined(ISPC_HOST_IS_X86)
+    // Disable APX for the host target if the OS does not support it.
+    if (hostRequested && ISPCTargetIsApxCapable(m_ispc_target) && !dispatch::get_x86_os_has_apx()) {
+        m_disabledAPX |= Opt::APX_all;
+    }
+#else
+    (void)hostRequested;
+#endif
 
     if (arch == Arch::none) {
         arch = lGetArchFromTarget(m_ispc_target);
@@ -2445,24 +2458,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             featuresString += "+longlong";
         }
 
-        // Disable any x86 APX sub-features the user requested via
-        // --opt=disable-apx. The APX sub-features are enabled by default on
-        // APX-capable targets (e.g. avx10.2dmr, avx10.2nvl) through the CPU
-        // name; appending "-<feature>" to the LLVM feature string turns them
-        // off. They are independent in the LLVM X86 backend, so any
-        // combination can be disabled. This is a no-op on targets that do not
-        // enable APX in the first place. The accepted set is the single source
-        // of truth in Opt::APXFeatureTable().
-        if (g->opt.disableAPX && ISPCTargetIsX86(m_ispc_target)) {
-            for (auto const &f : Opt::APXFeatureTable()) {
-                if (g->opt.disableAPX & f.second) {
-                    if (!featuresString.empty()) {
-                        featuresString += ",";
-                    }
-                    featuresString += "-";
-                    featuresString += f.first;
-                }
+        // Disable the requested x86 APX sub-features. They are enabled by
+        // default on APX-capable targets (e.g. avx10.2dmr, avx10.2nvl).
+        if (m_disabledAPX && ISPCTargetIsX86(m_ispc_target)) {
+            if (!featuresString.empty()) {
+                featuresString += ",";
             }
+            featuresString += Opt::APXDisableFeatureString(m_disabledAPX);
         }
 
 #if ISPC_LLVM_VERSION < ISPC_LLVM_24_0
@@ -3396,6 +3398,39 @@ const std::vector<std::pair<const char *, Opt::APXFeature>> &Opt::APXFeatureTabl
 #endif
     };
     return table;
+}
+
+unsigned int Target::getEnabledAPXFeatures() const {
+    // APX exists only in 64-bit mode.
+    if (m_arch != Arch::x86_64 || !ISPCTargetIsApxCapable(m_ispc_target)) {
+        return 0;
+    }
+    // Query the effective backend features: some APX sub-features (e.g. cf)
+    // are disabled by default.
+    Assert(m_targetMachine != nullptr);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+    const llvm::MCSubtargetInfo &subtarget = m_targetMachine->getMCSubtargetInfo();
+#else
+    const llvm::MCSubtargetInfo &subtarget = *m_targetMachine->getMCSubtargetInfo();
+#endif
+    unsigned int enabled = 0;
+    for (auto const &f : Opt::APXFeatureTable()) {
+        if (subtarget.checkFeatures(std::string("+") + f.first)) {
+            enabled |= f.second;
+        }
+    }
+    return enabled;
+}
+
+std::string Opt::APXDisableFeatureString(unsigned int mask) {
+    std::string features;
+    for (auto const &f : APXFeatureTable()) {
+        if (mask & f.second) {
+            features += features.empty() ? "-" : ",-";
+            features += f.first;
+        }
+    }
+    return features;
 }
 
 Opt::Opt() {

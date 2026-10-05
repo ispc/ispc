@@ -36,7 +36,7 @@ const char *const isa_strings[] = {
 };
 
 static const char *lGetSystemISA() {
-    static char amx_isa_string[32];
+    static char isa_string[32];
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
     return "ARM NEON";
 #elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
@@ -45,12 +45,19 @@ static const char *lGetSystemISA() {
         return "Unknown x86 ISA";
     }
     const char *isa = isa_strings[isa_id];
-    // Only show AMX status for AMX-capable ISAs (SPR, GNR, DMR - not NVL)
-    if (isa_id == SPR_AVX512 || isa_id == GNR_AVX512 || isa_id == DMR_AVX10_2) {
-        snprintf(amx_isa_string, sizeof(amx_isa_string), "%s (AMX %s)", isa, __os_has_amx_support() ? "on" : "off");
-        return amx_isa_string;
+    // Show AMX status for AMX-capable ISAs (SPR, GNR, DMR - not NVL) and APX
+    // status for APX-capable ISAs (NVL, DMR).
+    if (isa_id == DMR_AVX10_2) {
+        snprintf(isa_string, sizeof(isa_string), "%s (AMX %s, APX %s)", isa, __os_has_amx_support() ? "on" : "off",
+                 get_x86_os_has_apx() ? "on" : "off");
+    } else if (isa_id == SPR_AVX512 || isa_id == GNR_AVX512) {
+        snprintf(isa_string, sizeof(isa_string), "%s (AMX %s)", isa, __os_has_amx_support() ? "on" : "off");
+    } else if (isa_id == NVL_AVX10_2) {
+        snprintf(isa_string, sizeof(isa_string), "%s (APX %s)", isa, get_x86_os_has_apx() ? "on" : "off");
+    } else {
+        return isa;
     }
-    return isa;
+    return isa_string;
 #elif defined(__riscv)
     return "RISC-V";
 #elif defined(__powerpc64__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)

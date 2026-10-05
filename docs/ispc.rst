@@ -1381,6 +1381,15 @@ For more information about the AVX-512 targets, please read this `AVX-512 CPU co
 
 .. _AVX-512 CPU compatibility table: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#AVX-512_CPU_compatibility_table
 
+The ``avx10.2nvl`` and ``avx10.2dmr`` targets enable APX (Advanced Performance
+Extensions) by default. Executing code that uses APX requires both CPU and
+operating system support. Explicitly named ``avx10.2nvl`` and ``avx10.2dmr``
+targets keep APX enabled regardless of the system on which ``ispc`` runs; use
+``--opt=disable-apx`` to produce code that does not require operating system
+APX support (disabling only a subset of the sub-features, for example
+``--opt=disable-apx=egpr``, still requires it). With ``--target=host``, APX
+is disabled if the operating system does not support it.
+
 The following GPU targets are supported:
 
 ============= ========================= ===========================================================
