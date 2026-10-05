@@ -4242,15 +4242,13 @@ llvm::Constant *FunctionEmitContext::XeCreateConstantString(llvm::StringRef str,
     GV->setAlignment(llvm::MaybeAlign(g->target->getDataLayout()->getABITypeAlign(initializer->getType())));
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-    return llvm::ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,
-                                                        llvm::ArrayRef<llvm::Constant *>{LLVMInt32(0), LLVMInt32(0)});
+    return LLVMConstGEP(GV->getValueType(), GV, {LLVMInt32(0), LLVMInt32(0)}, /* inBounds */ true);
 }
 
 llvm::Constant *FunctionEmitContext::XeGetOrCreateConstantString(llvm::StringRef str, llvm::StringRef name) {
     auto *GV = m->module->getGlobalVariable(name, /* AllowInternal */ true);
     if (GV)
-        return llvm::ConstantExpr::getInBoundsGetElementPtr(
-            GV->getValueType(), GV, llvm::ArrayRef<llvm::Constant *>{LLVMInt32(0), LLVMInt32(0)});
+        return LLVMConstGEP(GV->getValueType(), GV, {LLVMInt32(0), LLVMInt32(0)}, /* inBounds */ true);
     return XeCreateConstantString(str, name);
 }
 

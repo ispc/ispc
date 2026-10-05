@@ -3272,7 +3272,7 @@ static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Typ
         if (op == BinaryExpr::Op::Sub) {
             c2 = llvm::ConstantExpr::getNeg(c2);
         }
-        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(AddressInfo::GetPointeeLLVMType(pt0), c1, c2);
+        llvm::Constant *c = LLVMConstGEP(AddressInfo::GetPointeeLLVMType(pt0), c1, c2);
         return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
     } else if (const PointerType *pt1 = CastType<PointerType>(arg1->GetType())) {
         std::pair<llvm::Constant *, bool> c1Pair;
@@ -3295,7 +3295,7 @@ static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Typ
         }
         llvm::Constant *c2 = c2Pair.first;
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c2Pair.second;
-        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(AddressInfo::GetPointeeLLVMType(pt1), c1, c2);
+        llvm::Constant *c = LLVMConstGEP(AddressInfo::GetPointeeLLVMType(pt1), c1, c2);
         return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
     }
 
@@ -8374,13 +8374,11 @@ std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constTyp
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         if (CastType<ArrayType>(expr->GetType())) {
             if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(ptr)) {
-                llvm::Value *offsets[2] = {LLVMInt32(0), LLVMInt32(0)};
-                llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
-                llvm::Value *resultPtr = llvm::ConstantExpr::getGetElementPtr(
-                    llvm::dyn_cast<llvm::GlobalVariable>(ptr)->getValueType(), c, arrayRef);
+                llvm::Constant *offsets[2] = {LLVMInt32(0), LLVMInt32(0)};
+                llvm::Constant *resultPtr =
+                    LLVMConstGEP(llvm::dyn_cast<llvm::GlobalVariable>(ptr)->getValueType(), c, offsets);
                 if (resultPtr->getType() == constType->LLVMType(g->ctx)) {
-                    llvm::Constant *ret = llvm::dyn_cast<llvm::Constant>(resultPtr);
-                    return std::pair<llvm::Constant *, bool>(ret, false);
+                    return std::pair<llvm::Constant *, bool>(resultPtr, false);
                 }
             }
         }
@@ -8870,7 +8868,7 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
                                                          isNotValidForMultiTargetGlobal);
 
             } else if (IndexExpr *IExpr = llvm::dyn_cast<IndexExpr>(expr)) {
-                std::vector<llvm::Value *> gepIndex;
+                std::vector<llvm::Constant *> gepIndex;
                 Expr *mBaseExpr = nullptr;
                 while (IExpr) {
                     std::pair<llvm::Constant *, bool> cIndexPair = IExpr->index->GetConstant(IExpr->index->GetType());
@@ -8890,8 +8888,8 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
                 }
                 gepIndex.insert(gepIndex.begin(), LLVMInt64(0));
                 llvm::Constant *c = llvm::cast<llvm::Constant>(ptr);
-                llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(
-                    llvm::dyn_cast<llvm::GlobalVariable>(ptr)->getValueType(), c, gepIndex);
+                llvm::Constant *c1 =
+                    LLVMConstGEP(llvm::dyn_cast<llvm::GlobalVariable>(ptr)->getValueType(), c, gepIndex);
                 return std::pair<llvm::Constant *, bool>(c1, isNotValidForMultiTargetGlobal);
             }
         }

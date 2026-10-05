@@ -378,6 +378,11 @@ extern llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llv
 extern llvm::GetElementPtrInst *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset,
                                             const char *name, llvm::Instruction *insertBefore);
 
+/** Create a constant getelementptr expression with source element type ty,
+    base pointer ptr and the given constant indices. */
+extern llvm::Constant *LLVMConstGEP(llvm::Type *ty, llvm::Constant *ptr, llvm::ArrayRef<llvm::Constant *> idx,
+                                    bool inBounds = false);
+
 /** Mask-related helpers */
 
 /** Given an llvm::Value represinting a vector mask, see if the value is a
