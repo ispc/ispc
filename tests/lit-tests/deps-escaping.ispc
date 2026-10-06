@@ -1,6 +1,9 @@
 // Verify Make dependency quoting with raw -MT, quoted -MQ, and implicit targets.
 // Literal tabs in RUN and CHECK lines are intentional. Strict whitespace checks
 // distinguish a tab from spaces and preserve backslashes before whitespace.
+// Slim binaries also list the on-disk core.isph, even with --nostdlib.
+// Allow its extra dependency lines and the resulting line continuations,
+// while checking each tested filename and its whitespace exactly.
 // RUN: mkdir -p "%t.dir"
 // RUN: cp "%s" "%t.dir/source.ispc"
 // RUN: cd "%t.dir"
@@ -32,25 +35,25 @@
 // RUN: FileCheck "%s" --check-prefix=FLAT --strict-whitespace --match-full-lines --input-file=flat.d
 // RUN: not %{ispc} source.ispc --target=host --nostdlib --nowrap -MQ 2>&1 | FileCheck "%s" --check-prefix=MISSING
 
-// RAW:$(OBJDIR)/one.o two.o: source.ispc
-// QUOTED:$$(OBJDIR)/one.o\ two.o: source.ispc
-// RAW-SPECIAL:C:\some path\out#$.o	two.o: source.ispc
-// SPACE:space\ name.o: source.ispc
-// TAB:tab\	name.o: source.ispc
-// BACKSLASH:back\slash.o: source.ispc
-// TWO-BACKSLASHES:two\\slashes.o: source.ispc
-// BACKSLASH-SPACE:back\\\ space.o: source.ispc
-// TWO-BACKSLASHES-SPACE:two\\\\\ space.o: source.ispc
-// BACKSLASH-TAB:back\\\	name.o: source.ispc
-// HASH-DOLLAR:hash\#dollar$$.o: source.ispc
-// DRIVE-FORWARD:C\:/some\ path/out.o: source.ispc
-// DRIVE-BACKSLASH:C\:\some\ path\out.o: source.ispc
-// IMPLICIT:space\ \#$$.o: space\ \#$$.ispc
-// SOURCE:out.o: space\ \#$$.ispc
-// DEPFILE:out\ file.o: space\ \#$$.ispc
+// RAW:$(OBJDIR)/one.o two.o: source.ispc{{( \\)?}}
+// QUOTED:$$(OBJDIR)/one.o\ two.o: source.ispc{{( \\)?}}
+// RAW-SPECIAL:C:\some path\out#$.o	two.o: source.ispc{{( \\)?}}
+// SPACE:space\ name.o: source.ispc{{( \\)?}}
+// TAB:tab\	name.o: source.ispc{{( \\)?}}
+// BACKSLASH:back\slash.o: source.ispc{{( \\)?}}
+// TWO-BACKSLASHES:two\\slashes.o: source.ispc{{( \\)?}}
+// BACKSLASH-SPACE:back\\\ space.o: source.ispc{{( \\)?}}
+// TWO-BACKSLASHES-SPACE:two\\\\\ space.o: source.ispc{{( \\)?}}
+// BACKSLASH-TAB:back\\\	name.o: source.ispc{{( \\)?}}
+// HASH-DOLLAR:hash\#dollar$$.o: source.ispc{{( \\)?}}
+// DRIVE-FORWARD:C\:/some\ path/out.o: source.ispc{{( \\)?}}
+// DRIVE-BACKSLASH:C\:\some\ path\out.o: source.ispc{{( \\)?}}
+// IMPLICIT:space\ \#$$.o: space\ \#$$.ispc{{( \\)?}}
+// SOURCE:out.o: space\ \#$$.ispc{{( \\)?}}
+// DEPFILE:out\ file.o: space\ \#$$.ispc{{( \\)?}}
 // INCLUDE:out.o: include.ispc \
-// INCLUDE-NEXT: .{{[\\/]}}space\ \#$$.ispc
-// OUTPUT:out\ \#$$.o: source.ispc
+// INCLUDE: .{{[\\/]}}space\ \#$$.ispc{{( \\)?}}
+// OUTPUT:out\ \#$$.o: source.ispc{{( \\)?}}
 // FLAT:space #$.ispc
 // MISSING:No target name specified after -MQ option.
 

@@ -1,6 +1,9 @@
 // Actual filenames containing tabs, backslashes, and colons are POSIX-only.
 // Literal tabs in RUN and CHECK lines are intentional.
 // UNSUPPORTED: WINDOWS_HOST
+// Slim binaries also list the on-disk core.isph, even with --nostdlib.
+// Allow its extra dependency lines and the resulting line continuations,
+// while checking each tested filename and its whitespace exactly.
 // RUN: mkdir -p "%t.dir"
 // RUN: cp "%s" "%t.dir/source.ispc"
 // RUN: cd "%t.dir"
@@ -37,28 +40,28 @@
 // RUN: echo '#include "colon:name.ispc"' > include.ispc
 // RUN: %{ispc} include.ispc --target=host --nostdlib --nowrap -M -MT out.o | FileCheck "%s" --check-prefix=COLON-INCLUDE --strict-whitespace --match-full-lines
 
-// TAB:tab\	name.o: tab\	name.ispc
-// TAB-SOURCE:out.o: tab\	name.ispc
-// TAB-DEPFILE:out\ file.o: tab\	name.ispc
+// TAB:tab\	name.o: tab\	name.ispc{{( \\)?}}
+// TAB-SOURCE:out.o: tab\	name.ispc{{( \\)?}}
+// TAB-DEPFILE:out\ file.o: tab\	name.ispc{{( \\)?}}
 // TAB-INCLUDE:out.o: include.ispc \
-// TAB-INCLUDE-NEXT: ./tab\	name.ispc
+// TAB-INCLUDE: ./tab\	name.ispc{{( \\)?}}
 
-// BACKSLASH:back\slash.o: back\slash.ispc
-// BACKSLASH-SOURCE:out.o: back\slash.ispc
-// BACKSLASH-DEPFILE:out\ file.o: back\slash.ispc
+// BACKSLASH:back\slash.o: back\slash.ispc{{( \\)?}}
+// BACKSLASH-SOURCE:out.o: back\slash.ispc{{( \\)?}}
+// BACKSLASH-DEPFILE:out\ file.o: back\slash.ispc{{( \\)?}}
 // BACKSLASH-INCLUDE:out.o: include.ispc \
-// BACKSLASH-INCLUDE-NEXT: ./back\slash.ispc
+// BACKSLASH-INCLUDE: ./back\slash.ispc{{( \\)?}}
 
-// BACKSLASH-SPACE:back\\\ space.o: back\\\ space.ispc
-// BACKSLASH-SPACE-SOURCE:out.o: back\\\ space.ispc
-// BACKSLASH-SPACE-DEPFILE:out\ file.o: back\\\ space.ispc
+// BACKSLASH-SPACE:back\\\ space.o: back\\\ space.ispc{{( \\)?}}
+// BACKSLASH-SPACE-SOURCE:out.o: back\\\ space.ispc{{( \\)?}}
+// BACKSLASH-SPACE-DEPFILE:out\ file.o: back\\\ space.ispc{{( \\)?}}
 // BACKSLASH-SPACE-INCLUDE:out.o: include.ispc \
-// BACKSLASH-SPACE-INCLUDE-NEXT: ./back\\\ space.ispc
+// BACKSLASH-SPACE-INCLUDE: ./back\\\ space.ispc{{( \\)?}}
 
-// COLON:colon\:name.o: colon\:name.ispc
-// COLON-SOURCE:out.o: colon\:name.ispc
-// COLON-DEPFILE:out\ file.o: colon\:name.ispc
+// COLON:colon\:name.o: colon\:name.ispc{{( \\)?}}
+// COLON-SOURCE:out.o: colon\:name.ispc{{( \\)?}}
+// COLON-DEPFILE:out\ file.o: colon\:name.ispc{{( \\)?}}
 // COLON-INCLUDE:out.o: include.ispc \
-// COLON-INCLUDE-NEXT: ./colon\:name.ispc
+// COLON-INCLUDE: ./colon\:name.ispc{{( \\)?}}
 
 uniform int value;
