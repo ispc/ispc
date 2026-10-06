@@ -507,7 +507,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_ZNVER4, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
     {CPU_ZNVER5, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
-    {CPU_ZNVER6, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+    {CPU_ZNVER6,
+     {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512fp16", "avx_vnni",
+      "avx512_vnni"}},
 #endif
 // TODO: Add features for remaining CPUs if valid.
 #ifdef ISPC_ARM_ENABLED
@@ -731,28 +733,28 @@ class AllCPUs {
         compat[CPU_ICL] =
             Set(CPU_ICL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_None);
+        compat[CPU_ZNVER1] =
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER1, CPU_None);
+        compat[CPU_ZNVER2] =
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER1, CPU_ZNVER2, CPU_None);
+        compat[CPU_ZNVER3] =
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER1, CPU_ZNVER2, CPU_ZNVER3, CPU_None);
+        compat[CPU_ZNVER4] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                                 CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX,
+                                 CPU_ICL, CPU_ZNVER1, CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_None);
+        compat[CPU_ZNVER5] =
+            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_TGL, CPU_ZNVER1,
+                CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_ZNVER5, CPU_None);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
         compat[CPU_ZNVER6] =
             Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_TGL, CPU_ZNVER1,
                 CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_ZNVER5, CPU_ZNVER6, CPU_None);
 #endif
-        compat[CPU_ZNVER5] =
-            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
-                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_TGL, CPU_ZNVER1,
-                CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_ZNVER5, CPU_None);
-        compat[CPU_ZNVER4] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
-                                 CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX,
-                                 CPU_ICL, CPU_ZNVER1, CPU_ZNVER2, CPU_ZNVER3, CPU_ZNVER4, CPU_None);
-        compat[CPU_ZNVER3] =
-            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
-                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER1, CPU_ZNVER2, CPU_ZNVER3, CPU_None);
-        compat[CPU_ZNVER2] =
-            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
-                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER1, CPU_ZNVER2, CPU_None);
-        compat[CPU_ZNVER1] =
-            Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
-                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER1, CPU_None);
         compat[CPU_Skylake] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                                   CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
         compat[CPU_Broadwell] = Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
