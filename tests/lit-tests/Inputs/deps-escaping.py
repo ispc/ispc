@@ -4,7 +4,7 @@
 import os
 from pathlib import Path
 import shutil
-import subprocess
+import subprocess  # nosec B404: Run the compiler under test without a shell.
 import sys
 
 
