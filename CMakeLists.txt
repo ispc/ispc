@@ -803,8 +803,10 @@ if (NOT MSVC)
             -Wno-error=comment
         )
         if (ISPC_LIBRARY_JIT)
-            # Disable warnings about redundant move in JIT mode triggered by LLVM code.
-            list(APPEND COMPILE_OPTIONS -Wno-redundant-move)
+            # Disable warnings about redundant move and maybe-uninitialized
+            # (false positive on llvm::unique_function in LLVM 23 ORC headers)
+            # in JIT mode triggered by LLVM code.
+            list(APPEND COMPILE_OPTIONS -Wno-redundant-move -Wno-maybe-uninitialized)
         endif()
         # The GCC warning issues false positives when one of the allocation and
         # deallocation functions is inlined into its caller but not the other.
