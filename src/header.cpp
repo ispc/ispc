@@ -435,24 +435,25 @@ static bool lIsExternC(const Symbol *sym) {
     return ft->IsExternC();
 }
 
-// Escape a string for use in a make/Ninja depfile rule.
-// Escape order matters: backslash must be escaped first to avoid double-escaping.
+// Quote a filename in a Make dependency rule. Ordinary backslashes are literal;
+// only those preceding a character we quote need to be doubled. In particular,
+// N backslashes before whitespace require 2N+1 backslashes in the depfile.
 static std::string lEscapeMakeDepfileToken(const std::string &s) {
     std::string result;
     result.reserve(s.size());
+    size_t backslashes = 0;
     for (char c : s) {
         switch (c) {
         case '\\':
-            result += "\\\\";
-            break;
+            result += c;
+            ++backslashes;
+            continue;
         case ' ':
-            result += "\\ ";
-            break;
+        case '\t':
         case ':':
-            result += "\\:";
-            break;
         case '#':
-            result += "\\#";
+            result.append(backslashes + 1, '\\');
+            result += c;
             break;
         case '$':
             result += "$$";
@@ -461,6 +462,7 @@ static std::string lEscapeMakeDepfileToken(const std::string &s) {
             result += c;
             break;
         }
+        backslashes = 0;
     }
     return result;
 }
