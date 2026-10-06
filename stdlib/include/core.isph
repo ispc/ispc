@@ -985,14 +985,14 @@ ISPC_BUILTINS_ATTRS uniform bool __any(UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __all(UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __none(UIntMaskType);
 
-ISPC_BUILTINS_ATTRS uniform int8 *uniform ISPCAlloc(uniform int8 *uniform *uniform, uniform int64, uniform int32);
-ISPC_BUILTINS_ATTRS void ISPCLaunch(uniform int8 *uniform *uniform, uniform int8 *uniform, uniform int8 *uniform,
+ISPC_BUILTINS_ATTRS uniform int8 *uniform ISPCAlloc(uniform int8 * uniform * uniform, uniform int64, uniform int32);
+ISPC_BUILTINS_ATTRS void ISPCLaunch(uniform int8 * uniform * uniform, uniform int8 *uniform, uniform int8 *uniform,
                                     uniform int32, uniform int32, uniform int32);
 ISPC_BUILTINS_ATTRS void ISPCSync(uniform int8 *uniform);
 ISPC_BUILTINS_ATTRS void ISPCInstrument(uniform int8 *uniform, uniform int8 *uniform, uniform int32, uniform int64);
 
 ISPC_BUILTINS_ATTRS void __do_print(uniform int8 *uniform, uniform int8 *uniform, uniform int32, uniform int64,
-                                    uniform int8 *uniform *uniform);
+                                    uniform int8 * uniform * uniform);
 ISPC_BUILTINS_ATTRS uniform int32 __num_cores();
 
 ISPC_BUILTINS_ATTRS int __get_system_best_isa();

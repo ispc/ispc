@@ -231,8 +231,8 @@ __declspec(safe, cost1) inline void prefetchw_l3(const void *varying ptr);
 ///////////////////////////////////////////////////////////////////////////
 // non-short-circuiting alternatives
 
-__declspec(safe, cost1) inline bool and (bool a, bool b);
-__declspec(safe, cost1) inline uniform bool and (uniform bool a, uniform bool b);
+__declspec(safe, cost1) inline bool and(bool a, bool b);
+__declspec(safe, cost1) inline uniform bool and(uniform bool a, uniform bool b);
 __declspec(safe, cost1) inline bool or (bool a, bool b);
 __declspec(safe, cost1) inline uniform bool or (uniform bool a, uniform bool b);
 __declspec(safe, cost1) inline int8 select(bool cond, int8 t, int8 f);
