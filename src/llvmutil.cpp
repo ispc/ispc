@@ -1861,16 +1861,11 @@ llvm::GetElementPtrInst *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, ll
 llvm::Constant *LLVMConstGEP(llvm::Type *ty, llvm::Constant *ptr, llvm::ArrayRef<llvm::Constant *> idx, bool inBounds) {
     llvm::GEPNoWrapFlags nw = inBounds ? llvm::GEPNoWrapFlags::inBounds() : llvm::GEPNoWrapFlags::none();
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
-    // ConstantExpr::getGetElementPtr() with a source element type is deprecated
-    // starting LLVM 24. When all indices are constant integers, fold them into
-    // a byte offset and emit "getelementptr i8, ptr, offset" instead.
-    if (llvm::all_of(idx, [](llvm::Constant *c) { return llvm::isa<llvm::ConstantInt>(c); })) {
-        const llvm::DataLayout *DL = g->target->getDataLayout();
-        llvm::SmallVector<llvm::Value *, 4> indices(idx.begin(), idx.end());
-        int64_t offset = DL->getIndexedOffsetInType(ty, indices);
-        llvm::Type *indexTy = DL->getIndexType(ptr->getType());
-        return llvm::ConstantExpr::getPtrAdd(ptr, llvm::ConstantInt::get(indexTy, offset, /* IsSigned */ true), nw);
+    const llvm::DataLayout *DL = g->target->getDataLayout();
+    if (llvm::Constant *result = llvm::ConstantExpr::getGetElementPtr(*DL, ty, ptr, idx, nw)) {
+        return result;
     }
+    // Preserve constant forms that cannot be converted to a byte offset.
     LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     llvm::Constant *result = llvm::ConstantExpr::getGetElementPtr(ty, ptr, idx, nw);
     LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
