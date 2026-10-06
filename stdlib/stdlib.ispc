@@ -1396,9 +1396,9 @@ __declspec(safe, cost1) static inline void prefetchw_l3(const void *varying ptr)
 ///////////////////////////////////////////////////////////////////////////
 // non-short-circuiting alternatives
 
-__declspec(safe, cost1) static inline bool and (bool a, bool b) { return a && b; }
+__declspec(safe, cost1) static inline bool and(bool a, bool b) { return a && b; }
 
-__declspec(safe, cost1) static inline uniform bool and (uniform bool a, uniform bool b) { return a && b; }
+__declspec(safe, cost1) static inline uniform bool and(uniform bool a, uniform bool b) { return a && b; }
 
 __declspec(safe, cost1) static inline bool or (bool a, bool b) { return a || b; }
 

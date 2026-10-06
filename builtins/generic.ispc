@@ -1211,7 +1211,7 @@ EXT READNONE varying double __shuffle2_double(varying double v0, varying double 
 // while on Unix we use posix_memalign/free
 
 #if BUILD_OS == UNIX
-EXT uniform int32 posix_memalign(uniform int8 *uniform *uniform, uniform int32, uniform int32);
+EXT uniform int32 posix_memalign(uniform int8 * uniform * uniform, uniform int32, uniform int32);
 EXT void free(uniform int8 *uniform);
 #endif // BUILD_OS == UNIX
 

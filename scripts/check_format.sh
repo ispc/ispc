@@ -1,20 +1,20 @@
 #!/bin/bash
 # ##################################################
-#  Copyright (c) 2019-2024, Intel Corporation
+#  Copyright (c) 2019-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 EXIT_CODE=0
 echo "\
 ############################################################################
 Checking formatting of modified files. It is expected that the files were
-formatted with clang-format 18.1. It is also expected that clang-format
-version 18.1 is used for the check. Otherwise the result can ne unexpected.
+formatted with clang-format 23.1. It is also expected that clang-format
+version 23.1 is used for the check. Otherwise the result can ne unexpected.
 ############################################################################"
 
 CLANG_FORMAT="clang-format"
 [[ ! -z $1 ]] && CLANG_FORMAT=$1
 which "$CLANG_FORMAT" || { echo "No $CLANG_FORMAT found in PATH" && exit 1; }
-REQUIRED_VERSION="18.1"
+REQUIRED_VERSION="23.1"
 VERSION_STRING="clang-format version $REQUIRED_VERSION.*"
 CURRENT_VERSION="$($CLANG_FORMAT --version)"
 if ! [[ $CURRENT_VERSION =~ $VERSION_STRING ]] ; then
