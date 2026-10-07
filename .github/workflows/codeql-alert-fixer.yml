@@ -1,11 +1,6 @@
 # Copyright 2026, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Triages open CodeQL code-scanning alerts (security-and-quality) and asks
-# Claude Code to fix each new one, mirroring the LLVM Trunk Failure Analyzer
-# pattern: a cheap triage job creates a tracking issue per alert, then a
-# capped-concurrency matrix hands each issue to the generic Claude fixer.
-
 name: CodeQL Alert Fixer
 
 on:
@@ -15,23 +10,31 @@ on:
       - completed
   workflow_dispatch:
     inputs:
-      max_new:
-        description: 'Maximum number of new alerts to triage this run'
+      alert_number:
+        description: >
+          Optional alert number to investigate or retry manually.
         required: false
         type: string
-        default: '10'
+      series_id:
+        description: 'Internal: original run ID for a continuing series; leave empty for a new series.'
+        required: false
+        type: string
+      attempted_alerts:
+        description: 'Internal: JSON list of alerts already attempted in this series.'
+        required: false
+        type: string
+        default: '[]'
 
 permissions: {}
 
 concurrency:
   group: codeql-alert-fixer
   cancel-in-progress: false
+  queue: max
 
 jobs:
-  triage:
-    # Only run in the main ispc/ispc repo, and only after a successful CodeQL
-    # scan of main (not a scan of some feature branch), or when dispatched
-    # manually.
+  find-new-alert:
+    # Successful CodeQL scan of main, or manual/continuation dispatch.
     if: |
       github.repository == 'ispc/ispc' &&
       (github.event_name == 'workflow_dispatch' ||
@@ -42,132 +45,488 @@ jobs:
     permissions:
       security-events: read
       issues: write
+      pull-requests: read # Required to check PR state when resuming a stalled fix
+      contents: read # Required to compare commits when verifying a post-merge scan
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      REQUESTED_ALERT: ${{ inputs.alert_number }}
+      SERIES_ID: ${{ inputs.series_id }}
+      ATTEMPTED_ALERTS: ${{ inputs.attempted_alerts || '[]' }}
 
     outputs:
-      alerts: ${{ steps.triage.outputs.alerts }}
+      alert_number: ${{ steps.select-alert.outputs.number }}
+      rule: ${{ steps.select-alert.outputs.rule }}
+      path: ${{ steps.select-alert.outputs.path }}
+      line: ${{ steps.select-alert.outputs.line }}
+      url: ${{ steps.select-alert.outputs.url }}
+      existing_issues: ${{ steps.select-alert.outputs.existing_issues }}
+      series_id: ${{ steps.select-alert.outputs.series_id }}
+      attempted_alerts: ${{ steps.select-alert.outputs.attempted_alerts }}
 
     steps:
-      - name: Triage CodeQL alerts
-        id: triage
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          MAX_NEW: ${{ inputs.max_new || '10' }}
-        run: |
-          set -euo pipefail
+    - name: Ensure investigation labels exist
+      run: |
+        set -euo pipefail
+        for label in codeql-alert codeql-needs-human codeql-unsure; do
+          gh label create "$label" --color ededed --description "Used by the CodeQL Alert Fixer workflow" --force
+        done
 
-          echo "Fetching open CodeQL alerts..."
-          gh api "repos/$REPO/code-scanning/alerts" --paginate \
-            -q '.[] | select(.state=="open") | [.number, .rule.id, (.rule.severity // "unknown"), .most_recent_instance.location.path, (.most_recent_instance.location.start_line | tostring), .html_url] | @tsv' \
-            | sort -u > open_alerts.tsv
-          echo "Open alerts: $(wc -l < open_alerts.tsv)"
+    - name: Select next alert and record series state
+      id: select-alert
+      run: |
+        set -euo pipefail
+        trap 'printf "Selection failed at line %s; series stopped without resetting state.\n" "$LINENO" | tee -a "$GITHUB_STEP_SUMMARY" >&2' ERR
 
-          echo "Listing existing codeql-alert tracking issues..."
-          gh issue list --label codeql-alert --state all --limit 1000 \
-            --json title -q '.[].title' > tracked_titles.txt || true
-          # Titles look like: [codeql-alert #715] cpp/inconsistent-null-check in src/ctx.cpp
-          grep -oE '#[0-9]+' tracked_titles.txt | tr -d '#' | sort -u > tracked_numbers.txt || true
-          touch tracked_numbers.txt
-
-          echo "Closing tracking issues whose alert is no longer open..."
-          cut -f1 open_alerts.tsv | sort -u > open_numbers.txt
-          gh issue list --label codeql-alert --state open --limit 1000 \
-            --json number,title > open_tracking_issues.json || echo '[]' > open_tracking_issues.json
-          jq -c '.[]' open_tracking_issues.json | while read -r row; do
-            issue_num=$(echo "$row" | jq -r '.number')
-            alert_num=$(echo "$row" | jq -r '.title' | grep -oE '#[0-9]+' | tr -d '#')
-            if [ -n "$alert_num" ] && ! grep -qx "$alert_num" open_numbers.txt; then
-              echo "Closing issue #$issue_num: alert #$alert_num is no longer open upstream"
-              gh issue close "$issue_num" --comment "CodeQL alert #$alert_num is no longer open upstream (fixed or dismissed). Closing this tracking issue."
-            fi
+        summary() { printf '%s\n\n' "$*" | tee -a "$GITHUB_STEP_SUMMARY"; }
+        fail() { summary "$*" >&2; exit 1; }
+        write_output() {
+          local key="$1" value="$2" delimiter
+          delimiter="codeql_${GITHUB_RUN_ID}_${RANDOM}_${RANDOM}"
+          while [[ $'\n'"$value"$'\n' == *$'\n'"$delimiter"$'\n'* ]]; do
+            delimiter="codeql_${GITHUB_RUN_ID}_${RANDOM}_${RANDOM}"
           done
-
-          echo "Selecting new alerts (not already tracked), sorted by path..."
-          sort -t$'\t' -k4,4 open_alerts.tsv > open_alerts_by_path.tsv
-          : > new_alerts.tsv
-          while IFS=$'\t' read -r number rule severity path line url; do
-            if ! grep -qx "$number" tracked_numbers.txt; then
-              printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$number" "$rule" "$severity" "$path" "$line" "$url" >> new_alerts.tsv
-            fi
-          done < open_alerts_by_path.tsv
-          head -n "$MAX_NEW" new_alerts.tsv > new_alerts_capped.tsv
-          echo "New alerts selected this run: $(wc -l < new_alerts_capped.tsv) (of $(wc -l < new_alerts.tsv) total new)"
-
-          echo "Creating tracking issues for selected new alerts..."
-          : > results.jsonl
-          while IFS=$'\t' read -r number rule severity path line url; do
-            title="[codeql-alert #$number] $rule in $path"
-            {
-              echo "## CodeQL alert #$number"
-              echo ""
-              echo "- **Rule:** \`$rule\`"
-              echo "- **Severity:** $severity"
-              echo "- **Location:** \`$path\`:$line"
-              echo "- **Alert:** $url"
-              echo ""
-              echo "Tracked automatically by the CodeQL Alert Fixer workflow."
-            } > issue_body.md
-            issue_url=$(gh issue create --title "$title" --label codeql-alert --body-file issue_body.md)
-            issue_number=$(echo "$issue_url" | grep -oE '[0-9]+$')
-            echo "Created issue #$issue_number for alert #$number"
-            jq -nc --arg number "$number" --arg issue "$issue_number" --arg rule "$rule" \
-              --arg path "$path" --arg line "$line" --arg url "$url" \
-              '{number: ($number|tonumber), issue: ($issue|tonumber), rule: $rule, path: $path, line: ($line|tonumber), url: $url}' \
-              >> results.jsonl
-          done < new_alerts_capped.tsv
-
-          if [ -s results.jsonl ]; then
-            jq -sc '.' results.jsonl > alerts.json
-          else
-            echo '[]' > alerts.json
+          printf '%s<<%s\n%s\n%s\n' "$key" "$delimiter" "$value" "$delimiter" >> "$GITHUB_OUTPUT"
+        }
+        validate_payload() {
+          local payload
+          payload=$(jq -cn --arg series "$SERIES_ID" --arg attempted "$1" \
+            '{ref:"main",inputs:{series_id:$series,attempted_alerts:$attempted}}')
+          # Inputs are ASCII IDs/JSON numbers. Leave room below GitHub's 65,535-character limit.
+          [ "${#payload}" -le 61440 ] || fail "Dispatch payload limit exceeded; not truncating or resetting this series."
+        }
+        remove_unsure_labels() {
+          local issue="$1" issue_num labels label
+          local args=()
+          issue_num=$(jq -r '.number' <<< "$issue")
+          labels=$(jq -r '.labels[].name | select(.=="codeql-unsure" or .=="codeql-needs-human")' <<< "$issue")
+          if [ -n "$labels" ]; then
+            while IFS= read -r label; do args+=(--remove-label "$label"); done <<< "$labels"
+            gh issue edit "$issue_num" --repo "$GH_REPO" "${args[@]}"
           fi
-          echo "alerts=$(cat alerts.json)" >> "$GITHUB_OUTPUT"
-          cat alerts.json
+        }
+
+        attempted=$(jq -ce '
+          select(type=="array") |
+          select(all(.[]; type=="number" and .>0 and .==floor and .<=9007199254740991)) |
+          select(length==(unique|length))' <<< "${ATTEMPTED_ALERTS:-[]}")
+        if [ -z "$SERIES_ID" ]; then
+          [ "$attempted" = '[]' ] || fail "attempted_alerts requires an existing series_id."
+          SERIES_ID="$GITHUB_RUN_ID"
+        fi
+        [[ "$SERIES_ID" =~ ^[1-9][0-9]*$ ]] || fail "series_id must be a positive run ID."
+        if [ -n "$REQUESTED_ALERT" ]; then
+          [[ "$REQUESTED_ALERT" =~ ^[1-9][0-9]*$ ]] || fail "alert_number must be a positive integer."
+          jq -e 'tonumber | .<=9007199254740991' <<< "$REQUESTED_ALERT" > /dev/null
+        fi
+        validate_payload "$attempted"
+
+        # No checkout: all work in this job uses GitHub API, with an explicit repository.
+        issues=$(gh api "repos/$GH_REPO/issues?state=all&labels=codeql-alert&per_page=100" --paginate --slurp |
+          jq -c 'add // [] | map(select(has("pull_request")|not) | . as $issue |
+            (.title | capture("^\\[codeql-alert #(?<n>[1-9][0-9]*)\\]")? | .n | tonumber) as $alert |
+            $issue + {alert_number:$alert})')
+        alerts=$(gh api "repos/$GH_REPO/code-scanning/alerts?state=open&tool_name=CodeQL&ref=refs%2Fheads%2Fmain&per_page=100" --paginate --slurp |
+          jq -c 'add // [] | map(select(.state=="open")) | sort_by(.number)')
+
+        # Absence from the filtered listing does not prove resolution. Confirm with a GET.
+        jq -c '.[] | select(.state=="open")' <<< "$issues" > open_issues.jsonl
+        while IFS= read -r issue; do
+          alert_num=$(jq -r '.alert_number' <<< "$issue")
+          if ! jq -e --argjson n "$alert_num" 'any(.[]; .number==$n)' <<< "$alerts" > /dev/null; then
+            current=$(gh api "repos/$GH_REPO/code-scanning/alerts/$alert_num")
+            state=$(jq -r '.state' <<< "$current")
+            if [ "$state" = fixed ] || [ "$state" = dismissed ]; then
+              remove_unsure_labels "$issue"
+              issue_num=$(jq -r '.number' <<< "$issue")
+              gh issue close "$issue_num" --repo "$GH_REPO" --comment \
+                "CodeQL alert #$alert_num is confirmed $state upstream. Closing this issue."
+            fi
+          fi
+        done < open_issues.jsonl
+
+        jq -c '.[]' <<< "$alerts" > candidates.jsonl
+        while IFS= read -r row; do
+          number=$(jq -r '.number' <<< "$row")
+          if jq -e --argjson n "$number" 'index($n)!=null' <<< "$attempted" > /dev/null; then continue; fi
+          if [ -n "$REQUESTED_ALERT" ] && [ "$REQUESTED_ALERT" != "$number" ]; then continue; fi
+          related=$(jq -c --argjson n "$number" 'map(select(.alert_number==$n))' <<< "$issues")
+          pulls=$(gh api "repos/$GH_REPO/pulls?state=all&head=${GH_REPO%%/*}%3Acodeql%2Falert-$number&base=main&per_page=100" --paginate --slurp |
+            jq -c --arg repo "$GH_REPO" 'add // [] | map(select(.head.repo.full_name==$repo))')
+          latest=$(jq -c '. as $prs | [.[]|select(.state=="open")] |
+            (if length>0 then . else $prs end) | max_by(.number) // null' <<< "$pulls")
+          cleared='[]'
+
+          # Repair a verdict transition interrupted before its label edit. Legacy
+          # needs-human alone does not establish Unsure; the agent migrates that evidence.
+          jq -c '.[] | select(.state=="open" and any(.labels[]; .name=="codeql-unsure"))' <<< "$related" > unsure_issues.jsonl
+          while IFS= read -r issue; do
+            issue_num=$(jq -r '.number' <<< "$issue")
+            comments=$(gh api "repos/$GH_REPO/issues/$issue_num/comments?per_page=100" --paginate --slurp | jq -c 'add // []')
+            verdict_comment=$(jq -c 'map(. as $comment |
+              ((.body // "") | capture("<!-- codeql-verdict: (?<v>bug|unsure|false-positive) -->")? | .v) as $v |
+              {id:$comment.id,verdict:$v,created_at:$comment.created_at}) | max_by(.id) // null' <<< "$comments")
+            verdict=$(jq -r '.verdict // ""' <<< "$verdict_comment")
+            if [ "$verdict" = bug ] || [ "$verdict" = false-positive ]; then
+              remove_unsure_labels "$issue"
+            # Compare with the verdict comment, not unrelated edits to the issue.
+            # Without a dated verdict, do not infer that the PR supersedes Unsure.
+            elif jq -e --argjson pr "$latest" \
+                '$pr!=null and .created_at!=null and $pr.created_at!=null and ($pr.created_at>.created_at)' <<< "$verdict_comment" > /dev/null; then
+              pr_url=$(jq -r '.html_url' <<< "$latest")
+              gh issue comment "$issue_num" --repo "$GH_REPO" --body \
+                "<!-- codeql-verdict: bug -->
+        The previous Unsure now has a fix PR: $pr_url. Waiting for CodeQL to confirm resolution before closing this issue."
+              remove_unsure_labels "$issue"
+            else
+              continue
+            fi
+            cleared=$(jq -c --argjson n "$issue_num" '.+[$n]' <<< "$cleared")
+          done < unsure_issues.jsonl
+
+          if jq -e 'any(.[]; .state=="open")' <<< "$pulls" > /dev/null; then
+            summary "Alert #$number: PR open, waiting for review."
+            continue
+          fi
+          if [ -z "$REQUESTED_ALERT" ] && jq -e --argjson cleared "$cleared" \
+              'any(.[]; .state=="open" and any(.labels[]; .name=="codeql-unsure") and
+                (.number as $n | ($cleared|index($n))==null))' <<< "$related" > /dev/null; then
+            summary "Alert #$number: Unsure, waiting for a human."
+            continue
+          fi
+          # With no open PR, latest is the newest completed PR. A newer closed
+          # unmerged PR takes precedence over an older merged fix.
+          if jq -e '.!=null and .merged_at!=null' <<< "$latest" > /dev/null; then
+            current=$(gh api "repos/$GH_REPO/code-scanning/alerts/$number")
+            if ! jq -e '.state=="open" and .most_recent_instance.ref=="refs/heads/main"' <<< "$current" > /dev/null; then continue; fi
+            analyzed_sha=$(jq -r '.most_recent_instance.commit_sha // ""' <<< "$current")
+            merge_sha=$(jq -r '.merge_commit_sha // ""' <<< "$latest")
+            if [ -z "$analyzed_sha" ] || [ -z "$merge_sha" ]; then continue; fi
+            if comparison=$(gh api "repos/$GH_REPO/compare/$merge_sha...$analyzed_sha") &&
+                status=$(jq -er '.status | select(type=="string")' <<< "$comparison"); then
+              if [ "$status" != ahead ] && [ "$status" != identical ]; then
+                summary "Alert #$number: waiting for a scan including the merge."
+                continue
+              fi
+            else
+              summary "Alert #$number: unable to verify the post-merge scan; waiting."
+              continue
+            fi
+          fi
+
+          # Record the attempt before the separate agent job starts, even if it
+          # later fails, times out or is skipped. Never reset/truncate this list.
+          attempted=$(jq -c --argjson n "$number" '.+[$n]' <<< "$attempted")
+          validate_payload "$attempted"
+          write_output number "$number"
+          write_output rule "$(jq -r '.rule.id' <<< "$row")"
+          write_output path "$(jq -r '.most_recent_instance.location.path' <<< "$row")"
+          write_output line "$(jq -r '.most_recent_instance.location.start_line // ""' <<< "$row")"
+          write_output url "$(jq -r '.html_url' <<< "$row")"
+          write_output existing_issues "$(jq -c 'map(.number)|sort' <<< "$related")"
+          write_output series_id "$SERIES_ID"
+          write_output attempted_alerts "$attempted"
+          summary "Series $SERIES_ID: alert #$number recorded before agent execution; verdict pending."
+          exit 0
+        done < candidates.jsonl
+
+        write_output number ""
+        write_output series_id "$SERIES_ID"
+        write_output attempted_alerts "$attempted"
+        summary "Series $SERIES_ID: no eligible alert; series complete."
 
   request-fix:
-    needs: triage
-    if: |
-      github.repository == 'ispc/ispc' &&
-      needs.triage.result == 'success' &&
-      needs.triage.outputs.alerts != '[]'
+    needs: find-new-alert
+    if: success() && needs.find-new-alert.outputs.alert_number != ''
     permissions:
       contents: write
       pull-requests: write
       issues: write
       actions: read
-    strategy:
-      max-parallel: 4
-      fail-fast: false
-      matrix:
-        alert: ${{ fromJson(needs.triage.outputs.alerts) }}
+      security-events: write # Required to recheck and, for proven false positives, dismiss alerts
     uses: ./.github/workflows/claude.yml
     with:
+      automated_fix: true
       prompt: |
-        Fix GitHub issue #${{ matrix.alert.issue }}, which tracks CodeQL
-        code-scanning alert #${{ matrix.alert.number }} (rule
-        ${{ matrix.alert.rule }}) in ${{ matrix.alert.path }}:${{ matrix.alert.line }}.
-        Alert details: ${{ matrix.alert.url }}
+        Investigate CodeQL code-scanning alert #${{ needs.find-new-alert.outputs.alert_number }}
+        (rule ${{ needs.find-new-alert.outputs.rule }}) in
+        ${{ needs.find-new-alert.outputs.path }}:${{ needs.find-new-alert.outputs.line }}.
+        Alert details: ${{ needs.find-new-alert.outputs.url }}
+        Existing tracking issues (possibly closed): ${{ needs.find-new-alert.outputs.existing_issues }}.
+        Do not create an issue before investigation. Bug -> PR only;
+        false positive -> confirmed CodeQL dismissal only; Unsure -> issue.
 
-        Investigate before changing anything:
-        1. Trace the flagged value/pointer back to where it originates and
-           determine whether it can actually be null, unvalidated, or
-           attacker-controlled at this call site.
-        2. Compare against sibling call sites of the same construct elsewhere
-           in the codebase to see whether a check is the established pattern
-           there, or whether this alert is a one-off that doesn't apply.
-        3. Decide: is this a real bug, or a false positive given ISPC's
-           actual invariants at this point in the code?
+        Before changing anything:
+        - Re-fetch the alert: only a successful response confirming
+          fixed/dismissed establishes resolution; use the Already resolved
+          outcome below. Someone else may have resolved it since selection.
+          A failed or inconclusive status check does not prove
+          resolution; continue investigating.
+        - Check whether this is a resumed attempt: read any existing tracking
+          issues and their comments, check whether branch
+          codeql/alert-${{ needs.find-new-alert.outputs.alert_number }}
+          already exists, and whether a PR from that branch already exists.
+          A prior attempt may have pushed a branch, opened a PR, dismissed
+          the alert or created an Unsure issue before failing. Re-fetch these
+          objects; an old comment alone is not proof of completion or safety.
+          Search for an open PR first, then the newest completed PR from
+          this exact branch in this repository, targeting main:
+          - PR exists and is still open: don't change code, push or open
+            another PR, even on a manual request. If an earlier Unsure issue
+            still has codeql-unsure despite this fix PR, record the Bug
+            resolution and PR link and remove the stale Unsure labels;
+            leave that issue open until upstream resolution is confirmed.
+            Then stop and wait for review.
+          - Latest completed PR is merged: verify the scan yourself:
+            fetch the alert and check whether its
+            `most_recent_instance.commit_sha` actually descends from the
+            PR's merge commit and that instance's ref is refs/heads/main
+            (e.g. via
+            `gh api repos/${{ github.repository }}/compare/<merge_sha>...<analyzed_sha>`
+            and checking `status` is `ahead` or `identical`). If it does
+            and the alert is still open, the fix didn't work -- investigate
+            again, treating the merged PR as context for what was already
+            tried and found insufficient, and prepare a follow-up fix via
+            the Bug outcome below, reusing the exact same branch name
+            `codeql/alert-${{ needs.find-new-alert.outputs.alert_number }}`
+            (delete the old merged branch first if it still exists, then
+            branch fresh from main -- do not invent a different branch
+            name, since the workflow's own PR lookups only search this
+            exact name). If the scan does not yet include the merge, or the
+            comparison fails, stop and wait; do not conclude the fix failed.
+            If the alert is confirmed fixed/dismissed, use Already resolved.
+          - PR exists and was closed without merging: read the review
+            feedback on that PR first -- it likely explains why the
+            approach wasn't acceptable. Investigate again taking that
+            feedback into account before proposing a new fix, reusing the
+            same branch name as above.
+          - Branch exists but no PR: fetch and inspect its commits and diff
+            against current main. Re-verify the evidence, preserve useful
+            unfinished work and complete or correct it on the same branch.
+            Do not blindly overwrite or delete it. Rebase onto current main
+            and validate before opening a PR.
+          - Existing issue says Unsure: verify that it records a real
+            unresolved fact, not a technical failure or exhausted attempts.
+            A legacy codeql-needs-human label alone proves neither Unsure
+            nor a completed investigation. Re-verify any earlier verdict.
+            Reuse the existing issue when a human decision is still needed;
+            mark confirmed Unsure with codeql-unsure and codeql-needs-human.
+            Closed tracking issues do not prove the alert is resolved and
+            must not permanently suppress its investigation.
+          - No reusable work or verdict exists: investigate fresh as below.
 
-        Then act:
-        - If it is a real bug: make the minimal fix on a new branch named
-          codeql/alert-${{ matrix.alert.number }}, rebase onto the latest
-          main before pushing, build ISPC and run the relevant tests, then
-          open a PR whose body includes "Fixes #${{ matrix.alert.issue }}"
-          and a short explanation referencing your investigation.
-        - If it is a false positive: do not change any code and do not open
-          a PR. Instead, comment on issue #${{ matrix.alert.issue }}
-          explaining why the alert does not represent a real bug (cite the
-          specific invariant that makes it safe), and close the issue.
+        Otherwise, investigate before changing code:
+        1. Fetch the full alert using `gh api` and read the available rule
+           description, message, locations, and instance details. Use
+           reported flow paths if available; otherwise reconstruct the
+           relevant paths from code. Account for changes between the
+           analyzed commit and current main. Identify any missing
+           information that materially limits the investigation.
+        2. Define the specific condition that would make this alert a real
+           bug. Adapt the investigation to the rule: nullability, lifetime,
+           bounds, arithmetic, initialization, validation, or another
+           property. Trace the relevant values and execution paths,
+           including the checks and branch conditions that determine
+           whether the unsafe operation is reachable. Consider all relevant
+           reported paths, rather than stopping after finding one safe path.
+        3. Examine the invariants that could exclude the failure. Identify
+           where each invariant is established and enforced. Check relevant
+           callers, supported configurations, and assertion-disabled
+           (release/NDEBUG) behavior. For ISPC, examine malformed-input and
+           compiler error-recovery paths where applicable, including values
+           returned after an earlier compiler error (e.g.
+           `AssertPos(currentPos, m->errorCount > 0); return nullptr;`).
+           Similar sibling code is supporting context, not proof of safety.
+        4. Actively search for a counterexample to the proposed verdict:
+           - For a suspected bug: check whether the required input or state
+             can actually arise and reach the operation. Construct a
+             minimal reproducer where feasible.
+           - For a suspected false positive: search for a relevant path or
+             configuration that breaks the claimed invariant.
 
-        Keep the change strictly scoped to this one alert.
+           Resolve disagreements with CodeQL by examining actual semantics,
+           reachable paths, and enforced invariants. Explain any
+           demonstrated mismatch with CodeQL's model; do not speculate
+           about its cause.
+        5. Choose the verdict from the evidence:
+           - Bug: a feasible failing execution path or reproducer
+             establishes the violation.
+           - False positive: an enforced invariant, or documented interface
+             semantics, that excludes the reported violation across the
+             relevant paths and configurations. "I couldn't find a
+             counterexample," "there's no network entry point" (on its
+             own, without identifying the actual trust boundary), and
+             "probably safe" are NOT sufficient -- those remain Unsure.
+           - Unsure: identify the specific unresolved fact preventing
+             either conclusion.
+
+           Failure to reproduce does not establish a false positive.
+           Limited impact does not establish correctness.
+
+        Then act. Human approval is required for code changes (via normal
+        PR review) but not for the other outcomes below -- complete those
+        automatically:
+        - Bug: fix the established cause while preserving intended behavior
+          and diagnostics, on branch
+          codeql/alert-${{ needs.find-new-alert.outputs.alert_number }},
+          rebased onto the latest main. Add a regression test where
+          feasible, preferably demonstrating failure before the fix and
+          success afterward, then build ISPC and run relevant existing
+          tests and report validation failures or limitations explicitly.
+          Review your own diff (follow this repo's documented code-review
+          step) before opening the PR. Recheck for an existing open PR to
+          avoid duplicates. The PR body must include the alert link, evidence
+          summary, validation and analyzed commit SHA. Do not create an
+          issue for a Bug. If an old tracking/Unsure issue exists, comment
+          with the new Bug verdict and PR link, remove codeql-unsure and
+          codeql-needs-human (and obsolete pending/attempt/review labels).
+          Do not close it based on PR creation or merge. Use "Refs #N", not
+          "Fixes #N", when linking an existing issue; the next successful
+          CodeQL scan including the merge must establish resolution.
+        - False positive: do not change any code and do not open a PR.
+          Immediately before dismissing, re-fetch the alert and re-check
+          that the flagged location on current main still matches the
+          evidence you gathered (code may have moved since you started).
+          Then dismiss the alert yourself via (include the evidence,
+          analyzed commit SHA and this workflow run URL in dismissed_comment)
+          `gh api -X PATCH repos/${{ github.repository }}/code-scanning/alerts/${{ needs.find-new-alert.outputs.alert_number }} -f state=dismissed -f dismissed_reason="false positive" -f dismissed_comment="<concise evidence>"`.
+          Re-fetch the alert with a separate GET to confirm its state is
+          `dismissed`; do not rely on the PATCH response. If unconfirmed,
+          re-fetch a couple more times to allow for transient read lag.
+          Retry PATCH only if read-back still
+          clearly reports `open`; never retry on an unclear read-back.
+          If dismissal remains unconfirmed, report incomplete execution in
+          the run summary and stop. A failed PATCH or ambiguous read-back is
+          not an Unsure verdict and must not automatically create an issue.
+          On confirmed success, do not create an issue or PR. If old tracking
+          issues exist, comment with the False positive verdict and evidence,
+          remove stale codeql-unsure/codeql-needs-human and obsolete tracking
+          labels, and close those issues.
+        - Already resolved (confirmed in the pre-check above): verify the
+          upstream status. Create no issue or PR. Close existing tracking
+          issues with a comment explaining the confirmed status and remove
+          stale Unsure and tracking labels.
+        - Unsure: do not guess. Re-fetch tracking issues with label
+          codeql-alert and exact title prefix
+          "[codeql-alert #${{ needs.find-new-alert.outputs.alert_number }}]"
+          before creating one. Reuse an existing issue (reopen if necessary),
+          or create one with that prefix in its title. Write or update the
+          evidence summary and the specific unresolved fact requiring a
+          human decision, with the alert link, analyzed commit SHA and run
+          URL. Add codeql-alert, codeql-needs-human and codeql-unsure; remove
+          obsolete pending/attempt/review labels. Leave the issue open.
+          If a manual retry is still Unsure, update the existing issue rather
+          than creating another. A real human decision is required for this
+          outcome: timeout, build failure or API failure alone is not Unsure.
+
+        When recording a tracking-issue verdict, include the corresponding
+        marker in the new comment: <!-- codeql-verdict: bug -->,
+        <!-- codeql-verdict: false-positive --> or <!-- codeql-verdict: unsure -->.
+        Record the verdict and evidence before editing labels. These markers
+        let the next run recover an interrupted transition without treating
+        an obsolete Unsure as the current verdict.
+        When re-analysis resolves an existing Unsure as Bug or false positive,
+        record that new verdict and evidence and clear codeql-unsure and
+        codeql-needs-human as soon as it is established, even if a later build
+        or API operation fails. Add the PR link when available; close the
+        existing issue only after confirmed upstream resolution. This lets
+        an incomplete action return in the next series without a stale
+        human-decision block.
+
+        In every outcome, append a concise run summary to GITHUB_STEP_SUMMARY
+        using Bash and jq (jq -nr can print Markdown text): alert number,
+        verdict if established, evidence,
+        last completed action, result link and any execution failure. A known
+        verdict and an incomplete action are separate facts. On technical
+        failure preserve reusable work and report the failure, without
+        inventing an Unsure verdict; the next series can retry after checking
+        current upstream state. This run URL is
+        ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}.
+
+        Keep the change strictly scoped to this one alert. Keep the
+        evidence summary concise: verdict, the trigger or invariant,
+        supporting file:line locations, counterexample checks performed,
+        validation performed, and remaining uncertainty -- so a human
+        reviewer can skim the outcome without reading the full
+        investigation.
     secrets: inherit
+
+  continue-loop:
+    # Failures/timeouts/skipped agent jobs still advance the recorded series.
+    # Human cancellation stops it. Each selected alert is tried once per series.
+    needs: [find-new-alert, request-fix]
+    if: |
+      !cancelled() &&
+      github.repository == 'ispc/ispc' &&
+      needs.find-new-alert.result == 'success' &&
+      needs.find-new-alert.outputs.alert_number != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      security-events: read
+      pull-requests: read
+      issues: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SERIES_ID: ${{ needs.find-new-alert.outputs.series_id }}
+      ATTEMPTED_ALERTS: ${{ needs.find-new-alert.outputs.attempted_alerts }}
+      SELECTED_ALERT: ${{ needs.find-new-alert.outputs.alert_number }}
+      AGENT_RESULT: ${{ needs.request-fix.result }}
+    steps:
+    - name: Report outcome and dispatch next alert with the full series state
+      run: |
+        set -euo pipefail
+        trap 'printf "Continuation failed at line %s; series stopped without resetting state.\n" "$LINENO" | tee -a "$GITHUB_STEP_SUMMARY" >&2' ERR
+
+        summary() { printf '%s\n\n' "$*" | tee -a "$GITHUB_STEP_SUMMARY"; }
+        fail() { summary "$*" >&2; exit 1; }
+
+        [[ "$SERIES_ID" =~ ^[1-9][0-9]*$ ]] || fail "Continuation requires a positive series_id."
+        [[ "$SELECTED_ALERT" =~ ^[1-9][0-9]*$ ]] || fail "Continuation requires a selected alert."
+        attempted=$(jq -ce '
+          select(type=="array") |
+          select(all(.[]; type=="number" and .>0 and .==floor and .<=9007199254740991)) |
+          select(length==(unique|length))' <<< "$ATTEMPTED_ALERTS")
+        jq -e --argjson n "$SELECTED_ALERT" 'index($n)!=null' <<< "$attempted" > /dev/null
+        payload=$(jq -cn --arg series "$SERIES_ID" --arg attempted "$attempted" \
+          '{ref:"main",inputs:{series_id:$series,attempted_alerts:$attempted}}')
+        [ "${#payload}" -le 61440 ] || fail "Dispatch payload limit exceeded; not resetting this series."
+
+        # This function is deliberately best-effort; every API/parse failure is
+        # explicit, because Bash disables errexit inside an if-tested function.
+        report_outcome() {
+          local current state pulls pr_url issues issue_url
+          current=$(gh api "repos/$GH_REPO/code-scanning/alerts/$SELECTED_ALERT") || return 1
+          state=$(jq -er '.state | select(type=="string")' <<< "$current") || return 1
+          if [ "$state" = fixed ] || [ "$state" = dismissed ]; then
+            summary "Alert #$SELECTED_ALERT: confirmed $state upstream."
+            return
+          fi
+          pulls=$(gh api "repos/$GH_REPO/pulls?state=all&head=${GH_REPO%%/*}%3Acodeql%2Falert-$SELECTED_ALERT&base=main&per_page=100" --paginate --slurp |
+            jq -c --arg repo "$GH_REPO" 'add // [] | map(select(.head.repo.full_name==$repo and .state=="open"))') || return 1
+          pr_url=$(jq -r 'max_by(.number) | .html_url // ""' <<< "$pulls") || return 1
+          if [ -n "$pr_url" ]; then
+            summary "Alert #$SELECTED_ALERT: fix PR awaiting review: $pr_url."
+            return
+          fi
+          issues=$(gh api "repos/$GH_REPO/issues?state=all&labels=codeql-alert&per_page=100" --paginate --slurp | jq -c 'add // []') || return 1
+          issue_url=$(jq -r --argjson n "$SELECTED_ALERT" '
+            map(select(has("pull_request")|not) | . as $issue |
+              (.title | capture("^\\[codeql-alert #(?<n>[1-9][0-9]*)\\]")? | .n | tonumber) as $alert |
+              select($alert==$n and .state=="open" and any(.labels[]; .name=="codeql-unsure"))) |
+            first | .html_url // ""' <<< "$issues") || return 1
+          if [ -n "$issue_url" ]; then
+            summary "Alert #$SELECTED_ALERT: an Unsure issue remains recorded: $issue_url. Check agent logs for any newer verdict."
+          else
+            summary "Alert #$SELECTED_ALERT: execution incomplete or awaiting a post-merge scan. No confirmed PR, dismissal or Unsure issue. This is not an Unsure verdict; the alert can return in the next series."
+          fi
+        }
+
+        summary "Series $SERIES_ID, alert #$SELECTED_ALERT. Agent job: $AGENT_RESULT. See agent logs for its verdict and last completed action."
+        if ! report_outcome; then
+          summary "Unable to confirm the outcome; continuing with the recorded state, without creating an issue."
+        fi
+        gh workflow run codeql-alert-fixer.yml --repo "$GH_REPO" --ref main \
+          -f "series_id=$SERIES_ID" -f "attempted_alerts=$attempted"
+        summary "Continued series $SERIES_ID; $(jq length <<< "$attempted") alert(s) already attempted."

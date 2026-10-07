@@ -23,6 +23,17 @@ on:
         description: "Prompt for Claude"
         required: true
         type: string
+      automated_fix:
+        description: >
+          Set to true by an automated fixer workflow (e.g. the CodeQL alert
+          fixer) to allow the fully automatic path. Reusable-workflow calls
+          inherit the caller's triggering event (e.g. workflow_run), not
+          "workflow_call", so this input -- not github.event_name -- is what
+          actually gates automatic callers. Defaults to false so existing
+          callers are unaffected.
+        required: false
+        type: boolean
+        default: false
     secrets:
       ANTHROPIC_API_KEY:
         required: true
@@ -41,6 +52,7 @@ jobs:
       github.repository == 'ispc/ispc' &&
       (github.event_name == 'workflow_dispatch' ||
       github.event_name == 'workflow_call' ||
+      inputs.automated_fix == true ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
         (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
@@ -56,6 +68,7 @@ jobs:
       pull-requests: write
       issues: write
       actions: read # Required for Claude to read CI results on PRs
+      security-events: write # Required for automated_fix callers to recheck and dismiss alerts
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -71,6 +84,7 @@ jobs:
         id: build_check
         env:
           EVENT_NAME: ${{ github.event_name }}
+          AUTOMATED_FIX: ${{ inputs.automated_fix }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           REVIEW_BODY: ${{ github.event.review.body }}
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -80,6 +94,9 @@ jobs:
             workflow_dispatch|workflow_call)
               needed=true ;;
             *)
+              if [ "$AUTOMATED_FIX" = "true" ]; then
+                needed=true
+              fi
               # The job-level if: already guarantees an "@claude" mention, so a
               # mention of "fix" anywhere in the triggering text means a build
               # task rather than Q&A/review.
@@ -120,8 +137,9 @@ jobs:
         with:
           use_bedrock: "true"
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call
-          track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
+          # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call,
+          # and not an automated_fix caller (which inherits a workflow_run-shaped event payload)
+          track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' && inputs.automated_fix != true }}
           # prompt is only used for workflow_dispatch/workflow_call; empty for issue/PR events
           prompt: ${{ inputs.prompt || '' }}
           # Required for Claude to access CI workflow logs
