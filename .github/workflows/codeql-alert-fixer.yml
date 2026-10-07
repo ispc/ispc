@@ -4,6 +4,8 @@
 name: CodeQL Alert Fixer
 
 on:
+  # find-new-alert accepts only successful main scans in ispc/ispc.
+  # zizmor: ignore[dangerous-triggers] - intentionally starts triage after CodeQL completes
   workflow_run:
     workflows: ["CodeQL"]
     types:
