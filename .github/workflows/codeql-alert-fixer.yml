@@ -377,10 +377,16 @@ jobs:
           tests and report validation failures or limitations explicitly.
           Review your own diff (follow this repo's documented code-review
           step) before opening the PR. Recheck for an existing open PR to
-          avoid duplicates. The PR body must include the alert link, evidence
-          summary, validation and analyzed commit SHA. Do not create an
-          issue for a Bug. If an old tracking/Unsure issue exists, comment
-          with the new Bug verdict and PR link, remove codeql-unsure and
+          avoid duplicates. Start the PR body from
+          `.github/pull_request_template.md`, preserving its Description,
+          Related Issue and Checklist headings and all checklist items.
+          In Description, include the evidence summary, validation and
+          analyzed commit SHA. In Related Issue, include the alert link and
+          any existing tracking issue using "Refs #N". Check an item only
+          when its requirement was actually verified; leave non-applicable
+          items unchecked and annotate them as N/A with a brief reason.
+          Do not create an issue for a Bug. If an old tracking/Unsure issue
+          exists, comment with the new Bug verdict and PR link, remove codeql-unsure and
           codeql-needs-human (and obsolete pending/attempt/review labels).
           Do not close it based on PR creation or merge. Use "Refs #N", not
           "Fixes #N", when linking an existing issue; the next successful
