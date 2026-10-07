@@ -1,8 +1,8 @@
 // Test basic foreach loop with array addition for RISC-V target
 
-// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --target-os=linux --cpu=spacemit-x60 --emit-asm %s -o - | FileCheck %s
-// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --target-os=linux --cpu=generic-rv64gcv --emit-asm %s -o - | FileCheck %s
-// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --target-os=linux --emit-asm %s -o - | FileCheck %s
+// RUN: %{ispc} --target=rvv-128b --arch=riscv64 --target-os=linux --cpu=spacemit-x60 --emit-asm %s -o - | FileCheck %s
+// RUN: %{ispc} --target=rvv-128b --arch=riscv64 --target-os=linux --cpu=generic-rv64gcv --emit-asm %s -o - | FileCheck %s
+// RUN: %{ispc} --target=rvv-128b --arch=riscv64 --target-os=linux --emit-asm %s -o - | FileCheck %s
 
 // REQUIRES: RISCV_ENABLED && LINUX_ENABLED
 

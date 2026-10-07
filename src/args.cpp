@@ -74,6 +74,9 @@ static ArgsParseResult usage() {
 #ifndef ISPC_HOST_IS_WINDOWS
     printf("    [--colored-output]\t\t\tAlways use terminal colors in error/warning messages\n");
 #endif
+    printf(
+        "    [--attr=<attr>[,<attr>...]]\t\tTarget attributes. For the rvv target, zvl<N>b sets the vector register\n"
+        "\t\t\t\t\twidth in bits (default 128), other attributes are passed to LLVM as target features\n");
     printf("    [--cpu=<type>]\t\t\tAn alias for [--device=<type>] switch\n");
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
 #if defined(ISPC_MACOS_TARGET_ON) || defined(ISPC_IOS_TARGET_ON)
@@ -741,6 +744,19 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             cpu = argv[i] + 9;
         } else if (!strncmp(argv[i], "--cpu=", 6)) {
             cpu = argv[i] + 6;
+        } else if (!strncmp(argv[i], "--attr=", 7)) {
+            std::string attrs = argv[i] + 7;
+            size_t start = 0;
+            while (start <= attrs.size()) {
+                size_t comma = attrs.find(',', start);
+                if (comma == std::string::npos) {
+                    comma = attrs.size();
+                }
+                if (comma > start) {
+                    g->targetAttributes.push_back(attrs.substr(start, comma - start));
+                }
+                start = comma + 1;
+            }
         } else if (!strcmp(argv[i], "--fast-math")) {
             errorHandler.AddError("--fast-math option has been renamed to --opt=fast-math!");
         } else if (!strcmp(argv[i], "--fast-masked-vload")) {
