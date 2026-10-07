@@ -1,0 +1,173 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Triages open CodeQL code-scanning alerts (security-and-quality) and asks
+# Claude Code to fix each new one, mirroring the LLVM Trunk Failure Analyzer
+# pattern: a cheap triage job creates a tracking issue per alert, then a
+# capped-concurrency matrix hands each issue to the generic Claude fixer.
+
+name: CodeQL Alert Fixer
+
+on:
+  workflow_run:
+    workflows: ["CodeQL"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      max_new:
+        description: 'Maximum number of new alerts to triage this run'
+        required: false
+        type: string
+        default: '10'
+
+permissions: {}
+
+concurrency:
+  group: codeql-alert-fixer
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    # Only run in the main ispc/ispc repo, and only after a successful CodeQL
+    # scan of main (not a scan of some feature branch), or when dispatched
+    # manually.
+    if: |
+      github.repository == 'ispc/ispc' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'))
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: read
+      issues: write
+
+    outputs:
+      alerts: ${{ steps.triage.outputs.alerts }}
+
+    steps:
+      - name: Triage CodeQL alerts
+        id: triage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          MAX_NEW: ${{ inputs.max_new || '10' }}
+        run: |
+          set -euo pipefail
+
+          echo "Fetching open CodeQL alerts..."
+          gh api "repos/$REPO/code-scanning/alerts" --paginate \
+            -q '.[] | select(.state=="open") | [.number, .rule.id, (.rule.severity // "unknown"), .most_recent_instance.location.path, (.most_recent_instance.location.start_line | tostring), .html_url] | @tsv' \
+            | sort -u > open_alerts.tsv
+          echo "Open alerts: $(wc -l < open_alerts.tsv)"
+
+          echo "Listing existing codeql-alert tracking issues..."
+          gh issue list --label codeql-alert --state all --limit 1000 \
+            --json title -q '.[].title' > tracked_titles.txt || true
+          # Titles look like: [codeql-alert #715] cpp/inconsistent-null-check in src/ctx.cpp
+          grep -oE '#[0-9]+' tracked_titles.txt | tr -d '#' | sort -u > tracked_numbers.txt || true
+          touch tracked_numbers.txt
+
+          echo "Closing tracking issues whose alert is no longer open..."
+          cut -f1 open_alerts.tsv | sort -u > open_numbers.txt
+          gh issue list --label codeql-alert --state open --limit 1000 \
+            --json number,title > open_tracking_issues.json || echo '[]' > open_tracking_issues.json
+          jq -c '.[]' open_tracking_issues.json | while read -r row; do
+            issue_num=$(echo "$row" | jq -r '.number')
+            alert_num=$(echo "$row" | jq -r '.title' | grep -oE '#[0-9]+' | tr -d '#')
+            if [ -n "$alert_num" ] && ! grep -qx "$alert_num" open_numbers.txt; then
+              echo "Closing issue #$issue_num: alert #$alert_num is no longer open upstream"
+              gh issue close "$issue_num" --comment "CodeQL alert #$alert_num is no longer open upstream (fixed or dismissed). Closing this tracking issue."
+            fi
+          done
+
+          echo "Selecting new alerts (not already tracked), sorted by path..."
+          sort -t$'\t' -k4,4 open_alerts.tsv > open_alerts_by_path.tsv
+          : > new_alerts.tsv
+          while IFS=$'\t' read -r number rule severity path line url; do
+            if ! grep -qx "$number" tracked_numbers.txt; then
+              printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$number" "$rule" "$severity" "$path" "$line" "$url" >> new_alerts.tsv
+            fi
+          done < open_alerts_by_path.tsv
+          head -n "$MAX_NEW" new_alerts.tsv > new_alerts_capped.tsv
+          echo "New alerts selected this run: $(wc -l < new_alerts_capped.tsv) (of $(wc -l < new_alerts.tsv) total new)"
+
+          echo "Creating tracking issues for selected new alerts..."
+          : > results.jsonl
+          while IFS=$'\t' read -r number rule severity path line url; do
+            title="[codeql-alert #$number] $rule in $path"
+            {
+              echo "## CodeQL alert #$number"
+              echo ""
+              echo "- **Rule:** \`$rule\`"
+              echo "- **Severity:** $severity"
+              echo "- **Location:** \`$path\`:$line"
+              echo "- **Alert:** $url"
+              echo ""
+              echo "Tracked automatically by the CodeQL Alert Fixer workflow."
+            } > issue_body.md
+            issue_url=$(gh issue create --title "$title" --label codeql-alert --body-file issue_body.md)
+            issue_number=$(echo "$issue_url" | grep -oE '[0-9]+$')
+            echo "Created issue #$issue_number for alert #$number"
+            jq -nc --arg number "$number" --arg issue "$issue_number" --arg rule "$rule" \
+              --arg path "$path" --arg line "$line" --arg url "$url" \
+              '{number: ($number|tonumber), issue: ($issue|tonumber), rule: $rule, path: $path, line: ($line|tonumber), url: $url}' \
+              >> results.jsonl
+          done < new_alerts_capped.tsv
+
+          if [ -s results.jsonl ]; then
+            jq -sc '.' results.jsonl > alerts.json
+          else
+            echo '[]' > alerts.json
+          fi
+          echo "alerts=$(cat alerts.json)" >> "$GITHUB_OUTPUT"
+          cat alerts.json
+
+  request-fix:
+    needs: triage
+    if: |
+      github.repository == 'ispc/ispc' &&
+      needs.triage.result == 'success' &&
+      needs.triage.outputs.alerts != '[]'
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        alert: ${{ fromJson(needs.triage.outputs.alerts) }}
+    uses: ./.github/workflows/claude.yml
+    with:
+      prompt: |
+        Fix GitHub issue #${{ matrix.alert.issue }}, which tracks CodeQL
+        code-scanning alert #${{ matrix.alert.number }} (rule
+        ${{ matrix.alert.rule }}) in ${{ matrix.alert.path }}:${{ matrix.alert.line }}.
+        Alert details: ${{ matrix.alert.url }}
+
+        Investigate before changing anything:
+        1. Trace the flagged value/pointer back to where it originates and
+           determine whether it can actually be null, unvalidated, or
+           attacker-controlled at this call site.
+        2. Compare against sibling call sites of the same construct elsewhere
+           in the codebase to see whether a check is the established pattern
+           there, or whether this alert is a one-off that doesn't apply.
+        3. Decide: is this a real bug, or a false positive given ISPC's
+           actual invariants at this point in the code?
+
+        Then act:
+        - If it is a real bug: make the minimal fix on a new branch named
+          codeql/alert-${{ matrix.alert.number }}, rebase onto the latest
+          main before pushing, build ISPC and run the relevant tests, then
+          open a PR whose body includes "Fixes #${{ matrix.alert.issue }}"
+          and a short explanation referencing your investigation.
+        - If it is a false positive: do not change any code and do not open
+          a PR. Instead, comment on issue #${{ matrix.alert.issue }}
+          explaining why the alert does not represent a real bug (cite the
+          specific invariant that makes it safe), and close the issue.
+
+        Keep the change strictly scoped to this one alert.
+    secrets: inherit
