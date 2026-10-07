@@ -2,7 +2,7 @@
 
 // REQUIRE: X86_ENABLED
 
-// XFAIL: *
+// XFAIL: !LLVM_24_0+
 
 // CHECK-LABEL: max___uni_3C_3_3E_uni_3C_3_3E_:
 // CHECK-NEXT:# %bb.0:
