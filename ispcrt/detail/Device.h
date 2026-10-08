@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -32,6 +32,7 @@ struct Device : public RefCounted {
                                             uint32_t stackSize) const = 0;
 
     virtual Module *newModule(const char *moduleFile, const ModuleOptions &opts) const = 0;
+    virtual Module *newModule(const uint8_t *buffer, size_t bufferSize, const ModuleOptions &opts) const = 0;
 
     virtual void dynamicLinkModules(Module **modules, uint32_t numModules) const = 0;
     virtual Module *staticLinkModules(Module **modules, uint32_t numModules) const = 0;

@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -42,6 +42,7 @@ struct GPUDevice : public base::Device {
                                           uint32_t stackSize) const override;
 
     base::Module *newModule(const char *moduleFile, const base::ModuleOptions &opts) const override;
+    base::Module *newModule(const uint8_t *buffer, size_t bufferSize, const base::ModuleOptions &opts) const override;
 
     void dynamicLinkModules(base::Module **modules, const uint32_t numModules) const override;
     base::Module *staticLinkModules(base::Module **modules, const uint32_t numModules) const override;

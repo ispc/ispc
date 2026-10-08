@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.hpp"
@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 
+#include <algorithm>
 #include <stdlib.h>
 
 namespace ispcrt {
@@ -381,6 +382,94 @@ TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreate) {
     Config::setRetValue("zeModuleCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Module m(m_device, "");
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+/////////////////////////////////////////////////////////////////////
+// Module from memory tests
+
+// SPIR-V magic number followed by some arbitrary bytes
+static const std::vector<uint8_t> TestModuleCode = {0x03, 0x02, 0x23, 0x07, 0x00, 0x01, 0x02, 0x03, 0xAA, 0xBB};
+
+TEST_F(MockTestWithDevice, Module_FromMemory) {
+    // Create a module from memory buffer and check that the buffer is passed to zeModuleCreate
+    ispcrt::Module m(m_device, TestModuleCode.data(), TestModuleCode.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_NE(m, 0);
+    ASSERT_EQ(CallCounters::get("zeModuleCreate"), 1);
+    ASSERT_EQ(Config::getLastModuleCode(), TestModuleCode);
+    ASSERT_EQ(Config::getLastModuleFormat(), ZE_MODULE_FORMAT_IL_SPIRV);
+}
+
+TEST_F(MockTestWithDevice, Module_FromMemoryWithOptions) {
+    // Create a module from memory buffer with options
+    ispcrt::ModuleOptions opts{m_device, ISPCRTModuleType::ISPCRT_SCALAR_MODULE, true, 32000};
+    ispcrt::Module m(m_device, TestModuleCode.data(), TestModuleCode.size(), opts);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_NE(m, 0);
+    ASSERT_EQ(Config::getLastModuleCode(), TestModuleCode);
+    const std::string &flags = Config::getLastModuleBuildFlags();
+    ASSERT_EQ(flags.find("-vc-codegen"), std::string::npos);
+    ASSERT_NE(flags.find("-stateless-stack-mem-size=32000"), std::string::npos);
+    ASSERT_NE(flags.find("-library-compilation"), std::string::npos);
+}
+
+TEST_F(MockTestWithDevice, Module_FromMemory_BufferIsCopied) {
+    // The module must keep its own copy of the code, so the user buffer can be reused or freed right after the call.
+    // Static linking reads the code of the input modules again, so overwrite the user buffers before linking.
+    std::vector<uint8_t> code1 = TestModuleCode;
+    std::vector<uint8_t> code2 = TestModuleCode;
+    ispcrt::Module m1(m_device, code1.data(), code1.size());
+    ispcrt::Module m2(m_device, code2.data(), code2.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    std::fill(code1.begin(), code1.end(), 0);
+    std::fill(code2.begin(), code2.end(), 0);
+    std::array<ISPCRTModule, 2> modules = {(ISPCRTModule)m1.handle(), (ISPCRTModule)m2.handle()};
+    ispcrt::Module m3 = m_device.staticLinkModules(modules.data(), modules.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    std::vector<uint8_t> expected = TestModuleCode;
+    expected.insert(expected.end(), TestModuleCode.begin(), TestModuleCode.end());
+    ASSERT_EQ(Config::getLastModuleCode(), expected);
+    ispcrt::Kernel k(m_device, m3, "");
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithDevice, Module_FromMemory_Zebin) {
+    // ISPCRT_USE_ZEBIN selects native format for in-memory modules as well
+    setenv("ISPCRT_USE_ZEBIN", "1", 1);
+    ispcrt::Module m(m_device, TestModuleCode.data(), TestModuleCode.size());
+    unsetenv("ISPCRT_USE_ZEBIN");
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_EQ(Config::getLastModuleFormat(), ZE_MODULE_FORMAT_NATIVE);
+}
+
+TEST_F(MockTestWithDevice, Module_FromMemory_NullBuffer) {
+    ispcrt::Module m(m_device, nullptr, TestModuleCode.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_INVALID_ARGUMENT);
+    ASSERT_EQ(m, 0);
+    ASSERT_EQ(CallCounters::get("zeModuleCreate"), 0);
+}
+
+TEST_F(MockTestWithDevice, Module_FromMemory_ZeroSize) {
+    ispcrt::Module m(m_device, TestModuleCode.data(), 0);
+    ASSERT_EQ(sm_rt_error, ISPCRT_INVALID_ARGUMENT);
+    ASSERT_EQ(m, 0);
+    ASSERT_EQ(CallCounters::get("zeModuleCreate"), 0);
+}
+
+TEST_F(MockTestWithDevice, Module_FromMemory_zeModuleCreate) {
+    // Check if error is reported from module constructor
+    Config::setRetValue("zeModuleCreate", ZE_RESULT_ERROR_DEVICE_LOST);
+    ispcrt::Module m(m_device, TestModuleCode.data(), TestModuleCode.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTest, Module_FromMemory_CPU) {
+    // Loading module from memory is not supported on CPU
+    ispcrt::Device d(ISPCRT_DEVICE_TYPE_CPU);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ispcrt::Module m(d, TestModuleCode.data(), TestModuleCode.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_INVALID_OPERATION);
+    ASSERT_EQ(m, 0);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -1505,6 +1594,29 @@ TEST_F(MockTest, C_API_ispcrtCommandListBarrierCloseSubmitReset) {
     ispcrtRelease(l);
     ASSERT_EQ(CallCounters::get("zeCommandListDestroy"), 1);
     ispcrtRelease(q);
+    ispcrtRelease(dev);
+    ispcrtRelease(ctx);
+}
+
+TEST_F(MockTest, C_API_ispcrtLoadModuleFromMemory) {
+    ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
+    ISPCRTModule m = ispcrtLoadModuleFromMemory(dev, TestModuleCode.data(), TestModuleCode.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_NE(m, nullptr);
+    ASSERT_EQ(Config::getLastModuleCode(), TestModuleCode);
+    ISPCRTModuleOptions o = ispcrtNewModuleOptions(dev, ISPCRT_SCALAR_MODULE, false, 0);
+    ISPCRTModule mo = ispcrtLoadModuleFromMemoryWithOptions(dev, TestModuleCode.data(), TestModuleCode.size(), o);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_NE(mo, nullptr);
+    ASSERT_EQ(CallCounters::get("zeModuleCreate"), 2);
+    ISPCRTKernel k = ispcrtNewKernel(dev, m, "");
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ispcrtRelease(k);
+    ispcrtRelease(mo);
+    ispcrtRelease(o);
+    ispcrtRelease(m);
+    ASSERT_EQ(CallCounters::get("zeModuleDestroy"), 2);
     ispcrtRelease(dev);
     ispcrtRelease(ctx);
 }

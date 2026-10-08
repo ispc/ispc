@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -184,6 +184,11 @@ void ispcrtModuleOptionsSetModuleType(ISPCRTModuleOptions, ISPCRTModuleType);
 
 ISPCRTModule ispcrtLoadModule(ISPCRTDevice, const char *moduleFile);
 ISPCRTModule ispcrtLoadModuleWithOptions(ISPCRTDevice, const char *moduleFile, ISPCRTModuleOptions);
+// Load a module from an in-memory SPIR-V (or zebin if ISPCRT_USE_ZEBIN is set) buffer. The buffer is copied, so it
+// can be freed after the call returns. Supported on GPU devices only.
+ISPCRTModule ispcrtLoadModuleFromMemory(ISPCRTDevice, const uint8_t *spvBuffer, size_t bufferSize);
+ISPCRTModule ispcrtLoadModuleFromMemoryWithOptions(ISPCRTDevice, const uint8_t *spvBuffer, size_t bufferSize,
+                                                   ISPCRTModuleOptions);
 void ispcrtDynamicLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32_t numModules);
 ISPCRTModule ispcrtStaticLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32_t numModules);
 void *ispcrtFunctionPtr(ISPCRTModule, const char *name);

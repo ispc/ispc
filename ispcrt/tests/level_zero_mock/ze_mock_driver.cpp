@@ -1,4 +1,4 @@
-// Copyright 2020-2024 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ze_mock.h"
@@ -307,7 +307,10 @@ ze_result_t zeModuleCreate(ze_context_handle_t hContext, ze_device_handle_t hDev
     MOCK_CNT_CALL;
     if (hContext != ContextHandle.get() || !ExpectedDevice(hDevice))
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    if (desc == nullptr)
+        return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
 
+    Config::setLastModuleDesc(desc);
     *phModule = ModuleHandle.get();
 
     MOCK_RET;
