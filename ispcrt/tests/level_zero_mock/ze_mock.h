@@ -1,4 +1,4 @@
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -67,6 +67,10 @@ class Config {
     static void setExpectedDevice(uint32_t deviceIdx);
     static uint32_t getExpectedDevice();
     static void setDeviceProperties(uint32_t deviceIdx, const DeviceProperties &dp);
+    static void setLastModuleDesc(const ze_module_desc_t *desc);
+    static const std::vector<uint8_t> &getLastModuleCode();
+    static ze_module_format_t getLastModuleFormat();
+    static const std::string &getLastModuleBuildFlags();
 
   private:
     static std::unordered_map<std::string, ze_result_t> resultsMap;
@@ -74,6 +78,9 @@ class Config {
     static bool cmdListOpened;
     static std::vector<DeviceProperties> devices;
     static uint32_t expectedDevice;
+    static std::vector<uint8_t> lastModuleCode;
+    static ze_module_format_t lastModuleFormat;
+    static std::string lastModuleBuildFlags;
 };
 
 } // namespace mock

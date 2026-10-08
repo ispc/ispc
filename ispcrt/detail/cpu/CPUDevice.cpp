@@ -1,4 +1,4 @@
-// Copyright 2020-2024, Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "CPUDevice.h"
@@ -441,6 +441,11 @@ ispcrt::base::ModuleOptions *CPUDevice::newModuleOptions(ISPCRTModuleType module
 ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile,
                                            [[maybe_unused]] const ispcrt::base::ModuleOptions &moduleOpts) const {
     return new cpu::Module(moduleFile);
+}
+
+ispcrt::base::Module *CPUDevice::newModule([[maybe_unused]] const uint8_t *buffer, [[maybe_unused]] size_t bufferSize,
+                                           [[maybe_unused]] const ispcrt::base::ModuleOptions &moduleOpts) const {
+    throw std::logic_error("loading a module from memory is not supported on CPU device");
 }
 
 void CPUDevice::dynamicLinkModules([[maybe_unused]] base::Module **modules,

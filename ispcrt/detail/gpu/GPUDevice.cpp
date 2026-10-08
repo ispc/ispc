@@ -1,4 +1,4 @@
-// Copyright 2020-2024 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "GPUDevice.h"
@@ -978,9 +978,6 @@ struct Module : public ispcrt::base::Module {
     Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, const bool is_mock_dev,
            const base::ModuleOptions &opts)
         : m_file(moduleFile) {
-        m_module_desc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
-        m_module_desc_exp.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
-
         std::ifstream is;
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
 
@@ -1013,6 +1010,24 @@ struct Module : public ispcrt::base::Module {
             is.read((char *)m_code.data(), codeSize);
             is.close();
         }
+
+        create(device, context, moduleFormat, opts);
+    }
+
+    Module(ze_device_handle_t device, ze_context_handle_t context, const uint8_t *buffer, size_t bufferSize,
+           const base::ModuleOptions &opts)
+        // The buffer is copied: static linking reads the module code again after this call returns.
+        : m_file("<memory>"), m_code(buffer, buffer + bufferSize) {
+        const ze_module_format_t moduleFormat =
+            get_bool_envvar(ISPCRT_USE_ZEBIN) ? ZE_MODULE_FORMAT_NATIVE : ZE_MODULE_FORMAT_IL_SPIRV;
+        create(device, context, moduleFormat, opts);
+    }
+
+  private:
+    void create(ze_device_handle_t device, ze_context_handle_t context, ze_module_format_t moduleFormat,
+                const base::ModuleOptions &opts) {
+        m_module_desc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+        m_module_desc_exp.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
 
         // Collect potential additional options for the compiler from the environment.
         // We assume some default options for the compiler, but we also
@@ -1057,7 +1072,7 @@ struct Module : public ispcrt::base::Module {
         }
 
         m_module_desc.format = moduleFormat;
-        m_module_desc.inputSize = codeSize;
+        m_module_desc.inputSize = m_code.size();
         m_module_desc.pInputModule = m_code.data();
         m_module_desc.pBuildFlags = m_igc_options.c_str();
 
@@ -1067,7 +1082,7 @@ struct Module : public ispcrt::base::Module {
             size_t size = 0;
 
             std::cout << "Module " << m_file << " format=" << moduleFormat;
-            std::cout << " size=" << codeSize << std::endl;
+            std::cout << " size=" << m_code.size() << std::endl;
             std::cout << "IGC options: " << m_igc_options << std::endl;
 
             L0_SAFE_CALL(zeModuleCreate(context, device, &m_module_desc, &m_module, &hLog));
@@ -1089,6 +1104,7 @@ struct Module : public ispcrt::base::Module {
             throw std::runtime_error("Failed to load spv module!");
     }
 
+  public:
     Module(ze_device_handle_t device, ze_context_handle_t context, Module **modules, const uint32_t numModules) {
         m_module_desc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
         m_module_desc_exp.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
@@ -1932,6 +1948,10 @@ base::ModuleOptions *GPUDevice::newModuleOptions(ISPCRTModuleType moduleType, bo
 
 base::Module *GPUDevice::newModule(const char *moduleFile, const base::ModuleOptions &opts) const {
     return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock, opts);
+}
+
+base::Module *GPUDevice::newModule(const uint8_t *buffer, size_t bufferSize, const base::ModuleOptions &opts) const {
+    return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, buffer, bufferSize, opts);
 }
 
 void GPUDevice::dynamicLinkModules(base::Module **modules, const uint32_t numModules) const {

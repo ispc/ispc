@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -839,6 +839,27 @@ ISPCRTModule ispcrtLoadModuleWithOptions(ISPCRTDevice d, const char *moduleFile,
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     const auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
     return (ISPCRTModule)device.newModule(moduleFile, opts);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTModule ispcrtLoadModuleFromMemory(ISPCRTDevice d, const uint8_t *spvBuffer,
+                                        size_t bufferSize) ISPCRT_CATCH_BEGIN {
+    ISPCRTModule module;
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    const auto &o = (ISPCRTModuleOptions)device.newModuleOptions();
+    module = ispcrtLoadModuleFromMemoryWithOptions(d, spvBuffer, bufferSize, o);
+    ispcrtRelease(o);
+    return module;
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTModule ispcrtLoadModuleFromMemoryWithOptions(ISPCRTDevice d, const uint8_t *spvBuffer, size_t bufferSize,
+                                                   ISPCRTModuleOptions o) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    const auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    if (spvBuffer == nullptr || bufferSize == 0)
+        throw ispcrt::base::ispcrt_runtime_error(ISPCRT_INVALID_ARGUMENT, "module buffer is null or empty");
+    return (ISPCRTModule)device.newModule(spvBuffer, bufferSize, opts);
 }
 ISPCRT_CATCH_END(nullptr)
 

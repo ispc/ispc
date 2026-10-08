@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Intel Corporation
+// Copyright 2020-2026 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -527,6 +527,8 @@ class Module : public GenericObject<ISPCRTModule> {
     Module() = default;
     Module(const Device &device, const char *moduleName);
     Module(const Device &device, const char *moduleName, const ModuleOptions &opts);
+    Module(const Device &device, const uint8_t *spvBuffer, size_t bufferSize);
+    Module(const Device &device, const uint8_t *spvBuffer, size_t bufferSize, const ModuleOptions &opts);
     Module(ISPCRTModule module);
     void *functionPtr(const char *functionName);
 };
@@ -538,6 +540,13 @@ inline Module::Module(const Device &device, const char *moduleName)
 
 inline Module::Module(const Device &device, const char *moduleName, const ModuleOptions &opts)
     : GenericObject<ISPCRTModule>(ispcrtLoadModuleWithOptions(device.handle(), moduleName, opts.handle())) {}
+
+inline Module::Module(const Device &device, const uint8_t *spvBuffer, size_t bufferSize)
+    : GenericObject<ISPCRTModule>(ispcrtLoadModuleFromMemory(device.handle(), spvBuffer, bufferSize)) {}
+
+inline Module::Module(const Device &device, const uint8_t *spvBuffer, size_t bufferSize, const ModuleOptions &opts)
+    : GenericObject<ISPCRTModule>(
+          ispcrtLoadModuleFromMemoryWithOptions(device.handle(), spvBuffer, bufferSize, opts.handle())) {}
 
 inline Module::Module(ISPCRTModule module) : GenericObject<ISPCRTModule>(module) {}
 
