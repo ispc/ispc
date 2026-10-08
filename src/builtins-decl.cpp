@@ -100,6 +100,8 @@ DECL_BUILTIN_NAME(__get_system_best_isa);
 DECL_BUILTIN_NAME(__is_compile_time_constant_mask);
 DECL_BUILTIN_NAME(__is_compile_time_constant_uniform_int32);
 DECL_BUILTIN_NAME(__is_compile_time_constant_varying_int32);
+DECL_BUILTIN_NAME(__is_compile_time_constant_uniform_int64);
+DECL_BUILTIN_NAME(__is_compile_time_constant_varying_int64);
 DECL_BUILTIN_NAME(__ispc_amx_dpbf16ps);
 DECL_BUILTIN_NAME(__ispc_amx_dpbssd);
 DECL_BUILTIN_NAME(__ispc_amx_dpbsud);

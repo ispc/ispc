@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -15,7 +15,9 @@ bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
     llvm::Module *M = bb.getModule();
     llvm::Function *funcs[] = {M->getFunction(builtin::__is_compile_time_constant_mask),
                                M->getFunction(builtin::__is_compile_time_constant_uniform_int32),
-                               M->getFunction(builtin::__is_compile_time_constant_varying_int32)};
+                               M->getFunction(builtin::__is_compile_time_constant_varying_int32),
+                               M->getFunction(builtin::__is_compile_time_constant_uniform_int64),
+                               M->getFunction(builtin::__is_compile_time_constant_varying_int64)};
 
     bool modifiedAny = false;
 

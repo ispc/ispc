@@ -7141,9 +7141,11 @@ exclusive_scan(WIDTH, i64, 64, or, 0, or_i64)
 ;; parallel bit deposit/extract with BMI2
 ;;
 ;; BMI2 PDEP/PEXT are scalar instructions, so the varying versions apply them
-;; to each lane and zero the inactive lanes with a select. The 64-bit
-;; instructions require 64-bit mode; on 32-bit targets the 64-bit builtins
-;; resolve to the generic software versions.
+;; to each lane and zero the inactive lanes with a select. For compile-time
+;; constant masks, the varying versions use the generic constant-mask
+;; implementation instead, which folds to a few vector shifts, ANDs, and ORs.
+;; The 64-bit instructions require 64-bit mode; on 32-bit targets the 64-bit
+;; builtins resolve to the generic software versions.
 ;; $1: operation (pdep or pext)
 ;; $2: integer width (32 or 64)
 
@@ -7153,8 +7155,19 @@ define i$2 @__$1_uniform_i$2(i$2 %value, i$2 %mask) nounwind readnone alwaysinli
   ret i$2 %r
 }
 
+declare <WIDTH x i$2> @__$1_const_varying_i$2(<WIDTH x i$2>, <WIDTH x i$2>, <WIDTH x MASK>) nounwind readnone
+
 define <WIDTH x i$2> @__$1_varying_i$2(<WIDTH x i$2> %value, <WIDTH x i$2> %mask,
                                       <WIDTH x MASK> %exec) nounwind readnone alwaysinline {
+  %is_const = call i1 @__is_compile_time_constant_varying_int$2(<WIDTH x i$2> %mask)
+  br i1 %is_const, label %const_mask, label %runtime_mask
+
+const_mask:
+  %const_res = call <WIDTH x i$2> @__$1_const_varying_i$2(<WIDTH x i$2> %value, <WIDTH x i$2> %mask,
+                                                         <WIDTH x MASK> %exec)
+  ret <WIDTH x i$2> %const_res
+
+runtime_mask:
 forloop(i, 0, eval(WIDTH-1), `
   %v_`'i = extractelement <WIDTH x i$2> %value, i32 i
   %m_`'i = extractelement <WIDTH x i$2> %mask, i32 i
@@ -7177,6 +7190,7 @@ bmi2_pdep_pext_op(pext, 32)
 ifelse(RUNTIME, `64', `
 declare i64 @llvm.x86.bmi.pdep.64(i64, i64)
 declare i64 @llvm.x86.bmi.pext.64(i64, i64)
+declare i1 @__is_compile_time_constant_varying_int64(<WIDTH x i64>)
 bmi2_pdep_pext_op(pdep, 64)
 bmi2_pdep_pext_op(pext, 64)
 ')

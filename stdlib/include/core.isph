@@ -1033,6 +1033,8 @@ ISPC_BUILTINS_ATTRS uniform bool __wasm_cmp_msk_eq(UIntMaskType, UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __is_compile_time_constant_mask(UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __is_compile_time_constant_uniform_int32(uniform int32);
 ISPC_BUILTINS_ATTRS uniform bool __is_compile_time_constant_varying_int32(varying int32);
+ISPC_BUILTINS_ATTRS uniform bool __is_compile_time_constant_uniform_int64(uniform int64);
+ISPC_BUILTINS_ATTRS uniform bool __is_compile_time_constant_varying_int64(varying int64);
 
 #undef ISPC_NOESCAPE
 #undef ISPC_ADDRSPACE

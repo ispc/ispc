@@ -333,6 +333,8 @@ EXT READNONE int8 __insert_int8(int8 vec, uniform int32 lane, uniform int8 val) 
 // // EXT uniform bool __is_compile_time_constant_mask(UIntMaskType);
 // // EXT uniform bool __is_compile_time_constant_uniform_int32(uniform int32);
 // // EXT uniform bool __is_compile_time_constant_varying_int32(varying int32);
+// // EXT uniform bool __is_compile_time_constant_uniform_int64(uniform int64);
+// // EXT uniform bool __is_compile_time_constant_varying_int64(varying int64);
 
 // trigonometric functions
 // __have_native_trigonometry
@@ -1030,28 +1032,149 @@ template <typename T> unmasked varying T __pext_varying(varying T value, varying
     }
     return result;
 }
+// Constant-mask versions, following the compress and expand algorithms from
+// Hacker's Delight (2nd edition, sections 7-4 and 7-5). They take log2(width)
+// steps, and all mask-derived values depend only on the mask, so with a
+// compile-time constant mask they fold to a few shifts, ANDs, and ORs on the
+// value. The steps are written out rather than looped over, so that folding
+// does not depend on loop unrolling. T is a uniform or varying unsigned type
+// of 2^log_width bits.
+template <typename T> unmasked T __parallel_suffix_xor(T x, uniform int log_width) {
+    x = x ^ (x << 1);
+    x = x ^ (x << 2);
+    x = x ^ (x << 4);
+    x = x ^ (x << 8);
+    x = x ^ (x << 16);
+    if (log_width == 6)
+        x = x ^ (x << 32);
+    return x;
+}
+// Returns the bits of mask m that step i moves right by 1 << i, and updates
+// m and mk, the mask of zeros to the right, for the next step.
+template <typename T> unmasked T __compress_step_bits(T &m, T &mk, uniform int i, uniform int log_width) {
+    T mp = __parallel_suffix_xor<T>(mk, log_width);
+    T mv = mp & m;
+    m = (m ^ mv) | (mv >> (1 << i));
+    mk = mk & ~mp;
+    return mv;
+}
+template <typename T> unmasked T __expand_step(T value, T mv, uniform int i) {
+    return (value & ~mv) | ((value << (1 << i)) & mv);
+}
+// Trailing zeros of the mask, or zero for a zero mask. Shifting them out first
+// removes the movement shared by all bits, for example for every odd bit.
+unmasked uniform uint32 __mask_trailing_zeros(uniform uint32 mask) {
+    return (uniform uint32)__count_trailing_zeros_uniform_i32((uniform int32)mask) & 31;
+}
+unmasked uniform uint64 __mask_trailing_zeros(uniform uint64 mask) {
+    return (uniform uint64)__count_trailing_zeros_uniform_i64((uniform int64)mask) & 63;
+}
+unmasked varying uint32 __mask_trailing_zeros(varying uint32 mask) {
+    return (varying uint32)__count_trailing_zeros_varying_i32((varying int32)mask) & 31;
+}
+unmasked varying uint64 __mask_trailing_zeros(varying uint64 mask) {
+    return (varying uint64)__count_trailing_zeros_varying_i64((varying int64)mask) & 63;
+}
+template <typename T> unmasked T __pdep_const(T value, T mask, uniform int log_width) {
+    T tz = __mask_trailing_zeros(mask);
+    T m = mask >> tz;
+    T mk = ~m << 1;
+    T mv0 = __compress_step_bits<T>(m, mk, 0, log_width);
+    T mv1 = __compress_step_bits<T>(m, mk, 1, log_width);
+    T mv2 = __compress_step_bits<T>(m, mk, 2, log_width);
+    T mv3 = __compress_step_bits<T>(m, mk, 3, log_width);
+    T mv4 = __compress_step_bits<T>(m, mk, 4, log_width);
+    if (log_width == 6)
+        value = __expand_step<T>(value, __compress_step_bits<T>(m, mk, 5, log_width), 5);
+    value = __expand_step<T>(value, mv4, 4);
+    value = __expand_step<T>(value, mv3, 3);
+    value = __expand_step<T>(value, mv2, 2);
+    value = __expand_step<T>(value, mv1, 1);
+    value = __expand_step<T>(value, mv0, 0);
+    return (value << tz) & mask;
+}
+// value has no bits outside m. If the step moves some bits, and neither the
+// moved bits nor the kept bits shifted by 1 << i overlap the new mask, the
+// step reduces to one shift, one OR, and one AND, as in hand-written Morton
+// decoding; if it moves no bits, the general form folds away entirely. The
+// choice depends only on the mask, so it folds for a constant mask.
+template <typename T> unmasked T __compress_step(T value, T &m, T &mk, uniform int i, uniform int log_width) {
+    T kept = m & ~(__parallel_suffix_xor<T>(mk, log_width));
+    T mv = __compress_step_bits<T>(m, mk, i, log_width);
+    T t = value & mv;
+    T moved = (value ^ t) | (t >> (1 << i));
+    T shifted = (value | (value >> (1 << i))) & m;
+    T use_shifted = (T)0 - (T)((mv != 0) & (((mv | (kept >> (1 << i))) & m) == 0));
+    return moved ^ ((moved ^ shifted) & use_shifted);
+}
+template <typename T> unmasked T __pext_const(T value, T mask, uniform int log_width) {
+    T tz = __mask_trailing_zeros(mask);
+    T m = mask >> tz;
+    T mk = ~m << 1;
+    value = (value >> tz) & m;
+    value = __compress_step<T>(value, m, mk, 0, log_width);
+    value = __compress_step<T>(value, m, mk, 1, log_width);
+    value = __compress_step<T>(value, m, mk, 2, log_width);
+    value = __compress_step<T>(value, m, mk, 3, log_width);
+    value = __compress_step<T>(value, m, mk, 4, log_width);
+    if (log_width == 6)
+        value = __compress_step<T>(value, m, mk, 5, log_width);
+    return value;
+}
+
+// Varying constant-mask entry points. They are also used by the native BMI2
+// implementations, where they replace per-lane scalar instructions.
+EXT READNONE varying uint32 __pdep_const_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec) {
+    return __select(exec != 0, __pdep_const<varying uint32>(value, mask, 5), (varying uint32)0);
+}
+EXT READNONE varying uint64 __pdep_const_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec) {
+    return __select(exec != 0, __pdep_const<varying uint64>(value, mask, 6), (varying uint64)0);
+}
+EXT READNONE varying uint32 __pext_const_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec) {
+    return __select(exec != 0, __pext_const<varying uint32>(value, mask, 5), (varying uint32)0);
+}
+EXT READNONE varying uint64 __pext_const_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec) {
+    return __select(exec != 0, __pext_const<varying uint64>(value, mask, 6), (varying uint64)0);
+}
+
 EXT READNONE uniform uint32 __pdep_uniform_i32(uniform uint32 value, uniform uint32 mask) {
+    if (__is_compile_time_constant_uniform_int32(mask))
+        return __pdep_const<uniform uint32>(value, mask, 5);
     return __pdep_uniform<uint32>(value, mask);
 }
 EXT READNONE uniform uint64 __pdep_uniform_i64(uniform uint64 value, uniform uint64 mask) {
+    if (__is_compile_time_constant_uniform_int64(mask))
+        return __pdep_const<uniform uint64>(value, mask, 6);
     return __pdep_uniform<uint64>(value, mask);
 }
 EXT READNONE uniform uint32 __pext_uniform_i32(uniform uint32 value, uniform uint32 mask) {
+    if (__is_compile_time_constant_uniform_int32(mask))
+        return __pext_const<uniform uint32>(value, mask, 5);
     return __pext_uniform<uint32>(value, mask);
 }
 EXT READNONE uniform uint64 __pext_uniform_i64(uniform uint64 value, uniform uint64 mask) {
+    if (__is_compile_time_constant_uniform_int64(mask))
+        return __pext_const<uniform uint64>(value, mask, 6);
     return __pext_uniform<uint64>(value, mask);
 }
 EXT READNONE varying uint32 __pdep_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec) {
+    if (__is_compile_time_constant_varying_int32(mask))
+        return __pdep_const_varying_i32(value, mask, exec);
     return __pdep_varying<uint32>(value, mask, exec);
 }
 EXT READNONE varying uint64 __pdep_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec) {
+    if (__is_compile_time_constant_varying_int64(mask))
+        return __pdep_const_varying_i64(value, mask, exec);
     return __pdep_varying<uint64>(value, mask, exec);
 }
 EXT READNONE varying uint32 __pext_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec) {
+    if (__is_compile_time_constant_varying_int32(mask))
+        return __pext_const_varying_i32(value, mask, exec);
     return __pext_varying<uint32>(value, mask, exec);
 }
 EXT READNONE varying uint64 __pext_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec) {
+    if (__is_compile_time_constant_varying_int64(mask))
+        return __pext_const_varying_i64(value, mask, exec);
     return __pext_varying<uint64>(value, mask, exec);
 }
 

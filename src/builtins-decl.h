@@ -152,6 +152,8 @@ extern const char *const __get_system_best_isa;
 extern const char *const __is_compile_time_constant_mask;
 extern const char *const __is_compile_time_constant_uniform_int32;
 extern const char *const __is_compile_time_constant_varying_int32;
+extern const char *const __is_compile_time_constant_uniform_int64;
+extern const char *const __is_compile_time_constant_varying_int64;
 extern const char *const __ispc_amx_dpbf16ps;
 extern const char *const __ispc_amx_dpbssd;
 extern const char *const __ispc_amx_dpbsud;
