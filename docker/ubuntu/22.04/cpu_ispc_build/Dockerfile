@@ -82,6 +82,10 @@ RUN apt-get -y update && \
 
 WORKDIR /usr/local/src
 
+# Install only the pinned NDK C headers; no NDK host binaries are used.
+RUN python3 ispc/scripts/install_cross_headers.py
+ENV ANDROID_NDK_HOME=/usr/local/share/android-ndk
+
 # Create new non-root user and switch to it
 RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
 chown -R ispc_user:ispc_user /usr

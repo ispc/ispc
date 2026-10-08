@@ -28,6 +28,7 @@ list(APPEND LIT_ARGS "-Dxe_enabled=$<IF:$<BOOL:${XE_ENABLED}>,ON,OFF>")
 # ISPC enabled OS.
 list(APPEND LIT_ARGS "-Dwindows_enabled=$<IF:$<BOOL:${ISPC_WINDOWS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dlinux_enabled=$<IF:$<BOOL:${ISPC_LINUX_TARGET}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dandroid_enabled=$<IF:$<BOOL:${ISPC_ANDROID_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dps_enabled=$<IF:$<BOOL:${ISPC_PS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_ARM_TARGET}>,ON,OFF>")

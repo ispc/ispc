@@ -10,6 +10,8 @@ SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
+ENV ANDROID_NDK_HOME=/usr/local/share/android-ndk
+
 ARG LTO=OFF
 ARG PGO=OFF
 ARG XE_DEPS=ON
@@ -32,13 +34,13 @@ RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-e
     update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-11 100 && \
     rm -rf /var/lib/apt/lists/*
 
-# Install multilib libc needed to build clang_rt
+# Install multilib libc and ARM target headers
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
-        export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; \
+        export CROSS_LIBS=("libc6-dev-i386=2.27-3ubuntu*" "libc6-dev-armhf-cross" "libc6-dev-arm64-cross"); \
     else \
-        export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu*"; \
+        export CROSS_LIBS=("libc6-dev-armhf-cross=2.27-3ubuntu*"); \
     fi && \
-    apt-get -y update && apt-get --no-install-recommends install -y "$CROSS_LIBS" && \
+    apt-get -y update && apt-get --no-install-recommends install -y "${CROSS_LIBS[@]}" && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
@@ -101,6 +103,7 @@ USER ispc_user
 # Build Clang/LLVM, XE dependencies and then ISPC.
 RUN git clone https://github.com/$REPO.git ispc && \
     git -C ispc checkout $SHA && \
+    python3 ispc/scripts/install_cross_headers.py && \
     cmake ispc/superbuild \
         -B build \
         --preset os \

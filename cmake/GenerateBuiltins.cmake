@@ -198,10 +198,50 @@ function(builtin_wasm_to_cpp bit os arch)
     set(COMMON_BUILTIN_BC_FILES ${tmp_list_bc} PARENT_SCOPE)
 endfunction()
 
+function(get_android_ndk_sysroot os out)
+    set(ndk_roots "")
+    if (ISPC_ANDROID_NDK_PATH)
+        set(ndk_roots "${ISPC_ANDROID_NDK_PATH}")
+    else()
+        foreach(ndk_env ANDROID_NDK_HOME ANDROID_NDK_ROOT ANDROID_NDK_LATEST_HOME)
+            if (DEFINED ENV{${ndk_env}})
+                list(APPEND ndk_roots "$ENV{${ndk_env}}")
+            endif()
+        endforeach()
+        foreach(sdk_env ANDROID_HOME ANDROID_SDK_ROOT)
+            if (DEFINED ENV{${sdk_env}})
+                file(GLOB installed_ndks "$ENV{${sdk_env}}/ndk/*")
+                list(SORT installed_ndks ORDER DESCENDING)
+                list(APPEND ndk_roots ${installed_ndks} "$ENV{${sdk_env}}/ndk-bundle")
+            endif()
+        endforeach()
+    endif()
+
+    foreach(ndk_root IN LISTS ndk_roots)
+        file(GLOB modern_sysroots "${ndk_root}/toolchains/llvm/prebuilt/*/sysroot")
+        foreach(sysroot "${ndk_root}/sysroot" ${modern_sysroots} "${ndk_root}")
+            if (EXISTS "${sysroot}/usr/include/stdio.h")
+                set(${out} "${sysroot}" PARENT_SCOPE)
+                return()
+            endif()
+        endforeach()
+    endforeach()
+
+    string(TOUPPER ${os} os_upper)
+    message(FATAL_ERROR "C builtins for ${os} require Android NDK headers on this host. "
+                        "Set -DISPC_ANDROID_NDK_PATH=<NDK root> or disable this OS with "
+                        "-DISPC_${os_upper}_TARGET=OFF.")
+endfunction()
+
 function (get_target_flags os arch out)
     # Determine triple
     set(fpic "")
     set(debian_triple)
+    set(android_api 21)
+    if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Android" AND CMAKE_SYSTEM_VERSION MATCHES "^[0-9]+$"
+            AND CMAKE_SYSTEM_VERSION GREATER_EQUAL 21)
+        set(android_api ${CMAKE_SYSTEM_VERSION})
+    endif()
     if (${os} STREQUAL "windows")
         set(triple ${arch}-pc-win32)
     elseif (${os} STREQUAL "linux")
@@ -220,6 +260,13 @@ function (get_target_flags os arch out)
         else()
             message(FATAL_ERROR "Error")
         endif()
+        if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Android")
+            # Building on Android (e.g. Termux, #3887): only bionic headers are available. They keep
+            # asm/ in <arch>-linux-android* folders and reject unversioned triples, so parse them with
+            # an API-versioned Android triple. ISPC replaces the triple when linking the builtins.
+            # Android ARM32 uses softfp; the C builtin entry points have no floating-point parameters.
+            set(triple ${arch}-unknown-linux-android${android_api})
+        endif()
         set(fpic -fPIC)
     elseif (${os} STREQUAL "freebsd")
         set(triple ${arch}-unknown-freebsd)
@@ -227,7 +274,7 @@ function (get_target_flags os arch out)
     elseif (${os} STREQUAL "macos")
         set(triple ${arch}-apple-macosx)
     elseif (${os} STREQUAL "android")
-        set(triple ${arch}-unknown-linux-android)
+        set(triple ${arch}-unknown-linux-android${android_api})
         set(fpic -fPIC)
     elseif (${os} STREQUAL "ios")
         set(triple ${arch}-apple-ios)
@@ -242,7 +289,22 @@ function (get_target_flags os arch out)
     endif()
 
     # Determine include path
-    if (WIN32)
+    if (${os} STREQUAL "windows" AND NOT WIN32)
+        set(include -isystem${ISPC_WINDOWS_VCTOOLS_PATH}/include -isystem${ISPC_WINDOWS_SDK_PATH}/include/ucrt)
+    elseif (NOT WIN32 AND NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Android"
+            AND (${os} STREQUAL "android" OR (APPLE AND (${os} STREQUAL "linux" OR ${os} STREQUAL "freebsd"))))
+        get_android_ndk_sysroot(${os} android_sysroot)
+        # macOS also uses NDK headers for Unix cross targets. Parse bionic with an
+        # Android triple; ISPC replaces the triple when linking these libraries.
+        set(triple ${arch}-unknown-linux-android${android_api})
+        if (${arch} STREQUAL "armv8a")
+            set(ndk_arch arm-linux-androideabi)
+        else()
+            set(ndk_arch ${arch}-linux-android)
+        endif()
+        set(include --sysroot=${android_sysroot} -isystem${android_sysroot}/usr/include
+                    -isystem${android_sysroot}/usr/include/${ndk_arch})
+    elseif (WIN32)
         if (${os} STREQUAL "windows")
             set(include "")
         elseif(${os} STREQUAL "macos")
@@ -256,20 +318,6 @@ function (get_target_flags os arch out)
         if (${os} STREQUAL "ios")
             # -isystem/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/
             set(include -isystem${ISPC_IOS_SDK_PATH}/usr/include)
-        elseif (${os} STREQUAL "linux" OR ${os} STREQUAL "android" OR ${os} STREQUAL "freebsd")
-            if (${arch} STREQUAL "armv8a")
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/arm-linux-androideabi
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/arm-linux-androideabi)
-            elseif (${arch} STREQUAL "aarch64")
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/aarch64-linux-android
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/aarch64-linux-android)
-            elseif(${arch} STREQUAL "i686")
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/i686-linux-android
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/i686-linux-android)
-            else()
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/x86_64-linux-android
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/x86_64-linux-android)
-            endif()
         elseif (${os} STREQUAL "macos")
             set(include -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         endif()
@@ -294,8 +342,6 @@ function (get_target_flags os arch out)
             else()
                 set(include -isystem/usr/${debian_triple}/include)
             endif()
-        elseif(${os} STREQUAL "windows")
-            set(include -isystem${ISPC_WINDOWS_VCTOOLS_PATH}/include -isystem${ISPC_WINDOWS_SDK_PATH}/include/ucrt)
         endif()
     endif()
 
@@ -328,8 +374,49 @@ function(builtin_to_cpp bit os generic_arch)
 
     get_target_flags(${os} ${arch} target_flags)
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm --std=gnu++17
+        # These builtins use C library headers only. Avoid host C++ library headers when cross-compiling.
+        -nostdinc++ -I${CMAKE_SOURCE_DIR} -m${bit} --std=gnu++17
     )
+
+    # Check the actual builtin compiler and target headers before starting the build.
+    # CMake's host C++ compiler may be different from the clang used to emit bitcode.
+    execute_process(
+        COMMAND ${CLANGPP_EXECUTABLE} ${flags} -fsyntax-only ${CMAKE_SOURCE_DIR}/${input}
+        RESULT_VARIABLE builtin_check_result
+        ERROR_VARIABLE builtin_check_error
+        OUTPUT_QUIET
+    )
+    if (NOT "${builtin_check_result}" STREQUAL "0")
+        if (${arch} STREQUAL "armv8a")
+            set(disable_arch "-DBUILD_32BIT_ARM=OFF")
+            set(header_package "libc6-dev-armhf-cross")
+        elseif (${arch} STREQUAL "aarch64")
+            set(disable_arch "-DARM_ENABLED=OFF")
+            set(header_package "libc6-dev-arm64-cross")
+        elseif (${generic_arch} STREQUAL "x86")
+            set(disable_arch "-DX86_ENABLED=OFF")
+            set(header_package "g++-multilib")
+        elseif (${generic_arch} STREQUAL "riscv")
+            set(disable_arch "-DRISCV_ENABLED=OFF")
+            set(header_package "libc6-dev-riscv64-cross")
+        else()
+            set(disable_arch "-DPPC64_ENABLED=OFF")
+            set(header_package "libc6-dev-ppc64el-cross")
+        endif()
+        set(header_help "Install matching target libc development headers/sysroot, or use ${disable_arch}.")
+        if (${os} STREQUAL "windows")
+            set(header_help "Check the Windows SDK/CRT installation, ISPC_WINDOWS_SDK_PATH and ISPC_WINDOWS_VCTOOLS_PATH, or use -DISPC_WINDOWS_TARGET=OFF.")
+        elseif (${os} STREQUAL "linux" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+            if ((${arch} STREQUAL "aarch64" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+                    OR (${arch} STREQUAL "armv8a" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^armv[0-9]"))
+                set(header_package "libc6-dev")
+            endif()
+            string(APPEND header_help " On Debian/Ubuntu, install ${header_package}.")
+        elseif (${os} STREQUAL "android" AND NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Android")
+            string(APPEND header_help " Check ISPC_ANDROID_NDK_PATH, or use -DISPC_ANDROID_TARGET=OFF.")
+        endif()
+        message(FATAL_ERROR "Cannot compile C builtins for ${os}/${arch}:\n${builtin_check_error}\n${header_help}")
+    endif()
 
     set(name builtins-cpp-${bit}-${os}-${arch})
     string(REPLACE "-" "_" name ${name})
@@ -340,8 +427,8 @@ function(builtin_to_cpp bit os generic_arch)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
-            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
+        # Emit bitcode directly: piping into llvm-as would hide clang errors (#3887).
+        COMMAND ${CLANGPP_EXECUTABLE} ${flags} -c -emit-llvm ${input} -o ${bc}
         DEPENDS ${input} ${BUILTINS_C_CPU_HEADER_DEPS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
