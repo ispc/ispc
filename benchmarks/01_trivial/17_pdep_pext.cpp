@@ -9,12 +9,13 @@
 #include "17_pdep_pext_ispc.h"
 
 static Docs docs("Check pdep32/pext32/pdep64/pext64 implementation of stdlib functions:\n"
-                 "[pdep, pext] x [uint32, uint64] x [uniform, varying] versions with sparse and dense masks,\n"
-                 "full and partial execution masks, and constant masks.\n"
-                 "Morton encode/decode with pdep/pext compared to shift/AND/OR interleaving.\n"
+                 "[pdep, pext] x [uint32, uint64] x [uniform, varying] versions with sparse and dense runtime masks,\n"
+                 "full and partial execution masks, and the same masks as compile-time constants and runtime values.\n"
+                 "Morton encode/decode with pdep/pext (constant and runtime masks) compared to shift/AND/OR.\n"
                  "Expectation:\n"
                  " - No regressions\n"
-                 " - Native BMI2 instructions on AVX2 and AVX-512 targets\n");
+                 " - Native BMI2 instructions on AVX2 and AVX-512 targets for runtime masks\n"
+                 " - Varying operations with constant masks at least as fast as with runtime masks\n");
 
 WARM_UP_RUN();
 
@@ -108,19 +109,20 @@ BENCHMARK_BIT_OPS(pext, 32, false)
 BENCHMARK_BIT_OPS(pdep, 64, true)
 BENCHMARK_BIT_OPS(pext, 64, false)
 
-#define BENCHMARK_CONST_OP(OP, W, CONST_MASK, V, IS_PDEP)                                                              \
-    static void OP##W##_const_##V(benchmark::State &state) {                                                           \
+// The same mask as a compile-time constant (CONST) and as a runtime argument (RUNTIME).
+#define BENCHMARK_MASK_OP_KIND(OP, W, NAME, MASK, V, IS_PDEP, KIND, ...)                                               \
+    static void OP##W##_##NAME##_##KIND##_##V(benchmark::State &state) {                                               \
         int count = static_cast<int>(state.range(0));                                                                  \
         uint##W##_t *src = static_cast<uint##W##_t *>(aligned_alloc_helper(sizeof(uint##W##_t) * count));              \
         uint##W##_t *mask = static_cast<uint##W##_t *>(aligned_alloc_helper(sizeof(uint##W##_t) * count));             \
         uint##W##_t *dst = static_cast<uint##W##_t *>(aligned_alloc_helper(sizeof(uint##W##_t) * count));              \
         init(src, mask, dst, count, false);                                                                            \
         for (int i = 0; i < count; i++) {                                                                              \
-            mask[i] = CONST_MASK;                                                                                      \
+            mask[i] = MASK;                                                                                            \
         }                                                                                                              \
                                                                                                                        \
         for (auto _ : state) {                                                                                         \
-            ispc::OP##W##_const_##V(src, dst, count);                                                                  \
+            ispc::OP##W##_##NAME##_##KIND##_##V(src, dst, count __VA_ARGS__);                                          \
         }                                                                                                              \
                                                                                                                        \
         check(src, mask, dst, count, IS_PDEP, 1);                                                                      \
@@ -129,18 +131,28 @@ BENCHMARK_BIT_OPS(pext, 64, false)
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \
-    BENCHMARK(OP##W##_const_##V)->Arg(8192);
+    BENCHMARK(OP##W##_##NAME##_##KIND##_##V)->Arg(8192);
 
-BENCHMARK_CONST_OP(pdep, 32, 0x55555555u, uniform, true)
-BENCHMARK_CONST_OP(pdep, 32, 0x55555555u, varying, true)
-BENCHMARK_CONST_OP(pext, 64, 0x5555555555555555ull, uniform, false)
-BENCHMARK_CONST_OP(pext, 64, 0x5555555555555555ull, varying, false)
+#define BENCHMARK_MASK_OP(OP, W, NAME, MASK, IS_PDEP)                                                                  \
+    BENCHMARK_MASK_OP_KIND(OP, W, NAME, MASK, uniform, IS_PDEP, const, )                                               \
+    BENCHMARK_MASK_OP_KIND(OP, W, NAME, MASK, uniform, IS_PDEP, runtime, , MASK)                                       \
+    BENCHMARK_MASK_OP_KIND(OP, W, NAME, MASK, varying, IS_PDEP, const, )                                               \
+    BENCHMARK_MASK_OP_KIND(OP, W, NAME, MASK, varying, IS_PDEP, runtime, , MASK)
+
+BENCHMARK_MASK_OP(pdep, 32, morton, 0x55555555u, true)
+BENCHMARK_MASK_OP(pext, 32, morton, 0x55555555u, false)
+BENCHMARK_MASK_OP(pdep, 64, morton, 0x5555555555555555ull, true)
+BENCHMARK_MASK_OP(pext, 64, morton, 0x5555555555555555ull, false)
+BENCHMARK_MASK_OP(pdep, 32, bytes, 0x00FF00FFu, true)
+BENCHMARK_MASK_OP(pext, 32, bytes, 0x00FF00FFu, false)
+BENCHMARK_MASK_OP(pdep, 64, bytes, 0x00FF00FF00FF00FFull, true)
+BENCHMARK_MASK_OP(pext, 64, bytes, 0x00FF00FF00FF00FFull, false)
 
 static uint64_t ref_morton(uint32_t x, uint32_t y) {
     return ref_pdep<uint64_t>(x, 0x5555555555555555ull) | ref_pdep<uint64_t>(y, 0xAAAAAAAAAAAAAAAAull);
 }
 
-#define BENCHMARK_MORTON_ENCODE(IMPL)                                                                                  \
+#define BENCHMARK_MORTON_ENCODE(IMPL, ...)                                                                             \
     static void morton_encode_##IMPL(benchmark::State &state) {                                                        \
         int count = static_cast<int>(state.range(0));                                                                  \
         uint32_t *x = static_cast<uint32_t *>(aligned_alloc_helper(sizeof(uint32_t) * count));                         \
@@ -154,7 +166,7 @@ static uint64_t ref_morton(uint32_t x, uint32_t y) {
         }                                                                                                              \
                                                                                                                        \
         for (auto _ : state) {                                                                                         \
-            ispc::morton_encode_##IMPL(x, y, dst, count);                                                              \
+            ispc::morton_encode_##IMPL(x, y, dst, count __VA_ARGS__);                                                  \
         }                                                                                                              \
                                                                                                                        \
         for (int i = 0; i < count; ++i) {                                                                              \
@@ -170,7 +182,7 @@ static uint64_t ref_morton(uint32_t x, uint32_t y) {
     }                                                                                                                  \
     BENCHMARK(morton_encode_##IMPL)->Arg(8192);
 
-#define BENCHMARK_MORTON_DECODE(IMPL)                                                                                  \
+#define BENCHMARK_MORTON_DECODE(IMPL, ...)                                                                             \
     static void morton_decode_##IMPL(benchmark::State &state) {                                                        \
         int count = static_cast<int>(state.range(0));                                                                  \
         uint64_t *src = static_cast<uint64_t *>(aligned_alloc_helper(sizeof(uint64_t) * count));                       \
@@ -184,7 +196,7 @@ static uint64_t ref_morton(uint32_t x, uint32_t y) {
         }                                                                                                              \
                                                                                                                        \
         for (auto _ : state) {                                                                                         \
-            ispc::morton_decode_##IMPL(src, x, y, count);                                                              \
+            ispc::morton_decode_##IMPL(src, x, y, count __VA_ARGS__);                                                  \
         }                                                                                                              \
                                                                                                                        \
         for (int i = 0; i < count; ++i) {                                                                              \
@@ -200,9 +212,11 @@ static uint64_t ref_morton(uint32_t x, uint32_t y) {
     }                                                                                                                  \
     BENCHMARK(morton_decode_##IMPL)->Arg(8192);
 
-BENCHMARK_MORTON_ENCODE(pdep)
-BENCHMARK_MORTON_ENCODE(shifts)
-BENCHMARK_MORTON_DECODE(pext)
-BENCHMARK_MORTON_DECODE(shifts)
+BENCHMARK_MORTON_ENCODE(pdep_const, )
+BENCHMARK_MORTON_ENCODE(pdep_runtime, , 0x5555555555555555ull, 0xAAAAAAAAAAAAAAAAull)
+BENCHMARK_MORTON_ENCODE(shifts, )
+BENCHMARK_MORTON_DECODE(pext_const, )
+BENCHMARK_MORTON_DECODE(pext_runtime, , 0x5555555555555555ull, 0xAAAAAAAAAAAAAAAAull)
+BENCHMARK_MORTON_DECODE(shifts, )
 
 BENCHMARK_MAIN();

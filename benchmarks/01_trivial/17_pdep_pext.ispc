@@ -37,36 +37,59 @@ BIT_OP(pext, 32)
 BIT_OP(pdep, 64)
 BIT_OP(pext, 64)
 
-// Constant masks.
-export void pdep32_const_uniform(uniform uint32 *uniform src, uniform uint32 *uniform dst, uniform int count) {
-    for (uniform int i = 0; i < count; i++) {
-        dst[i] = pdep32(src[i], 0x55555555u);
+// The same mask as a compile-time constant and as a runtime argument.
+#define MASK_OP(OP, W, NAME, MASK)                                                                                     \
+    export void OP##W##_##NAME##_const_uniform(uniform uint##W *uniform src, uniform uint##W *uniform dst,             \
+                                               uniform int count) {                                                    \
+        for (uniform int i = 0; i < count; i++) {                                                                      \
+            dst[i] = OP##W(src[i], MASK);                                                                              \
+        }                                                                                                              \
+    }                                                                                                                  \
+    export void OP##W##_##NAME##_const_varying(uniform uint##W *uniform src, uniform uint##W *uniform dst,             \
+                                               uniform int count) {                                                    \
+        foreach (i = 0 ... count) {                                                                                    \
+            dst[i] = OP##W(src[i], MASK);                                                                              \
+        }                                                                                                              \
+    }                                                                                                                  \
+    export void OP##W##_##NAME##_runtime_uniform(uniform uint##W *uniform src, uniform uint##W *uniform dst,           \
+                                                 uniform int count, uniform uint##W mask) {                            \
+        for (uniform int i = 0; i < count; i++) {                                                                      \
+            dst[i] = OP##W(src[i], mask);                                                                              \
+        }                                                                                                              \
+    }                                                                                                                  \
+    export void OP##W##_##NAME##_runtime_varying(uniform uint##W *uniform src, uniform uint##W *uniform dst,           \
+                                                 uniform int count, uniform uint##W mask) {                            \
+        foreach (i = 0 ... count) {                                                                                    \
+            dst[i] = OP##W(src[i], mask);                                                                              \
+        }                                                                                                              \
     }
-}
 
-export void pdep32_const_varying(uniform uint32 *uniform src, uniform uint32 *uniform dst, uniform int count) {
-    foreach (i = 0 ... count) {
-        dst[i] = pdep32(src[i], 0x55555555u);
-    }
-}
+// Morton masks: every other bit.
+MASK_OP(pdep, 32, morton, 0x55555555u)
+MASK_OP(pext, 32, morton, 0x55555555u)
+MASK_OP(pdep, 64, morton, 0x5555555555555555ull)
+MASK_OP(pext, 64, morton, 0x5555555555555555ull)
 
-export void pext64_const_uniform(uniform uint64 *uniform src, uniform uint64 *uniform dst, uniform int count) {
-    for (uniform int i = 0; i < count; i++) {
-        dst[i] = pext64(src[i], 0x5555555555555555ull);
-    }
-}
+// Byte fields: every other byte.
+MASK_OP(pdep, 32, bytes, 0x00FF00FFu)
+MASK_OP(pext, 32, bytes, 0x00FF00FFu)
+MASK_OP(pdep, 64, bytes, 0x00FF00FF00FF00FFull)
+MASK_OP(pext, 64, bytes, 0x00FF00FF00FF00FFull)
 
-export void pext64_const_varying(uniform uint64 *uniform src, uniform uint64 *uniform dst, uniform int count) {
-    foreach (i = 0 ... count) {
-        dst[i] = pext64(src[i], 0x5555555555555555ull);
-    }
-}
-
-// 2D Morton encode/decode of 32-bit coordinates into 64-bit codes.
-export void morton_encode_pdep(uniform uint32 *uniform x, uniform uint32 *uniform y, uniform uint64 *uniform dst,
-                               uniform int count) {
+// 2D Morton encode/decode of 32-bit coordinates into 64-bit codes, using
+// pdep/pext with constant masks, pdep/pext with runtime masks, and shifts.
+export void morton_encode_pdep_const(uniform uint32 *uniform x, uniform uint32 *uniform y, uniform uint64 *uniform dst,
+                                     uniform int count) {
     foreach (i = 0 ... count) {
         dst[i] = pdep64(x[i], 0x5555555555555555ull) | pdep64(y[i], 0xAAAAAAAAAAAAAAAAull);
+    }
+}
+
+export void morton_encode_pdep_runtime(uniform uint32 *uniform x, uniform uint32 *uniform y,
+                                       uniform uint64 *uniform dst, uniform int count, uniform uint64 mask_x,
+                                       uniform uint64 mask_y) {
+    foreach (i = 0 ... count) {
+        dst[i] = pdep64(x[i], mask_x) | pdep64(y[i], mask_y);
     }
 }
 
@@ -96,11 +119,20 @@ export void morton_encode_shifts(uniform uint32 *uniform x, uniform uint32 *unif
     }
 }
 
-export void morton_decode_pext(uniform uint64 *uniform src, uniform uint32 *uniform x, uniform uint32 *uniform y,
-                               uniform int count) {
+export void morton_decode_pext_const(uniform uint64 *uniform src, uniform uint32 *uniform x, uniform uint32 *uniform y,
+                                     uniform int count) {
     foreach (i = 0 ... count) {
         x[i] = (uint32)pext64(src[i], 0x5555555555555555ull);
         y[i] = (uint32)pext64(src[i], 0xAAAAAAAAAAAAAAAAull);
+    }
+}
+
+export void morton_decode_pext_runtime(uniform uint64 *uniform src, uniform uint32 *uniform x,
+                                       uniform uint32 *uniform y, uniform int count, uniform uint64 mask_x,
+                                       uniform uint64 mask_y) {
+    foreach (i = 0 ... count) {
+        x[i] = (uint32)pext64(src[i], mask_x);
+        y[i] = (uint32)pext64(src[i], mask_y);
     }
 }
 
