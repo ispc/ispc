@@ -1251,6 +1251,15 @@ The ``-h`` flag can also be used to direct ``ispc`` to generate a C/C++
 header file that includes C/C++ declarations of the C-callable ``ispc``
 functions and the types passed to it.
 
+The ``-M`` flag emits a Make-style dependency rule to standard output. Use
+``-MF <filename>`` to write that rule to a file. Dependency filenames and the
+default target are quoted for Make. Use ``-MT <target>`` to specify a target
+verbatim, preserving Make expressions such as ``$(OBJDIR)/foo.o``, or
+``-MQ <target>`` to quote a target containing spaces or other Make-special
+characters. If multiple ``-MT`` or ``-MQ`` options are given, the last one
+takes precedence. The ``-MMM <filename>`` option writes a flat dependency
+list instead of a Make rule.
+
 The ``-D`` option can be used to specify definitions to be passed along to
 the pre-processor, which runs over the program input before it's compiled.
 For example, including ``-DTEST=1`` defines the pre-processor symbol
