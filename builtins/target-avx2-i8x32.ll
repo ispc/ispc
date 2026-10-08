@@ -770,3 +770,8 @@ define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64> %0, <WIDTH x MASK> %m
   %masked = select <WIDTH x i1> %mask_as_i1, <WIDTH x i32> %trunc, <WIDTH x i32> zeroinitializer
   ret <WIDTH x i32> %masked
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; parallel bit deposit/extract
+
+bmi2_pdep_pext()

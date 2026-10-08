@@ -1153,3 +1153,8 @@ define <16 x double> @__rsqrt_varying_double(<16 x double> %v) nounwind readonly
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; parallel bit deposit/extract
+
+bmi2_pdep_pext()

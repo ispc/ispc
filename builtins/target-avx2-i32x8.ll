@@ -473,8 +473,7 @@ declare <8 x i16> @llvm.masked.expandload.v8i16(ptr %startptr_typed, <8 x i1> %i
 declare <8 x i32> @llvm.masked.expandload.v8i32(ptr, <8 x i1>, <8 x i32>)
 declare <8 x i64> @llvm.masked.expandload.v8i64(ptr, <8 x i1>, <8 x i64>)
 declare i32 @llvm.ctpop.i32(i32)
-declare i32 @llvm.x86.bmi.pdep.32(i32, i32)
-declare i32 @llvm.x86.bmi.pext.32(i32, i32)
+; llvm.x86.bmi.pdep.32 and llvm.x86.bmi.pext.32 are declared in the parallel bit deposit/extract section below.
 declare void @llvm.x86.avx2.maskstore.d.256(ptr, <8 x i32>, <8 x i32>)
 
 ; Function Attrs: alwaysinline nounwind
@@ -1014,3 +1013,8 @@ done:                                             ; preds = %loop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; parallel bit deposit/extract
+
+bmi2_pdep_pext()

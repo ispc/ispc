@@ -7138,6 +7138,51 @@ exclusive_scan(WIDTH, i64, 64, or, 0, or_i64)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; parallel bit deposit/extract with BMI2
+;;
+;; BMI2 PDEP/PEXT are scalar instructions, so the varying versions apply them
+;; to each lane and zero the inactive lanes with a select. The 64-bit
+;; instructions require 64-bit mode; on 32-bit targets the 64-bit builtins
+;; resolve to the generic software versions.
+;; $1: operation (pdep or pext)
+;; $2: integer width (32 or 64)
+
+define(`bmi2_pdep_pext_op', `
+define i$2 @__$1_uniform_i$2(i$2 %value, i$2 %mask) nounwind readnone alwaysinline {
+  %r = call i$2 @llvm.x86.bmi.$1.$2(i$2 %value, i$2 %mask)
+  ret i$2 %r
+}
+
+define <WIDTH x i$2> @__$1_varying_i$2(<WIDTH x i$2> %value, <WIDTH x i$2> %mask,
+                                      <WIDTH x MASK> %exec) nounwind readnone alwaysinline {
+forloop(i, 0, eval(WIDTH-1), `
+  %v_`'i = extractelement <WIDTH x i$2> %value, i32 i
+  %m_`'i = extractelement <WIDTH x i$2> %mask, i32 i
+  %r_`'i = call i$2 @llvm.x86.bmi.$1.$2(i$2 %v_`'i, i$2 %m_`'i)')
+
+  %ret_0 = insertelement <WIDTH x i$2> poison, i$2 %r_0, i32 0
+forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x i$2> %ret_`'eval(i-1), i$2 %r_`'i, i32 i
+')
+  %active = icmp ne <WIDTH x MASK> %exec, zeroinitializer
+  %res = select <WIDTH x i1> %active, <WIDTH x i$2> %ret_`'eval(WIDTH-1), <WIDTH x i$2> zeroinitializer
+  ret <WIDTH x i$2> %res
+}
+')
+
+define(`bmi2_pdep_pext', `
+declare i32 @llvm.x86.bmi.pdep.32(i32, i32)
+declare i32 @llvm.x86.bmi.pext.32(i32, i32)
+bmi2_pdep_pext_op(pdep, 32)
+bmi2_pdep_pext_op(pext, 32)
+ifelse(RUNTIME, `64', `
+declare i64 @llvm.x86.bmi.pdep.64(i64, i64)
+declare i64 @llvm.x86.bmi.pext.64(i64, i64)
+bmi2_pdep_pext_op(pdep, 64)
+bmi2_pdep_pext_op(pext, 64)
+')
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; per_lane
 ;;
 ;; The scary macro below encapsulates the 'scalarization' idiom--i.e. we have

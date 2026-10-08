@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2025, Intel Corporation
+#  Copyright (c) 2020-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -20,3 +20,4 @@ compile_benchmark_test(13_rotate)
 compile_benchmark_test(14_shift)
 compile_benchmark_test(15_reduce_equal)
 compile_benchmark_test(16_dispatcher_overhead)
+compile_benchmark_test(17_pdep_pext)

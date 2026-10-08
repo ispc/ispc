@@ -972,6 +972,89 @@ EXT varying int32 __popcnt_int64_varying(varying int64 x, UIntMaskType mask) {
     return mask ? r : 0;
 }
 
+// parallel bit deposit/extract
+// Both loops visit the set bits of the mask from least to most significant;
+// every shift is by one, so there is no shift by the operand width.
+template <typename T> unmasked uniform T __pdep_uniform(uniform T value, uniform T mask) {
+    uniform T result = 0;
+    while (mask != (uniform T)0) {
+        uniform T lowest = mask & ((uniform T)0 - mask);
+        if ((value & (uniform T)1) != (uniform T)0)
+            result |= lowest;
+        value >>= 1;
+        mask &= mask - (uniform T)1;
+    }
+    return result;
+}
+template <typename T> unmasked uniform T __pext_uniform(uniform T value, uniform T mask) {
+    uniform T result = 0;
+    uniform T bit = 1;
+    while (mask != (uniform T)0) {
+        uniform T lowest = mask & ((uniform T)0 - mask);
+        if ((value & lowest) != (uniform T)0)
+            result |= bit;
+        bit <<= 1;
+        mask &= mask - (uniform T)1;
+    }
+    return result;
+}
+// Inactive lanes get a zero value and bit mask before the loop, so they do
+// not enter its control flow and produce zero. Use select rather than AND
+// to also suppress poison in inactive lanes.
+template <typename T> unmasked varying T __pdep_varying(varying T value, varying T mask, UIntMaskType exec) {
+    varying bool active = exec != 0;
+    value = __select(active, value, (varying T)0);
+    mask = __select(active, mask, (varying T)0);
+    varying T result = 0;
+    while (mask != (varying T)0) {
+        varying T lowest = mask & ((varying T)0 - mask);
+        if ((value & (varying T)1) != (varying T)0)
+            result |= lowest;
+        value >>= 1;
+        mask &= mask - (varying T)1;
+    }
+    return result;
+}
+template <typename T> unmasked varying T __pext_varying(varying T value, varying T mask, UIntMaskType exec) {
+    varying bool active = exec != 0;
+    value = __select(active, value, (varying T)0);
+    mask = __select(active, mask, (varying T)0);
+    varying T result = 0;
+    varying T bit = 1;
+    while (mask != (varying T)0) {
+        varying T lowest = mask & ((varying T)0 - mask);
+        if ((value & lowest) != (varying T)0)
+            result |= bit;
+        bit <<= 1;
+        mask &= mask - (varying T)1;
+    }
+    return result;
+}
+EXT READNONE uniform uint32 __pdep_uniform_i32(uniform uint32 value, uniform uint32 mask) {
+    return __pdep_uniform<uint32>(value, mask);
+}
+EXT READNONE uniform uint64 __pdep_uniform_i64(uniform uint64 value, uniform uint64 mask) {
+    return __pdep_uniform<uint64>(value, mask);
+}
+EXT READNONE uniform uint32 __pext_uniform_i32(uniform uint32 value, uniform uint32 mask) {
+    return __pext_uniform<uint32>(value, mask);
+}
+EXT READNONE uniform uint64 __pext_uniform_i64(uniform uint64 value, uniform uint64 mask) {
+    return __pext_uniform<uint64>(value, mask);
+}
+EXT READNONE varying uint32 __pdep_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec) {
+    return __pdep_varying<uint32>(value, mask, exec);
+}
+EXT READNONE varying uint64 __pdep_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec) {
+    return __pdep_varying<uint64>(value, mask, exec);
+}
+EXT READNONE varying uint32 __pext_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec) {
+    return __pext_varying<uint32>(value, mask, exec);
+}
+EXT READNONE varying uint64 __pext_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec) {
+    return __pext_varying<uint64>(value, mask, exec);
+}
+
 // various bitcasts from one type to another
 EXT READNONE uniform double __doublebits_uniform_int64(uniform int64 x) {
     return @llvm.ispc.bitcast(x, (uniform double)0);

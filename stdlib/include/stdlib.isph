@@ -128,6 +128,15 @@ __declspec(safe) inline uniform int32 popcnt(uniform int64 v);
 __declspec(safe) inline varying int32 popcnt(varying int32 v);
 __declspec(safe) inline varying int32 popcnt(varying int64 v);
 __declspec(safe) inline uniform int popcnt(bool v);
+
+__declspec(safe) inline uniform uint32 pdep32(uniform uint32 value, uniform uint32 mask);
+__declspec(safe) inline varying uint32 pdep32(varying uint32 value, varying uint32 mask);
+__declspec(safe) inline uniform uint64 pdep64(uniform uint64 value, uniform uint64 mask);
+__declspec(safe) inline varying uint64 pdep64(varying uint64 value, varying uint64 mask);
+__declspec(safe) inline uniform uint32 pext32(uniform uint32 value, uniform uint32 mask);
+__declspec(safe) inline varying uint32 pext32(varying uint32 value, varying uint32 mask);
+__declspec(safe) inline uniform uint64 pext64(uniform uint64 value, uniform uint64 mask);
+__declspec(safe) inline varying uint64 pext64(varying uint64 value, varying uint64 mask);
 __declspec(safe) inline uniform unsigned int64 lanemask();
 __declspec(safe) inline uniform unsigned int64 packmask(bool v);
 
