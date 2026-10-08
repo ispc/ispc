@@ -139,6 +139,24 @@ platforms, please refer to our
 [ISPC Development Guide](https://github.com/ispc/ispc/wiki/ISPC-Development-Guide)
 for build and test instructions.
 
+On AArch64 Termux installations without ARM32 development headers, configure with
+`-DBUILD_32BIT_ARM=OFF` to omit 32-bit ARM builtin and standard libraries. This
+option defaults to `ON` and preserves AArch64 support with either addressing
+width. `ISPC_TARGETS` is an internal ISA list, not an architecture/OS build
+selector.
+
+Linux builds with ARM support need the corresponding libc development headers.
+On Debian/Ubuntu, install `libc6-dev-armhf-cross` and `libc6-dev-arm64-cross`, or
+disable ARM support with `-DARM_ENABLED=OFF`. Configuration checks the C builtin
+headers before the build starts. For Android target libraries on Linux, provide
+`-DISPC_ANDROID_NDK_PATH=<NDK root>` or an installed NDK through the Android SDK
+environment variables; `-DISPC_ANDROID_TARGET=OFF` disables those libraries.
+Native Termux builds use the installed bionic headers.
+
+macOS cross builds also use Android NDK headers for Linux builtin libraries.
+These headers belong to bionic; compatibility of these libraries with glibc
+remains an existing limitation of that build configuration.
+
 ## Additional Resources
 
 Latest `ispc` binaries corresponding to `main` branch can be downloaded from

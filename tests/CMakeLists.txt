@@ -19,6 +19,11 @@ list(APPEND LIT_ARGS "-Dispc_test_exec_root=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${
 # LLVM version used to build ISPC
 list(APPEND LIT_ARGS "-Dispc_llvm_version_number=${LLVM_VERSION_NUMBER}")
 # ISPC enabled targets
+set(arm_32bit_enabled OFF)
+if (ARM_ENABLED AND BUILD_32BIT_ARM)
+    set(arm_32bit_enabled ON)
+endif()
+list(APPEND LIT_ARGS "-Darm_32bit_enabled=${arm_32bit_enabled}")
 list(APPEND LIT_ARGS "-Dx86_enabled=$<IF:$<BOOL:${X86_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Darm_enabled=$<IF:$<BOOL:${ARM_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Driscv_enabled=$<IF:$<BOOL:${RISCV_ENABLED}>,ON,OFF>")

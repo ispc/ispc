@@ -369,6 +369,11 @@ function(builtin_to_cpp bit os generic_arch)
         message(FATAL_ERROR "Error")
     endif()
 
+    ispc_arch_enabled(${arch} enabled)
+    if (NOT enabled)
+        return()
+    endif()
+
     # Report supported targets.
     message (STATUS "Enabling target: ${os} / ${arch}")
 
