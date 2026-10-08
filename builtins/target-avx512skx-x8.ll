@@ -1115,3 +1115,8 @@ define <8 x double> @__rsqrt_varying_double(<8 x double> %v) nounwind readonly a
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; parallel bit deposit/extract
+
+bmi2_pdep_pext()

@@ -812,6 +812,38 @@ __declspec(safe) static inline uniform int popcnt(bool v) {
 #endif
 }
 
+__declspec(safe) static inline uniform uint32 pdep32(uniform uint32 value, uniform uint32 mask) {
+    return __pdep_uniform_i32(value, mask);
+}
+
+__declspec(safe) static inline varying uint32 pdep32(varying uint32 value, varying uint32 mask) {
+    return __pdep_varying_i32(value, mask, __mask);
+}
+
+__declspec(safe) static inline uniform uint64 pdep64(uniform uint64 value, uniform uint64 mask) {
+    return __pdep_uniform_i64(value, mask);
+}
+
+__declspec(safe) static inline varying uint64 pdep64(varying uint64 value, varying uint64 mask) {
+    return __pdep_varying_i64(value, mask, __mask);
+}
+
+__declspec(safe) static inline uniform uint32 pext32(uniform uint32 value, uniform uint32 mask) {
+    return __pext_uniform_i32(value, mask);
+}
+
+__declspec(safe) static inline varying uint32 pext32(varying uint32 value, varying uint32 mask) {
+    return __pext_varying_i32(value, mask, __mask);
+}
+
+__declspec(safe) static inline uniform uint64 pext64(uniform uint64 value, uniform uint64 mask) {
+    return __pext_uniform_i64(value, mask);
+}
+
+__declspec(safe) static inline varying uint64 pext64(varying uint64 value, varying uint64 mask) {
+    return __pext_varying_i64(value, mask, __mask);
+}
+
 __declspec(safe) static inline uniform unsigned int64 lanemask() { return __movmsk(__mask); }
 
 __declspec(safe) static inline uniform unsigned int64 packmask(bool v) {

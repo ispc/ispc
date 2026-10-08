@@ -5416,6 +5416,47 @@ int64`` types.
     int32 count_trailing_zeros(int32 v)
     uniform int32 count_trailing_zeros(uniform int32 v)
 
+The ``pdep32()``, ``pdep64()``, ``pext32()``, and ``pext64()`` functions
+perform parallel bit deposit and parallel bit extract operations on 32-bit and
+64-bit unsigned values.
+
+::
+
+    uniform uint32 pdep32(uniform uint32 value, uniform uint32 mask)
+    uint32 pdep32(uint32 value, uint32 mask)
+    uniform uint64 pdep64(uniform uint64 value, uniform uint64 mask)
+    uint64 pdep64(uint64 value, uint64 mask)
+    uniform uint32 pext32(uniform uint32 value, uniform uint32 mask)
+    uint32 pext32(uint32 value, uint32 mask)
+    uniform uint64 pext64(uniform uint64 value, uniform uint64 mask)
+    uint64 pext64(uint64 value, uint64 mask)
+
+``pdep`` deposits the low bits of ``value`` into the positions of the set bits
+of ``mask``, from the least significant to the most significant bit; all other
+bits of the result are zero. ``pext`` gathers the bits of ``value`` at the
+positions of the set bits of ``mask``, in the same order, into the low bits of
+the result; all remaining bits of the result are zero. For example,
+``pdep32(5, 0x52)`` is ``0x42``, and ``pext32(0x42, 0x52)`` is ``5``. A zero
+mask returns zero, and a mask with all bits set returns ``value``. The bit
+mask is separate from the execution mask: the varying versions operate
+independently on each active program instance.
+
+The width in the function name determines the operand type. Arguments of other
+integer types are converted to it with the usual conversion rules: for
+example, a negative ``int32`` passed to ``pdep64()`` is sign-extended, while an
+``uint64`` passed to ``pdep32()`` is truncated to its low 32 bits.
+
+These functions are useful, for instance, for computing Morton codes that
+interleave the bits of coordinates:
+
+::
+
+    uint32 morton2d(uint32 x, uint32 y) {
+        return pdep32(x, 0x55555555) | pdep32(y, 0xAAAAAAAA);
+    }
+    uint32 morton2d_x(uint32 code) { return pext32(code, 0x55555555); }
+    uint32 morton2d_y(uint32 code) { return pext32(code, 0xAAAAAAAA); }
+
 Sometimes it's useful to convert a ``bool`` value to an integer using sign
 extension so that the integer's bits are all on if the ``bool`` has the
 value ``true`` (rather than just having the value one).  The

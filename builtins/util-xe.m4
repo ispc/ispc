@@ -1661,6 +1661,127 @@ define $2 @__atomic_compare_exchange_uniform_$3_global(i8* %ptr, $2 %cmp,
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; parallel bit deposit/extract
+;;
+;; Software loops over the set bits of the mask, from least to most
+;; significant. Inactive lanes get a zero value and bit mask before the
+;; loop, so they produce zero.
+;; $1: integer width (32 or 64)
+
+define(`pdep_pext_width', `
+define i$1 @__pdep_uniform_i$1(i$1 %value, i$1 %mask) nounwind readnone alwaysinline {
+entry:
+  %mask.zero = icmp eq i$1 %mask, 0
+  br i1 %mask.zero, label %done, label %loop
+loop:
+  %v = phi i$1 [ %value, %entry ], [ %v.next, %loop ]
+  %m = phi i$1 [ %mask, %entry ], [ %m.next, %loop ]
+  %r = phi i$1 [ 0, %entry ], [ %r.next, %loop ]
+  %neg = sub i$1 0, %m
+  %lowest = and i$1 %m, %neg
+  %v.bit = and i$1 %v, 1
+  %take = icmp ne i$1 %v.bit, 0
+  %dep = select i1 %take, i$1 %lowest, i$1 0
+  %r.next = or i$1 %r, %dep
+  %v.next = lshr i$1 %v, 1
+  %m.dec = sub i$1 %m, 1
+  %m.next = and i$1 %m, %m.dec
+  %more = icmp ne i$1 %m.next, 0
+  br i1 %more, label %loop, label %done
+done:
+  %res = phi i$1 [ 0, %entry ], [ %r.next, %loop ]
+  ret i$1 %res
+}
+
+define i$1 @__pext_uniform_i$1(i$1 %value, i$1 %mask) nounwind readnone alwaysinline {
+entry:
+  %mask.zero = icmp eq i$1 %mask, 0
+  br i1 %mask.zero, label %done, label %loop
+loop:
+  %m = phi i$1 [ %mask, %entry ], [ %m.next, %loop ]
+  %b = phi i$1 [ 1, %entry ], [ %b.next, %loop ]
+  %r = phi i$1 [ 0, %entry ], [ %r.next, %loop ]
+  %neg = sub i$1 0, %m
+  %lowest = and i$1 %m, %neg
+  %v.bit = and i$1 %value, %lowest
+  %take = icmp ne i$1 %v.bit, 0
+  %ext = select i1 %take, i$1 %b, i$1 0
+  %r.next = or i$1 %r, %ext
+  %b.next = shl i$1 %b, 1
+  %m.dec = sub i$1 %m, 1
+  %m.next = and i$1 %m, %m.dec
+  %more = icmp ne i$1 %m.next, 0
+  br i1 %more, label %loop, label %done
+done:
+  %res = phi i$1 [ 0, %entry ], [ %r.next, %loop ]
+  ret i$1 %res
+}
+
+define <WIDTH x i$1> @__pdep_varying_i$1(<WIDTH x i$1> %value, <WIDTH x i$1> %mask,
+                                         <WIDTH x MASK> %exec) nounwind readnone alwaysinline {
+entry:
+  %value.active = select <WIDTH x i1> %exec, <WIDTH x i$1> %value, <WIDTH x i$1> zeroinitializer
+  %mask.active = select <WIDTH x i1> %exec, <WIDTH x i$1> %mask, <WIDTH x i$1> zeroinitializer
+  %mask.nz = icmp ne <WIDTH x i$1> %mask.active, zeroinitializer
+  %any = call i1 @__any(<WIDTH x MASK> %mask.nz)
+  br i1 %any, label %loop, label %done
+loop:
+  %v = phi <WIDTH x i$1> [ %value.active, %entry ], [ %v.next, %loop ]
+  %m = phi <WIDTH x i$1> [ %mask.active, %entry ], [ %m.next, %loop ]
+  %r = phi <WIDTH x i$1> [ zeroinitializer, %entry ], [ %r.next, %loop ]
+  %neg = sub <WIDTH x i$1> zeroinitializer, %m
+  %lowest = and <WIDTH x i$1> %m, %neg
+  %v.bit = and <WIDTH x i$1> %v, CONSTANT_VECTOR(i$1, 1)
+  %take = icmp ne <WIDTH x i$1> %v.bit, zeroinitializer
+  %dep = select <WIDTH x i1> %take, <WIDTH x i$1> %lowest, <WIDTH x i$1> zeroinitializer
+  %r.next = or <WIDTH x i$1> %r, %dep
+  %v.next = lshr <WIDTH x i$1> %v, CONSTANT_VECTOR(i$1, 1)
+  %m.dec = sub <WIDTH x i$1> %m, CONSTANT_VECTOR(i$1, 1)
+  %m.next = and <WIDTH x i$1> %m, %m.dec
+  %m.next.nz = icmp ne <WIDTH x i$1> %m.next, zeroinitializer
+  %more = call i1 @__any(<WIDTH x MASK> %m.next.nz)
+  br i1 %more, label %loop, label %done
+done:
+  %res = phi <WIDTH x i$1> [ zeroinitializer, %entry ], [ %r.next, %loop ]
+  ret <WIDTH x i$1> %res
+}
+
+define <WIDTH x i$1> @__pext_varying_i$1(<WIDTH x i$1> %value, <WIDTH x i$1> %mask,
+                                         <WIDTH x MASK> %exec) nounwind readnone alwaysinline {
+entry:
+  %value.active = select <WIDTH x i1> %exec, <WIDTH x i$1> %value, <WIDTH x i$1> zeroinitializer
+  %mask.active = select <WIDTH x i1> %exec, <WIDTH x i$1> %mask, <WIDTH x i$1> zeroinitializer
+  %mask.nz = icmp ne <WIDTH x i$1> %mask.active, zeroinitializer
+  %any = call i1 @__any(<WIDTH x MASK> %mask.nz)
+  br i1 %any, label %loop, label %done
+loop:
+  %m = phi <WIDTH x i$1> [ %mask.active, %entry ], [ %m.next, %loop ]
+  %b = phi <WIDTH x i$1> [ CONSTANT_VECTOR(i$1, 1), %entry ], [ %b.next, %loop ]
+  %r = phi <WIDTH x i$1> [ zeroinitializer, %entry ], [ %r.next, %loop ]
+  %neg = sub <WIDTH x i$1> zeroinitializer, %m
+  %lowest = and <WIDTH x i$1> %m, %neg
+  %v.bit = and <WIDTH x i$1> %value.active, %lowest
+  %take = icmp ne <WIDTH x i$1> %v.bit, zeroinitializer
+  %ext = select <WIDTH x i1> %take, <WIDTH x i$1> %b, <WIDTH x i$1> zeroinitializer
+  %r.next = or <WIDTH x i$1> %r, %ext
+  %b.next = shl <WIDTH x i$1> %b, CONSTANT_VECTOR(i$1, 1)
+  %m.dec = sub <WIDTH x i$1> %m, CONSTANT_VECTOR(i$1, 1)
+  %m.next = and <WIDTH x i$1> %m, %m.dec
+  %m.next.nz = icmp ne <WIDTH x i$1> %m.next, zeroinitializer
+  %more = call i1 @__any(<WIDTH x MASK> %m.next.nz)
+  br i1 %more, label %loop, label %done
+done:
+  %res = phi <WIDTH x i$1> [ zeroinitializer, %entry ], [ %r.next, %loop ]
+  ret <WIDTH x i$1> %res
+}
+')
+
+define(`pdep_pext', `
+pdep_pext_width(32)
+pdep_pext_width(64)
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; count trailing zeros
 
 define(`ctlztz', `

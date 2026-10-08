@@ -284,3 +284,8 @@ define <4 x double> @__gather64_double(<4 x i64> %ptrs,
 
   ret <4 x double> %v
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; parallel bit deposit/extract
+
+bmi2_pdep_pext()

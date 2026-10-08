@@ -285,6 +285,16 @@ EXT uniform int32 __popcnt_int64_uniform(uniform int64);
 EXT varying int32 __popcnt_int32_varying(varying int32, UIntMaskType mask);
 EXT varying int32 __popcnt_int64_varying(varying int64, UIntMaskType mask);
 
+// parallel bit deposit/extract
+EXT inline READNONE uniform uint32 __pdep_uniform_i32(uniform uint32 value, uniform uint32 mask);
+EXT inline READNONE uniform uint64 __pdep_uniform_i64(uniform uint64 value, uniform uint64 mask);
+EXT inline READNONE uniform uint32 __pext_uniform_i32(uniform uint32 value, uniform uint32 mask);
+EXT inline READNONE uniform uint64 __pext_uniform_i64(uniform uint64 value, uniform uint64 mask);
+EXT inline READNONE varying uint32 __pdep_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec);
+EXT inline READNONE varying uint64 __pdep_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec);
+EXT inline READNONE varying uint32 __pext_varying_i32(varying uint32 value, varying uint32 mask, UIntMaskType exec);
+EXT inline READNONE varying uint64 __pext_varying_i64(varying uint64 value, varying uint64 mask, UIntMaskType exec);
+
 // read hw clock
 EXT uniform int64 __clock();
 
