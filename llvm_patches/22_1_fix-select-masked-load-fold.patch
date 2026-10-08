@@ -1,0 +1,73 @@
+# [PATCH] [InstCombine] Fix miscompile when folding a select into a masked load
+
+# Backport of upstream fec2cbad1539 (llvm/llvm-project#216730) to LLVM 22.1.
+# Fixes ispc/ispc#3891: the select -> masked.load fold created the new load at
+# the select, sinking it below an aliasing store.
+
+diff --git a/llvm/lib/Transforms/InstCombine/InstCombineSelect.cpp b/llvm/lib/Transforms/InstCombine/InstCombineSelect.cpp
+index 1f415ff..e04a5b2 100644
+--- a/llvm/lib/Transforms/InstCombine/InstCombineSelect.cpp
++++ b/llvm/lib/Transforms/InstCombine/InstCombineSelect.cpp
+@@ -4815,12 +4815,18 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
+ 
+   Value *MaskedLoadPtr;
+   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
+-                                           m_Specific(CondVal), m_Value()))))
+-    return replaceInstUsesWith(
+-        SI, Builder.CreateMaskedLoad(
+-                TrueVal->getType(), MaskedLoadPtr,
+-                cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
+-                CondVal, FalseVal));
++                                           m_Specific(CondVal), m_Value())))) {
++    auto *LoadInst = cast<IntrinsicInst>(TrueVal);
++    // Keep the load at its original position to avoid crossing writes. The new
++    // passthrough must therefore be available there.
++    if (DT.dominates(FalseVal, LoadInst)) {
++      Builder.SetInsertPoint(LoadInst);
++      return replaceInstUsesWith(
++          SI, Builder.CreateMaskedLoad(TrueVal->getType(), MaskedLoadPtr,
++                                       LoadInst->getParamAlign(0).valueOrOne(),
++                                       CondVal, FalseVal));
++    }
++  }
+ 
+   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
+   // bitwidth-1, 1 -> scmp(X, 0)
+diff --git a/llvm/test/Transforms/InstCombine/select-masked_load.ll b/llvm/test/Transforms/InstCombine/select-masked_load.ll
+index f7584c4..88a7b45 100644
+--- a/llvm/test/Transforms/InstCombine/select-masked_load.ll
++++ b/llvm/test/Transforms/InstCombine/select-masked_load.ll
+@@ -149,6 +149,33 @@ define <vscale x 4 x float> @fold_sel_into_masked_load_scalable_one_use_check(pt
+   ret <vscale x 4 x float> %sel
+ }
+ 
++; Keep the folded load before an intervening aliasing store.
++define <4 x float> @fold_sel_into_masked_load_aliasing_store(ptr %ptr, <4 x i1> %mask, <4 x float> %passthrough) {
++; CHECK-LABEL: @fold_sel_into_masked_load_aliasing_store(
++; CHECK-NEXT:    [[SEL:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> [[PASSTHROUGH:%.*]])
++; CHECK-NEXT:    store <4 x float> [[PASSTHROUGH]], ptr [[PTR]], align 16
++; CHECK-NEXT:    ret <4 x float> [[SEL]]
++;
++  %load = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x float> zeroinitializer)
++  store <4 x float> %passthrough, ptr %ptr, align 16
++  %sel = select <4 x i1> %mask, <4 x float> %load, <4 x float> %passthrough
++  ret <4 x float> %sel
++}
++
++; Do not fold when the new passthrough is unavailable at the old load.
++define <4 x float> @neg_fold_sel_into_masked_load_passthrough_after_load(ptr %ptr, <4 x i1> %mask, <4 x float> %a) {
++; CHECK-LABEL: @neg_fold_sel_into_masked_load_passthrough_after_load(
++; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> zeroinitializer)
++; CHECK-NEXT:    [[PASSTHROUGH:%.*]] = fadd <4 x float> [[A:%.*]], [[A]]
++; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[MASK]], <4 x float> [[LOAD]], <4 x float> [[PASSTHROUGH]]
++; CHECK-NEXT:    ret <4 x float> [[SEL]]
++;
++  %load = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x float> zeroinitializer)
++  %passthrough = fadd <4 x float> %a, %a
++  %sel = select <4 x i1> %mask, <4 x float> %load, <4 x float> %passthrough
++  ret <4 x float> %sel
++}
++
+ declare <8 x float> @llvm.masked.load.v8f32.p0(ptr, i32 immarg, <8 x i1>, <8 x float>)
+ declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
+ declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32 immarg, <4 x i1>, <4 x float>)
