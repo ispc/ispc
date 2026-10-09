@@ -46,6 +46,7 @@ Contents:
 
 * `Recent Changes to ISPC`_
 
+  + `Updating ISPC Programs For Changes In ISPC 1.32.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.31.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.30.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.29.0`_
@@ -90,6 +91,7 @@ Contents:
   + `Basic Command-line Options`_
   + `Selecting The Compilation Target`_
   + `Selecting 32 or 64 Bit Addressing`_
+  + `Stack smash protection (SSP)`_
   + `The Preprocessor`_
   + `Pragma Directives`_
   + `Debugging`_
@@ -103,6 +105,12 @@ Contents:
   + `Simple Compilation Interface`_
   + `Advanced Interface with ISPCEngine`_
   + `Just-In-Time (JIT) Compilation Interface`_
+
+    * `Basic JIT Usage`_
+    * `Runtime Function Registration`_
+    * `JIT Management Functions`_
+    * `JIT Limitations and Considerations`_
+
   + `Compatibility`_
   + `CMake Integration`_
 
@@ -151,6 +159,10 @@ Contents:
     * `Struct Types`_
 
       + `Operators Overloading`_
+
+        * `Binary Operators`_
+        * `Unary Operators`_
+        * `Assignment Operators`_
 
     * `Structure of Array Types`_
 
@@ -257,6 +269,42 @@ of recent changes to the compiler.
 
 .. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/main/docs/ReleaseNotes.txt
 
+
+Updating ISPC Programs For Changes In ISPC 1.32.0
+-------------------------------------------------
+
+Standard Library Changes:
+
+* Parallel bit deposit and extract functions ``pdep32()``, ``pext32()``,
+  ``pdep64()``, and ``pext64()`` have been added to the standard library, with
+  ``uniform`` and ``varying`` overloads operating on ``uint32`` and ``uint64``
+  values. ``pdep`` deposits the low bits of a value into the set-bit positions
+  of a mask, and ``pext`` gathers the bits selected by a mask into the low bits
+  of the result; for example, ``pdep32(5u, 0x52u) == 0x42u``. They are useful,
+  for example, for computing Morton codes. Arguments are converted to the
+  unsigned type of the function, so a negative ``int32`` passed to
+  ``pdep64()`` is sign-extended, and a ``uint64`` passed to ``pdep32()`` is
+  truncated.
+
+New CPU Support:
+
+* ``--cpu=znver6`` has been added for AMD Zen 6 processors (requires ISPC built
+  with LLVM 23 or newer). It maps to the ``avx512icl-x16`` target and enables
+  native ``float16`` arithmetic.
+
+Compiler Switches:
+
+* Dependency files generated with ``-M``/``-MF`` now quote filenames
+  containing spaces and other Make-special characters. A new ``-MQ <target>``
+  option specifies a dependency rule target that is quoted for Make, while
+  ``-MT <target>`` uses the target verbatim.
+
+New Architecture Support:
+
+* PowerPC 64-bit little-endian (ppc64le) support, which is experimental and
+  enabled with the ``PPC64_ENABLED=ON`` CMake option, is now also available
+  for the FreeBSD target OS. It is not included in official ISPC binaries; to
+  use it, build ISPC from source.
 
 Updating ISPC Programs For Changes In ISPC 1.31.0
 -------------------------------------------------
