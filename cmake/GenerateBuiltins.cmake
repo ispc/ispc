@@ -261,9 +261,10 @@ function (get_target_flags os arch out)
             message(FATAL_ERROR "Error")
         endif()
         if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Android")
-            # Building on Android (e.g. Termux, #3887): only bionic headers are available. They keep
-            # asm/ in <arch>-linux-android* folders and reject unversioned triples, so parse them with
-            # an API-versioned Android triple. ISPC replaces the triple when linking the builtins.
+            # Building on Android (e.g. Termux, #3887): only bionic headers are available, in the NDK
+            # layout where asm/ lives under <arch>-linux-android*. Clang searches those folders only for
+            # Android triples, and the API level keeps bionic's availability guards in line with the
+            # device. ISPC replaces the triple when linking the builtins.
             # Android ARM32 uses softfp; the C builtin entry points have no floating-point parameters.
             set(triple ${arch}-unknown-linux-android${android_api})
         endif()
@@ -294,9 +295,8 @@ function (get_target_flags os arch out)
     elseif (NOT WIN32 AND NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Android"
             AND (${os} STREQUAL "android" OR (APPLE AND (${os} STREQUAL "linux" OR ${os} STREQUAL "freebsd"))))
         get_android_ndk_sysroot(${os} android_sysroot)
-        # macOS also uses NDK headers for Unix cross targets. Parse bionic with an
-        # Android triple; ISPC replaces the triple when linking these libraries.
-        set(triple ${arch}-unknown-linux-android${android_api})
+        # Keep the destination triple for macOS Unix cross targets using NDK headers.
+        # Android triples below API 23 redirect stdout to __sF, which glibc does not export.
         if (${arch} STREQUAL "armv8a")
             set(ndk_arch arm-linux-androideabi)
         else()
