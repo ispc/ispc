@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -61,7 +61,7 @@ class DebugModulePassManager {
 
   private:
     llvm::TargetMachine *targetMachine;
-    llvm::PassBuilder pb;
+    std::unique_ptr<llvm::PassBuilder> pb;
     llvm::LoopAnalysisManager lam;
     llvm::FunctionAnalysisManager fam;
     llvm::CGSCCAnalysisManager cgam;
