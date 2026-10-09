@@ -1,0 +1,44 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Termux Build
+
+permissions: read-all
+
+on:
+  pull_request:
+    paths:
+      - 'builtins/**'
+      - 'cmake/**'
+      - 'stdlib/**'
+      - 'CMakeLists.txt'
+      - 'tests/CMakeLists.txt'
+      - 'tests/lit-tests/lit.cfg'
+      - '.github/workflows/termux.yml'
+      - '.github/workflows/scripts/termux-build.sh'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  termux-aarch64:
+    name: Termux AArch64 (BUILD_32BIT_ARM=OFF)
+    # Native AArch64 runner, so the Termux container runs without emulation.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    env:
+      TERMUX_IMAGE: termux/termux-docker:aarch64@sha256:df5f14a6adfc0713df0040b0fa885dd8e72d9455c95df8bc8453fefd970f89e4
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - name: Build ISPC in Termux
+      run: |
+        docker run --rm --security-opt seccomp=unconfined \
+          --volume "${GITHUB_WORKSPACE}:/ispc:ro" \
+          "${TERMUX_IMAGE}" \
+          bash /ispc/.github/workflows/scripts/termux-build.sh /ispc
