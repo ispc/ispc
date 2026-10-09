@@ -323,11 +323,6 @@ function(builtin_to_cpp bit os generic_arch)
         message(FATAL_ERROR "Error")
     endif()
 
-    ispc_arch_enabled(${arch} enabled)
-    if (NOT enabled)
-        return()
-    endif()
-
     # Report supported targets.
     message (STATUS "Enabling target: ${os} / ${arch}")
 
@@ -447,7 +442,9 @@ endfunction()
 
 function (generate_common_builtins)
     if (ISPC_LINUX_TARGET AND ARM_ENABLED)
-        builtin_to_cpp(32 linux arm)
+        if (ARM32_ENABLED)
+            builtin_to_cpp(32 linux arm)
+        endif()
         builtin_to_cpp(64 linux arm)
     endif()
 
@@ -465,7 +462,9 @@ function (generate_common_builtins)
     endif()
 
     if (ISPC_ANDROID_TARGET AND ARM_ENABLED)
-        builtin_to_cpp(32 android arm)
+        if (ARM32_ENABLED)
+            builtin_to_cpp(32 android arm)
+        endif()
         builtin_to_cpp(64 android arm)
     endif()
 
@@ -475,7 +474,9 @@ function (generate_common_builtins)
     endif()
 
     if (ISPC_FREEBSD_TARGET AND ARM_ENABLED)
-        builtin_to_cpp(32 freebsd arm)
+        if (ARM32_ENABLED)
+            builtin_to_cpp(32 freebsd arm)
+        endif()
         builtin_to_cpp(64 freebsd arm)
     endif()
 

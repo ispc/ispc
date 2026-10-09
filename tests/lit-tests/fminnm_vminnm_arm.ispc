@@ -7,7 +7,7 @@
 
 // ARM must be enabled in order to test it.
 // Windows and Mac do not support 32 bit ARM. so test on Linux only (Android assumed to be the same)
-// REQUIRES: ARM_32BIT_ENABLED && LINUX_HOST
+// REQUIRES: ARM32_ENABLED && LINUX_HOST
 
 // CHECK-LABEL: test_max___vyfvyf:
 // CHECK: vmaxnm.f32

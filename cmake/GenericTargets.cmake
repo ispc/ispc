@@ -74,8 +74,12 @@ function (generate_generic_builtins ispc_name)
     if (ARM_ENABLED)
         list(APPEND ARCH_LIST
             "aarch64,64"
-            "arm,32"
         )
+        if (ARM32_ENABLED)
+            list(APPEND ARCH_LIST
+                "arm,32"
+            )
+        endif()
     endif()
 
     if (RISCV_ENABLED AND ISPC_LINUX_TARGET)

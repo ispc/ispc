@@ -7,25 +7,10 @@
 # ispc CommonStdlibBuiltins.cmake
 #
 
-# ARM32 libraries are independent of AArch64's addressing width.
-function(ispc_arch_enabled arch out_enabled)
-    set(enabled TRUE)
-    if (NOT BUILD_32BIT_ARM AND "${arch}" MATCHES "^(arm|armv8a)$")
-        set(enabled FALSE)
-    endif()
-    set(${out_enabled} ${enabled} PARENT_SCOPE)
-endfunction()
-
 # Check if target should be skipped for the given OS/bit combination
 # Sets out_skip to TRUE if target should be skipped, FALSE otherwise
 function(should_skip_target_for_os target os bit out_skip)
     set(skip FALSE)
-    determine_arch_and_os(${target} ${bit} ${os} arch unused_os)
-    ispc_arch_enabled(${arch} enabled)
-    if (NOT enabled)
-        set(${out_skip} TRUE PARENT_SCOPE)
-        return()
-    endif()
     # When cross-compiling on macOS for Unix/Linux targets
     if ("${os}" STREQUAL "unix" AND APPLE AND NOT ISPC_LINUX_TARGET)
         # macOS target supports only x86_64 and aarch64
@@ -99,11 +84,6 @@ endfunction()
 # This function is a common entry to generate stdlib or target builtins via
 # stdlib_to_cpp or target_ll_to_cpp
 function (disp_target_stdlib func ispc_name target bit os CPP_LIST BC_LIST)
-    determine_arch_and_os(${target} ${bit} ${os} arch unused_os)
-    ispc_arch_enabled(${arch} enabled)
-    if (NOT enabled)
-        return()
-    endif()
     if (${func} STREQUAL "stdlib_to_cpp")
         stdlib_to_cpp(${ispc_name} ${target} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
     elseif(${func} STREQUAL "target_ll_to_cpp")
@@ -189,10 +169,15 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
     # ARM targets
     if (ARM_ENABLED)
         if (${func} STREQUAL "stdlib_to_cpp")
+            set(arm_bits)
+            if (ARM32_ENABLED)
+                list(APPEND arm_bits 32)
+            endif()
+            list(APPEND arm_bits 64)
             # Stdlib families are defined in cmake/StdlibFamilies.cmake
             # Use pre-filtered ARM families for efficiency
             # Loop order matches x86 section for consistency
-            foreach (bit 32 64)
+            foreach (bit ${arm_bits})
                 foreach (os ${os_list})
                     # On Windows only 64-bit neon targets are supported
                     if (${os} STREQUAL "windows" AND ${bit} EQUAL 32)
@@ -219,7 +204,7 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
                 foreach (target ${ARM_TARGETS})
                     disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
                     # On Windows only 64-bit neon targets are supported
-                    if (${os} STREQUAL "windows")
+                    if (${os} STREQUAL "windows" OR NOT ARM32_ENABLED)
                         continue()
                     endif()
                     disp_target_stdlib(${func} ${ispc_name} ${target} 32 ${os} ${CPP_LIST} ${BC_LIST})
@@ -283,10 +268,6 @@ endfunction()
 
 # Generate bitcode and corresponding C++ wrapper files for generic targets.
 function(generate_generic ispc_name target arch bit os component)
-    ispc_arch_enabled(${arch} enabled)
-    if (NOT enabled)
-        return()
-    endif()
     set(include ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/include)
 
     # Handle OS-specific settings

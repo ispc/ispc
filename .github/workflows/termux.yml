@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   termux-aarch64:
-    name: Termux AArch64 (BUILD_32BIT_ARM=OFF)
+    name: Termux AArch64 (ARM32_ENABLED=OFF)
     # Native AArch64 runner, so the Termux container runs without emulation.
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120

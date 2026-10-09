@@ -12,7 +12,7 @@
 // RUN: %{ispc} --target=generic-i32x16 --arch=arm --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I32X16
 // RUN: %{ispc} --target=generic-i64x4 --arch=arm --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I64X4
 
-// REQUIRES: ARM_32BIT_ENABLED && LINUX_HOST
+// REQUIRES: ARM32_ENABLED && LINUX_HOST
 
 // CHECK-I1X4: define <4 x i32> @bar___vyi(<4 x i32> returned %x, <4 x i1> %__mask)
 // CHECK-I1X8: define <8 x i32> @bar___vyi(<8 x i32> returned %x, <8 x i1> %__mask)
