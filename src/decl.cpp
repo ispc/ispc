@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -180,12 +180,20 @@ static const Type *lApplyTypeQualifiers(int typeQualifiers, const Type *type, So
             type = unsignedType;
         } else {
             const Type *resolvedType = type->ResolveUnboundVariability(Variability::Varying);
+            if (resolvedType == nullptr) {
+                AssertPos(pos, m->errorCount > 0);
+                return nullptr;
+            }
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.", resolvedType->GetString().c_str());
         }
     }
 
     if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false) {
         const Type *resolvedType = type->ResolveUnboundVariability(Variability::Varying);
+        if (resolvedType == nullptr) {
+            AssertPos(pos, m->errorCount > 0);
+            return nullptr;
+        }
         Error(pos,
               "\"signed\" qualifier is illegal with non-integer type "
               "\"%s\".",

@@ -1659,9 +1659,16 @@ specifier_qualifier_list
                 if (t)
                     $$ = t;
                 else {
-                    Error(@1, "Can't apply \"signed\" qualifier to \"%s\" type.",
-                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
-                    $$ = $2;
+                    const Type *resolvedType = $2->ResolveUnboundVariability(Variability::Varying);
+                    if (resolvedType == nullptr) {
+                        AssertPos(@1, m->errorCount > 0);
+                        $$ = nullptr;
+                    }
+                    else {
+                        Error(@1, "Can't apply \"signed\" qualifier to \"%s\" type.",
+                              resolvedType->GetString().c_str());
+                        $$ = $2;
+                    }
                 }
             }
             else if ($1 == TYPEQUAL_UNSIGNED) {
@@ -1669,9 +1676,16 @@ specifier_qualifier_list
                 if (t)
                     $$ = t;
                 else {
-                    Error(@1, "Can't apply \"unsigned\" qualifier to \"%s\" type. Ignoring.",
-                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
-                    $$ = $2;
+                    const Type *resolvedType = $2->ResolveUnboundVariability(Variability::Varying);
+                    if (resolvedType == nullptr) {
+                        AssertPos(@1, m->errorCount > 0);
+                        $$ = nullptr;
+                    }
+                    else {
+                        Error(@1, "Can't apply \"unsigned\" qualifier to \"%s\" type. Ignoring.",
+                              resolvedType->GetString().c_str());
+                        $$ = $2;
+                    }
                 }
             }
             else if ($1 == TYPEQUAL_INLINE) {
@@ -3461,7 +3475,13 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             while (funcDecl && funcDecl->kind != DK_FUNCTION) {
                 funcDecl = funcDecl->child;
             }
-            Assert(funcDecl);
+            // A function type that comes from a typedef has no DK_FUNCTION
+            // declarator, so there are no parameter declarations to use.
+            if (funcDecl == nullptr) {
+                Error(decl->pos, "Declaring function \"%s\" with a typedef'd function type is not supported.",
+                      decl->name.c_str());
+                return;
+            }
 
             // For pointer return type we have attributeList attached to decl
             // (DK_POINTER) whereas we need to pass DK_FUNCTION declarator to

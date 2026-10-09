@@ -2747,6 +2747,13 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         elType = ptrType->GetBaseType();
     }
 
+    // Invalid reference targets can survive error recovery. Stop before using
+    // the pointee type to construct a load.
+    if (elType == nullptr) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return nullptr;
+    }
+
     if (CastType<UndefinedStructType>(ptrType->GetBaseType())) {
         Error(currentPos, "Unable to load to undefined struct type \"%s\".",
               ptrType->GetBaseType()->GetString().c_str());
