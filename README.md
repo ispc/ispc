@@ -139,6 +139,12 @@ platforms, please refer to our
 [ISPC Development Guide](https://github.com/ispc/ispc/wiki/ISPC-Development-Guide)
 for build and test instructions.
 
+On AArch64 Termux installations without ARM32 development headers, configure with
+`-DBUILD_32BIT_ARM=OFF` to omit 32-bit ARM builtin and standard libraries. This
+option defaults to `ON` and preserves AArch64 support with either addressing
+width. `ISPC_TARGETS` is an internal ISA list, not an architecture/OS build
+selector.
+
 ## Additional Resources
 
 Latest `ispc` binaries corresponding to `main` branch can be downloaded from

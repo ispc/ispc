@@ -4,7 +4,7 @@
 // RUN: %{ispc} %s --arch=aarch64 --target=neon-i32x4 --target-os=linux --nostdlib --opt=disable-fma --emit-asm -o - | FileCheck %s --check-prefix=AARCH64-NO-FMA --implicit-check-not=fmadd
 // RUN: %{ispc} %s --arch=arm --target=neon-i32x4 --target-os=linux --nostdlib --emit-llvm-text -o - | FileCheck %s --check-prefix=IR --implicit-check-not='"float-abi"' --implicit-check-not=contract
 // RUN: %{ispc} %s --arch=aarch64 --target=neon-i32x4 --target-os=linux --nostdlib --emit-llvm-text -o - | FileCheck %s --check-prefix=IR --implicit-check-not='"float-abi"' --implicit-check-not=contract
-// REQUIRES: ARM_ENABLED && LINUX_HOST
+// REQUIRES: ARM_32BIT_ENABLED && ARM_ENABLED && LINUX_HOST
 
 // Exported uniform floats must use floating-point registers for arguments
 // and the return value. LLVM 24 requires a "float-abi" module flag for this,
