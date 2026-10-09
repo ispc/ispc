@@ -1,7 +1,7 @@
 // pdep/pext compile on Xe targets, which define the software builtins in
 // their separate builtin library.
-// RUN: %{ispc} %s --target=xehpg-x8 --device=acm-g10 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not="declare {{.*}}@__pdep_" --implicit-check-not="declare {{.*}}@__pext_"
-// RUN: %{ispc} %s --target=xe2hpg-x16 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not="declare {{.*}}@__pdep_" --implicit-check-not="declare {{.*}}@__pext_"
+// RUN: %{ispc} %s --target=xehpg-x8 --device=acm-g10 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not="{{llvm.(x86.bmi|pdep|pext)}}" --implicit-check-not="declare {{.*}}@__pdep_" --implicit-check-not="declare {{.*}}@__pext_"
+// RUN: %{ispc} %s --target=xe2hpg-x16 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not="{{llvm.(x86.bmi|pdep|pext)}}" --implicit-check-not="declare {{.*}}@__pdep_" --implicit-check-not="declare {{.*}}@__pext_"
 // RUN: %{ispc} %s --target=xehpg-x8 --device=acm-g10 --emit-spirv -o %t.spv
 
 // REQUIRES: XE_ENABLED

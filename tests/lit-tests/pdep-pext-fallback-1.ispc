@@ -1,19 +1,9 @@
 // On x86 targets without BMI2, pdep/pext compile to software code with no
 // BMI2 intrinsics and no remaining builtin calls or declarations.
-// RUN: %{ispc} %s --target=sse2-i32x4 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=sse4.1-i8x16 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=sse4.2-i32x4 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=avx1-i32x8 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=avx1-i64x4 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=generic-i1x16 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=generic-i32x8 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=sse2-i32x4 -O2 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=sse4.1-i8x16 -O2 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=sse4.2-i32x4 -O2 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=avx1-i32x8 -O2 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=avx1-i64x4 -O2 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=generic-i1x16 -O2 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
-// RUN: %{ispc} %s --target=generic-i32x8 -O2 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not=llvm.x86.bmi --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
+// RUN: %{ispc} %s --target=sse2-i32x4 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not="{{llvm.(x86.bmi|pdep|pext)}}" --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
+// RUN: %{ispc} %s --target=sse4.2-i32x4 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not="{{llvm.(x86.bmi|pdep|pext)}}" --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
+// RUN: %{ispc} %s --target=avx1-i32x8 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not="{{llvm.(x86.bmi|pdep|pext)}}" --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
+// RUN: %{ispc} %s --target=generic-i32x8 -O0 --nowrap --emit-llvm-text -o - | FileCheck %s --implicit-check-not="{{llvm.(x86.bmi|pdep|pext)}}" --implicit-check-not=@__pdep_ --implicit-check-not=@__pext_
 
 // REQUIRES: X86_ENABLED
 

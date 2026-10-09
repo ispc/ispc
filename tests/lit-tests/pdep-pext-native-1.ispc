@@ -1,6 +1,6 @@
 // pdep32/pext32/pdep64/pext64 with dynamic operands use the native BMI2
-// instructions on every target in the AVX2 and AVX-512 inheritance chains,
-// at both -O0 and -O2.
+// instructions on the AVX2, AVX2-VNNI, SKX and ICL targets, at both -O0 and
+// -O2. SPR and GNR are covered by pdep-pext-native-4.ispc.
 // RUN: %{ispc} %s --target=avx2-i32x4 --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2-i32x8 --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2-i32x16 --nowrap --emit-asm -o - | FileCheck %s
@@ -20,16 +20,6 @@
 // RUN: %{ispc} %s --target=avx512icl-x16 --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512icl-x32 --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512icl-x64 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512spr-x4 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512spr-x8 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512spr-x16 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512spr-x32 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512spr-x64 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512gnr-x4 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512gnr-x8 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512gnr-x16 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512gnr-x32 --nowrap --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512gnr-x64 --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512skx-x16-nozmm --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512icl-x16-nozmm --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2-i32x8 -O0 --nowrap --emit-asm -o - | FileCheck %s
