@@ -9,6 +9,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
+ENV ANDROID_NDK_HOME=/usr/local/share/android-ndk
+
 ARG LTO=OFF
 
 # !!! Make sure that your docker config provides enough memory to the container,
@@ -17,7 +19,7 @@ ARG LTO=OFF
 # Packages
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-8 build-essential \
     libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick m4 bison flex \
-    libc6-dev-i386 cpio lsb-core wget gnupg netcat-openbsd libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates && \
+    libc6-dev-i386 libc6-dev-armhf-cross libc6-dev-arm64-cross cpio lsb-core wget gnupg netcat-openbsd libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates && \
     apt-get --no-install-recommends install -y ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
@@ -62,6 +64,7 @@ RUN git clone https://github.com/$REPO.git ispc
 WORKDIR /home/src/ispc
 # Build Clang/LLVM, XE dependencies and then ISPC.
 RUN git checkout $SHA && \
+    python3 scripts/install_cross_headers.py && \
     cmake superbuild \
         -B build \
         --preset os \

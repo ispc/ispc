@@ -17,7 +17,7 @@ BUILD_DIR="$HOME/build"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -y -o Dpkg::Options::=--force-confnew upgrade
-apt-get -y install bison clang cmake flex llvm-tools m4 ninja python
+apt-get -y install bison clang cmake flex git llvm-tools m4 ninja python
 
 uname -a
 clang --version
@@ -38,4 +38,6 @@ test ! -e "$BUILD_DIR/share/ispc/builtins_cpp_32_linux_armv8a.bc"
 test -e "$BUILD_DIR/share/ispc/builtins_cpp_64_linux_aarch64.bc"
 
 "$BUILD_DIR/bin/ispc" --version
-TEST="$WORK_DIR/tests/lit-tests/3887-no-arm32.ispc" cmake --build "$BUILD_DIR" --target check-one
+# With bionic headers resolved, the C builtins are complete and the whole
+# lit suite applies, including the #3887 builtin-definition checks.
+cmake --build "$BUILD_DIR" --target check-all

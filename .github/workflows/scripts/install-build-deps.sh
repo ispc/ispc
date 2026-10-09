@@ -40,7 +40,7 @@ esac
 # Detect system architecture
 if [[ $(uname -m) =~ "x86" ]]; then
     # Use versioned, matched toolchain; avoid unversioned metas
-    CROSS_LIBS_BASE=("libc6-dev-i386" "g++-multilib" "lib32stdc++6" "binutils-riscv64-linux-gnu" "gcc-${RISCV_GCC_MAJOR}-cross-base")
+    CROSS_LIBS_BASE=("libc6-dev-i386" "g++-multilib" "lib32stdc++6" "libc6-dev-armhf-cross" "libc6-dev-arm64-cross" "binutils-riscv64-linux-gnu" "gcc-${RISCV_GCC_MAJOR}-cross-base")
     CROSS_LIBS_RISCV=("gcc-${RISCV_GCC_MAJOR}-riscv64-linux-gnu" "g++-${RISCV_GCC_MAJOR}-riscv64-linux-gnu")
 else
     CROSS_LIBS_BASE=("libc6-dev-armhf-cross")

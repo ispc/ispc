@@ -81,6 +81,9 @@ SHELL ["/bin/bash", "-c"]
 
 RUN dnf -y update && dnf install -y m4 bison flex && dnf clean -y all
 
+RUN python3.8 scripts/install_cross_headers.py --linux-arm-headers
+ENV ANDROID_NDK_HOME=/usr/local/share/android-ndk
+
 # Create new non-root user and switch to it
 RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
     chown -R ispc_user:ispc_user /usr
