@@ -2745,6 +2745,10 @@ Expr *BinaryExpr::Optimize() {
         // transform x / y -> x * rcp(y)
         if (op == Div) {
             const Type *type1 = arg1->GetType();
+            if (type1 == nullptr) {
+                AssertPos(pos, m->errorCount > 0);
+                return nullptr;
+            }
             if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat16) ||
                 Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat16) ||
                 Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
@@ -2764,12 +2768,12 @@ Expr *BinaryExpr::Optimize() {
                         return ::TypeCheckAndOptimize(ret);
                     }
                 }
-            }
 
-            Warning(pos,
-                    "rcp(%s) not found from stdlib.  Can't apply "
-                    "fast-math rcp optimization.",
-                    type1->GetString().c_str());
+                Warning(pos,
+                        "rcp(%s) not found from stdlib.  Can't apply "
+                        "fast-math rcp optimization.",
+                        type1->GetString().c_str());
+            }
         }
     }
 
@@ -3777,12 +3781,22 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
 
-    const Type *testType = test->GetType()->GetAsNonConstType();
+    const Type *testType = test->GetType();
+    const Type *type = expr1->GetType();
+    if (testType == nullptr || type == nullptr || expr2->GetType() == nullptr) {
+        AssertPos(pos, m->errorCount > 0);
+        return nullptr;
+    }
+    testType = testType->GetAsNonConstType();
     // This should be taken care of during typechecking
     AssertPos(pos, Type::Equal(testType->GetBaseType(), AtomicType::UniformBool) ||
                        Type::Equal(testType->GetBaseType(), AtomicType::VaryingBool));
 
-    const Type *type = expr1->GetType();
+    llvm::Value *testVal = test->GetValue(ctx);
+    if (testVal == nullptr) {
+        AssertPos(pos, m->errorCount > 0);
+        return nullptr;
+    }
 
     if (Type::Equal(testType, AtomicType::UniformBool)) {
         // Simple case of a single uniform bool test expression; we just
@@ -3790,7 +3804,6 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // careful to evaluate just the one of the expressions that we need
         // the value of so that if the other one has side-effects or
         // accesses invalid memory, it doesn't execute.
-        llvm::Value *testVal = test->GetValue(ctx);
         llvm::BasicBlock *testTrue = ctx->CreateBasicBlock("select_true", ctx->GetCurrentBasicBlock());
         llvm::BasicBlock *testFalse = ctx->CreateBasicBlock("select_false", testTrue);
         llvm::BasicBlock *testDone = ctx->CreateBasicBlock("select_done", testFalse);
@@ -3798,6 +3811,10 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
 
         ctx->SetCurrentBasicBlock(testTrue);
         llvm::Value *expr1Val = expr1->GetValue(ctx);
+        if (expr1Val == nullptr) {
+            AssertPos(pos, m->errorCount > 0);
+            return nullptr;
+        }
         // Note that truePred won't be necessarily equal to testTrue, in
         // case the expr1->GetValue() call changes the current basic block.
         llvm::BasicBlock *truePred = ctx->GetCurrentBasicBlock();
@@ -3805,6 +3822,10 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
 
         ctx->SetCurrentBasicBlock(testFalse);
         llvm::Value *expr2Val = expr2->GetValue(ctx);
+        if (expr2Val == nullptr) {
+            AssertPos(pos, m->errorCount > 0);
+            return nullptr;
+        }
         // See comment above truePred for why we can't just assume we're in
         // the testFalse basic block here.
         llvm::BasicBlock *falsePred = ctx->GetCurrentBasicBlock();
@@ -3817,7 +3838,6 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         return ret;
     } else if (CastType<VectorType>(testType) == nullptr) {
         // the test is a varying bool type
-        llvm::Value *testVal = test->GetValue(ctx);
         AssertPos(pos, testVal->getType() == LLVMTypes::MaskType);
         llvm::Value *oldMask = ctx->GetInternalMask();
         llvm::Value *fullMask = ctx->GetFullMask();
@@ -3864,7 +3884,6 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // FIXME? Short-circuiting doesn't work in the case of
         // vector-valued test expressions.  (We could also just prohibit
         // these and place the issue in the user's hands...)
-        llvm::Value *testVal = test->GetValue(ctx);
         llvm::Value *expr1Val = expr1->GetValue(ctx);
         llvm::Value *expr2Val = expr2->GetValue(ctx);
 
@@ -8903,7 +8922,9 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
 SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p) : Expr(p, SizeOfExprID), expr(e), type(nullptr) {}
 
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p) : Expr(p, SizeOfExprID), expr(nullptr), type(t) {
-    type = type->ResolveUnboundVariability(Variability::Varying);
+    if (type != nullptr) {
+        type = type->ResolveUnboundVariability(Variability::Varying);
+    }
 }
 
 llvm::Value *SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
@@ -8957,16 +8978,25 @@ void SizeOfExpr::Print(Indent &indent) const {
 }
 
 Expr *SizeOfExpr::TypeCheck() {
-    if (type && type->IsDependent()) {
+    const Type *t = expr ? expr->GetType() : type;
+    if (t != nullptr) {
+        t = t->GetReferenceTarget();
+    }
+    if (t == nullptr) {
+        AssertPos(pos, m->errorCount > 0);
+        return nullptr;
+    }
+
+    if (t->IsDependent()) {
         return this;
     }
 
     // Can't compute the size of a struct without a definition
-    if (type != nullptr && CastType<UndefinedStructType>(type) != nullptr) {
+    if (CastType<UndefinedStructType>(t) != nullptr) {
         Error(pos,
               "Can't compute the size of declared but not defined "
               "struct type \"%s\".",
-              type->GetString().c_str());
+              t->GetString().c_str());
         return nullptr;
     }
 
@@ -8981,7 +9011,10 @@ SizeOfExpr *SizeOfExpr::Instantiate(TemplateInstantiation &templInst) const {
     if (expr != nullptr) {
         return new SizeOfExpr(expr->Instantiate(templInst), pos);
     }
-    Assert(type != nullptr);
+    if (type == nullptr) {
+        AssertPos(pos, m->errorCount > 0);
+        return nullptr;
+    }
     return new SizeOfExpr(type->ResolveDependence(templInst), pos);
 }
 

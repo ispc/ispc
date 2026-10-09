@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -3266,7 +3266,7 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     // that doesn't make sense
     const Function *func = ctx->GetFunction();
     const Type *returnType = func->GetReturnType();
-    if (IsReferenceType(returnType) == true && IsReferenceType(expr->GetType()) == false) {
+    if (expr != nullptr && IsReferenceType(returnType) == true && IsReferenceType(expr->GetType()) == false) {
         const Type *lvType = expr->GetLValueType();
         if (lvType == nullptr) {
             Error(expr->pos,
