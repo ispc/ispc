@@ -3,7 +3,7 @@
 // RUN: %{ispc} %s --arch=arm --target=neon-i32x4 --cpu=cortex-a55 --emit-asm  -o - | FileCheck %s
 // RUN: %{ispc} %s --arch=arm --target=neon-i32x8 --cpu=cortex-a55 --emit-asm  -o - | FileCheck %s
 
-// REQUIRES: ARM_ENABLED && LINUX_HOST
+// REQUIRES: ARM32_ENABLED && LINUX_HOST
 
 // CHECK-LABEL: dot4add_u8u8___
 // CHECK: udot

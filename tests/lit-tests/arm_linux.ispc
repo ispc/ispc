@@ -12,7 +12,7 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=arm --cpu=cortex-a57 --print-target | FileCheck %s -check-prefix=CHECK_ARM_A57
 
 // arm supported on Linux only
-// REQUIRES: ARM_ENABLED && LINUX_HOST
+// REQUIRES: ARM32_ENABLED && LINUX_HOST
 
 // CHECK_DEFAULT: Triple: aarch64-unknown-linux-gnu
 // CHECK_DEFAULT: CPU: {{cortex-a*}}
