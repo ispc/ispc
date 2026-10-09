@@ -140,14 +140,15 @@ DebugModulePassManager::DebugModulePassManager(llvm::Module &M, int optLevel) : 
         TimePasses.registerCallbacks(PIC);
     }
     // Create the new pass manager builder using our target machine.
-    pb = llvm::PassBuilder(targetMachine, llvm::PipelineTuningOptions(), std::nullopt, &PIC);
+    // llvm::PassBuilder is not assignable in newer LLVM, so construct it in place.
+    pb = std::make_unique<llvm::PassBuilder>(targetMachine, llvm::PipelineTuningOptions(), std::nullopt, &PIC);
 
     // Register all the basic analyses with the managers.
-    pb.registerModuleAnalyses(mam);
-    pb.registerCGSCCAnalyses(cgam);
-    pb.registerFunctionAnalyses(fam);
-    pb.registerLoopAnalyses(lam);
-    pb.crossRegisterProxies(lam, fam, cgam, mam);
+    pb->registerModuleAnalyses(mam);
+    pb->registerCGSCCAnalyses(cgam);
+    pb->registerFunctionAnalyses(fam);
+    pb->registerLoopAnalyses(lam);
+    pb->crossRegisterProxies(lam, fam, cgam, mam);
 
     SI.registerCallbacks(PIC, &mam);
 
