@@ -12,6 +12,8 @@ ARG SHA=main
 ARG IGC_VER=15985.7
 ARG CR_VER=24.05.28454.6
 ARG CR_VER_SUFFIX=28454.6
+ENV ANDROID_NDK_HOME=/usr/local/share/android-ndk
+
 ARG LTO
 
 # !!! Make sure that your docker config provides enough memory to the container,
@@ -20,7 +22,7 @@ ARG LTO
 # Packages
 # Ubuntu 22.04 provides TBB 2021.x (libtbb.so.12) which is compatible with LLVM 21+
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-12 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick \
-    m4 bison flex libc6-dev-i386 cpio lsb-core wget netcat-openbsd libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates ninja-build libtbb-dev && \
+    m4 bison flex libc6-dev-i386 libc6-dev-armhf-cross libc6-dev-arm64-cross cpio lsb-core wget netcat-openbsd libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates ninja-build libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
@@ -58,6 +60,7 @@ RUN git clone https://github.com/$REPO.git ispc
 WORKDIR /home/src/ispc
 # Build Clang/LLVM, XE dependencies and then ISPC.
 RUN git checkout $SHA && \
+    python3 scripts/install_cross_headers.py && \
     cmake superbuild \
         -B build \
         --preset os \

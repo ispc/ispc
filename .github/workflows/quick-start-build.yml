@@ -28,7 +28,8 @@ jobs:
     - name: Install prerequisites
       run: |
         sudo apt-get update
-        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 libtbb-dev g++-multilib
+        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 libtbb-dev g++-multilib \
+          libc6-dev-armhf-cross libc6-dev-arm64-cross
 
     - name: Build ISPC
       run: ./scripts/quick-start-build.py
@@ -54,6 +55,29 @@ jobs:
         pacman-key --populate archlinux
         pacman -Su --noconfirm
         pacman -S --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
+
+    - name: Install ARM cross-compilation headers
+      shell: bash
+      run: |
+        pacman -S --noconfirm aarch64-linux-gnu-glibc
+        # Arch provides AArch64 headers, but no ARM32 glibc package. Extract Debian's
+        # architecture-specific headers into /usr/arm-linux-gnueabihf/include.
+        cross_header_dir="$(mktemp -d)"
+        cd "$cross_header_dir"
+        # Snapshot file URLs keep these packages available across Debian updates.
+        curl --fail --location --retry 3 \
+          https://snapshot.debian.org/file/5201855e65fce1b89f9deecfd04849e7cea358bc \
+          --output libc6-dev-armhf-cross_2.41-11cross1_all.deb
+        curl --fail --location --retry 3 \
+          https://snapshot.debian.org/file/42675270308252467348a7493d595dc46aa0f500 \
+          --output linux-libc-dev-armhf-cross_6.12.38-1cross1_all.deb
+        sha256sum --check <<'EOF'
+        9f0c3d473edb51883949fb4fd61929110aa3e5d6f4a88782aaa95c9ae65031e0  libc6-dev-armhf-cross_2.41-11cross1_all.deb
+        bf6fa2d938e493a84c34086219b3e3e391aba885d4fb349022eda9fdafa36272  linux-libc-dev-armhf-cross_6.12.38-1cross1_all.deb
+        EOF
+        for cross_header_package in *.deb; do
+          bsdtar -xOf "$cross_header_package" data.tar.xz | bsdtar -xf - -C /
+        done
 
     - name: Build ISPC
       run: ./scripts/quick-start-build.py
