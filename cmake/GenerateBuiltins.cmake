@@ -337,7 +337,7 @@ function(builtin_to_cpp bit os generic_arch)
 
     get_target_flags(${os} ${arch} target_flags)
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -nostdinc++ --std=gnu++17
+        -I${CMAKE_SOURCE_DIR} -m${bit} -nostdinc++ -S -emit-llvm --std=gnu++17
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
@@ -349,7 +349,8 @@ function(builtin_to_cpp bit os generic_arch)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${CLANGPP_EXECUTABLE} ${flags} -c -emit-llvm ${input} -o ${bc}
+        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
+            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input} ${BUILTINS_C_CPU_HEADER_DEPS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
