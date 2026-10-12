@@ -205,7 +205,15 @@ function (get_target_flags os arch out)
     if (${os} STREQUAL "windows")
         set(triple ${arch}-pc-win32)
     elseif (${os} STREQUAL "linux")
-        if (${arch} STREQUAL "i686" OR ${arch} STREQUAL "x86_64" OR ${arch} STREQUAL "aarch64")
+        if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+            # ISPC that runs on Android (built natively in Termux or cross-compiled) targets
+            # Linux, but the C library is bionic. Use the Android triple, so clang picks up the
+            # bionic headers including the architecture specific ones (e.g. asm/types.h). The
+            # bionic headers reject unversioned triples; API level 24 is the one Termux targets.
+            # 32-bit Android uses softfp, but the C builtin entry points have no floating-point
+            # parameters, so this is compatible with the hard-float ABI of ISPC code.
+            set(triple ${arch}-unknown-linux-android24)
+        elseif (${arch} STREQUAL "i686" OR ${arch} STREQUAL "x86_64" OR ${arch} STREQUAL "aarch64")
             set(triple ${arch}-unknown-linux-gnu)
             set(debian_triple ${arch}-linux-gnu)
         elseif (${arch} STREQUAL "armv8a")
@@ -327,8 +335,10 @@ function(builtin_to_cpp bit os generic_arch)
     message (STATUS "Enabling target: ${os} / ${arch}")
 
     get_target_flags(${os} ${arch} target_flags)
+    # builtins-c-cpu.cpp doesn't depend on the C++ library (see builtins/array.hpp), so
+    # -nostdinc++ keeps the build independent of the target's C++ library headers.
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm --std=gnu++17
+        -I${CMAKE_SOURCE_DIR} -m${bit} -nostdinc++ -S -emit-llvm --std=gnu++17
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
