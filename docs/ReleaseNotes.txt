@@ -1,3 +1,116 @@
+=== v1.32.0 === (13 October 2026)
+
+ISPC release featuring full backend support for AVX10.2 and APX on the
+`avx10.2dmr` and `avx10.2nvl` targets, new parallel bit deposit/extract
+functions in the standard library, and several bug fixes. Based on a patched
+LLVM 23.1.2.
+
+AVX10.2 and APX Support:
+
+* ISPC is now based on the LLVM 23.1.2, which provides full backend
+  support for AVX10.2 and APX (Advanced Performance Extensions). Code generated
+  for the `avx10.2dmr` (Diamond Rapids) and `avx10.2nvl` (Nova Lake) targets
+  now benefits from complete AVX10.2 and APX code generation.
+
+Standard Library:
+
+* Parallel bit deposit and extract functions `pdep32()`, `pext32()`,
+  `pdep64()`, and `pext64()` have been added to the standard library, with
+  `uniform` and `varying` overloads operating on `uint32` and `uint64` values
+  (#1243). `pdep` deposits the low bits of a value into the set-bit positions
+  of a mask, and `pext` gathers the bits selected by a mask into the low bits of
+  the result. They use native BMI2 instructions where available and are
+  specialized for compile-time constant masks, so common patterns such as Morton
+  code computation compile to short shift/mask sequences.
+
+New CPU Support:
+
+* `--cpu=znver6` has been added for AMD Zen 6 processors.
+
+Dispatcher:
+
+* As a reminder, the multi-target runtime dispatcher selects the `avx10.2dmr`,
+  `avx10.2nvl`, and AMX-capable variants based on CPUID only. It does not check
+  whether the OS has enabled APX or AMX state:
+  * The AMX-capable variants (`avx512spr`, `avx512gnr`, `avx10.2dmr`) are
+    selected whenever the CPU supports AMX. The application is responsible for
+    checking OS support and requesting AMX permission before executing AMX
+    instructions.
+  * The `avx10.2dmr` and `avx10.2nvl` variants are compiled with APX enabled by
+    default. If the application may run on an OS without APX support, disable
+    APX with `--opt=disable-apx`. The dispatch functions themselves are always
+    compiled without APX.
+  * When `--target=host` detects a Nova Lake or Diamond Rapids CPU on a system
+    where the OS has not enabled APX state, ISPC keeps the detected target but
+    disables APX code generation.
+
+Compiler Switches:
+
+* Dependency files generated with `-M`/`-MF` now escape spaces and other
+  Make-special characters in filenames, making them compatible with Make and
+  Ninja (#3743). A new `-MQ <target>` option specifies a dependency rule
+  target that is quoted for Make, while `-MT <target>` uses the target verbatim.
+
+ISPC Runtime:
+
+* New `ispcrtLoadModuleFromMemory()` and `ispcrtLoadModuleFromMemoryWithOptions()`
+  APIs, along with matching `ispcrt::Module` constructors, allow loading a GPU
+  module from an in-memory SPIR-V (or zebin) buffer (#3900).
+
+Bug Fixes:
+
+* Fixed a miscompile where `--` on a varying unsigned integer became a no-op on
+  AArch64 hosts and triggered an assertion for `uint64` (#3882).
+
+* Fixed an AVX-512 miscompile in ISPC 1.31.0 where a masked load was sunk
+  below an aliasing masked store at `-O1` and `-O2`, breaking patterns such as
+  element swaps (#3891).
+
+* Fixed a compiler crash when loading a `bool` short vector through a
+  reference, for example passing a `const bool<3>&` argument to a function
+  that takes `bool<3>` by value (#3893).
+
+* Fixed a compiler assertion failure in gather/scatter index analysis with
+  large constant offsets or shift amounts, for example when a gather index is
+  derived from 64-bit hash computations (#3881).
+
+Build System:
+
+* Updated default LLVM version to the released LLVM 23.1.2.
+* Added support for building with LLVM 24 (trunk).
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/25.13.33276.16
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel Arc(TM)
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.8250
+   https://www.intel.com/content/www/us/en/download/785597/869290/intel-arc-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - OpenCL(TM) Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/e65dde2
+ - https://github.com/intel/vc-intrinsics/commit/e2bb84f
+ - https://github.com/oneapi-src/level-zero/commit/v1.20.2
+ - https://github.com/llvm/llvm-project/commit/85ac560 (llvmorg-23.1.2) +
+   patches from llvm_patches folder
+
 === v1.31.0 === (25 June 2026)
 
 ISPC release featuring new avx10.2nvl targets for Intel Nova Lake processors,
