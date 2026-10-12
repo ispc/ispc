@@ -17,7 +17,7 @@ BUILD_DIR="$HOME/build"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -y -o Dpkg::Options::=--force-confnew upgrade
-apt-get -y install bison clang cmake flex llvm-tools m4 ninja python
+apt-get -y install bison clang cmake flex git llvm-tools m4 ninja python
 
 uname -a
 clang --version
