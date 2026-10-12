@@ -174,8 +174,8 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
             # Loop order matches x86 section for consistency
             foreach (bit 32 64)
                 foreach (os ${os_list})
-                    # On Windows only 64-bit neon targets are supported
-                    if (${os} STREQUAL "windows" AND ${bit} EQUAL 32)
+                    # 32-bit neon targets require ARM32_ENABLED and are not supported on Windows
+                    if (${bit} EQUAL 32 AND (NOT ARM32_ENABLED OR ${os} STREQUAL "windows"))
                         continue()
                     endif()
 
@@ -198,8 +198,8 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
             foreach (os ${os_list})
                 foreach (target ${ARM_TARGETS})
                     disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
-                    # On Windows only 64-bit neon targets are supported
-                    if (${os} STREQUAL "windows")
+                    # 32-bit neon targets require ARM32_ENABLED and are not supported on Windows
+                    if (NOT ARM32_ENABLED OR ${os} STREQUAL "windows")
                         continue()
                     endif()
                     disp_target_stdlib(${func} ${ispc_name} ${target} 32 ${os} ${CPP_LIST} ${BC_LIST})

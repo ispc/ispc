@@ -441,8 +441,11 @@ function (generate_target_builtins)
 endfunction()
 
 function (generate_common_builtins)
-    if (ISPC_LINUX_TARGET AND ARM_ENABLED)
+    if (ISPC_LINUX_TARGET AND ARM32_ENABLED)
         builtin_to_cpp(32 linux arm)
+    endif()
+
+    if (ISPC_LINUX_TARGET AND ARM_ENABLED)
         builtin_to_cpp(64 linux arm)
     endif()
 
@@ -459,8 +462,11 @@ function (generate_common_builtins)
         builtin_to_cpp(64 linux x86)
     endif()
 
-    if (ISPC_ANDROID_TARGET AND ARM_ENABLED)
+    if (ISPC_ANDROID_TARGET AND ARM32_ENABLED)
         builtin_to_cpp(32 android arm)
+    endif()
+
+    if (ISPC_ANDROID_TARGET AND ARM_ENABLED)
         builtin_to_cpp(64 android arm)
     endif()
 
@@ -469,8 +475,11 @@ function (generate_common_builtins)
         builtin_to_cpp(64 android x86)
     endif()
 
-    if (ISPC_FREEBSD_TARGET AND ARM_ENABLED)
+    if (ISPC_FREEBSD_TARGET AND ARM32_ENABLED)
         builtin_to_cpp(32 freebsd arm)
+    endif()
+
+    if (ISPC_FREEBSD_TARGET AND ARM_ENABLED)
         builtin_to_cpp(64 freebsd arm)
     endif()
 
