@@ -37,10 +37,12 @@ env:
 jobs:
   claude:
     # Only run in the main ispc/ispc repo where the secret is available.
+    # A non-empty prompt comes only from workflow_dispatch or a workflow_call
+    # caller. A called workflow inherits the caller's event (e.g. workflow_run),
+    # so github.event_name is never 'workflow_call' and can't be used here.
     if: |
       github.repository == 'ispc/ispc' &&
-      (github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'workflow_call' ||
+      (inputs.prompt != '' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
         (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
@@ -64,30 +66,27 @@ jobs:
 
       # Building LLVM + ISPC adds ~2-5 min and ~500MB to the run. Only do it for
       # tasks that actually need to compile: a request mentioning "fix" (e.g.
-      # "@claude fix this", "@claude can you fix X"), or the
-      # workflow_dispatch/workflow_call auto-fix chain. Lightweight tasks
-      # (Q&A, code review) skip the build entirely.
+      # "@claude fix this", "@claude can you fix X"), or a prompt-driven
+      # auto-fix run (workflow_dispatch or a workflow_call caller). Lightweight
+      # tasks (Q&A, code review) skip the build entirely.
       - name: Determine if build is needed
         id: build_check
         env:
-          EVENT_NAME: ${{ github.event_name }}
+          PROMPT_SET: ${{ inputs.prompt != '' }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           REVIEW_BODY: ${{ github.event.review.body }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           needed=false
-          case "$EVENT_NAME" in
-            workflow_dispatch|workflow_call)
-              needed=true ;;
-            *)
-              # The job-level if: already guarantees an "@claude" mention, so a
-              # mention of "fix" anywhere in the triggering text means a build
-              # task rather than Q&A/review.
-              if printf '%s\n%s\n%s' "$COMMENT_BODY" "$REVIEW_BODY" "$ISSUE_BODY" \
-                  | grep -qiE '\bfix(es|ed|ing)?\b'; then
-                needed=true
-              fi ;;
-          esac
+          if [ "$PROMPT_SET" = "true" ]; then
+            needed=true
+          # Without a prompt, the job-level if: guarantees an "@claude" mention,
+          # so a mention of "fix" anywhere in the triggering text means a build
+          # task rather than Q&A/review.
+          elif printf '%s\n%s\n%s' "$COMMENT_BODY" "$REVIEW_BODY" "$ISSUE_BODY" \
+              | grep -qiE '\bfix(es|ed|ing)?\b'; then
+            needed=true
+          fi
           echo "needed=$needed" >> "$GITHUB_OUTPUT"
           echo "Build needed: $needed"
 
@@ -120,9 +119,10 @@ jobs:
         with:
           use_bedrock: "true"
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call
-          track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
-          # prompt is only used for workflow_dispatch/workflow_call; empty for issue/PR events
+          # track_progress only works with issue/PR events, so turn it off for
+          # prompt-driven runs, whose inherited event can be e.g. workflow_run
+          track_progress: ${{ inputs.prompt == '' }}
+          # prompt is only set for workflow_dispatch/workflow_call; empty for issue/PR events
           prompt: ${{ inputs.prompt || '' }}
           # Required for Claude to access CI workflow logs
           additional_permissions: |
