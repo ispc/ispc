@@ -91,6 +91,8 @@ jobs:
           echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen" >> "$GITHUB_ENV"
           echo "$GITHUB_WORKSPACE/yarpgen/scripts" >> "$GITHUB_PATH"
           echo "$GITHUB_WORKSPACE/yarpgen/build" >> "$GITHUB_PATH"
+          # Test sets for ISA not supported by the runner are run as "sde -<arch> -- <test>".
+          echo "$SDE_HOME" >> "$GITHUB_PATH"
 
       - name: Set timeout for dispatched run
         if: github.event_name == 'workflow_dispatch'
@@ -105,7 +107,9 @@ jobs:
       - name: Run YARPGEN
         run: |
           ispc --version
-          "$YARPGEN_HOME"/scripts/run_gen.py --std ispc --target ispc --timeout "$TIMEOUT"
+          # Cap array dimensions: 4D arrays may produce tests with >16Gb of global
+          # data, which exhausts runner memory and gets the whole runner killed.
+          "$YARPGEN_HOME"/scripts/run_gen.py --std ispc --target ispc --timeout "$TIMEOUT" --max-array-dims=3
           tar -czvf yarpgen.tar.gz testing
         working-directory: yarpgen
 
