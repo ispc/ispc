@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 // A failed optimization inside sizeof can leave a valid type but no value in
-// either branch or the condition of a scalar/short-vector select.
+// either branch or the condition of a scalar/short-vector select, or in the
+// operand of a logical/bitwise not.
 // RUN: not %{ispc} %s -DFIRST --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
 // RUN: not %{ispc} %s --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
 // RUN: not %{ispc} %s -DFIRST -DVARYING --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
@@ -15,6 +16,8 @@
 // RUN: not %{ispc} %s -DCONDITION -DVARYING --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
 // RUN: not %{ispc} %s -DCONDITION -DSHORT_VECTOR --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
 // RUN: not %{ispc} %s -DCONDITION -DSHORT_VECTOR -DVARYING --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
+// RUN: not %{ispc} %s -DLOGICAL_NOT --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
+// RUN: not %{ispc} %s -DBIT_NOT --target=host --nostdlib --nowrap --opt=fast-math:legacy --emit-llvm-text -o %t.ll 2>&1 | FileCheck %s --implicit-check-not="FATAL ERROR" --implicit-check-not="Assertion failed"
 
 // CHECK: Error: First operand to binary operator "*" is of invalid type "void".
 #ifdef SHORT_VECTOR
@@ -32,7 +35,11 @@
 
 void rcp(uniform float x);
 VAR INT f(uniform float a, uniform float b, uniform float * uniform p, VAR BOOL c, VAR INT q) {
-#ifdef CONDITION
+#ifdef LOGICAL_NOT
+    return !sizeof((uniform int64)&(a / b, p));
+#elif defined(BIT_NOT)
+    return ~sizeof((uniform int64)&(a / b, p));
+#elif defined(CONDITION)
     return (q + sizeof((uniform int64)&(a / b, p))) != 0 ? q : q + 1;
 #elif defined(FIRST)
     return c ? sizeof((uniform int64)&(a / b, p)) : 1;

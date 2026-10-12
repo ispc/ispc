@@ -1235,6 +1235,10 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
         Error(pos, "Can't %s-%s non-lvalues.", prepost, incdec);
         return nullptr;
     }
+    if (rvalue == nullptr) {
+        AssertPos(pos, m->errorCount > 0);
+        return nullptr;
+    }
 
     // Emit code to do the appropriate addition/subtraction to the
     // expression's old value
@@ -1336,10 +1340,18 @@ llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
         return lEmitNegate(expr, pos, ctx, wrapSemantics);
     case LogicalNot: {
         llvm::Value *argVal = expr->GetValue(ctx);
+        if (argVal == nullptr) {
+            AssertPos(pos, m->errorCount > 0);
+            return nullptr;
+        }
         return ctx->NotOperator(argVal, llvm::Twine(argVal->getName()) + "_logicalnot");
     }
     case BitNot: {
         llvm::Value *argVal = expr->GetValue(ctx);
+        if (argVal == nullptr) {
+            AssertPos(pos, m->errorCount > 0);
+            return nullptr;
+        }
         return ctx->NotOperator(argVal, llvm::Twine(argVal->getName()) + "_bitnot");
     }
     default:
