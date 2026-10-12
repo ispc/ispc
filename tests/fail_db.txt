@@ -141,3 +141,5 @@
 .\tests\func-tests\pmulus-vi64.ispc compfail  x86-64 avx10.2nvl-x64 unspec Windows LLVM 23.1         cl O0 obj *
 .\tests\func-tests\ref-overloads3.ispc compfail  x86-64 avx10.2dmr-x64 unspec Windows LLVM 23.1         cl O0 obj *
 .\tests\func-tests\ref-overloads3.ispc compfail  x86-64 avx10.2nvl-x64 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\pdep-pext-const.ispc compfail  x86-64 avx10.2dmr-x64 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\pdep-pext-const.ispc compfail  x86-64 avx10.2nvl-x64 unspec Windows LLVM 23.1         cl O0 obj *
