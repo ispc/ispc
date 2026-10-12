@@ -1,5 +1,11 @@
 #include "test_static.isph"
 
+// Skip on Windows x86 only: under SDE 9.58 (used by CI on runners without
+// native AVX-512) the test fails spuriously, while it passes on hardware with
+// native AVX-512. Rules apply in order, so the ppc64le rule must stay last:
+// the OS rule re-enables every non-Windows configuration.
+// rule: skip on arch=x86
+// rule: run on OS=!windows
 // rule: skip on arch=ppc64le
 
 uniform bool ok(uniform float16 x, uniform float16 ref) {
