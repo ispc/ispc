@@ -1,0 +1,39 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Termux Tests
+
+permissions: read-all
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'builtins/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/termux.yml'
+      - '.github/workflows/scripts/build-ispc-termux.sh'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  termux-native-test:
+    name: Termux aarch64 test (native)
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+    # The Termux image can't host GitHub Actions steps (no /bin/sh, no glibc), so
+    # everything runs in one container. The unrestricted seccomp profile is needed
+    # for the personality() syscall, see https://github.com/termux/termux-docker.
+    - name: Build ISPC and run lit tests in Termux
+      run: |
+        docker run --rm --security-opt seccomp=unconfined \
+          --volume "$GITHUB_WORKSPACE:/ispc:ro" \
+          termux/termux-docker:aarch64@sha256:df5f14a6adfc0713df0040b0fa885dd8e72d9455c95df8bc8453fefd970f89e4 \
+          bash -e /ispc/.github/workflows/scripts/build-ispc-termux.sh /ispc
