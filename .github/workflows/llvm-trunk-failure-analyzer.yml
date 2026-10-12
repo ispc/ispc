@@ -148,8 +148,10 @@ jobs:
 
     - name: Run Claude Code analyzer
       env:
-        # Route Claude Code through AWS Bedrock
-        CLAUDE_CODE_USE_BEDROCK: ${{ secrets.CLAUDE_CODE_USE_BEDROCK }}
+        # Route Claude Code through AWS Bedrock. This is a plain flag, not a
+        # secret: a secret with the value "1" makes GitHub mask every "1" in
+        # this job and drop outputs that contain one, such as issue_number.
+        CLAUDE_CODE_USE_BEDROCK: '1'
         AWS_REGION: ${{ secrets.AWS_REGION }}
         AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
         GH_TOKEN: ${{ github.token }}
