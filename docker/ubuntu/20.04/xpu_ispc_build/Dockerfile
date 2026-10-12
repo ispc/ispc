@@ -21,6 +21,18 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-rec
     apt-get --no-install-recommends install -y ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
+# Ubuntu 20.04's default GCC 9.4 runs out of memory on GitHub runners while
+# building LLVM's GlobalISel instruction selectors (e.g. RISCVInstructionSelector.cpp),
+# so install GCC 11 from the ubuntu-toolchain-r PPA and make it the default compiler.
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y gcc-11 g++-11 gcc-11-multilib g++-11-multilib && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 \
+        --slave /usr/bin/g++ g++ /usr/bin/g++-11 && \
+    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-11 100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-11 100 && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install TBB from Intel oneAPI.
 # Use oneAPI TBB instead of system TBB to avoid enum-constexpr-conversion errors with LLVM 21+
 RUN wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor -o /usr/share/keyrings/intel-oneapi-archive-keyring.gpg && \
