@@ -5,8 +5,8 @@
 SDE_REPO=${SDE_REPO:-"https://github.com/ispc/ispc.dependencies"}
 # Default to the newer SDE, which supports avx10.2 targets (e.g. the -nvl knob)
 # needed by the build job's lit tests. The basic/avx512 test matrix jobs override
-# SDE_TAR_NAME to the older 9.58.0 SDE (the newer 10.8 SDE hangs on those runs).
-SDE_TAR_NAME=${SDE_TAR_NAME:-"sde-external-10.8.0-2026-03-15"}
+# SDE_TAR_NAME to the older 9.58.0 SDE (SDE 10.8 hung on those runs).
+SDE_TAR_NAME=${SDE_TAR_NAME:-"sde-external-10.13.1-2026-07-28"}
 LLVM_REPO=${LLVM_REPO:-"https://github.com/ispc/ispc.dependencies"}
 LLVM_VERSION=${LLVM_VERSION:-"23.1"}
 echo "LLVM_VERSION=${LLVM_VERSION}" >> "${GITHUB_ENV}"
