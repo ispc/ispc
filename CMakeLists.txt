@@ -162,6 +162,11 @@ endif()
 
 option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ${LLVM_SUPPORTS_ARM})
+# 32-bit ARM builtins are compiled against 32-bit ARM C library headers. Turn this
+# option off on systems that don't provide them, e.g. Termux on Android.
+# ARM32_ENABLED is OFF while ARM_ENABLED is OFF, without changing its cached value.
+include(CMakeDependentOption)
+cmake_dependent_option(ARM32_ENABLED "Enable 32-bit ARM support (requires ARM_ENABLED)" ON "ARM_ENABLED" OFF)
 # Turn off RISC-V support by default. Later we can use ${LLVM_SUPPORTS_RISCV} for default option value.
 option(RISCV_ENABLED "Enable RISC-V support" OFF)
 option(PPC64_ENABLED "Enable PowerPC64 support" OFF)
