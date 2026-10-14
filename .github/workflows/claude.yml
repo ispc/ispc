@@ -23,9 +23,6 @@ on:
         description: "Prompt for Claude"
         required: true
         type: string
-    secrets:
-      ANTHROPIC_API_KEY:
-        required: true
 
 permissions: {}
 
@@ -40,7 +37,7 @@ jobs:
     if: |
       github.repository == 'ispc/ispc' &&
       (github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'workflow_call' ||
+      inputs.prompt != '' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
         (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
@@ -71,6 +68,7 @@ jobs:
         id: build_check
         env:
           EVENT_NAME: ${{ github.event_name }}
+          INPUT_PROMPT: ${{ inputs.prompt }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           REVIEW_BODY: ${{ github.event.review.body }}
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -88,6 +86,7 @@ jobs:
                 needed=true
               fi ;;
           esac
+          if [ -n "$INPUT_PROMPT" ]; then needed=true; fi
           echo "needed=$needed" >> "$GITHUB_OUTPUT"
           echo "Build needed: $needed"
 
@@ -121,7 +120,7 @@ jobs:
           use_bedrock: "true"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # track_progress only works with issue/PR events, not workflow_dispatch/workflow_call
-          track_progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
+          track_progress: ${{ !inputs.prompt && github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
           # prompt is only used for workflow_dispatch/workflow_call; empty for issue/PR events
           prompt: ${{ inputs.prompt || '' }}
           # Required for Claude to access CI workflow logs
