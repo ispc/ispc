@@ -120,7 +120,7 @@ jobs:
           --model us.anthropic.claude-opus-5-5
           --add-dir ${{ runner.temp }}/codeql-input
           --add-dir ${{ runner.temp }}/codeql-result
-          --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *:*),Bash(cmake *:*),Bash(*cmake *:*),Bash(clang-format *:*),Bash(*/ispc *:*),Bash(./build/*:*),Bash(build/*:*),Bash(*run_tests.py *:*),Bash(jq *:*),Bash(ls *:*),Bash(mkdir *:*),Bash(cp *:*),Bash(diff *:*),Bash(cat *:*),Bash(llvm-* *:*),Bash(opt *:*),Bash(llc *:*),Bash(FileCheck *:*)"
+          --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *:*),Bash(cmake *:*),Bash(*cmake *:*),Bash(clang-format *:*),Bash(*/ispc *:*),Bash(./build/*:*),Bash(build/*:*),Bash(*run_tests.py *:*),Bash(jq *:*),Bash(ls *:*),Bash(mkdir *:*),Bash(cp *:*),Bash(diff *:*),Bash(cat *:*),Bash(head *:*),Bash(tail *:*),Bash(wc *:*),Bash(llvm-* *:*),Bash(opt *:*),Bash(llc *:*),Bash(FileCheck *:*)"
 
     # Only a successful investigation uploads its result, so a failed or
     # timed-out worker never leads to an action.

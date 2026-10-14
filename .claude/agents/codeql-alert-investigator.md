@@ -36,7 +36,8 @@ Investigate before deciding:
      in all relevant configurations. Failing to reproduce, limited impact or "probably safe" is
      not enough.
    - unsure: one specific unresolved fact prevents either conclusion.
-   - already-resolved: alert.json shows the alert fixed or dismissed.
+   - already-resolved: alert.json shows the alert fixed or dismissed. No further investigation is
+     needed.
 
 For a bug, fix the cause without changing other behavior or diagnostics. Add a regression test
 whose name contains <ALERT>, show that it fails before and passes after the
@@ -52,12 +53,13 @@ JSON object, using this format:
  "evidence": "short reasoning with file:line references",
  "counterexample_checks": ["checks you actually performed"],
  "unresolved_fact": "the open question if unsure, else null",
- "validation": [{"command": "...", "passed": true, "summary": "..."}],
+ "validation": [{"command": "...", "passed": true, "summary": "..."}] for builds and tests you ran, else [],
  "fix_available": true only for an actual bug patch, else false,
  "execution_status": "complete" | "incomplete",
  "error": "what failed if incomplete, else null"}
 Always state execution_status and verdict explicitly. A false-positive or unsure report needs
 textual evidence; unsure also needs a specific unresolved_fact. A completed bug needs a nonempty fix.patch.
+Start the evidence with the conclusion in one sentence; it begins the dismissal comment of a false positive.
 A timeout, tool/setup failure or unfinished investigation is "incomplete", never "unsure".
 A completed bug fix with recorded failing tests can remain "complete"; report those failures.
 Don't claim checks you didn't run.
