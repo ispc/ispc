@@ -1,4 +1,5 @@
 // RUN: %{ispc} --pic --target=avx512skx-x8 -h %t.h %s -o %t.o
+// RUN: %{ispc} --pic --target=avx2-i32x8 -h %t.h %s -o %t.o
 // RUN: %{cc} -x c -c %s -o %t.c.o --include %t.h
 // RUN: %{cc} %t.o %t.c.o -o %t.c.bin
 // RUN: %t.c.bin | FileCheck %s

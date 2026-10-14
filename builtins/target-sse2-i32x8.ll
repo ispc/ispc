@@ -378,15 +378,36 @@ define <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysin
 ;; rounding doubles
 
 define <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  unary1to8(double, @round)
+  %double_to_int_bitcast.i.i.i.i = bitcast <8 x double> %0 to <8 x i64>
+  %bitop.i.i = and <8 x i64> %double_to_int_bitcast.i.i.i.i, splat (i64 -9223372036854775808)
+  %bitop.i = xor <8 x i64> %double_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int64_to_double_bitcast.i.i40.i = bitcast <8 x i64> %bitop.i to <8 x double>
+  %binop.i = fadd <8 x double> %int64_to_double_bitcast.i.i40.i, splat (double 0x4330000000000000)
+  %binop21.i = fadd <8 x double> %binop.i, splat (double 0xC330000000000000)
+  %double_to_int_bitcast.i.i.i = bitcast <8 x double> %binop21.i to <8 x i64>
+  %bitop31.i = xor <8 x i64> %double_to_int_bitcast.i.i.i, %bitop.i.i
+  %int64_to_double_bitcast.i.i.i = bitcast <8 x i64> %bitop31.i to <8 x double>
+  ret <8 x double> %int64_to_double_bitcast.i.i.i
 }
 
 define <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  unary1to8(double, @floor)
+  %calltmp.i = tail call <8 x double> @__round_varying_double(<8 x double> %0) nounwind
+  %bincmp.i = fcmp ogt <8 x double> %calltmp.i, %0
+  %val_to_boolvec64.i = sext <8 x i1> %bincmp.i to <8 x i64>
+  %bitop.i = and <8 x i64> %val_to_boolvec64.i, splat (i64 -4616189618054758400)
+  %int64_to_double_bitcast.i.i.i = bitcast <8 x i64> %bitop.i to <8 x double>
+  %binop.i = fadd <8 x double> %calltmp.i, %int64_to_double_bitcast.i.i.i
+  ret <8 x double> %binop.i
 }
 
 define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  unary1to8(double, @ceil)
+  %calltmp.i = tail call <8 x double> @__round_varying_double(<8 x double> %0) nounwind
+  %bincmp.i = fcmp olt <8 x double> %calltmp.i, %0
+  %val_to_boolvec64.i = sext <8 x i1> %bincmp.i to <8 x i64>
+  %bitop.i = and <8 x i64> %val_to_boolvec64.i, splat (i64 4607182418800017408)
+  %int64_to_double_bitcast.i.i.i = bitcast <8 x i64> %bitop.i to <8 x double>
+  %binop.i = fadd <8 x double> %calltmp.i, %int64_to_double_bitcast.i.i.i
+  ret <8 x double> %binop.i
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

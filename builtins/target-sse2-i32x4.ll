@@ -103,15 +103,36 @@ define <4 x float> @__ceil_varying_float(<4 x float>) nounwind readonly alwaysin
 ;; rounding doubles
 
 define <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
-  unary1to4(double, @round)
+  %double_to_int_bitcast.i.i.i.i = bitcast <4 x double> %0 to <4 x i64>
+  %bitop.i.i = and <4 x i64> %double_to_int_bitcast.i.i.i.i, splat (i64 -9223372036854775808)
+  %bitop.i = xor <4 x i64> %double_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int64_to_double_bitcast.i.i40.i = bitcast <4 x i64> %bitop.i to <4 x double>
+  %binop.i = fadd <4 x double> %int64_to_double_bitcast.i.i40.i, splat (double 0x4330000000000000)
+  %binop21.i = fadd <4 x double> %binop.i, splat (double 0xC330000000000000)
+  %double_to_int_bitcast.i.i.i = bitcast <4 x double> %binop21.i to <4 x i64>
+  %bitop31.i = xor <4 x i64> %double_to_int_bitcast.i.i.i, %bitop.i.i
+  %int64_to_double_bitcast.i.i.i = bitcast <4 x i64> %bitop31.i to <4 x double>
+  ret <4 x double> %int64_to_double_bitcast.i.i.i
 }
 
 define <4 x double> @__floor_varying_double(<4 x double>) nounwind readonly alwaysinline {
-  unary1to4(double, @floor)
+  %calltmp.i = tail call <4 x double> @__round_varying_double(<4 x double> %0) nounwind
+  %bincmp.i = fcmp ogt <4 x double> %calltmp.i, %0
+  %val_to_boolvec64.i = sext <4 x i1> %bincmp.i to <4 x i64>
+  %bitop.i = and <4 x i64> %val_to_boolvec64.i, splat (i64 -4616189618054758400)
+  %int64_to_double_bitcast.i.i.i = bitcast <4 x i64> %bitop.i to <4 x double>
+  %binop.i = fadd <4 x double> %calltmp.i, %int64_to_double_bitcast.i.i.i
+  ret <4 x double> %binop.i
 }
 
 define <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alwaysinline {
-  unary1to4(double, @ceil)
+  %calltmp.i = tail call <4 x double> @__round_varying_double(<4 x double> %0) nounwind
+  %bincmp.i = fcmp olt <4 x double> %calltmp.i, %0
+  %val_to_boolvec64.i = sext <4 x i1> %bincmp.i to <4 x i64>
+  %bitop.i = and <4 x i64> %val_to_boolvec64.i, splat (i64 4607182418800017408)
+  %int64_to_double_bitcast.i.i.i = bitcast <4 x i64> %bitop.i to <4 x double>
+  %binop.i = fadd <4 x double> %calltmp.i, %int64_to_double_bitcast.i.i.i
+  ret <4 x double> %binop.i
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
