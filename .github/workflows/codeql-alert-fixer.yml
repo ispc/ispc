@@ -28,6 +28,7 @@ permissions: {}
 concurrency:
   group: codeql-alert-fixer
   cancel-in-progress: false
+  queue: max
 
 jobs:
   select-alerts:
@@ -345,7 +346,7 @@ jobs:
     with:
       prompt: |
         Push the validated CodeQL fixes from run ${{ github.run_id }} to ONE branch, codeql/fixes.
-        Don't open a PR: GitHub Actions can't create PRs in this repository, so a maintainer opens it from the branch.
+        Don't open a PR. A maintainer opens it manually from the branch.
 
         1. Run `gh run download ${{ github.run_id }} --name codeql-batch-${{ github.run_id }}-${{ github.run_attempt }} --dir /tmp/codeql-batch`.
            results.json has one short report per alert. patches/N.patch is the fix for alert N; an independent
