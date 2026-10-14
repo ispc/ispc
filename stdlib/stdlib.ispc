@@ -7743,9 +7743,11 @@ static inline uniform unsigned int64 saturating_mul(uniform unsigned int64 a, un
     if ((a1 != 0) && (b1 != 0)) {
         return UINT64_MAX;
     } else if (a1 != 0) {
-        return saturating_add((uniform unsigned int64)saturating_mul(b0, a1) << 32, (uniform unsigned int64)(a0)*b0);
+        uniform unsigned int64 hi = (uniform unsigned int64)b0 * a1;
+        return hi > UINT32_MAX ? UINT64_MAX : saturating_add(hi << 32, (uniform unsigned int64)(a0)*b0);
     } else if (b1 != 0) {
-        return saturating_add((uniform unsigned int64)saturating_mul(a0, b1) << 32, (uniform unsigned int64)(a0)*b0);
+        uniform unsigned int64 hi = (uniform unsigned int64)a0 * b1;
+        return hi > UINT32_MAX ? UINT64_MAX : saturating_add(hi << 32, (uniform unsigned int64)(a0)*b0);
     } else {
         return a * b;
     }
@@ -7760,9 +7762,11 @@ static inline varying unsigned int64 saturating_mul(varying unsigned int64 a, va
     if ((a1 != 0) && (b1 != 0)) {
         return UINT64_MAX;
     } else if (a1 != 0) {
-        return saturating_add((varying unsigned int64)saturating_mul(b0, a1) << 32, (varying unsigned int64)(a0)*b0);
+        varying unsigned int64 hi = (varying unsigned int64)b0 * a1;
+        return hi > UINT32_MAX ? UINT64_MAX : saturating_add(hi << 32, (varying unsigned int64)(a0)*b0);
     } else if (b1 != 0) {
-        return saturating_add((varying unsigned int64)saturating_mul(a0, b1) << 32, (varying unsigned int64)(a0)*b0);
+        varying unsigned int64 hi = (varying unsigned int64)a0 * b1;
+        return hi > UINT32_MAX ? UINT64_MAX : saturating_add(hi << 32, (varying unsigned int64)(a0)*b0);
     } else {
         return a * b;
     }
