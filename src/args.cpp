@@ -255,6 +255,9 @@ static ArgsParseResult devUsage() {
            "current directory, or to <path> if specified\n");
     printf("    [--gen-stdlib]\t\tEnable special compilation mode to generate LLVM IR for stdlib.ispc.\n");
     printf("    [--check-bitcode-libs]\t\tCheck the presence of bitcode libraries for ISPC slim binary.\n");
+    printf("    [--mock-host-os-apx=on|off]\t\tFor testing: assume the OS has APX state enabled or disabled when "
+           "the target is detected from the host\n");
+    printf("    [--mock-host-target=<target>]\tFor testing: use <target> as the target detected from the host\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. "
            "--off-phase=pre:first,210:220,300,305,310:last\n");
@@ -1153,6 +1156,18 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             }
             errorHandler.Emit();
             return ArgsParseResult::help_requested;
+        } else if (!strncmp(argv[i], "--mock-host-target=", 19)) {
+            const char *target = argv[i] + 19;
+            ISPCTarget mock = ParseISPCTarget(target);
+            if (mock == ISPCTarget::error || mock == ISPCTarget::none || mock == ISPCTarget::host) {
+                errorHandler.AddError("Unknown or unsupported target \"%s\" in --mock-host-target.", target);
+            } else {
+                g->mockHostTarget = mock;
+            }
+        } else if (!strcmp(argv[i], "--mock-host-os-apx=on")) {
+            g->mockHostOSAPX = 1;
+        } else if (!strcmp(argv[i], "--mock-host-os-apx=off")) {
+            g->mockHostOSAPX = 0;
         } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = lParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED

@@ -819,6 +819,14 @@ struct Globals {
     /** When \c true, target ISA will be printed during ispc's execution. */
     bool printTarget;
 
+    /** For testing: when not ISPCTarget::none, the target to use instead of
+        the one detected from the host system. */
+    ISPCTarget mockHostTarget;
+
+    /** For testing: the OS APX state (0 - off, 1 - on) to use instead of the
+        XCR0 check of the host system, or -1 to check the host system. */
+    int mockHostOSAPX;
+
     /** When \c true, LLVM won't omit frame pointer. */
     bool NoOmitFramePointer;
 
