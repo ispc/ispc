@@ -187,6 +187,7 @@ jobs:
       pull-requests: write
       issues: write
       actions: read
+      id-token: write
     uses: ./.github/workflows/claude.yml
     with:
       prompt: >-
