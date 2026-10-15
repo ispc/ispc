@@ -123,11 +123,15 @@ jobs:
           track_progress: ${{ !inputs.prompt && github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
           # prompt is only used for workflow_dispatch/workflow_call; empty for issue/PR events
           prompt: ${{ inputs.prompt || '' }}
+          # Claude can't write $GITHUB_STEP_SUMMARY, so show its report there for prompt runs
+          display_report: ${{ inputs.prompt != '' }}
           # Required for Claude to access CI workflow logs
           additional_permissions: |
             actions: read
           # Allow tools for building, testing, and code formatting
           claude_args: |
             --model us.anthropic.claude-opus-5-5
-            --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *),Bash(gh *),Bash(cmake *),Bash(*cmake *),Bash(clang-format *),Bash(*/ispc *),Bash(./build/*),Bash(build/*),Bash(*run_tests.py *),Bash(python3 *),Bash(curl *),Bash(jq *),Bash(rm *),Bash(ls *),Bash(mkdir *),Bash(cp *),Bash(mv *),Bash(touch *),Bash(diff *),Bash(cat *),Bash(head *),Bash(tail *),Bash(wc *),Bash(pwd *),Bash(which *),Bash(realpath *),Bash(llvm-* *),Bash(opt *),Bash(llc *),Bash(FileCheck *)"
+            --add-dir /tmp
+            --permission-mode acceptEdits
+            --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *),Bash(gh *),Bash(cmake *),Bash(*cmake *),Bash(clang-format *),Bash(*/ispc *),Bash(./build/*),Bash(build/*),Bash(*run_tests.py *),Bash(python3 *),Bash(curl *),Bash(jq *),Bash(rm *),Bash(ls *),Bash(mkdir *),Bash(cp *),Bash(mv *),Bash(touch *),Bash(diff *),Bash(cat *),Bash(head *),Bash(tail *),Bash(wc *),Bash(grep *),Bash(echo *),Bash(printf *),Bash(pwd *),Bash(which *),Bash(realpath *),Bash(llvm-* *),Bash(opt *),Bash(llc *),Bash(FileCheck *)"
 

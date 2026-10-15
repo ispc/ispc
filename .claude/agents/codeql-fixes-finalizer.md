@@ -19,6 +19,10 @@ Your prompt gives these arguments; the instructions below use their values:
 Push the validated CodeQL fixes from run <RUN_ID> to ONE branch, codeql/fixes.
 Don't open a PR. A maintainer opens it manually from the branch.
 
+Nobody can approve commands in this job: Bash denies `$(...)` and shell variables, and reads
+outside the checkout and /tmp. Use literal values instead (the runner has 4 cores: `-j 4`),
+and create files with the Write tool, not heredocs. LLVM and the build tools are on PATH.
+
 1. Run `gh run download <RUN_ID> --name codeql-batch-<RUN_ID>-<RUN_ATTEMPT> --dir /tmp/codeql-batch`.
    results.json has one short report per alert. patches/N.patch is the fix for alert N; an independent
    investigation proposed it on commit <BASE_SHA> and recorded its
@@ -39,11 +43,11 @@ Don't open a PR. A maintainer opens it manually from the branch.
    report's `alert` field, and the evidence and validation from the report. Its last line is exactly
    `CodeQL-Alert: N`.
 5. Test the combined result: build ISPC, run `cmake --build build --target check-all`, and if a fix
-   changes runtime behavior also `PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --target=avx2-i32x8`.
+   changes runtime behavior also `ISPC_HOME=build/bin ./scripts/run_tests.py --target=avx2-i32x8`.
    Run clang-format on changed C/C++ files before testing. If combined validation fails,
    make ONE narrowly justified repair attempt, then repeat the affected validation.
    If genuine code/test failures remain, publish the branch for review and clearly state
-   VALIDATION FAILED in the run summary and prepared PR body. Don't claim failed tests passed.
+   VALIDATION FAILED in your final message and prepared PR body. Don't claim failed tests passed.
    Tool/setup failures, timeout or incomplete integration do not authorize publication.
    Preserve pending fixes; don't remove unrelated tests or weaken assertions to pass.
    If no new fix was accepted or there are no new code changes, stop without pushing.
@@ -71,5 +75,5 @@ Don't open a PR. A maintainer opens it manually from the branch.
    URL-encode the body with jq and provide this link for a maintainer:
    https://github.com/ispc/ispc/compare/main...codeql/fixes?expand=1&body=ENCODED_BODY
 
-   Write the link, included alerts, omitted alerts with reasons, and combined
-   validation to $GITHUB_STEP_SUMMARY and your final message. Do not create a PR.
+   Give the link, included alerts, omitted alerts with reasons, and combined
+   validation in your final message; the job summary shows it. Do not create a PR.
