@@ -22,3 +22,21 @@ open_bot_issues() {
       add // [] | map(select(.user.login == "github-actions[bot]" and (has("pull_request") | not)) |
         {number, state, alerts: alert_numbers})'
 }
+
+# Paths a CodeQL fix must not touch: CI, Claude config, and the build and test
+# scripts and the test runner that CI and check-all run. Changes there need a
+# human-authored PR.
+PROTECTED_PATHS_RE='^(\.github/|\.claude/|scripts/|cmake/|utils/|(.*/)?CMakeLists\.txt$|(.*/)?lit(\.site)?\.cfg(\.py)?$|.*\.(py|sh|ps1|cmake)$|\.gitmodules$|\.gitattributes$|\.mcp\.json$|CLAUDE(\.local)?\.md$)'
+
+# Prints the files that match PROTECTED_PATHS_RE, read as NUL-separated paths
+# from stdin. NUL separation avoids Git's quoting of unusual file names.
+protected_paths() {
+  { grep -zE "$PROTECTED_PATHS_RE" || true; } | tr '\0' ' '
+}
+
+# Prints the protected files that patch file $1 touches. --numstat shows only
+# the new name of a renamed file, so renames and copies count as protected.
+protected_patch_paths() {
+  if grep -qE '^(rename|copy) from ' "$1"; then echo "(renamed or copied files)"; return; fi
+  git apply --numstat -z "$1" | sed -z 's/^[-0-9]*\t[-0-9]*\t//' | protected_paths
+}

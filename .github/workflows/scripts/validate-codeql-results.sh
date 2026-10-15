@@ -6,6 +6,8 @@
 # Validates each investigation result of the CodeQL Alert Fixer and collects them in batch/.
 
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/codeql-common.sh"
 mkdir -p batch/patches
 # Keep original responses and patches, including unusable reports, for inspection.
 if [ -d results ]; then cp -R results batch/reports; fi
@@ -41,7 +43,18 @@ while IFS= read -r alert; do
       alert: $alert, verdict: null, execution_status: "incomplete", error: $reason}')
   fi
   if jq -e '.execution_status == "complete" and .verdict == "bug"' <<< "$result" > /dev/null; then
+    protected=""
     if [ -s "$dir/fix.patch" ]; then
+      protected=$(protected_patch_paths "$dir/fix.patch") || protected="(the patch could not be read)"
+    fi
+    # Hand such fixes to a maintainer as Unsure instead of applying them.
+    if [ -n "$protected" ]; then
+      result=$(jq -c --arg paths "$protected" '.verdict = "unsure" |
+        .unresolved_fact = "The proposed fix touches protected paths (" + $paths +
+          "), so it needs a human-authored change." |
+        .evidence = (if (.evidence | type) == "string" and (.evidence | test("\\S"))
+          then .evidence else "Bug verdict with a fix in protected paths." end)' <<< "$result")
+    elif [ -s "$dir/fix.patch" ]; then
       cp "$dir/fix.patch" "batch/patches/$n.patch"
     else
       result=$(jq -c '.execution_status = "incomplete" | .error = "bug verdict without a patch"' <<< "$result")
