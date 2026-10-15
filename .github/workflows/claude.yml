@@ -23,6 +23,11 @@ on:
         description: "Prompt for Claude"
         required: true
         type: string
+    secrets:
+      AWS_REGION:
+        required: true
+      AWS_BEARER_TOKEN_BEDROCK:
+        required: true
 
 permissions: {}
 

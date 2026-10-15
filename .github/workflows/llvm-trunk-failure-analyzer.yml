@@ -26,23 +26,25 @@ jobs:
     # Only run if the nightly workflow failed, or if manually triggered
     if: github.repository == 'ispc/ispc' && (github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Read-only: Claude can't change anything on GitHub. The issue is filed by
+    # the next job, which doesn't run Claude.
     permissions:
       contents: read
       actions: read
-      issues: write
 
     outputs:
-      issue_number: ${{ steps.create-issue.outputs.issue_number }}
+      run_id: ${{ steps.get-run-id.outputs.run_id }}
+      current_sha: ${{ steps.download-sha.outputs.current_sha }}
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-    - name: Setup Node.js
-      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        # Claude Code >= 2.1.198 requires Node 22; on older Node npx silently
-        # installs 2.1.197, which is too old for current models
-        node-version: '22'
+        # The ISPC commit the nightly tested, with enough history for
+        # "commits in the last 24 hours".
+        ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+        fetch-depth: 50
+        persist-credentials: false
 
     - name: Determine run ID to analyze
       id: get-run-id
@@ -59,6 +61,10 @@ jobs:
           # Find the latest failed run of the nightly workflow
           RUN_ID=$(gh run list --workflow="linux-nightly-trunk.yml" --status=failure --limit=1 --json databaseId --jq '.[0].databaseId')
         fi
+        if ! [[ "$RUN_ID" =~ ^[0-9]+$ ]]; then
+          echo "::error::Invalid run ID: $RUN_ID"
+          exit 1
+        fi
         echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
         echo "Analyzing run ID: $RUN_ID"
 
@@ -66,23 +72,23 @@ jobs:
       id: download-sha
       env:
         GH_TOKEN: ${{ github.token }}
+        RUN_ID: ${{ steps.get-run-id.outputs.run_id }}
       run: |
-        RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
         echo "Downloading LLVM SHA artifact from run $RUN_ID"
 
         # Download the artifact
-        gh run download "$RUN_ID" --name llvm_commit_sha --dir ./artifacts || {
+        gh run download "$RUN_ID" --name llvm_commit_sha --dir "$RUNNER_TEMP/artifacts" || {
           echo "Failed to download LLVM SHA artifact"
           echo "current_sha=unknown" >> "$GITHUB_OUTPUT"
           exit 0
         }
 
-        if [ -f "./artifacts/llvm-commit-sha.txt" ]; then
-          CURRENT_SHA=$(cat ./artifacts/llvm-commit-sha.txt)
+        CURRENT_SHA=$(cat "$RUNNER_TEMP/artifacts/llvm-commit-sha.txt" 2>/dev/null || true)
+        if [[ "$CURRENT_SHA" =~ ^[0-9a-f]{7,40}$ ]]; then
           echo "Current LLVM SHA: $CURRENT_SHA"
           echo "current_sha=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
         else
-          echo "LLVM SHA file not found"
+          echo "LLVM SHA file not found or invalid"
           echo "current_sha=unknown" >> "$GITHUB_OUTPUT"
         fi
 
@@ -90,9 +96,9 @@ jobs:
       id: get-previous-sha
       env:
         GH_TOKEN: ${{ github.token }}
+        FAILED_RUN_ID: ${{ steps.get-run-id.outputs.run_id }}
       run: |
         # Find the latest successful run before the failed one
-        FAILED_RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
         FAILED_RUN_DATE=$(gh run view "$FAILED_RUN_ID" --json createdAt --jq '.createdAt')
 
         echo "Looking for successful runs before $FAILED_RUN_DATE"
@@ -110,86 +116,96 @@ jobs:
         echo "Previous successful run ID: $PREV_RUN_ID"
 
         # Download artifact from previous run
-        gh run download "$PREV_RUN_ID" --name llvm_commit_sha --dir ./prev_artifacts || {
+        gh run download "$PREV_RUN_ID" --name llvm_commit_sha --dir "$RUNNER_TEMP/prev_artifacts" || {
           echo "Failed to download previous LLVM SHA artifact"
           echo "previous_sha=unknown" >> "$GITHUB_OUTPUT"
           exit 0
         }
 
-        if [ -f "./prev_artifacts/llvm-commit-sha.txt" ]; then
-          PREV_SHA=$(cat ./prev_artifacts/llvm-commit-sha.txt)
+        PREV_SHA=$(cat "$RUNNER_TEMP/prev_artifacts/llvm-commit-sha.txt" 2>/dev/null || true)
+        if [[ "$PREV_SHA" =~ ^[0-9a-f]{7,40}$ ]]; then
           echo "Previous LLVM SHA: $PREV_SHA"
           echo "previous_sha=$PREV_SHA" >> "$GITHUB_OUTPUT"
         else
-          echo "Previous LLVM SHA file not found"
+          echo "Previous LLVM SHA file not found or invalid"
           echo "previous_sha=unknown" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: Get recent ISPC commits
-      id: get-ispc-commits
-      env:
-        GH_TOKEN: ${{ github.token }}
+    # CLAUDE_CODE_SUBPROCESS_ENV_SCRUB below needs bubblewrap and socat;
+    # without them every Bash command fails.
+    - name: Install subprocess isolation dependencies
       run: |
-        # Get ISPC commits from last 24 hours
-        SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
-        echo "Getting ISPC commits since $SINCE"
-
-        COMMITS=$(git log --since="$SINCE" --oneline HEAD 2>/dev/null || echo "")
-        if [ -z "$COMMITS" ]; then
-          # Fallback: get last 5 commits
-          COMMITS=$(git log --oneline -5 HEAD)
-        fi
-
-        echo "Recent ISPC commits:"
-        echo "$COMMITS"
-
-        # Save to file for the agent
-        echo "$COMMITS" > ispc-recent-commits.txt
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends bubblewrap socat
 
     - name: Run Claude Code analyzer
+      id: claude
+      uses: anthropics/claude-code-action@fccf022fdf80a6c41253d57e99293f208e484626 # v1.0.237
       env:
-        # Route Claude Code through AWS Bedrock
-        CLAUDE_CODE_USE_BEDROCK: ${{ secrets.CLAUDE_CODE_USE_BEDROCK }}
+        # Remove secrets such as the Bedrock token from the environment of
+        # Claude's commands.
+        CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
         AWS_REGION: ${{ secrets.AWS_REGION }}
         AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
-        CURRENT_SHA="${{ steps.download-sha.outputs.current_sha }}"
-        PREVIOUS_SHA="${{ steps.get-previous-sha.outputs.previous_sha }}"
-
-        echo "=== LLVM Trunk Failure Analysis ==="
-        echo "Failed run ID: $RUN_ID"
-        echo "Current LLVM SHA: $CURRENT_SHA"
-        echo "Previous LLVM SHA: $PREVIOUS_SHA"
-        echo "=================================="
-
-        # Mark the workspace as trusted so permissions.allow from
-        # .claude/settings.json is honored in headless mode
-        echo "{\"projects\":{\"$GITHUB_WORKSPACE\":{\"hasTrustDialogAccepted\":true}}}" > "$HOME/.claude.json"
-
-        # Run Claude Code with the analyzer skill and capture output.
+      with:
+        use_bedrock: "true"
+        github_token: ${{ github.token }}
+        track_progress: false
+        prompt: >-
+          /analyze-llvm-trunk --run-id ${{ steps.get-run-id.outputs.run_id }}
+          --current-sha ${{ steps.download-sha.outputs.current_sha }}
+          --previous-sha ${{ steps.get-previous-sha.outputs.previous_sha }}
         # Pin the model: the Bedrock default model is denied by IAM policy.
-        if ! npx @anthropic-ai/claude-code --print \
-          --model us.anthropic.claude-opus-5-5 \
-          "/analyze-llvm-trunk --run-id $RUN_ID --current-sha $CURRENT_SHA --previous-sha $PREVIOUS_SHA" \
-          > analysis_output.txt 2>&1; then
-          echo "::error::Claude Code analysis failed"
-          echo "=== Analysis Output ==="
-          cat analysis_output.txt
+        claude_args: |
+          --model us.anthropic.claude-opus-5-5
+          --allowedTools "Read,Grep,Glob,Agent,Skill,WebFetch,Bash(gh run view *),Bash(gh run download *),Bash(git log *),Bash(git show *)"
+
+    # Only Claude's final report is kept; the full transcript is not printed.
+    - name: Save the analysis
+      env:
+        EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/analysis"
+        jq -r '.[-1].result // empty' "$EXECUTION_FILE" > "$RUNNER_TEMP/analysis/analysis.md"
+        if [ ! -s "$RUNNER_TEMP/analysis/analysis.md" ]; then
+          echo "::error::Claude Code produced no analysis"
           exit 1
         fi
-        cat analysis_output.txt
+
+    - name: Upload the analysis
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: llvm-trunk-analysis
+        path: ${{ runner.temp }}/analysis/analysis.md
+        if-no-files-found: error
+        retention-days: 14
+
+  file-issue:
+    needs: analyze-failure
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+    outputs:
+      issue_number: ${{ steps.create-issue.outputs.issue_number }}
+      has_pr: ${{ steps.check-pr.outputs.has_pr }}
+    steps:
+    - name: Download the analysis
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      with:
+        name: llvm-trunk-analysis
+        path: ${{ runner.temp }}/analysis
 
     - name: Create GitHub issue with analysis
       id: create-issue
       env:
         GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        RUN_ID: ${{ needs.analyze-failure.outputs.run_id }}
+        CURRENT_SHA: ${{ needs.analyze-failure.outputs.current_sha }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ needs.analyze-failure.outputs.run_id }}
+        ANALYSIS: ${{ runner.temp }}/analysis/analysis.md
       run: |
-        RUN_ID="${{ steps.get-run-id.outputs.run_id }}"
-        CURRENT_SHA="${{ steps.download-sha.outputs.current_sha }}"
-        RUN_URL="https://github.com/${{ github.repository }}/actions/runs/$RUN_ID"
-
         # Check if an open issue already exists for LLVM trunk failure
         EXISTING_ISSUE=$(gh issue list --label "llvm-trunk" --state open --limit 1 --json number --jq '.[0].number')
 
@@ -204,7 +220,7 @@ jobs:
             echo "<details>"
             echo "<summary>Analysis Output</summary>"
             echo ""
-            cat analysis_output.txt
+            cat "$ANALYSIS"
             echo ""
             echo "</details>"
             echo ""
@@ -223,7 +239,7 @@ jobs:
             echo ""
             echo "## Analysis"
             echo ""
-            cat analysis_output.txt
+            cat "$ANALYSIS"
             echo ""
             echo "---"
             echo "Generated with [Claude Code](https://claude.com/claude-code)"
@@ -236,10 +252,29 @@ jobs:
           echo "issue_number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
         fi
 
+    # Repeat failures comment on the same issue; don't request a second fix
+    # while a fix PR for it is open.
+    - name: Check for an open fix PR
+      id: check-pr
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        ISSUE_NUMBER: ${{ steps.create-issue.outputs.issue_number }}
+      run: |
+        # Claude's fix branches start with claude/.
+        COUNT=$(gh pr list --state open --limit 200 --json headRefName,title,body \
+          --jq "[.[] | select((.headRefName | startswith(\"claude/\")) and ((.title + \" \" + .body) | test(\"#$ISSUE_NUMBER\\\\b\")))] | length")
+        echo "Open PRs mentioning #$ISSUE_NUMBER: $COUNT"
+        if [ "$COUNT" = 0 ]; then
+          echo "has_pr=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_pr=true" >> "$GITHUB_OUTPUT"
+        fi
+
   request-fix:
     # Request Claude to fix LLVM trunk failures via reusable workflow
-    needs: analyze-failure
-    if: success() && needs.analyze-failure.outputs.issue_number != ''
+    needs: file-issue
+    if: needs.file-issue.outputs.issue_number != '' && needs.file-issue.outputs.has_pr == 'false'
     permissions:
       contents: write
       pull-requests: write
@@ -247,5 +282,7 @@ jobs:
       actions: read
     uses: ./.github/workflows/claude.yml
     with:
-      prompt: "Fix issue #${{ needs.analyze-failure.outputs.issue_number }} and create a PR"
-    secrets: inherit
+      prompt: "Fix issue #${{ needs.file-issue.outputs.issue_number }} and create a PR"
+    secrets:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
