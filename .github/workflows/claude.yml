@@ -91,7 +91,6 @@ jobs:
       # not edit, build, run or push it. Even read-only git commands can run
       # or write things (`git -c alias.x='!cmd' x`, `git log --output=...`),
       # so fork sessions get no Bash at all and read the diff from a file.
-      # Deny rules also override the allow rules in .claude/settings.json.
       #
       # Building LLVM + ISPC adds ~2-5 min and ~500MB to the run. Only do it for
       # tasks that actually need to compile: a request mentioning "fix" (e.g.
@@ -158,11 +157,10 @@ jobs:
             args+=' --disallowedTools "Bash,Edit,MultiEdit,Write,NotebookEdit,WebFetch,WebSearch,Read(./.git/**)"'
             args+=" --append-system-prompt \"This PR comes from a fork, so you can only read and review it. Its diff is in $RUNNER_TEMP/pr/pr.diff. For a review, follow .claude/agents/code-review.md, skipping any step that needs Bash, read the changed code in the checkout, check CI with the mcp__github_ci tools and post specific findings as inline comments. If asked to change, build or test it, reply that a maintainer must push the branch to ispc/ispc first.\""
           else
-            # Bash(git *) can still run any program through an alias, so the
-            # deny list is defense in depth; the env scrub protects the secrets.
+            # Bash(git *) can still run any program through an alias; the env
+            # scrub protects the secrets.
             args='--permission-mode acceptEdits --add-dir /tmp'
             args+=' --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr list *),Bash(gh issue view *),Bash(gh run view *),Bash(gh run list *),Bash(gh run download *),Bash(cmake *),Bash(*cmake *),Bash(clang-format *),Bash(*/ispc *),Bash(./build/*),Bash(build/*),Bash(*run_tests.py *),Bash(jq *),Bash(rm *),Bash(ls *),Bash(mkdir *),Bash(cp *),Bash(mv *),Bash(touch *),Bash(diff *),Bash(cat *),Bash(head *),Bash(tail *),Bash(wc *),Bash(grep *),Bash(echo *),Bash(printf *),Bash(pwd *),Bash(which *),Bash(realpath *),Bash(llvm-* *),Bash(opt *),Bash(llc *),Bash(FileCheck *)"'
-            args+=' --disallowedTools "Bash(python3 *),Bash(curl *),Bash(gh api *),Bash(gh pr review *),Bash(gh pr merge *),Bash(gh auth *)"'
             # Pushes and PRs use the claude[bot] token, so CI runs on them.
             args+=' --allowedTools "Bash(gh pr create --draft *),mcp__github_inline_comment__create_inline_comment"'
             args+=' --append-system-prompt "For a review request on a PR, follow .claude/agents/code-review.md: read gh pr diff and the surrounding code, check CI with the mcp__github_ci tools and post specific findings as inline comments. If you fixed an issue (not a change to an existing PR, which you push to its own branch) and your instructions do not forbid opening a PR, work on a branch named claude/issue-<issue>-<short-description> (keep the branch the action created, if any), push it and open a draft PR with gh pr create --draft --base main --head <branch> --title Fix #<issue>: <summary> --body-file <file>; the body starts with Fixes #<issue>. Never open a non-draft PR."'

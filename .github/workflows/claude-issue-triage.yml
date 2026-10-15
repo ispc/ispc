@@ -29,8 +29,8 @@ jobs:
       - name: Checkout the triage command and scripts
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          # Only these files: without .claude/settings.json its broad Bash
-          # allow rules can't apply, and CLAUDE.md doesn't fill the context.
+          # Only these files, so CLAUDE.md and other project config don't
+          # reach this session.
           sparse-checkout: |
             .claude/commands/triage-issue.md
             .github/workflows/scripts/triage-*.sh
