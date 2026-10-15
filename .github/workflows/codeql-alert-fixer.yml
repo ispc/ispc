@@ -5,7 +5,7 @@ name: CodeQL Alert Fixer
 
 # Investigates eligible CodeQL alerts on main, one independent session per alert.
 # Fixes are combined and tested on codeql/fixes by a job without write access,
-# then a scripted job checks and pushes the branch; a maintainer opens the PR.
+# then a scripted job checks and pushes the branch and Claude opens a draft PR.
 # An open PR from codeql/fixes freezes automatic and manual runs.
 # Without an open PR, new fixes may be added to the existing branch.
 # Delete the branch after merging its PR.
@@ -293,14 +293,16 @@ jobs:
         retention-days: 14
 
   push-fixes:
-    name: Push the combined fixes
+    name: Push the combined fixes and open a draft PR
     needs: [select-alerts, combine-fixes]
     if: ${{ !cancelled() && needs.combine-fixes.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
-    # No Claude and no build: only git, gh and jq act on the bundle.
+    # Nothing from the bundle is built or run here: a script checks and pushes
+    # it, then Claude only opens the PR.
     permissions:
       contents: write # push codeql/fixes
       pull-requests: read
+      id-token: write # Exchanged for a claude[bot] token
     steps:
     - name: Checkout repository
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -317,12 +319,63 @@ jobs:
         path: fixes
 
     - name: Check and push the combined branch
+      id: push
       env:
         GH_REPO: ${{ github.repository }}
         GH_TOKEN: ${{ github.token }}
         BASE_SHA: ${{ needs.select-alerts.outputs.base_sha }}
         BRANCH_SHA: ${{ needs.select-alerts.outputs.branch_sha }}
       run: .github/workflows/scripts/push-codeql-fixes.sh
+
+    # The PR step needs no project config, and .claude/settings.json would
+    # widen what Claude may run (it allows Bash(gh:*)).
+    - name: Remove the project's Claude config
+      if: steps.push.outputs.pushed == 'true'
+      run: rm -rf .claude .mcp.json CLAUDE.md
+
+    # A PR opened with the claude[bot] token, unlike GITHUB_TOKEN, starts CI.
+    # Claude can run this one command and nothing else; the action replaces
+    # the checkout's push credential with its own token.
+    - name: Open a draft PR
+      id: claude
+      if: steps.push.outputs.pushed == 'true'
+      uses: anthropics/claude-code-action@a26b07d8c778b0c43f64618e5fd29fd0f8af72e8 # v1.0.250
+      env:
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+      with:
+        use_bedrock: 'true'
+        bot_id: '209825114'
+        track_progress: false
+        # Only pull_requests keeps the action's default write access.
+        additional_permissions: |
+          contents: read
+          issues: read
+        prompt: >-
+          Open a draft PR by running exactly this command once:
+          gh pr create --draft --base main --head codeql/fixes
+          --title "Fix CodeQL alerts" --body-file fixes/pr-body.md
+          Don't read or change any file. Reply with the PR URL.
+        claude_args: |
+          --model us.anthropic.claude-sonnet-5-5
+          --allowedTools "Bash(gh pr create --draft --base main --head codeql/fixes *)"
+          --disallowedTools "Edit,MultiEdit,Write,NotebookEdit,WebFetch,WebSearch,Read(./.git/**)"
+
+    # The action can succeed without opening the PR, e.g. if the token
+    # exchange is skipped, so check the PR itself.
+    - name: Check the draft PR
+      if: always() && steps.push.outputs.pushed == 'true'
+      env:
+        GH_REPO: ${{ github.repository }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        pr=$(gh pr list --head codeql/fixes --state open --json number,isDraft,author \
+          --jq '[.[] | select(.isDraft and .author.login == "app/claude")][0].number // empty')
+        if [ -z "$pr" ]; then
+          echo "::error::No draft PR from claude[bot] for codeql/fixes; use the link in the job summary"
+          exit 1
+        fi
+        echo "Draft PR: $GITHUB_SERVER_URL/$GH_REPO/pull/$pr" >> "$GITHUB_STEP_SUMMARY"
 
   apply-outcomes:
     name: Dismiss false positives and report one Unsure batch

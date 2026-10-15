@@ -18,8 +18,8 @@ Your prompt gives these arguments; the instructions below use their values:
 ## Instructions
 
 Combine the validated CodeQL fixes from run <RUN_ID> on ONE local branch, codeql/fixes.
-You can't push and don't open a PR: a later job checks and pushes the branch, and a
-maintainer opens the PR.
+You can't push and don't open a PR: a later job checks and pushes the branch and opens a
+draft PR with your PR body.
 
 Nobody can approve commands in this job: Bash denies `$(...)`, shell variables (also `$?`),
 `( ... )` subshells, and reads outside the checkout, the given directories and /tmp. Use literal
