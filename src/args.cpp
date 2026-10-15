@@ -256,6 +256,10 @@ static ArgsParseResult devUsage() {
            "current directory, or to <path> if specified\n");
     printf("    [--gen-stdlib]\t\tEnable special compilation mode to generate LLVM IR for stdlib.ispc.\n");
     printf("    [--check-bitcode-libs]\t\tCheck the presence of bitcode libraries for ISPC slim binary.\n");
+    printf("    [--mock-host-os-apx=on|off]\t\tFor testing: assume the OS has APX state enabled or disabled when "
+           "the target is detected from the host (x86 hosts only)\n");
+    printf("    [--mock-host-target=<target>]\tFor testing: use the x86 <target> as the detected host target "
+           "(x86 hosts only)\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. "
            "--off-phase=pre:first,210:220,300,305,310:last\n");
@@ -1155,6 +1159,24 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             }
             errorHandler.Emit();
             return ArgsParseResult::help_requested;
+        } else if (!strncmp(argv[i], "--mock-host-target=", 19)) {
+            const char *target = argv[i] + 19;
+            ISPCTarget mock = ParseISPCTarget(target);
+            if (!ISPCTargetIsX86(mock)) {
+                errorHandler.AddError("Unknown or non-x86 target \"%s\" in --mock-host-target.", target);
+            } else {
+#if defined(ISPC_HOST_IS_X86)
+                g->mockHostTarget = mock;
+#else
+                errorHandler.AddWarning("--mock-host-target is ignored on non-x86 hosts.");
+#endif
+            }
+        } else if (!strcmp(argv[i], "--mock-host-os-apx=on") || !strcmp(argv[i], "--mock-host-os-apx=off")) {
+#if defined(ISPC_HOST_IS_X86)
+            g->mockHostOSAPX = !strcmp(argv[i], "--mock-host-os-apx=on") ? 1 : 0;
+#else
+            errorHandler.AddWarning("--mock-host-os-apx is ignored on non-x86 hosts.");
+#endif
         } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = lParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED
