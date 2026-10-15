@@ -19,12 +19,22 @@ on:
         description: "Prompt for Claude"
         required: true
         type: string
+      build:
+        description: "Install LLVM and the build dependencies"
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       prompt:
         description: "Prompt for Claude"
         required: true
         type: string
+      build:
+        description: "Install LLVM and the build dependencies"
+        required: false
+        type: boolean
+        default: true
     secrets:
       AWS_REGION:
         required: true
@@ -55,6 +65,12 @@ jobs:
         (github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER' || github.event.issue.author_association == 'COLLABORATOR')))
     runs-on: ubuntu-22.04
     timeout-minutes: 60
+    # One session per issue or PR at a time, so two requests don't race on
+    # the same branch. queue: max keeps every waiting request.
+    concurrency:
+      group: claude-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: false
+      queue: max
     permissions:
       contents: write # Required to push branches and create commits
       pull-requests: write
@@ -76,8 +92,8 @@ jobs:
       #
       # Building LLVM + ISPC adds ~2-5 min and ~500MB to the run. Only do it for
       # tasks that actually need to compile: a request mentioning "fix" (e.g.
-      # "@claude fix this", "@claude can you fix X"), or the
-      # workflow_dispatch/workflow_call auto-fix chain. Lightweight tasks
+      # "@claude fix this", "@claude can you fix X"), or a prompt run with
+      # "build" set (the default for workflow_call). Lightweight tasks
       # (Q&A, code review) skip the build entirely.
       - name: Determine if build is needed
         id: build_check
@@ -86,6 +102,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           INPUT_PROMPT: ${{ inputs.prompt }}
+          INPUT_BUILD: ${{ inputs.build }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           REVIEW_BODY: ${{ github.event.review.body }}
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -99,32 +116,31 @@ jobs:
             # Anything but an explicit "false" counts as a fork.
             [ "$cross" = false ] || fork=true
           fi
-          needed=false
-          case "$EVENT_NAME" in
-            workflow_dispatch|workflow_call)
-              needed=true ;;
-            *)
-              # The job-level if: already guarantees an "@claude" mention, so a
-              # mention of "fix" anywhere in the triggering text means a build
-              # task rather than Q&A/review.
-              if printf '%s\n%s\n%s' "$COMMENT_BODY" "$REVIEW_BODY" "$ISSUE_BODY" \
-                  | grep -qiE '\bfix(es|ed|ing)?\b'; then
-                needed=true
-              fi ;;
-          esac
-          if [ -n "$INPUT_PROMPT" ]; then needed=true; fi
-          # The action's own trigger rule is stricter than the job's if: it
-          # wants "@claude" followed by a space, punctuation or the end.
+          # The text that invoked Claude. Prompt runs (workflow_dispatch and
+          # workflow_call) decide with the build input instead; in a called
+          # workflow, EVENT_NAME is the caller's event.
           case "$EVENT_NAME" in
             issue_comment|pull_request_review_comment) text=$COMMENT_BODY ;;
             pull_request_review) text=$REVIEW_BODY ;;
             issues) text=$(printf '%s\n%s' "$ISSUE_TITLE" "$ISSUE_BODY") ;;
             *) text= ;;
           esac
+          needed=false
           triggered=false
-          if [ -n "$INPUT_PROMPT" ] ||
-              printf '%s\n' "$text" | grep -qiE '(^|[[:space:]])@claude([[:space:].,!?;:]|$)'; then
+          if [ -n "$INPUT_PROMPT" ]; then
             triggered=true
+            if [ "$INPUT_BUILD" = true ]; then needed=true; fi
+          else
+            # The action's own trigger rule is stricter than the job's if: it
+            # wants "@claude" followed by a space, punctuation or the end.
+            if printf '%s\n' "$text" | grep -qiE '(^|[[:space:]])@claude([[:space:].,!?;:]|$)'; then
+              triggered=true
+            fi
+            # A mention of "fix" in the invoking text means a build task
+            # rather than Q&A/review.
+            if printf '%s\n' "$text" | grep -qiE '\bfix(es|ed|ing)?\b'; then
+              needed=true
+            fi
           fi
           if [ "$fork" = true ]; then
             needed=false
