@@ -19,7 +19,7 @@ Parse arguments:
 
 ## Instructions
 
-Use the Task tool to spawn the `codeql-alert-investigator` agent with this prompt:
+Use the Agent tool to spawn the `codeql-alert-investigator` agent with this prompt:
 
 ```
 Investigate the CodeQL alert and write the result files.

@@ -98,6 +98,15 @@ Use the `ispc-builtins` skill when modifying files in `builtins/` directory.
 
 **Do not commit until all checks pass. Do not skip any of these steps.**
 
+## In CI (GitHub Actions)
+
+- Nobody can answer questions or approve commands. Instead of asking, state your
+  assumptions or what blocked you in the final report.
+- Commands that would need approval are denied. Use literal values (`-j 4`,
+  `build/bin/ispc`) instead of `$(nproc)`, `$(pwd)` or backticks.
+- When the workflow prompt or its agent gives its own validation and publishing
+  rules, follow them instead of the Precommit Rules above.
+
 ## Important Instructions
 - Do only what is asked; nothing more, nothing less
 - ALWAYS prefer editing existing files over creating new ones
