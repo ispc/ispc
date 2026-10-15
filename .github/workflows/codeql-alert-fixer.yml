@@ -327,7 +327,7 @@ jobs:
   apply-outcomes:
     name: Dismiss false positives and report one Unsure batch
     needs: [select-alerts, collect-results]
-    # Independent of the finalize job, so a failed fix branch doesn't hold back these outcomes.
+    # Independent of the combine and push jobs, so a failed fix branch doesn't hold back these outcomes.
     if: ${{ !cancelled() && needs.collect-results.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
