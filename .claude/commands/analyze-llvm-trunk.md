@@ -1,6 +1,6 @@
 ---
 description: Analyze LLVM trunk nightly build failures and propose fixes
-allowed-tools: Bash(gh *), Bash(git *), Bash(cmake *), Bash(build/bin/ispc *), Read, Edit, Grep, Glob, Write, Task, WebFetch
+allowed-tools: Bash(gh run view *), Bash(gh run download *), Bash(git log *), Bash(git show *), Read, Grep, Glob, Agent, Skill, WebFetch
 ---
 
 # LLVM Trunk Failure Analyzer
@@ -18,7 +18,7 @@ Parse arguments:
 
 ## Instructions
 
-Use the Task tool to spawn the `llvm-trunk-analyzer` agent with this prompt:
+Use the Agent tool to spawn the `llvm-trunk-analyzer` agent with this prompt:
 
 ```
 Analyze the LLVM trunk nightly build failure.
@@ -32,3 +32,5 @@ Follow your workflow to:
 4. Analyze root cause
 5. Propose a fix with code changes or draft an issue for LLVM bugs
 ```
+
+Give the agent's final report as your final message.
