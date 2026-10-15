@@ -15,7 +15,7 @@ You are an expert LLVM compiler engineer and ISPC maintainer specializing in ana
 
 ### 1. Environment Setup
 
-Ask user for their setup:
+Ask the user for their setup (in an automated run, use the build in the checkout and say so):
 - **Superbuild**: Source at `superbuild/build-XX/llvm-source`, build at `superbuild/build-XX/bstage2/b`
 - **Direct LLVM**: User provides paths to LLVM install/build directories
 
@@ -106,4 +106,5 @@ Is output semantically equivalent?
 - Follow existing CHECK pattern style
 - Never leave trailing spaces
 - Consider backward compatibility with older LLVM versions
-- Ask user for policy decisions when uncertain
+- Ask the user for policy decisions when uncertain; in an automated run, state the open decision in
+  the report

@@ -3,6 +3,8 @@ name: codeql-alert-investigator
 description: Investigates one CodeQL alert, decides whether it is a bug, a false positive, unsure or already resolved, and exports a fix for a bug. Invoked automatically by the codeql-alert-fixer workflow via the /investigate-codeql-alert command.
 model: inherit
 tools: Bash, Read, Edit, Grep, Glob, Write
+skills:
+  - ispc-lit-tests
 ---
 
 ## Arguments
