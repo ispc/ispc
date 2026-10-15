@@ -58,7 +58,14 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
+      # Code from a fork PR is untrusted: Claude may read and review it, but
+      # not edit, build, run or push it. Even read-only git commands can run
+      # or write things (`git -c alias.x='!cmd' x`, `git log --output=...`),
+      # so fork sessions get no Bash at all and read the diff from a file.
+      # Deny rules also override the allow rules in .claude/settings.json.
+      #
       # Building LLVM + ISPC adds ~2-5 min and ~500MB to the run. Only do it for
       # tasks that actually need to compile: a request mentioning "fix" (e.g.
       # "@claude fix this", "@claude can you fix X"), or the
@@ -67,12 +74,22 @@ jobs:
       - name: Determine if build is needed
         id: build_check
         env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           INPUT_PROMPT: ${{ inputs.prompt }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           REVIEW_BODY: ${{ github.event.review.body }}
           ISSUE_BODY: ${{ github.event.issue.body }}
+          IS_PR: ${{ (github.event.issue.pull_request || github.event.pull_request) && 'true' || 'false' }}
+          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
         run: |
+          fork=false
+          if [ "$IS_PR" = true ]; then
+            cross=$(gh pr view "$PR_NUMBER" --json isCrossRepository --jq .isCrossRepository)
+            # Anything but an explicit "false" counts as a fork.
+            [ "$cross" = false ] || fork=true
+          fi
           needed=false
           case "$EVENT_NAME" in
             workflow_dispatch|workflow_call)
@@ -87,14 +104,42 @@ jobs:
               fi ;;
           esac
           if [ -n "$INPUT_PROMPT" ]; then needed=true; fi
-          echo "needed=$needed" >> "$GITHUB_OUTPUT"
-          echo "Build needed: $needed"
+          if [ "$fork" = true ]; then
+            needed=false
+            mkdir -p "$RUNNER_TEMP/pr"
+            gh pr diff "$PR_NUMBER" > "$RUNNER_TEMP/pr/pr.diff"
+            # The action itself allows git add/commit/rm and its push wrapper;
+            # denying Bash removes them too.
+            args='--permission-mode default'
+            args+=" --add-dir $RUNNER_TEMP/pr"
+            args+=' --allowedTools "Glob,Grep,LS,Read,mcp__github_inline_comment__create_inline_comment"'
+            args+=' --disallowedTools "Bash,Edit,MultiEdit,Write,NotebookEdit,WebFetch,WebSearch"'
+            args+=" --append-system-prompt \"This PR comes from a fork, so you can only read and review it. Its diff is in $RUNNER_TEMP/pr/pr.diff. If asked to change, build or test it, reply that a maintainer must push the branch to ispc/ispc first.\""
+          else
+            # Bash(git *) can still run any program through an alias, so the
+            # deny list is defense in depth; the env scrub protects the secrets.
+            args='--permission-mode acceptEdits'
+            args+=' --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr list *),Bash(gh issue view *),Bash(gh run view *),Bash(gh run list *),Bash(gh run download *),Bash(cmake *),Bash(*cmake *),Bash(clang-format *),Bash(*/ispc *),Bash(./build/*),Bash(build/*),Bash(*run_tests.py *),Bash(jq *),Bash(rm *),Bash(ls *),Bash(mkdir *),Bash(cp *),Bash(mv *),Bash(touch *),Bash(diff *),Bash(cat *),Bash(head *),Bash(tail *),Bash(wc *),Bash(grep *),Bash(echo *),Bash(printf *),Bash(pwd *),Bash(which *),Bash(realpath *),Bash(llvm-* *),Bash(opt *),Bash(llc *),Bash(FileCheck *)"'
+            args+=' --disallowedTools "Bash(python3 *),Bash(curl *),Bash(gh api *),Bash(gh pr review *),Bash(gh pr merge *),Bash(gh auth *)"'
+          fi
+          {
+            echo "needed=$needed"
+            echo "fork=$fork"
+            echo "args=$args"
+          } >> "$GITHUB_OUTPUT"
+          echo "Fork PR: $fork, build needed: $needed"
+
+      # CLAUDE_CODE_SUBPROCESS_ENV_SCRUB below needs bubblewrap and socat;
+      # without them every Bash command fails.
+      - name: Install subprocess isolation dependencies
+        run: |
+          echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends bubblewrap socat
 
       - name: Install build dependencies
         if: steps.build_check.outputs.needed == 'true'
         run: |
-          echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build bison flex m4 \
             libc6-dev libc6-dev-i386 g++-multilib \
@@ -113,6 +158,9 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@fccf022fdf80a6c41253d57e99293f208e484626 # v1.0.237
         env:
+          # Remove secrets such as the Bedrock token from the environment of
+          # Claude's commands.
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
           # Route Claude Code through AWS Bedrock (bearer-token auth)
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
@@ -128,10 +176,9 @@ jobs:
           # Required for Claude to access CI workflow logs
           additional_permissions: |
             actions: read
-          # Allow tools for building, testing, and code formatting
+          # Tools and permission mode come from the build check above.
           claude_args: |
             --model us.anthropic.claude-opus-5-5
             --add-dir /tmp
-            --permission-mode acceptEdits
-            --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *),Bash(gh *),Bash(cmake *),Bash(*cmake *),Bash(clang-format *),Bash(*/ispc *),Bash(./build/*),Bash(build/*),Bash(*run_tests.py *),Bash(python3 *),Bash(curl *),Bash(jq *),Bash(rm *),Bash(ls *),Bash(mkdir *),Bash(cp *),Bash(mv *),Bash(touch *),Bash(diff *),Bash(cat *),Bash(head *),Bash(tail *),Bash(wc *),Bash(grep *),Bash(echo *),Bash(printf *),Bash(pwd *),Bash(which *),Bash(realpath *),Bash(llvm-* *),Bash(opt *),Bash(llc *),Bash(FileCheck *)"
+            ${{ steps.build_check.outputs.args }}
 
