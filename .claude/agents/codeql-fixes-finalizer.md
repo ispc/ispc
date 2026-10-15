@@ -19,9 +19,11 @@ Your prompt gives these arguments; the instructions below use their values:
 Push the validated CodeQL fixes from run <RUN_ID> to ONE branch, codeql/fixes.
 Don't open a PR. A maintainer opens it manually from the branch.
 
-Nobody can approve commands in this job: Bash denies `$(...)` and shell variables, and reads
-outside the checkout and /tmp. Use literal values instead (the runner has 4 cores: `-j 4`),
-and create files with the Write tool, not heredocs. LLVM and the build tools are on PATH.
+Nobody can approve commands in this job: Bash denies `$(...)`, shell variables (also `$?`),
+`( ... )` subshells, and reads outside the checkout and /tmp. Use literal values instead (the
+runner has 4 cores: `-j 4`); the Bash tool already reports exit codes. Search with the Grep tool,
+not awk, and create files with the Write tool, not heredocs. LLVM, with its headers, is in the
+checkout under bin-*/ and on PATH.
 
 1. Run `gh run download <RUN_ID> --name codeql-batch-<RUN_ID>-<RUN_ATTEMPT> --dir /tmp/codeql-batch`.
    results.json has one short report per alert. patches/N.patch is the fix for alert N; an independent
