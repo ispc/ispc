@@ -45,5 +45,6 @@ fi
 git push --force-with-lease="refs/heads/codeql/fixes:$lease" origin "$new:refs/heads/codeql/fixes" ||
   fail "the push was rejected"
 
+echo "pushed=true" >> "$GITHUB_OUTPUT"
 body=$(jq -sRr @uri fixes/pr-body.md)
-note "Pushed codeql/fixes at $new. Open the PR: $GITHUB_SERVER_URL/$GH_REPO/compare/main...codeql/fixes?expand=1&body=$body"
+note "Pushed codeql/fixes at $new. If no draft PR follows, open it: $GITHUB_SERVER_URL/$GH_REPO/compare/main...codeql/fixes?expand=1&body=$body"

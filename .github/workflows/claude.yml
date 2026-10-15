@@ -165,7 +165,7 @@ jobs:
             args+=' --disallowedTools "Bash(python3 *),Bash(curl *),Bash(gh api *),Bash(gh pr review *),Bash(gh pr merge *),Bash(gh auth *)"'
             # Pushes and PRs use the claude[bot] token, so CI runs on them.
             args+=' --allowedTools "Bash(gh pr create --draft *),mcp__github_inline_comment__create_inline_comment"'
-            args+=' --append-system-prompt "For a review request on a PR, follow .claude/agents/code-review.md: read gh pr diff and the surrounding code, check CI with the mcp__github_ci tools and post specific findings as inline comments. If you fixed an issue on a new branch and your instructions do not forbid opening a PR, push the branch and open a draft PR with gh pr create --draft --base main --head <branch> --title Fix #<issue>: <summary> --body-file <file>. Never open a non-draft PR."'
+            args+=' --append-system-prompt "For a review request on a PR, follow .claude/agents/code-review.md: read gh pr diff and the surrounding code, check CI with the mcp__github_ci tools and post specific findings as inline comments. If you fixed an issue (not a change to an existing PR, which you push to its own branch) and your instructions do not forbid opening a PR, work on a branch named claude/issue-<issue>-<short-description> (keep the branch the action created, if any), push it and open a draft PR with gh pr create --draft --base main --head <branch> --title Fix #<issue>: <summary> --body-file <file>; the body starts with Fixes #<issue>. Never open a non-draft PR."'
           fi
           {
             echo "needed=$needed"
