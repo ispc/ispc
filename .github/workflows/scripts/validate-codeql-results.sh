@@ -13,7 +13,7 @@ if [ -d results ]; then cp -R results batch/reports; fi
 while IFS= read -r alert; do
   n=$(jq .number <<< "$alert")
   # download-artifact extracts a single matching artifact directly into results/.
-  dir="results/codeql-alert-$n-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/$n"
+  dir="results/codeql-alert-$n-$GITHUB_RUN_ID-$BASE_SHA/$n"
   if [ ! -d "$dir" ]; then dir="results/$n"; fi
   file="$dir/result.json"
   reason="missing result"

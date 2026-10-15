@@ -10,11 +10,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/codeql-common.sh"
 issues=$(open_bot_issues)
 
-# Dismisses only the analysis the worker examined, and only while the
-# alert's file is unchanged on main. Otherwise a later run checks again.
+# Dismisses only the analysis the worker examined, only while main is still
+# the commit it investigated (the verdict may rest on code in any file), and
+# only while the alert's file is unchanged since the analyzed commit.
+# Otherwise a later run checks again.
 dismiss() {
-  local r=$1 n alert files changed comment state
+  local r=$1 n alert main_sha files changed comment state
   n=$(jq .alert_number <<< "$r")
+  main_sha=$(gh api "repos/$GH_REPO/commits/main" --jq .sha) || return 1
+  if [ "$main_sha" != "$BASE_SHA" ]; then
+    note "Alert #$n: main moved past the investigated commit; not dismissed, a later run checks it again."
+    return 0
+  fi
   alert=$(gh api "repos/$GH_REPO/code-scanning/alerts/$n") || return 1
   if [ "$(jq -r .state <<< "$alert")" = dismissed ]; then
     note "Alert #$n: already dismissed."

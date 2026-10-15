@@ -12,7 +12,6 @@ $ARGUMENTS
 
 Parse arguments:
 - `--run-id <RUN_ID>` - CodeQL Alert Fixer run with the validated batch
-- `--run-attempt <RUN_ATTEMPT>` - attempt of that run
 - `--base-sha <BASE_SHA>` - selected main snapshot
 - `--branch-sha <BRANCH_SHA>` - selected codeql/fixes SHA, or `none` if the branch was absent
 - `--covered <COVERED>` - alert IDs with pending fixes on codeql/fixes, as a JSON array

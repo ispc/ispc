@@ -125,11 +125,13 @@ jobs:
           --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *),Bash(cmake *),Bash(*cmake *),Bash(clang-format *),Bash(*/ispc *),Bash(./build/*),Bash(build/*),Bash(*run_tests.py *),Bash(jq *),Bash(ls *),Bash(mkdir *),Bash(cp *),Bash(diff *),Bash(cat *),Bash(head *),Bash(tail *),Bash(wc *),Bash(grep *),Bash(which *),Bash(echo *),Bash(printf *),Bash(llvm-* *),Bash(opt *),Bash(llc *),Bash(FileCheck *)"
 
     # Only a successful investigation uploads its result, so a failed or
-    # timed-out worker never leads to an action.
+    # timed-out worker never leads to an action. The name omits the run
+    # attempt, so a rerun of a later job finds it, and includes the base
+    # commit, so a rerun that selects a newer main never reuses it.
     - name: Upload the result
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: codeql-alert-${{ matrix.alert.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+        name: codeql-alert-${{ matrix.alert.number }}-${{ github.run_id }}-${{ needs.select-alerts.outputs.base_sha }}
         path: ${{ runner.temp }}/codeql-result
         overwrite: true
         if-no-files-found: error
@@ -155,7 +157,7 @@ jobs:
       continue-on-error: true # missing results become incomplete below
       uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
-        pattern: codeql-alert-*-${{ github.run_id }}-${{ github.run_attempt }}
+        pattern: codeql-alert-*-${{ github.run_id }}-${{ needs.select-alerts.outputs.base_sha }}
         merge-multiple: false # Keep each worker's files in its own artifact directory.
         path: results
 
@@ -163,12 +165,13 @@ jobs:
       id: validate
       env:
         MATRIX: ${{ needs.select-alerts.outputs.matrix }}
+        BASE_SHA: ${{ needs.select-alerts.outputs.base_sha }}
       run: .github/workflows/scripts/validate-codeql-results.sh
 
     - name: Upload the validated batch
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: codeql-batch-${{ github.run_id }}-${{ github.run_attempt }}
+        name: codeql-batch-${{ github.run_id }}
         path: batch
         overwrite: true
         if-no-files-found: error
@@ -188,7 +191,6 @@ jobs:
     with:
       prompt: >-
         /finalize-codeql-fixes --run-id ${{ github.run_id }}
-        --run-attempt ${{ github.run_attempt }}
         --base-sha ${{ needs.select-alerts.outputs.base_sha }}
         --branch-sha ${{ needs.select-alerts.outputs.branch_sha || 'none' }}
         --covered ${{ needs.select-alerts.outputs.covered }}
@@ -213,7 +215,7 @@ jobs:
     - name: Download the validated batch
       uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
-        name: codeql-batch-${{ github.run_id }}-${{ github.run_attempt }}
+        name: codeql-batch-${{ github.run_id }}
         path: batch
 
     - name: Apply the outcomes
@@ -221,4 +223,5 @@ jobs:
         GH_REPO: ${{ github.repository }}
         GH_TOKEN: ${{ github.token }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        BASE_SHA: ${{ needs.select-alerts.outputs.base_sha }}
       run: .github/workflows/scripts/apply-codeql-outcomes.sh
