@@ -1523,8 +1523,13 @@ operating system support. Explicitly named ``avx10.2nvl`` and ``avx10.2dmr``
 targets keep APX enabled regardless of the system on which ``ispc`` runs; use
 ``--opt=disable-apx`` to produce code that does not require operating system
 APX support (disabling only a subset of the sub-features, for example
-``--opt=disable-apx=egpr``, still requires it). With ``--target=host``, APX
-is disabled if the operating system does not support it.
+``--opt=disable-apx=egpr``, still requires it). When the target is detected
+from the system on which ``ispc`` runs, that is with ``--target=host`` (also
+when ``--cpu`` is given, which then only tunes for the detected target) or with
+neither ``--target`` nor ``--cpu``, APX is disabled if the operating system
+does not support it. ``--cpu=nvl`` or ``--cpu=dmr`` without ``--target``
+selects the target from the CPU and keeps APX enabled, as an explicitly named
+target does.
 
 The following GPU targets are supported:
 

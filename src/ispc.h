@@ -25,6 +25,18 @@
 #define ISPC_HOST_IS_APPLE
 #endif
 
+#if defined(__aarch64__) || defined(_M_ARM64)
+#define ISPC_HOST_IS_AARCH64
+#elif defined(__arm__)
+#define ISPC_HOST_IS_ARM
+#elif defined(__riscv)
+#define ISPC_HOST_IS_RISCV
+#elif defined(__powerpc64__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define ISPC_HOST_IS_PPC64LE
+#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+#define ISPC_HOST_IS_X86
+#endif
+
 #include <bitset>
 #include <map>
 #include <memory>
@@ -824,6 +836,15 @@ struct Globals {
 
     /** When \c true, target ISA will be printed during ispc's execution. */
     bool printTarget;
+
+    /** For testing: when not ISPCTarget::none, the target to use instead of
+        the one detected from the host system. Never set on non-x86 hosts. */
+    ISPCTarget mockHostTarget;
+
+    /** For testing: the OS APX state (0 - off, 1 - on) to use instead of the
+        XCR0 check of the host system, or -1 to check the host system. Never set
+        on non-x86 hosts. */
+    int mockHostOSAPX;
 
     /** When \c true, LLVM won't omit frame pointer. */
     bool NoOmitFramePointer;

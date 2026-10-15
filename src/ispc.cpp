@@ -61,18 +61,6 @@ Module *ispc::m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-#if defined(__aarch64__) || defined(_M_ARM64)
-#define ISPC_HOST_IS_AARCH64
-#elif defined(__arm__)
-#define ISPC_HOST_IS_ARM
-#elif defined(__riscv)
-#define ISPC_HOST_IS_RISCV
-#elif defined(__powerpc64__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-#define ISPC_HOST_IS_PPC64LE
-#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
-#define ISPC_HOST_IS_X86
-#endif
-
 #if defined(ISPC_ARM_ENABLED)
 // Retrieve the target features for a given ARM/AARCH64 architecture and CPU
 // Detecting hardware-supported ARM features across different platforms (e.g., Linux, macOS, Windows) much more trickier
@@ -230,6 +218,9 @@ static ISPCTarget lGetARMSystemISA() {
 #endif // defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
 
 static ISPCTarget lGetSystemISA() {
+    if (g->mockHostTarget != ISPCTarget::none) {
+        return g->mockHostTarget;
+    }
 #if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
     return lGetARMSystemISA();
 #elif defined(ISPC_HOST_IS_RISCV)
@@ -286,6 +277,16 @@ static ISPCTarget lGetSystemISA() {
 #error "Unsupported host CPU architecture."
 #endif
 }
+
+#if defined(ISPC_HOST_IS_X86)
+// Whether the OS has enabled APX state, or the state set by --mock-host-os-apx.
+static bool lHostOSHasAPX() {
+    if (g->mockHostOSAPX >= 0) {
+        return g->mockHostOSAPX != 0;
+    }
+    return dispatch::get_x86_os_has_apx();
+}
+#endif
 
 static bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
     bool ret = true;
@@ -1171,7 +1172,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
 #if defined(ISPC_HOST_IS_X86)
     // Disable APX for the host target if the OS does not support it.
-    if (hostRequested && ISPCTargetIsApxCapable(m_ispc_target) && !dispatch::get_x86_os_has_apx()) {
+    if (hostRequested && ISPCTargetIsApxCapable(m_ispc_target) && !lHostOSHasAPX()) {
         m_disabledAPX |= Opt::APX_all;
     }
 #else
@@ -2572,6 +2573,17 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             if (m_targetMachine) {
                 lPrintTargetInfo("CPU", m_targetMachine->getTargetTriple().str(), m_targetMachine->getTargetCPU().str(),
                                  m_targetMachine->getTargetFeatureString().str());
+                if (m_arch == Arch::x86_64 && ISPCTargetIsApxCapable(m_ispc_target)) {
+                    unsigned int enabledAPX = getEnabledAPXFeatures();
+                    std::string apxFeatures;
+                    for (auto const &f : Opt::APXFeatureTable()) {
+                        if (enabledAPX & f.second) {
+                            apxFeatures += apxFeatures.empty() ? "" : ",";
+                            apxFeatures += f.first;
+                        }
+                    }
+                    printf("Target APX Features: %s\n", apxFeatures.empty() ? "none" : apxFeatures.c_str());
+                }
             } else {
                 lPrintTargetInfo("CPU", "null", "null", "null");
             }
@@ -3497,6 +3509,8 @@ Globals::Globals() {
     genStdlib = false;
     isSlimBinary = false;
     printTarget = false;
+    mockHostTarget = ISPCTarget::none;
+    mockHostOSAPX = -1;
     NoOmitFramePointer = false;
     debugIR = -1;
     disableWarnings = false;
