@@ -327,8 +327,8 @@ jobs:
         BRANCH_SHA: ${{ needs.select-alerts.outputs.branch_sha }}
       run: .github/workflows/scripts/push-codeql-fixes.sh
 
-    # The PR step needs no project config, and .claude/settings.json would
-    # widen what Claude may run (it allows Bash(gh:*)).
+    # The PR step needs no project config. Without it, no slash command or
+    # agent can add its own tool grants to this session.
     - name: Remove the project's Claude config
       if: steps.push.outputs.pushed == 'true'
       run: rm -rf .claude .mcp.json CLAUDE.md
