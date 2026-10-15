@@ -4,11 +4,18 @@ name: Issue Triage
 
 # Labels each new issue, sets its type if it has none, and marks likely
 # duplicates. Claude can only read issues and run the triage-*.sh scripts,
-# which act on the triggering issue alone.
+# which act on the triggering issue alone. To triage an existing issue, run
+# it by hand with its number.
 
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue to triage"
+        required: true
+        type: number
 
 permissions: {}
 
@@ -19,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
-      group: issue-triage-${{ github.event.issue.number }}
+      group: issue-triage-${{ github.event.issue.number || inputs.issue_number }}
       cancel-in-progress: false
     permissions:
       contents: read # Required to check out the helper scripts
@@ -37,6 +44,21 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
+      # The scripts take the number from the event; make sure a dispatched
+      # one is an issue, not a PR.
+      - name: Check the issue
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          kind=$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER" --jq 'if .pull_request then "a pull request" else "an issue" end')
+          if [ "$kind" != "an issue" ]; then
+            echo "::error::#$ISSUE_NUMBER is $kind, not an issue"
+            exit 1
+          fi
+
       - name: Triage the issue
         uses: anthropics/claude-code-action@a26b07d8c778b0c43f64618e5fd29fd0f8af72e8 # v1.0.250
         env:
@@ -52,7 +74,7 @@ jobs:
           # scrub, so Claude's commands can't read the Bedrock token.
           allowed_non_write_users: "*"
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: "/triage-issue REPO: ${{ github.repository }} ISSUE_NUMBER: ${{ github.event.issue.number }}"
+          prompt: "/triage-issue REPO: ${{ github.repository }} ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}"
           # Fail-closed allowlist: only the triage scripts, bare and ./ forms.
           # --model is pinned because the action's default changes between
           # releases.

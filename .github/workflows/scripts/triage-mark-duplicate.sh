@@ -16,14 +16,14 @@ export GH_REPO="${GH_REPO:-${GITHUB_REPOSITORY:?GH_REPO or GITHUB_REPOSITORY mus
 
 DUP_LABEL="duplicate"
 
-if [[ $# -ne 1 ]] || ! [[ "$1" =~ ^[0-9]+$ ]]; then
+if [[ $# -ne 1 ]] || ! [[ "$1" =~ ^[1-9][0-9]*$ ]]; then
   echo "Error: give exactly one numeric issue number, the open issue this one duplicates" >&2
   exit 1
 fi
 ORIGINAL="$1"
 
 # Read from event payload so the issue number is bound to the triggering event.
-ISSUE=$(jq -r '.issue.number // empty' "${GITHUB_EVENT_PATH:?GITHUB_EVENT_PATH not set}")
+ISSUE=$(jq -r '.issue.number // .inputs.issue_number // empty' "${GITHUB_EVENT_PATH:?GITHUB_EVENT_PATH not set}")
 if ! [[ "$ISSUE" =~ ^[0-9]+$ ]]; then
   echo "Error: no issue number in event payload" >&2
   exit 1
