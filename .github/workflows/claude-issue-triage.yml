@@ -1,0 +1,61 @@
+## Copyright 2026 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+name: Issue Triage
+
+# Labels each new issue, sets its type if it has none, and marks likely
+# duplicates. Claude can only read issues and run the triage-*.sh scripts,
+# which act on the triggering issue alone.
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  triage:
+    # Only run in the main ispc/ispc repo where the secret is available.
+    if: github.repository == 'ispc/ispc'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: issue-triage-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read # Required to check out the helper scripts
+      issues: write # Required to apply labels, the type and the duplicate comment
+
+    steps:
+      - name: Checkout the triage command and scripts
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # Only these files: without .claude/settings.json its broad Bash
+          # allow rules can't apply, and CLAUDE.md doesn't fill the context.
+          sparse-checkout: |
+            .claude/commands/triage-issue.md
+            .github/workflows/scripts/triage-*.sh
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Triage the issue
+        uses: anthropics/claude-code-action@fccf022fdf80a6c41253d57e99293f208e484626 # v1.0.237
+        env:
+          GH_REPO: ${{ github.repository }}
+          # Each write script may run at most once.
+          CLAUDE_CODE_SCRIPT_CAPS: '{"triage-edit-labels.sh":1,"triage-set-issue-type.sh":1,"triage-mark-duplicate.sh":1}'
+          # Route Claude Code through AWS Bedrock (bearer-token auth)
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+        with:
+          use_bedrock: "true"
+          # Issues come from anyone. This also turns on the subprocess env
+          # scrub, so Claude's commands can't read the Bedrock token.
+          allowed_non_write_users: "*"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: "/triage-issue REPO: ${{ github.repository }} ISSUE_NUMBER: ${{ github.event.issue.number }}"
+          # Fail-closed allowlist: only the triage scripts, bare and ./ forms.
+          # --model is pinned because the action's default changes between
+          # releases.
+          claude_args: |
+            --model us.anthropic.claude-sonnet-5-5
+            --allowedTools "Bash(.github/workflows/scripts/triage-gh.sh *),Bash(./.github/workflows/scripts/triage-gh.sh *),Bash(.github/workflows/scripts/triage-edit-labels.sh *),Bash(./.github/workflows/scripts/triage-edit-labels.sh *),Bash(.github/workflows/scripts/triage-set-issue-type.sh *),Bash(./.github/workflows/scripts/triage-set-issue-type.sh *),Bash(.github/workflows/scripts/triage-mark-duplicate.sh *),Bash(./.github/workflows/scripts/triage-mark-duplicate.sh *)"
