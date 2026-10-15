@@ -12,10 +12,12 @@ if [ -d results ]; then cp -R results batch/reports; fi
 : > batch/results.jsonl
 while IFS= read -r alert; do
   n=$(jq .number <<< "$alert")
-  artifact="codeql-alert-$n-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-  file="results/$artifact/$n/result.json"
+  # download-artifact extracts a single matching artifact directly into results/.
+  dir="results/codeql-alert-$n-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/$n"
+  if [ ! -d "$dir" ]; then dir="results/$n"; fi
+  file="$dir/result.json"
   reason="missing result"
-  if [ -f "$file" ]; then reason="invalid or incomplete result (see reports/$artifact/$n/result.json)"; fi
+  if [ -f "$file" ]; then reason="invalid or incomplete result (see reports/${dir#results/}/result.json)"; fi
   # Require one explicit completed decision. Optional investigation
   # details are data for the integrator, never commands for this job.
   if [ -f "$file" ] && jq -se --argjson alert "$alert" '
@@ -39,8 +41,8 @@ while IFS= read -r alert; do
       alert: $alert, verdict: null, execution_status: "incomplete", error: $reason}')
   fi
   if jq -e '.execution_status == "complete" and .verdict == "bug"' <<< "$result" > /dev/null; then
-    if [ -s "results/$artifact/$n/fix.patch" ]; then
-      cp "results/$artifact/$n/fix.patch" "batch/patches/$n.patch"
+    if [ -s "$dir/fix.patch" ]; then
+      cp "$dir/fix.patch" "batch/patches/$n.patch"
     else
       result=$(jq -c '.execution_status = "incomplete" | .error = "bug verdict without a patch"' <<< "$result")
     fi
