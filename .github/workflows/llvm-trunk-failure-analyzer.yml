@@ -38,13 +38,27 @@ jobs:
       current_sha: ${{ steps.download-sha.outputs.current_sha }}
 
     steps:
+    # The default branch, never the commit of the triggering run: Claude runs
+    # with secrets and loads its commands and agents from this checkout.
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
-        # The ISPC commit the nightly tested, with enough history for
-        # "commits in the last 24 hours".
-        ref: ${{ github.event.workflow_run.head_sha || github.sha }}
         fetch-depth: 50
         persist-credentials: false
+
+    # The ISPC commit the nightly tested, possibly on another branch, only as
+    # git objects: Claude reads it with git log and git show, nothing runs it.
+    # The history covers "commits in the last 24 hours".
+    - name: Fetch the tested ISPC commit
+      id: ispc-sha
+      env:
+        TESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      run: |
+        if [[ ! "$TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "::error::Invalid ISPC commit: $TESTED_SHA"
+          exit 1
+        fi
+        git fetch -q --no-tags --depth=50 origin "$TESTED_SHA"
+        echo "ispc_sha=$TESTED_SHA" >> "$GITHUB_OUTPUT"
 
     - name: Determine run ID to analyze
       id: get-run-id
@@ -155,6 +169,7 @@ jobs:
           /analyze-llvm-trunk --run-id ${{ steps.get-run-id.outputs.run_id }}
           --current-sha ${{ steps.download-sha.outputs.current_sha }}
           --previous-sha ${{ steps.get-previous-sha.outputs.previous_sha }}
+          --ispc-sha ${{ steps.ispc-sha.outputs.ispc_sha }}
         # Pin the model: the Bedrock default model is denied by IAM policy.
         claude_args: |
           --model us.anthropic.claude-opus-5-5
