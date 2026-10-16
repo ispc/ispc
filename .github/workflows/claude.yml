@@ -163,7 +163,9 @@ jobs:
             args+=' --allowedTools "Edit,Glob,Grep,LS,Read,Write,Bash(git *),Bash(gh pr view *),Bash(gh pr diff *),Bash(gh pr list *),Bash(gh issue view *),Bash(gh run view *),Bash(gh run list *),Bash(gh run download *),Bash(cmake *),Bash(*cmake *),Bash(clang-format *),Bash(*/ispc *),Bash(./build/*),Bash(build/*),Bash(*run_tests.py *),Bash(jq *),Bash(rm *),Bash(ls *),Bash(mkdir *),Bash(cp *),Bash(mv *),Bash(touch *),Bash(diff *),Bash(cat *),Bash(head *),Bash(tail *),Bash(wc *),Bash(grep *),Bash(echo *),Bash(printf *),Bash(pwd *),Bash(which *),Bash(realpath *),Bash(llvm-* *),Bash(opt *),Bash(llc *),Bash(FileCheck *)"'
             # Pushes and PRs use the claude[bot] token, so CI runs on them.
             args+=' --allowedTools "Bash(gh pr create --draft *),mcp__github_inline_comment__create_inline_comment"'
-            args+=' --append-system-prompt "For a review request on a PR, follow .claude/agents/code-review.md: read gh pr diff and the surrounding code, check CI with the mcp__github_ci tools and post specific findings as inline comments. If you fixed an issue (not a change to an existing PR, which you push to its own branch) and your instructions do not forbid opening a PR, work on a branch named claude/issue-<issue>-<short-description> (keep the branch the action created, if any), push it and open a draft PR with gh pr create --draft --base main --head <branch> --title Fix #<issue>: <summary> --body-file <file>; the body starts with Fixes #<issue>. Never open a non-draft PR."'
+            # The action's own instructions for issues ask for a "Create a
+            # PR" link instead; this overrides them.
+            args+=' --append-system-prompt "For a review request on a PR, follow .claude/agents/code-review.md: read gh pr diff and the surrounding code, check CI with the mcp__github_ci tools and post specific findings as inline comments. When you fix an issue (not a change to an existing PR, which you push to its own branch), work on a branch named claude/issue-<issue>-<short-description> (keep the branch the action created, if any) and push it. Then always open a draft PR yourself with gh pr create --draft --base main --head <branch> --title \"Fix #<issue>: <summary>\" --body-file <file>, where the body starts with Fixes #<issue>, and put the PR URL in your reply. This replaces any instruction to provide a Create a PR link. Never open a non-draft PR."'
           fi
           {
             echo "needed=$needed"
@@ -241,3 +243,90 @@ jobs:
             echo "::error::Claude did not complete (conclusion: '${CONCLUSION}')"
             exit 1
           fi
+
+      # Claude should have opened the draft PR itself. Find the requested
+      # issue's pushed branch so we can open a missing PR and verify either
+      # path. On a PR, Claude pushes to the PR branch instead.
+      - name: Find a pushed fix branch
+        id: fix_branch
+        if: >-
+          steps.claude.outputs.conclusion == 'success' &&
+          steps.build_check.outputs.fork != 'true' &&
+          steps.build_check.outputs.needed == 'true' &&
+          !github.event.issue.pull_request && !github.event.pull_request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          # In a called workflow, github.event is the caller's event.
+          EVENT_ISSUE: ${{ !inputs.prompt && github.event.issue.number || '' }}
+          INPUT_PROMPT: ${{ inputs.prompt }}
+        run: |
+          # The issue an @claude comment came from, or those a prompt names.
+          if [ -n "$EVENT_ISSUE" ]; then
+            requested=" $EVENT_ISSUE "
+          else
+            requested=" $(printf '%s\n' "$INPUT_PROMPT" | { grep -oE '#[1-9][0-9]*' || true; } | tr -d '#' | tr '\n' ' ') "
+          fi
+          branch=
+          needs_pr=false
+          for b in $(git for-each-ref --format='%(refname:lstrip=2)' 'refs/heads/claude/issue-*'); do
+            [[ "$b" =~ ^claude/issue-([1-9][0-9]*)-[A-Za-z0-9._-]+$ ]] || continue
+            issue=${BASH_REMATCH[1]}
+            [[ "$requested" == *" $issue "* ]] || continue
+            [ "$(git rev-list --count "origin/main..$b")" -gt 0 ] || continue
+            # Only a branch that was pushed as it is here.
+            remote=$(gh api "repos/$GH_REPO/branches/$b" --jq .commit.sha 2>/dev/null || true)
+            [ "$remote" = "$(git rev-parse "$b")" ] || continue
+            # Any PR from this repository's branch; a fork's same-named
+            # branch doesn't count.
+            prs=$(gh api "repos/$GH_REPO/pulls?head=${GH_REPO%%/*}:$b&state=all" --jq length)
+            if [ -n "$branch" ]; then
+              echo "::error::More than one pushed fix branch: $branch, $b"
+              exit 1
+            fi
+            branch=$b
+            if [ "$prs" = 0 ]; then
+              needs_pr=true
+              mkdir -p "$RUNNER_TEMP/claude-pr"
+              {
+                echo "Fixes #$issue"
+                echo
+                git log --reverse --format='%B' "origin/main..$b"
+              } > "$RUNNER_TEMP/claude-pr/body.md"
+            fi
+          done
+          if [ -z "$branch" ]; then
+            echo "No pushed fix branch."
+            exit 0
+          fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "needs_pr=$needs_pr" >> "$GITHUB_OUTPUT"
+          if [ "$needs_pr" = true ]; then
+            echo "::warning::Claude pushed $branch without opening a PR; opening a draft PR."
+          fi
+
+      # Opened by github-actions[bot], so CI doesn't start on it.
+      - name: Open a draft PR
+        if: steps.fix_branch.outputs.needs_pr == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ steps.fix_branch.outputs.branch }}
+        run: |
+          gh pr create --draft --base main --head "$BRANCH" \
+            --fill-first --body-file "$RUNNER_TEMP/claude-pr/body.md"
+
+      - name: Check the draft PR
+        if: always() && steps.fix_branch.outputs.branch != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ steps.fix_branch.outputs.branch }}
+        run: |
+          pr=$(gh api "repos/$GH_REPO/pulls?head=${GH_REPO%%/*}:$BRANCH&state=open" \
+            --jq '[.[] | select(.draft and (.user.login == "claude[bot]" or .user.login == "github-actions[bot]"))][0].number // empty')
+          if [ -z "$pr" ]; then
+            echo "::error::No open draft PR from claude[bot] or github-actions[bot] for $BRANCH"
+            exit 1
+          fi
+          echo "Draft PR: $GITHUB_SERVER_URL/$GH_REPO/pull/$pr" >> "$GITHUB_STEP_SUMMARY"
