@@ -162,6 +162,10 @@ endif()
 
 option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ${LLVM_SUPPORTS_ARM})
+option(ARM32_ENABLED "Enable 32-bit ARM support (requires ARM_ENABLED)" ${ARM_ENABLED})
+if (ARM32_ENABLED AND NOT ARM_ENABLED)
+    message(FATAL_ERROR "ARM32_ENABLED requires ARM_ENABLED")
+endif()
 # Turn off RISC-V support by default. Later we can use ${LLVM_SUPPORTS_RISCV} for default option value.
 option(RISCV_ENABLED "Enable RISC-V support" OFF)
 option(PPC64_ENABLED "Enable PowerPC64 support" OFF)

@@ -169,10 +169,15 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
     # ARM targets
     if (ARM_ENABLED)
         if (${func} STREQUAL "stdlib_to_cpp")
+            set(arm_bits)
+            if (ARM32_ENABLED)
+                list(APPEND arm_bits 32)
+            endif()
+            list(APPEND arm_bits 64)
             # Stdlib families are defined in cmake/StdlibFamilies.cmake
             # Use pre-filtered ARM families for efficiency
             # Loop order matches x86 section for consistency
-            foreach (bit 32 64)
+            foreach (bit ${arm_bits})
                 foreach (os ${os_list})
                     # On Windows only 64-bit neon targets are supported
                     if (${os} STREQUAL "windows" AND ${bit} EQUAL 32)
@@ -199,7 +204,7 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
                 foreach (target ${ARM_TARGETS})
                     disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
                     # On Windows only 64-bit neon targets are supported
-                    if (${os} STREQUAL "windows")
+                    if (${os} STREQUAL "windows" OR NOT ARM32_ENABLED)
                         continue()
                     endif()
                     disp_target_stdlib(${func} ${ispc_name} ${target} 32 ${os} ${CPP_LIST} ${BC_LIST})

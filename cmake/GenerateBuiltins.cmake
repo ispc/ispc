@@ -220,6 +220,15 @@ function (get_target_flags os arch out)
         else()
             message(FATAL_ERROR "Error")
         endif()
+        if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Android")
+            # Native Termux uses bionic headers for the Linux-labelled library.
+            set(android_api 21)
+            if (CMAKE_SYSTEM_VERSION MATCHES "^[0-9]+$" AND CMAKE_SYSTEM_VERSION GREATER_EQUAL 21)
+                set(android_api ${CMAKE_SYSTEM_VERSION})
+            endif()
+            set(triple ${arch}-unknown-linux-android${android_api})
+            set(debian_triple "")
+        endif()
         set(fpic -fPIC)
     elseif (${os} STREQUAL "freebsd")
         set(triple ${arch}-unknown-freebsd)
@@ -277,7 +286,7 @@ function (get_target_flags os arch out)
         if (${os} STREQUAL "macos")
             # -isystem/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
             set(include -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
-        elseif(NOT ${debian_triple} STREQUAL "")
+        elseif(NOT "${debian_triple}" STREQUAL "")
             # When compiling on Linux, there are two way to support cross targets:
             # - add "foreign" architecture to the set of supported architectures and install corresponding toolchain.
             #   For example on aarch64: "dpkg --add-architecture armhf" and "apt-get install libc6-dev:armhf".
@@ -328,7 +337,7 @@ function(builtin_to_cpp bit os generic_arch)
 
     get_target_flags(${os} ${arch} target_flags)
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm --std=gnu++17
+        -I${CMAKE_SOURCE_DIR} -m${bit} -nostdinc++ -S -emit-llvm --std=gnu++17
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
@@ -442,7 +451,9 @@ endfunction()
 
 function (generate_common_builtins)
     if (ISPC_LINUX_TARGET AND ARM_ENABLED)
-        builtin_to_cpp(32 linux arm)
+        if (ARM32_ENABLED)
+            builtin_to_cpp(32 linux arm)
+        endif()
         builtin_to_cpp(64 linux arm)
     endif()
 
@@ -460,7 +471,9 @@ function (generate_common_builtins)
     endif()
 
     if (ISPC_ANDROID_TARGET AND ARM_ENABLED)
-        builtin_to_cpp(32 android arm)
+        if (ARM32_ENABLED)
+            builtin_to_cpp(32 android arm)
+        endif()
         builtin_to_cpp(64 android arm)
     endif()
 
@@ -470,7 +483,9 @@ function (generate_common_builtins)
     endif()
 
     if (ISPC_FREEBSD_TARGET AND ARM_ENABLED)
-        builtin_to_cpp(32 freebsd arm)
+        if (ARM32_ENABLED)
+            builtin_to_cpp(32 freebsd arm)
+        endif()
         builtin_to_cpp(64 freebsd arm)
     endif()
 
