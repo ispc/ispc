@@ -1570,7 +1570,7 @@ Expr *UnaryExpr::TypeCheck() {
             Error(expr->pos, "Illegal to pre/post increment \"%s\" type.", type->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(pt->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt)->GetBaseType())) {
             Error(expr->pos,
                   "Illegal to pre/post increment pointer to "
                   "undefined struct type \"%s\".",
@@ -2916,14 +2916,14 @@ Expr *BinaryExpr::TypeCheck() {
                   type1->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(pt0->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt0)->GetBaseType())) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".",
                   pt0->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(pt1->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt1)->GetBaseType())) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".",
@@ -2966,7 +2966,7 @@ Expr *BinaryExpr::TypeCheck() {
                   pt0->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(pt0->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt0)->GetBaseType())) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".",
@@ -5033,7 +5033,7 @@ static bool lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
                 return false;
             }
 
-            st = CastType<StructType>(pt->GetBaseType());
+            st = CastType<StructType>(ResolveForwardDeclaredStruct(pt)->GetBaseType());
         }
 
         if (st == nullptr) {
@@ -5154,7 +5154,7 @@ const Type *IndexExpr::GetTypeImpl() const {
     const PointerType *pointerType = CastType<PointerType>(baseExprType);
     if (pointerType != nullptr) {
         // ptr[index] -> type that the pointer points to
-        elementType = pointerType->GetBaseType();
+        elementType = ResolveForwardDeclaredStruct(pointerType->GetBaseType());
     } else if (const SequentialType *sequentialType = CastType<SequentialType>(baseExprType->GetReferenceTarget())) {
         // sequential type[index] -> element type of the sequential type
         elementType = sequentialType->GetElementType();
@@ -5720,6 +5720,7 @@ const StructType *StructMemberExpr::getStructType() const {
     if (type == nullptr) {
         return nullptr;
     }
+    type = ResolveForwardDeclaredStruct(type);
 
     // Handle reference types
     const ReferenceType *rt = CastType<ReferenceType>(type);
@@ -5987,6 +5988,9 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
         Assert(exprType != nullptr);
     }
 
+    // A pointer to a forward declared struct may have been created before the
+    // struct was defined.
+    exprType = ResolveForwardDeclaredStruct(exprType);
     const PointerType *pointerType = CastType<PointerType>(exprType);
     if (pointerType != nullptr) {
         exprType = pointerType->GetBaseType();
@@ -8643,10 +8647,11 @@ const Type *PtrDerefExpr::GetTypeImpl() const {
         return AtomicType::Dependent;
     }
 
+    const Type *baseType = ResolveForwardDeclaredStruct(type->GetBaseType());
     if (type->IsUniformType()) {
-        return type->GetBaseType();
+        return baseType;
     } else {
-        return type->GetBaseType()->GetAsVaryingType();
+        return baseType->GetAsVaryingType();
     }
 }
 
@@ -8735,7 +8740,7 @@ const Type *RefDerefExpr::GetTypeImpl() const {
     }
 
     AssertPos(pos, CastType<ReferenceType>(type) != nullptr);
-    return type->GetReferenceTarget();
+    return ResolveForwardDeclaredStruct(type->GetReferenceTarget());
 }
 
 Expr *RefDerefExpr::TypeCheck() {
@@ -9031,7 +9036,7 @@ void SizeOfExpr::Print(Indent &indent) const {
 Expr *SizeOfExpr::TypeCheck() {
     const Type *t = expr ? expr->GetType() : type;
     if (t != nullptr) {
-        t = t->GetReferenceTarget();
+        t = ResolveForwardDeclaredStruct(t->GetReferenceTarget());
     }
     if (t == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -9508,6 +9513,7 @@ static std::pair<std::string, const Type *> lDeduceParam(const Type *paramType, 
     if (paramType == nullptr || argType == nullptr) {
         return std::pair<std::string, const Type *>("", nullptr);
     }
+    argType = ResolveForwardDeclaredStruct(argType);
 
     bool constParam = paramType->IsConstType() && !paramType->IsReferenceType();
     bool constArg = argType->IsConstType() && !argType->IsReferenceType();
