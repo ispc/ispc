@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -315,6 +315,11 @@ class FunctionCallExpr : public Expr {
     bool isLaunch;
     bool isInvoke;
     Expr *launchCountExpr[3];
+
+    /** Name of the LLVM intrinsic being called, if its declaration is
+        deferred until template instantiation because of template-dependent
+        argument types. Empty otherwise. */
+    std::string deferredIntrinsicName;
 };
 
 /** @brief Expression representing indexing into something with an integer
@@ -997,4 +1002,11 @@ bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type);
 */
 Expr *PossiblyResolveStructOperatorOverloads(const char *baseOpName, const std::vector<Expr *> &args, SourcePos pos,
                                              bool isPostfix = false);
+
+/** Creates a call of the LLVM intrinsic with the given name and arguments.
+    If some of the arguments have template-dependent types, the intrinsic
+    can't be declared yet, so its declaration is deferred until the template
+    is instantiated.
+*/
+FunctionCallExpr *CreateLLVMIntrinsicCall(const std::string &name, ExprList *args, SourcePos namePos, SourcePos pos);
 } // namespace ispc

@@ -4625,8 +4625,13 @@ int FunctionCallExpr::EstimateCost() const {
 }
 
 FunctionCallExpr *FunctionCallExpr::Instantiate(TemplateInstantiation &templInst) const {
-    Expr *instFunc = func ? func->Instantiate(templInst) : nullptr;
     ExprList *instantiatedArgs = args ? args->Instantiate(templInst) : nullptr;
+    if (!deferredIntrinsicName.empty()) {
+        // Now the argument types are known and the intrinsic can be declared.
+        // Intrinsic calls are never launches, so launch fields are not needed.
+        return CreateLLVMIntrinsicCall(deferredIntrinsicName, instantiatedArgs, func ? func->pos : pos, pos);
+    }
+    Expr *instFunc = func ? func->Instantiate(templInst) : nullptr;
     FunctionCallExpr *inst = new FunctionCallExpr(instFunc, instantiatedArgs, pos, isLaunch);
     inst->launchCountExpr[0] = launchCountExpr[0] ? launchCountExpr[0]->Instantiate(templInst) : nullptr;
     inst->launchCountExpr[1] = launchCountExpr[1] ? launchCountExpr[1]->Instantiate(templInst) : nullptr;
@@ -4658,6 +4663,36 @@ void FunctionCallExpr::Print(Indent &indent) const {
     args->Print(indent);
 
     indent.Done();
+}
+
+FunctionCallExpr *ispc::CreateLLVMIntrinsicCall(const std::string &name, ExprList *args, SourcePos namePos,
+                                                SourcePos pos) {
+    bool hasDependentArgs = false;
+    if (args != nullptr) {
+        for (const Expr *arg : args->exprs) {
+            const Type *argType = arg ? arg->GetType() : nullptr;
+            if (argType && argType->IsDependent()) {
+                hasDependentArgs = true;
+                break;
+            }
+        }
+    }
+
+    if (hasDependentArgs && g->enableLLVMIntrinsics) {
+        // The LLVM types of the arguments are needed to declare the intrinsic,
+        // so wait for template instantiation.
+        FunctionSymbolExpr *fSym = new FunctionSymbolExpr(name.c_str(), {}, {}, TemplateArgs(), namePos);
+        FunctionCallExpr *call = new FunctionCallExpr(fSym, args, pos);
+        call->deferredIntrinsicName = name;
+        return call;
+    }
+
+    Symbol *sym = m->AddLLVMIntrinsicDecl(name, args, pos);
+    FunctionSymbolExpr *fSym = nullptr;
+    if (sym != nullptr) {
+        fSym = new FunctionSymbolExpr(name.c_str(), {sym}, {}, TemplateArgs(), namePos);
+    }
+    return new FunctionCallExpr(fSym, args, pos);
 }
 
 ///////////////////////////////////////////////////////////////////////////
