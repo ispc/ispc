@@ -182,6 +182,20 @@ jobs:
         if-no-files-found: error
         retention-days: 14
 
+    # Only the reports and patches for the finalizer; the full investigator
+    # output stays in the batch artifact for maintainers.
+    - name: Upload the reports and patches
+      if: steps.validate.outputs.has_fixes == 'true'
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: codeql-patches-${{ github.run_id }}
+        path: |
+          batch/results.json
+          batch/patches
+        overwrite: true
+        if-no-files-found: error
+        retention-days: 14
+
   finalize:
     name: Push one branch with the validated fixes and open a draft PR
     needs: [select-alerts, collect-results]
@@ -202,9 +216,34 @@ jobs:
         --covered ${{ needs.select-alerts.outputs.covered }}
       pr_branch: codeql/fixes
       pr_body_file: /tmp/codeql-pr-body.md
+      pr_title: Fix CodeQL alerts
     secrets:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+
+  # Claude pushes codeql/fixes itself, so check the pushed branch with
+  # trusted code, outside the job Claude ran in. This can't undo a push, but a
+  # failure here marks the branch and its PR as not to be merged.
+  check-fixes:
+    name: Check the pushed fixes branch
+    needs: [select-alerts, finalize]
+    if: ${{ !cancelled() && needs.finalize.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Check out the selected main commit
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        ref: ${{ needs.select-alerts.outputs.base_sha }}
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Check codeql/fixes
+      env:
+        BASE_SHA: ${{ needs.select-alerts.outputs.base_sha }}
+        BRANCH_SHA: ${{ needs.select-alerts.outputs.branch_sha }}
+      run: .github/workflows/scripts/check-codeql-fixes.sh
 
   apply-outcomes:
     name: Dismiss false positives and report one Unsure batch

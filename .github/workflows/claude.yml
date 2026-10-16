@@ -47,6 +47,11 @@ on:
         required: false
         type: string
         default: ""
+      pr_title:
+        description: "Title of a draft PR opened for pr_branch"
+        required: false
+        type: string
+        default: ""
     secrets:
       AWS_REGION:
         required: true
@@ -54,11 +59,6 @@ on:
         required: true
 
 permissions: {}
-
-env:
-  LLVM_VERSION: "23.1"
-  LLVM_TAR: llvm-23.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
   claude:
@@ -193,24 +193,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends bubblewrap socat
 
-      - name: Install build dependencies
+      # The same setup as the CodeQL investigators and the other CI jobs.
+      - name: Install build dependencies and LLVM
         if: steps.build_check.outputs.needed == 'true'
         run: |
-          sudo apt-get install -y --no-install-recommends \
-            cmake ninja-build bison flex m4 \
-            libc6-dev libc6-dev-i386 g++-multilib \
-            libtbb-dev libstdc++6
-
-      - name: Download LLVM
-        if: steps.build_check.outputs.needed == 'true'
-        run: |
-          wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 \
-            "$LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR"
-          tar xf "$LLVM_TAR"
-          rm -f "$LLVM_TAR"
-          # Keep LLVM out of Claude's git status and commits.
-          echo '/bin-*/' >> .git/info/exclude
-          echo "$GITHUB_WORKSPACE/bin-$LLVM_VERSION/bin" >> "$GITHUB_PATH"
+          # Keep the downloaded files out of Claude's git status and commits.
+          printf '%s\n' '/bin-*/' '/sde-external-*/' '/*.tar.xz' '/log[0-9]*.txt' >> .git/info/exclude
+          .github/workflows/scripts/install-build-deps.sh
 
       # Only a push from this run counts for a caller-named PR branch.
       - name: Record the PR branch
@@ -279,8 +268,12 @@ jobs:
       # to the PR branch instead.
       - name: Find a pushed fix branch
         id: fix_branch
+        # A caller-named branch pushed in this run gets its PR even if Claude
+        # failed afterwards.
         if: >-
-          steps.claude.outputs.conclusion == 'success' &&
+          !cancelled() &&
+          (steps.claude.outputs.conclusion == 'success' ||
+           (inputs.pr_branch != '' && steps.pr_branch.outcome == 'success')) &&
           steps.build_check.outputs.fork != 'true' &&
           steps.build_check.outputs.needed == 'true' &&
           !github.event.issue.pull_request && !github.event.pull_request
@@ -302,8 +295,12 @@ jobs:
             # The caller's branch, if it was pushed in this run as it is here.
             remote=$(git ls-remote origin "refs/heads/$PR_BRANCH" |
               jq -Rr --arg ref "refs/heads/$PR_BRANCH" 'split("\t") | select(.[1] == $ref) | .[0]')
-            if [ -n "$remote" ] && [ "$remote" != "$BEFORE_SHA" ] &&
-                [ "$remote" = "$(git rev-parse -q --verify "refs/heads/$PR_BRANCH" || true)" ]; then
+            if [ -n "$remote" ] && [ "$remote" != "$BEFORE_SHA" ]; then
+              # Someone else pushed, or Claude pushed another commit than its branch.
+              if [ "$remote" != "$(git rev-parse -q --verify "refs/heads/$PR_BRANCH" || true)" ]; then
+                echo "::error::$PR_BRANCH changed in this run to $remote, which is not Claude's local branch."
+                exit 1
+              fi
               branch=$PR_BRANCH
               head=$(jq -rn --arg b "${GH_REPO%%/*}:$branch" '$b | @uri')
               prs=$(gh api "repos/$GH_REPO/pulls?head=$head&state=open" --jq length)
@@ -362,14 +359,21 @@ jobs:
 
       # Opened by github-actions[bot], so CI doesn't start on it.
       - name: Open a draft PR
-        if: steps.fix_branch.outputs.needs_pr == 'true'
+        if: ${{ !cancelled() && steps.fix_branch.outputs.needs_pr == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           BRANCH: ${{ steps.fix_branch.outputs.branch }}
+          PR_TITLE: ${{ inputs.pr_title }}
         run: |
+          if [ -n "$PR_TITLE" ]; then
+            title=(--title "$PR_TITLE")
+          else
+            title=(--fill-first)
+          fi
           gh pr create --draft --base main --head "$BRANCH" \
-            --fill-first --body-file "$RUNNER_TEMP/claude-pr/body.md"
+            "${title[@]}" --body-file "$RUNNER_TEMP/claude-pr/body.md"
+          echo "Opened by github-actions[bot], so CI doesn't start on it; start it manually." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check the draft PR
         if: always() && steps.fix_branch.outputs.branch != ''
