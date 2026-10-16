@@ -37,6 +37,16 @@ on:
         required: false
         type: boolean
         default: true
+      pr_branch:
+        description: "Branch Claude pushes and opens a draft PR from, if not claude/issue-<N>-*"
+        required: false
+        type: string
+        default: ""
+      pr_body_file:
+        description: "File Claude writes the PR body to; a draft PR opened for pr_branch uses it"
+        required: false
+        type: string
+        default: ""
     secrets:
       AWS_REGION:
         required: true
@@ -198,7 +208,26 @@ jobs:
             "$LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR"
           tar xf "$LLVM_TAR"
           rm -f "$LLVM_TAR"
+          # Keep LLVM out of Claude's git status and commits.
+          echo '/bin-*/' >> .git/info/exclude
           echo "$GITHUB_WORKSPACE/bin-$LLVM_VERSION/bin" >> "$GITHUB_PATH"
+
+      # Only a push from this run counts for a caller-named PR branch.
+      - name: Record the PR branch
+        id: pr_branch
+        if: inputs.pr_branch != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_BRANCH: ${{ inputs.pr_branch }}
+        run: |
+          set -o pipefail
+          if ! git check-ref-format --branch "$PR_BRANCH" > /dev/null || [[ "$PR_BRANCH" == -* ]]; then
+            echo "::error::Invalid pr_branch: $PR_BRANCH"
+            exit 1
+          fi
+          sha=$(git ls-remote origin "refs/heads/$PR_BRANCH" | jq -Rr --arg ref "refs/heads/$PR_BRANCH" 'split("\t") | select(.[1] == $ref) | .[0]')
+          echo "before=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code
         id: claude
@@ -244,9 +273,10 @@ jobs:
             exit 1
           fi
 
-      # Claude should have opened the draft PR itself. Find the requested
-      # issue's pushed branch so we can open a missing PR and verify either
-      # path. On a PR, Claude pushes to the PR branch instead.
+      # Claude should have opened the draft PR itself. Find the branch it
+      # pushed, the caller's pr_branch or the requested issue's branch, so we
+      # can open a missing PR and verify either path. On a PR, Claude pushes
+      # to the PR branch instead.
       - name: Find a pushed fix branch
         id: fix_branch
         if: >-
@@ -260,41 +290,66 @@ jobs:
           # In a called workflow, github.event is the caller's event.
           EVENT_ISSUE: ${{ !inputs.prompt && github.event.issue.number || '' }}
           INPUT_PROMPT: ${{ inputs.prompt }}
+          PR_BRANCH: ${{ inputs.pr_branch }}
+          PR_BODY_FILE: ${{ inputs.pr_body_file }}
+          BEFORE_SHA: ${{ steps.pr_branch.outputs.before }}
         run: |
-          # The issue an @claude comment came from, or those a prompt names.
-          if [ -n "$EVENT_ISSUE" ]; then
-            requested=" $EVENT_ISSUE "
-          else
-            requested=" $(printf '%s\n' "$INPUT_PROMPT" | { grep -oE '#[1-9][0-9]*' || true; } | tr -d '#' | tr '\n' ' ') "
-          fi
           branch=
           needs_pr=false
-          for b in $(git for-each-ref --format='%(refname:lstrip=2)' 'refs/heads/claude/issue-*'); do
-            [[ "$b" =~ ^claude/issue-([1-9][0-9]*)-[A-Za-z0-9._-]+$ ]] || continue
-            issue=${BASH_REMATCH[1]}
-            [[ "$requested" == *" $issue "* ]] || continue
-            [ "$(git rev-list --count "origin/main..$b")" -gt 0 ] || continue
-            # Only a branch that was pushed as it is here.
-            remote=$(gh api "repos/$GH_REPO/branches/$b" --jq .commit.sha 2>/dev/null || true)
-            [ "$remote" = "$(git rev-parse "$b")" ] || continue
-            # Any PR from this repository's branch; a fork's same-named
-            # branch doesn't count.
-            prs=$(gh api "repos/$GH_REPO/pulls?head=${GH_REPO%%/*}:$b&state=all" --jq length)
-            if [ -n "$branch" ]; then
-              echo "::error::More than one pushed fix branch: $branch, $b"
-              exit 1
+          mkdir -p "$RUNNER_TEMP/claude-pr"
+          if [ -n "$PR_BRANCH" ]; then
+            set -o pipefail
+            # The caller's branch, if it was pushed in this run as it is here.
+            remote=$(git ls-remote origin "refs/heads/$PR_BRANCH" |
+              jq -Rr --arg ref "refs/heads/$PR_BRANCH" 'split("\t") | select(.[1] == $ref) | .[0]')
+            if [ -n "$remote" ] && [ "$remote" != "$BEFORE_SHA" ] &&
+                [ "$remote" = "$(git rev-parse -q --verify "refs/heads/$PR_BRANCH" || true)" ]; then
+              branch=$PR_BRANCH
+              head=$(jq -rn --arg b "${GH_REPO%%/*}:$branch" '$b | @uri')
+              prs=$(gh api "repos/$GH_REPO/pulls?head=$head&state=open" --jq length)
+              if [ "$prs" = 0 ]; then
+                needs_pr=true
+                # The body Claude prepared, if it got that far.
+                if [ -n "$PR_BODY_FILE" ] && [ -f "$PR_BODY_FILE" ] && [ ! -L "$PR_BODY_FILE" ] && [ -s "$PR_BODY_FILE" ]; then
+                  cp "$PR_BODY_FILE" "$RUNNER_TEMP/claude-pr/body.md"
+                else
+                  git log --reverse --format='%B' "origin/main..$branch" > "$RUNNER_TEMP/claude-pr/body.md"
+                fi
+              fi
             fi
-            branch=$b
-            if [ "$prs" = 0 ]; then
-              needs_pr=true
-              mkdir -p "$RUNNER_TEMP/claude-pr"
-              {
-                echo "Fixes #$issue"
-                echo
-                git log --reverse --format='%B' "origin/main..$b"
-              } > "$RUNNER_TEMP/claude-pr/body.md"
+          else
+            # The issue an @claude comment came from, or those a prompt names.
+            if [ -n "$EVENT_ISSUE" ]; then
+              requested=" $EVENT_ISSUE "
+            else
+              requested=" $(printf '%s\n' "$INPUT_PROMPT" | { grep -oE '#[1-9][0-9]*' || true; } | tr -d '#' | tr '\n' ' ') "
             fi
-          done
+            for b in $(git for-each-ref --format='%(refname:lstrip=2)' 'refs/heads/claude/issue-*'); do
+              [[ "$b" =~ ^claude/issue-([1-9][0-9]*)-[A-Za-z0-9._-]+$ ]] || continue
+              issue=${BASH_REMATCH[1]}
+              [[ "$requested" == *" $issue "* ]] || continue
+              [ "$(git rev-list --count "origin/main..$b")" -gt 0 ] || continue
+              # Only a branch that was pushed as it is here.
+              remote=$(gh api "repos/$GH_REPO/branches/$b" --jq .commit.sha 2>/dev/null || true)
+              [ "$remote" = "$(git rev-parse "$b")" ] || continue
+              # Any PR from this repository's branch; a fork's same-named
+              # branch doesn't count.
+              prs=$(gh api "repos/$GH_REPO/pulls?head=${GH_REPO%%/*}:$b&state=all" --jq length)
+              if [ -n "$branch" ]; then
+                echo "::error::More than one pushed fix branch: $branch, $b"
+                exit 1
+              fi
+              branch=$b
+              if [ "$prs" = 0 ]; then
+                needs_pr=true
+                {
+                  echo "Fixes #$issue"
+                  echo
+                  git log --reverse --format='%B' "origin/main..$b"
+                } > "$RUNNER_TEMP/claude-pr/body.md"
+              fi
+            done
+          fi
           if [ -z "$branch" ]; then
             echo "No pushed fix branch."
             exit 0
