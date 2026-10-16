@@ -3,6 +3,7 @@
 
 // RUN: %{ispc} --target=avx2-i32x8 --nowrap --enable-llvm-intrinsics --emit-llvm-text %s -o - 2>&1 | FileCheck %s
 // RUN: not %{ispc} --target=avx2-i32x8 --nowrap -DNO_INSTANCE %s -o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED
+// RUN: not %{ispc} --target=avx2-i32x8 --nowrap --enable-llvm-intrinsics -DNO_INSTANCE -DBAD_NAME %s -o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-NAME
 
 // REQUIRES: X86_ENABLED
 
@@ -10,8 +11,18 @@
 // CHECK-DISABLED: Calling LLVM intrinsics from ISPC source code is an experimental feature
 // CHECK-DISABLED-NOT: FATAL ERROR
 
+// Unknown intrinsic names are reported even if the template is never instantiated.
+// CHECK-BAD-NAME: Error: LLVM intrinsic "llvm.typo" not supported.
+// CHECK-BAD-NAME: Error: LLVM intrinsic "llvm.ispc.typo" not supported.
+// CHECK-BAD-NAME-NOT: FATAL ERROR
+
 // Never instantiated.
 template <typename T> T unused(T x) { return @llvm.ctlz(x, false); }
+
+#ifdef BAD_NAME
+template <typename T> T bad_llvm(T x) { return @llvm.typo(x); }
+template <typename T> T bad_ispc(T x) { return @llvm.ispc.typo(x); }
+#endif
 
 #ifndef NO_INSTANCE
 template <typename T> T cttz(T x) { return @llvm.cttz(x, false); }

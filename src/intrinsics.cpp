@@ -661,6 +661,24 @@ static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std:
     return nullptr;
 }
 
+bool Module::CheckLLVMIntrinsicName(const std::string &name, SourcePos pos) {
+#ifdef ISPC_XE_ENABLED
+    if (g->target->isXeTarget()) {
+        if (llvm::GenXIntrinsic::lookupGenXIntrinsicID(name) == llvm::GenXIntrinsic::not_any_intrinsic) {
+            Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+            return false;
+        }
+        return true;
+    }
+#endif // ISPC_XE_ENABLED
+    if (lLookupIntrinsicID(name) == llvm::Intrinsic::not_intrinsic &&
+        lLookupISPCInstrinsic(name) == ISPCIntrinsics::not_intrinsic) {
+        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+        return false;
+    }
+    return true;
+}
+
 Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
     if (g->enableLLVMIntrinsics == false) {
         Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
