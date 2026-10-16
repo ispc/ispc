@@ -205,7 +205,13 @@ function (get_target_flags os arch out)
     if (${os} STREQUAL "windows")
         set(triple ${arch}-pc-win32)
     elseif (${os} STREQUAL "linux")
-        if (${arch} STREQUAL "i686" OR ${arch} STREQUAL "x86_64" OR ${arch} STREQUAL "aarch64")
+        if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+            # ISPC that runs on Android (built natively in Termux or cross-compiled) targets
+            # Linux, but the C library is bionic. Use the Android triple, so clang picks up the
+            # bionic headers including the architecture specific ones (e.g. asm/types.h). The
+            # bionic headers reject unversioned triples; API level 24 is the one Termux targets.
+            set(triple ${arch}-unknown-linux-android24)
+        elseif (${arch} STREQUAL "i686" OR ${arch} STREQUAL "x86_64" OR ${arch} STREQUAL "aarch64")
             set(triple ${arch}-unknown-linux-gnu)
             set(debian_triple ${arch}-linux-gnu)
         elseif (${arch} STREQUAL "armv8a")
@@ -327,8 +333,10 @@ function(builtin_to_cpp bit os generic_arch)
     message (STATUS "Enabling target: ${os} / ${arch}")
 
     get_target_flags(${os} ${arch} target_flags)
+    # builtins-c-cpu.cpp doesn't depend on the C++ library (see builtins/array.hpp), so
+    # -nostdinc++ keeps the build independent of the target's C++ library headers.
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm --std=gnu++17
+        -I${CMAKE_SOURCE_DIR} -m${bit} -nostdinc++ -S -emit-llvm --std=gnu++17
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
@@ -441,8 +449,11 @@ function (generate_target_builtins)
 endfunction()
 
 function (generate_common_builtins)
-    if (ISPC_LINUX_TARGET AND ARM_ENABLED)
+    if (ISPC_LINUX_TARGET AND ARM32_ENABLED)
         builtin_to_cpp(32 linux arm)
+    endif()
+
+    if (ISPC_LINUX_TARGET AND ARM_ENABLED)
         builtin_to_cpp(64 linux arm)
     endif()
 
@@ -459,8 +470,11 @@ function (generate_common_builtins)
         builtin_to_cpp(64 linux x86)
     endif()
 
-    if (ISPC_ANDROID_TARGET AND ARM_ENABLED)
+    if (ISPC_ANDROID_TARGET AND ARM32_ENABLED)
         builtin_to_cpp(32 android arm)
+    endif()
+
+    if (ISPC_ANDROID_TARGET AND ARM_ENABLED)
         builtin_to_cpp(64 android arm)
     endif()
 
@@ -469,8 +483,11 @@ function (generate_common_builtins)
         builtin_to_cpp(64 android x86)
     endif()
 
-    if (ISPC_FREEBSD_TARGET AND ARM_ENABLED)
+    if (ISPC_FREEBSD_TARGET AND ARM32_ENABLED)
         builtin_to_cpp(32 freebsd arm)
+    endif()
+
+    if (ISPC_FREEBSD_TARGET AND ARM_ENABLED)
         builtin_to_cpp(64 freebsd arm)
     endif()
 
