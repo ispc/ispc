@@ -124,6 +124,11 @@ class Module {
         function symbol for it. */
     Symbol *AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos po);
 
+    /** Checks that an LLVM intrinsic with the given name is known and reports
+        an error if it isn't. Only the name is checked, so this can be used
+        before the argument types are known. */
+    bool CheckLLVMIntrinsicName(const std::string &name, SourcePos pos);
+
     /** Returns pointer to FunctionTemplate based on template name and template argument types provided. Also makes
        template argument types normalization, i.e apply "varying type default":
        template <typename T> void foo(T t);

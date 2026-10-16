@@ -4680,7 +4680,11 @@ FunctionCallExpr *ispc::CreateLLVMIntrinsicCall(const std::string &name, ExprLis
 
     if (hasDependentArgs && g->enableLLVMIntrinsics) {
         // The LLVM types of the arguments are needed to declare the intrinsic,
-        // so wait for template instantiation.
+        // so wait for template instantiation. The name doesn't depend on them,
+        // so check it now.
+        if (!m->CheckLLVMIntrinsicName(name, pos)) {
+            return new FunctionCallExpr(nullptr, args, pos);
+        }
         FunctionSymbolExpr *fSym = new FunctionSymbolExpr(name.c_str(), {}, {}, TemplateArgs(), namePos);
         FunctionCallExpr *call = new FunctionCallExpr(fSym, args, pos);
         call->deferredIntrinsicName = name;
