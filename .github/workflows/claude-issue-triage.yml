@@ -41,6 +41,7 @@ jobs:
           sparse-checkout: |
             .claude/commands/triage-issue.md
             .github/workflows/scripts/triage-*.sh
+            .gitmodules
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
