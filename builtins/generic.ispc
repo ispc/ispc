@@ -107,29 +107,6 @@ unmasked uniform float16<DOUBLE_WIDTH> __concat(float16 v0, float16 v1) { return
 unmasked uniform float<DOUBLE_WIDTH> __concat(float v0, float v1) { return @llvm.ispc.concat(v0, v1); }
 unmasked uniform double<DOUBLE_WIDTH> __concat(double v0, double v1) { return @llvm.ispc.concat(v0, v1); }
 
-// overloaded __masked_expandload functions
-unmasked varying int8 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int8 passthru) {
-    return @llvm.masked.expandload(from, mask, passthru);
-}
-unmasked varying int16 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int16 passthru) {
-    return @llvm.masked.expandload(from, mask, passthru);
-}
-unmasked varying int32 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int32 passthru) {
-    return @llvm.masked.expandload(from, mask, passthru);
-}
-unmasked varying int64 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int64 passthru) {
-    return @llvm.masked.expandload(from, mask, passthru);
-}
-unmasked varying float16 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying float16 passthru) {
-    return @llvm.masked.expandload(from, mask, passthru);
-}
-unmasked varying float __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying float passthru) {
-    return @llvm.masked.expandload(from, mask, passthru);
-}
-unmasked varying double __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying double passthru) {
-    return @llvm.masked.expandload(from, mask, passthru);
-}
-
 // bitcast
 template <typename L, typename R> unmasked L __bitcast(R x) {
     // This function should never be called, instead specialized versions should be used.
@@ -1639,59 +1616,7 @@ EXT varying double __streaming_load_varying_double(NOESCAPE uniform int8 *unifor
 }
 
 template <typename T> unmasked varying T __masked_load(varying T *uniform ptr, UIntMaskType mask) {
-    // This function should never be called, instead specialized versions should be used.
-    __not_supported();
-}
-template <> unmasked varying int8 __masked_load<int8>(varying int8 *uniform ptr, UIntMaskType mask) {
-    varying int8 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
-#else
-    return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
-#endif
-}
-template <> unmasked varying int16 __masked_load<int16>(varying int16 *uniform ptr, UIntMaskType mask) {
-    varying int16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
-#else
-    return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
-#endif
-}
-template <> unmasked varying int32 __masked_load<int32>(varying int32 *uniform ptr, UIntMaskType mask) {
-    varying int32 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
-#else
-    return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
-#endif
-}
-template <> unmasked varying int64 __masked_load<int64>(varying int64 *uniform ptr, UIntMaskType mask) {
-    varying int64 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
-#else
-    return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
-#endif
-}
-template <> unmasked varying float16 __masked_load<float16>(varying float16 *uniform ptr, UIntMaskType mask) {
-    varying float16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
-#else
-    return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
-#endif
-}
-template <> unmasked varying float __masked_load<float>(varying float *uniform ptr, UIntMaskType mask) {
-    varying float passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
-#else
-    return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
-#endif
-}
-template <> unmasked varying double __masked_load<double>(varying double *uniform ptr, UIntMaskType mask) {
-    varying double passthru;
+    varying T passthru;
 #if LLVM_VERSION_MAJOR >= 22
     return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
 #else
@@ -1743,7 +1668,7 @@ EXT varying double __masked_load_double(varying double *uniform ptr, UIntMaskTyp
     return __masked_load_fast<double>(ptr, mask);
 }
 
-EXT void __masked_store_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
+template <typename T> unmasked void __masked_store(NOESCAPE varying T *uniform ptr, varying T val, UIntMaskType mask) {
 #if LLVM_VERSION_MAJOR >= 22
     @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
 #else
@@ -1751,47 +1676,27 @@ EXT void __masked_store_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val,
 #endif
 }
 
+EXT void __masked_store_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
+    __masked_store<int8>(ptr, val, mask);
+}
+
 EXT void __masked_store_i16(NOESCAPE varying int16 *uniform ptr, varying int16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
-#else
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
-#endif
+    __masked_store<int16>(ptr, val, mask);
 }
 EXT void __masked_store_i32(NOESCAPE varying int32 *uniform ptr, varying int32 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
-#else
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
-#endif
+    __masked_store<int32>(ptr, val, mask);
 }
 EXT void __masked_store_i64(NOESCAPE varying int64 *uniform ptr, varying int64 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
-#else
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
-#endif
+    __masked_store<int64>(ptr, val, mask);
 }
 EXT void __masked_store_half(NOESCAPE varying float16 *uniform ptr, varying float16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
-#else
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
-#endif
+    __masked_store<float16>(ptr, val, mask);
 }
 EXT void __masked_store_float(NOESCAPE varying float *uniform ptr, varying float val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
-#else
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
-#endif
+    __masked_store<float>(ptr, val, mask);
 }
 EXT void __masked_store_double(NOESCAPE varying double *uniform ptr, varying double val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
-#else
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
-#endif
+    __masked_store<double>(ptr, val, mask);
 }
 
 EXT void __masked_store_blend_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
@@ -1829,118 +1734,57 @@ EXT uniform bool __all(UIntMaskType mask) { return __cast_mask_to_i64(mask) == ~
 EXT uniform bool __none(UIntMaskType mask) { return __cast_mask_to_i64(mask) == 0; }
 
 // general gather functions
-// 1l is needed for immarg of i32
-EXT READONLY varying int8 __gather32_i8(varying uint32 addrs, UIntMaskType mask) {
-    varying int8 passthru;
+template <typename T> READONLY unmasked varying T __masked_gather(varying uint64 addrs, UIntMaskType mask) {
+    varying T passthru;
 #if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((varying uint64)addrs, mask, passthru);
+    return @llvm.masked.gather(addrs, mask, passthru);
 #else
-    return @llvm.masked.gather((varying uint64)addrs, 1l, mask, passthru);
+    // 1l is needed for immarg of i32
+    return @llvm.masked.gather(addrs, 1l, mask, passthru);
 #endif
+}
+
+EXT READONLY varying int8 __gather32_i8(varying uint32 addrs, UIntMaskType mask) {
+    return __masked_gather<int8>((varying uint64)addrs, mask);
 }
 EXT READONLY varying int8 __gather64_i8(varying uint64 addrs, UIntMaskType mask) {
-    varying int8 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather(addrs, mask, passthru);
-#else
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<int8>(addrs, mask);
 }
 EXT READONLY varying int16 __gather32_i16(varying uint32 addrs, UIntMaskType mask) {
-    varying int16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((varying uint64)addrs, mask, passthru);
-#else
-    return @llvm.masked.gather((varying uint64)addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<int16>((varying uint64)addrs, mask);
 }
 EXT READONLY varying int16 __gather64_i16(varying uint64 addrs, UIntMaskType mask) {
-    varying int16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather(addrs, mask, passthru);
-#else
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<int16>(addrs, mask);
 }
 EXT READONLY varying float16 __gather32_half(varying uint32 addrs, UIntMaskType mask) {
-    varying float16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((varying uint64)addrs, mask, passthru);
-#else
-    return @llvm.masked.gather((varying uint64)addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<float16>((varying uint64)addrs, mask);
 }
 EXT READONLY varying float16 __gather64_half(varying uint64 addrs, UIntMaskType mask) {
-    varying float16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather(addrs, mask, passthru);
-#else
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<float16>(addrs, mask);
 }
 EXT READONLY varying int32 __gather32_i32(varying uint32 addrs, UIntMaskType mask) {
-    varying int32 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((varying uint64)addrs, mask, passthru);
-#else
-    return @llvm.masked.gather((varying uint64)addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<int32>((varying uint64)addrs, mask);
 }
 EXT READONLY varying int32 __gather64_i32(varying uint64 addrs, UIntMaskType mask) {
-    varying int32 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather(addrs, mask, passthru);
-#else
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<int32>(addrs, mask);
 }
 EXT READONLY varying float __gather32_float(varying uint32 addrs, UIntMaskType mask) {
-    varying float passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((varying uint64)addrs, mask, passthru);
-#else
-    return @llvm.masked.gather((varying uint64)addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<float>((varying uint64)addrs, mask);
 }
 EXT READONLY varying float __gather64_float(varying uint64 addrs, UIntMaskType mask) {
-    varying float passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather(addrs, mask, passthru);
-#else
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<float>(addrs, mask);
 }
 EXT READONLY varying int64 __gather32_i64(varying uint32 addrs, UIntMaskType mask) {
-    varying int64 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((varying uint64)addrs, mask, passthru);
-#else
-    return @llvm.masked.gather((varying uint64)addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<int64>((varying uint64)addrs, mask);
 }
 EXT READONLY varying int64 __gather64_i64(varying uint64 addrs, UIntMaskType mask) {
-    varying int64 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather(addrs, mask, passthru);
-#else
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<int64>(addrs, mask);
 }
 EXT READONLY varying double __gather32_double(varying uint32 addrs, UIntMaskType mask) {
-    varying double passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((varying uint64)addrs, mask, passthru);
-#else
-    return @llvm.masked.gather((varying uint64)addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<double>((varying uint64)addrs, mask);
 }
 EXT READONLY varying double __gather64_double(varying uint64 addrs, UIntMaskType mask) {
-    varying double passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather(addrs, mask, passthru);
-#else
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
-#endif
+    return __masked_gather<double>(addrs, mask);
 }
 
 // generic gather functions
@@ -2001,271 +1845,131 @@ UNMANGLED CDECL READONLY varying double __gather64_generic_double(varying uint64
 // gather functions with base offsets
 EXT READONLY varying int8 __gather_base_offsets32_i8(uniform int8 *uniform ptr, uniform int32 scale,
                                                      varying int32 offsets, UIntMaskType mask) {
-    varying int8 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int8>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying int8 __gather_base_offsets64_i8(uniform int8 *uniform ptr, uniform int32 scale,
                                                      varying int64 offsets, UIntMaskType mask) {
-    varying int8 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int8>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying int16 __gather_base_offsets32_i16(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int32 offsets, UIntMaskType mask) {
-    varying int16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int16>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying int16 __gather_base_offsets64_i16(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int64 offsets, UIntMaskType mask) {
-    varying int16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int16>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying float16 __gather_base_offsets32_half(uniform int8 *uniform ptr, uniform int32 scale,
                                                           varying int32 offsets, UIntMaskType mask) {
-    varying float16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<float16>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying float16 __gather_base_offsets64_half(uniform int8 *uniform ptr, uniform int32 scale,
                                                           varying int64 offsets, UIntMaskType mask) {
-    varying float16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<float16>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying int32 __gather_base_offsets32_i32(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int32 offsets, UIntMaskType mask) {
-    varying int32 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int32>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying int32 __gather_base_offsets64_i32(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int64 offsets, UIntMaskType mask) {
-    varying int32 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int32>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying float __gather_base_offsets32_float(uniform int8 *uniform ptr, uniform int32 scale,
                                                          varying int32 offsets, UIntMaskType mask) {
-    varying float passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<float>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying float __gather_base_offsets64_float(uniform int8 *uniform ptr, uniform int32 scale,
                                                          varying int64 offsets, UIntMaskType mask) {
-    varying float passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<float>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying int64 __gather_base_offsets32_i64(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int32 offsets, UIntMaskType mask) {
-    varying int64 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int64>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying int64 __gather_base_offsets64_i64(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int64 offsets, UIntMaskType mask) {
-    varying int64 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<int64>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying double __gather_base_offsets32_double(uniform int8 *uniform ptr, uniform int32 scale,
                                                            varying int32 offsets, UIntMaskType mask) {
-    varying double passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<double>((uniform uint64)ptr + offsets * scale, mask);
 }
 EXT READONLY varying double __gather_base_offsets64_double(uniform int8 *uniform ptr, uniform int32 scale,
                                                            varying int64 offsets, UIntMaskType mask) {
-    varying double passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)ptr + offsets * scale, 1l, mask, passthru);
-#endif
+    return __masked_gather<double>((uniform uint64)ptr + offsets * scale, mask);
 }
 
 // gather functions with factored base offsets
 EXT READONLY varying int8 __gather_factored_base_offsets32_i8(uniform int8 *uniform base, varying int32 offsets,
                                                               uniform int32 scale, varying int32 delta,
                                                               UIntMaskType mask) {
-    varying int8 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int8>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying int8 __gather_factored_base_offsets64_i8(uniform int8 *uniform base, varying int64 offsets,
                                                               uniform int32 scale, varying int64 delta,
                                                               UIntMaskType mask) {
-    varying int8 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int8>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying int16 __gather_factored_base_offsets32_i16(uniform int8 *uniform base, varying int32 offsets,
                                                                 uniform int32 scale, varying int32 delta,
                                                                 UIntMaskType mask) {
-    varying int16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int16>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying int16 __gather_factored_base_offsets64_i16(uniform int8 *uniform base, varying int64 offsets,
                                                                 uniform int32 scale, varying int64 delta,
                                                                 UIntMaskType mask) {
-    varying int16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int16>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying float16 __gather_factored_base_offsets32_half(uniform int8 *uniform base, varying int32 offsets,
                                                                    uniform int32 scale, varying int32 delta,
                                                                    UIntMaskType mask) {
-    varying float16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<float16>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying float16 __gather_factored_base_offsets64_half(uniform int8 *uniform base, varying int64 offsets,
                                                                    uniform int32 scale, varying int64 delta,
                                                                    UIntMaskType mask) {
-    varying float16 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<float16>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying int32 __gather_factored_base_offsets32_i32(uniform int8 *uniform base, varying int32 offsets,
                                                                 uniform int32 scale, varying int32 delta,
                                                                 UIntMaskType mask) {
-    varying int32 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int32>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying int32 __gather_factored_base_offsets64_i32(uniform int8 *uniform base, varying int64 offsets,
                                                                 uniform int32 scale, varying int64 delta,
                                                                 UIntMaskType mask) {
-    varying int32 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int32>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying float __gather_factored_base_offsets32_float(uniform int8 *uniform base, varying int32 offsets,
                                                                   uniform int32 scale, varying int32 delta,
                                                                   UIntMaskType mask) {
-    varying float passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<float>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying float __gather_factored_base_offsets64_float(uniform int8 *uniform base, varying int64 offsets,
                                                                   uniform int32 scale, varying int64 delta,
                                                                   UIntMaskType mask) {
-    varying float passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<float>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying int64 __gather_factored_base_offsets32_i64(uniform int8 *uniform base, varying int32 offsets,
                                                                 uniform int32 scale, varying int32 delta,
                                                                 UIntMaskType mask) {
-    varying int64 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int64>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying int64 __gather_factored_base_offsets64_i64(uniform int8 *uniform base, varying int64 offsets,
                                                                 uniform int32 scale, varying int64 delta,
                                                                 UIntMaskType mask) {
-    varying int64 passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<int64>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying double __gather_factored_base_offsets32_double(uniform int8 *uniform base, varying int32 offsets,
                                                                     uniform int32 scale, varying int32 delta,
                                                                     UIntMaskType mask) {
-    varying double passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<double>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 EXT READONLY varying double __gather_factored_base_offsets64_double(uniform int8 *uniform base, varying int64 offsets,
                                                                     uniform int32 scale, varying int64 delta,
                                                                     UIntMaskType mask) {
-    varying double passthru;
-#if LLVM_VERSION_MAJOR >= 22
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), mask, passthru);
-#else
-    return @llvm.masked.gather((uniform uint64)base + (offsets * scale + delta), 1l, mask, passthru);
-#endif
+    return __masked_gather<double>((uniform uint64)base + (offsets * scale + delta), mask);
 }
 
 // scatter generic functions
@@ -2321,332 +2025,172 @@ UNMANGLED CDECL void __scatter64_generic_double(varying uint64 addr, varying dou
 }
 
 // general scatters
-// 1l is needed because argument is immarg of i32
-EXT void __scatter32_i8(varying uint32 addr, varying int8 val, UIntMaskType mask) {
+template <typename T> unmasked void __masked_scatter(varying T val, varying uint64 addrs, UIntMaskType mask) {
 #if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (varying uint64)addr, mask);
+    @llvm.masked.scatter(val, addrs, mask);
 #else
-    @llvm.masked.scatter(val, (varying uint64)addr, 1l, mask);
+    // 1l is needed because argument is immarg of i32
+    @llvm.masked.scatter(val, addrs, 1l, mask);
 #endif
+}
+
+EXT void __scatter32_i8(varying uint32 addr, varying int8 val, UIntMaskType mask) {
+    __masked_scatter<int8>(val, (varying uint64)addr, mask);
 }
 EXT void __scatter64_i8(varying uint64 addr, varying int8 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, addr, mask);
-#else
-    @llvm.masked.scatter(val, addr, 1l, mask);
-#endif
+    __masked_scatter<int8>(val, addr, mask);
 }
 EXT void __scatter32_i16(varying uint32 addr, varying int16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (varying uint64)addr, mask);
-#else
-    @llvm.masked.scatter(val, (varying uint64)addr, 1l, mask);
-#endif
+    __masked_scatter<int16>(val, (varying uint64)addr, mask);
 }
 EXT void __scatter64_i16(varying uint64 addr, varying int16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, addr, mask);
-#else
-    @llvm.masked.scatter(val, addr, 1l, mask);
-#endif
+    __masked_scatter<int16>(val, addr, mask);
 }
 EXT void __scatter32_half(varying uint32 addr, varying float16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (varying uint64)addr, mask);
-#else
-    @llvm.masked.scatter(val, (varying uint64)addr, 1l, mask);
-#endif
+    __masked_scatter<float16>(val, (varying uint64)addr, mask);
 }
 EXT void __scatter64_half(varying uint64 addr, varying float16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, addr, mask);
-#else
-    @llvm.masked.scatter(val, addr, 1l, mask);
-#endif
+    __masked_scatter<float16>(val, addr, mask);
 }
 EXT void __scatter32_i32(varying uint32 addr, varying int32 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (varying uint64)addr, mask);
-#else
-    @llvm.masked.scatter(val, (varying uint64)addr, 1l, mask);
-#endif
+    __masked_scatter<int32>(val, (varying uint64)addr, mask);
 }
 EXT void __scatter64_i32(varying uint64 addr, varying int32 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, addr, mask);
-#else
-    @llvm.masked.scatter(val, addr, 1l, mask);
-#endif
+    __masked_scatter<int32>(val, addr, mask);
 }
 EXT void __scatter32_float(varying uint32 addr, varying float val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (varying uint64)addr, mask);
-#else
-    @llvm.masked.scatter(val, (varying uint64)addr, 1l, mask);
-#endif
+    __masked_scatter<float>(val, (varying uint64)addr, mask);
 }
 EXT void __scatter64_float(varying uint64 addr, varying float val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, addr, mask);
-#else
-    @llvm.masked.scatter(val, addr, 1l, mask);
-#endif
+    __masked_scatter<float>(val, addr, mask);
 }
 EXT void __scatter32_i64(varying uint32 addr, varying int64 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (varying uint64)addr, mask);
-#else
-    @llvm.masked.scatter(val, (varying uint64)addr, 1l, mask);
-#endif
+    __masked_scatter<int64>(val, (varying uint64)addr, mask);
 }
 EXT void __scatter64_i64(varying uint64 addr, varying int64 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, addr, mask);
-#else
-    @llvm.masked.scatter(val, addr, 1l, mask);
-#endif
+    __masked_scatter<int64>(val, addr, mask);
 }
 EXT void __scatter32_double(varying uint32 addr, varying double val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (varying uint64)addr, mask);
-#else
-    @llvm.masked.scatter(val, (varying uint64)addr, 1l, mask);
-#endif
+    __masked_scatter<double>(val, (varying uint64)addr, mask);
 }
 EXT void __scatter64_double(varying uint64 addr, varying double val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, addr, mask);
-#else
-    @llvm.masked.scatter(val, addr, 1l, mask);
-#endif
+    __masked_scatter<double>(val, addr, mask);
 }
 
 // scatter functions with base offsets
 EXT void __scatter_base_offsets32_i8(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                      varying int8 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int8>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i8(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                      varying int8 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int8>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets32_i16(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                       varying int16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int16>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i16(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                       varying int16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int16>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets32_half(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                        varying float16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<float16>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_half(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                        varying float16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<float16>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets32_i32(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                       varying int32 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int32>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i32(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                       varying int32 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int32>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets32_float(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                         varying float val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<float>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_float(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                         varying float val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<float>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets32_i64(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                       varying int64 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int64>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i64(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                       varying int64 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<int64>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets32_double(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                          varying double val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<double>(val, (uniform uint64)base + offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_double(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                          varying double val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + offset * scale, 1l, mask);
-#endif
+    __masked_scatter<double>(val, (uniform uint64)base + offset * scale, mask);
 }
 
 // scatters with factored base offsets
 EXT void __scatter_factored_base_offsets32_i8(uniform int8 *uniform base, varying int32 offset, uniform int32 scale,
                                               varying int32 delta, varying int8 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int8>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets64_i8(uniform int8 *uniform base, varying int64 offset, uniform int32 scale,
                                               varying int64 delta, varying int8 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int8>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets32_i16(uniform int8 *uniform base, varying int32 offset, uniform int32 scale,
                                                varying int32 delta, varying int16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int16>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets64_i16(uniform int8 *uniform base, varying int64 offset, uniform int32 scale,
                                                varying int64 delta, varying int16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int16>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets32_half(uniform int8 *uniform base, varying int32 offset, uniform int32 scale,
                                                 varying int32 delta, varying float16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<float16>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets64_half(uniform int8 *uniform base, varying int64 offset, uniform int32 scale,
                                                 varying int64 delta, varying float16 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<float16>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets32_i32(uniform int8 *uniform base, varying int32 offset, uniform int32 scale,
                                                varying int32 delta, varying int32 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int32>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets64_i32(uniform int8 *uniform base, varying int64 offset, uniform int32 scale,
                                                varying int64 delta, varying int32 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int32>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets32_float(uniform int8 *uniform base, varying int32 offset, uniform int32 scale,
                                                  varying int32 delta, varying float val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<float>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets64_float(uniform int8 *uniform base, varying int64 offset, uniform int32 scale,
                                                  varying int64 delta, varying float val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<float>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets32_i64(uniform int8 *uniform base, varying int32 offset, uniform int32 scale,
                                                varying int32 delta, varying int64 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int64>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets64_i64(uniform int8 *uniform base, varying int64 offset, uniform int32 scale,
                                                varying int64 delta, varying int64 val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<int64>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets32_double(uniform int8 *uniform base, varying int32 offset, uniform int32 scale,
                                                   varying int32 delta, varying double val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<double>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 EXT void __scatter_factored_base_offsets64_double(uniform int8 *uniform base, varying int64 offset, uniform int32 scale,
                                                   varying int64 delta, varying double val, UIntMaskType mask) {
-#if LLVM_VERSION_MAJOR >= 22
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), mask);
-#else
-    @llvm.masked.scatter(val, (uniform uint64)base + (offset * scale + delta), 1l, mask);
-#endif
+    __masked_scatter<double>(val, (uniform uint64)base + (offset * scale + delta), mask);
 }
 
 // packed active stores
@@ -2711,7 +2255,7 @@ template <typename T>
 uniform int32 __packed_load_active(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
     varying T *uniform ptr = (varying T * uniform) to;
     varying T passthru = *ptr;
-    varying T vec = __masked_expandload(from, mask, passthru);
+    varying T vec = @llvm.masked.expandload(from, mask, passthru);
     *ptr = vec;
     return __popcnt_int64_uniform(__cast_mask_to_i64(mask));
 }
