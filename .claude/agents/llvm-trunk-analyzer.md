@@ -44,9 +44,13 @@ gh run view <RUN_ID> --log-failed
 
 ### Step 2: Check Recent ISPC Commits
 ```bash
-git log --since="24 hours ago" --oneline
+git log --since="24 hours ago" --oneline <ISPC_SHA>
 ```
-Look for commits touching files related to the failure (same module, same functionality).
+`<ISPC_SHA>` is the `--ispc-sha` argument, the ISPC commit the nightly tested; without it, omit
+it to use the checkout. In CI the checkout is the default branch, which may differ from the
+tested commit, so read the tested sources with `git show <ISPC_SHA>:<path>` rather than from
+the checkout. Look for commits touching files related to the failure (same module, same
+functionality).
 
 ### Step 3: Categorize Failure
 

@@ -15,6 +15,8 @@ Parse arguments:
 - `--run-id <ID>` - Workflow run ID to analyze (optional, auto-detects latest failed run)
 - `--current-sha <SHA>` - Current LLVM commit SHA
 - `--previous-sha <SHA>` - Previous successful LLVM commit SHA
+- `--ispc-sha <SHA>` - ISPC commit the nightly tested (optional). The checkout may be another
+  commit; read the tested code with `git show <SHA>:<path>` and its history with `git log <SHA>`
 
 ## Instructions
 
@@ -27,7 +29,7 @@ Arguments: $ARGUMENTS
 
 Follow your workflow to:
 1. Fetch workflow logs (use --run-id if provided, otherwise find latest failed run)
-2. Check recent ISPC commits (last 24 hours) for potential regressions in https://github.com/ispc/ispc
+2. Check recent ISPC commits (last 24 hours, up to --ispc-sha if given) for potential regressions in https://github.com/ispc/ispc
 3. Categorize the failure (ISPC regression, LLVM API change, lit test failure, LLVM regression)
 4. Analyze root cause
 5. Propose a fix with code changes or draft an issue for LLVM bugs
