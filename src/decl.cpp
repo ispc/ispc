@@ -362,21 +362,23 @@ void AttributeList::Print() const {
 // DeclSpecs
 
 DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) {
-    // A typedef of a forward declared struct refers to the struct's definition
-    // once it has been provided.
-    baseType = ResolveForwardDeclaredStruct(t);
     typeQualifiers = tq;
     soaWidth = 0;
     vectorSize = std::monostate{};
     attributeList = nullptr;
-    if (t != nullptr) {
-        if (m->symbolTable->ContainsType(t)) {
-            // Typedefs might have uniform/varying qualifiers inside.
-            if (t->IsVaryingType()) {
-                typeQualifiers |= TYPEQUAL_VARYING;
-            } else if (t->IsUniformType()) {
-                typeQualifiers |= TYPEQUAL_UNIFORM;
-            }
+    SetTypeSpecifier(t);
+}
+
+void DeclSpecs::SetTypeSpecifier(const Type *t) {
+    // A typedef of a forward declared struct refers to the struct's definition
+    // once it has been provided.
+    baseType = ResolveForwardDeclaredStruct(t);
+    if (t != nullptr && m->symbolTable->ContainsType(t)) {
+        // Typedefs might have uniform/varying qualifiers inside.
+        if (t->IsVaryingType()) {
+            typeQualifiers |= TYPEQUAL_VARYING;
+        } else if (t->IsUniformType()) {
+            typeQualifiers |= TYPEQUAL_UNIFORM;
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -169,6 +169,12 @@ class DeclSpecs : public Traceable {
         has an array size, etc.
     */
     const Type *baseType;
+
+    /** Applies the type specifier of the declaration: sets the base type to
+        it (a forward declared struct is replaced by its definition, if it has
+        been defined) and, if it is a typedef, adds its uniform/varying
+        qualifier to typeQualifiers. */
+    void SetTypeSpecifier(const Type *t);
 
     const Type *GetBaseType(SourcePos pos) const;
 
