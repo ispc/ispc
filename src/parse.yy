@@ -2890,6 +2890,8 @@ external_declaration
     {
         if ($3 != nullptr)
             m->AddExportedTypes(*$3);
+        // type_specifier_list returns a vector that is not needed anymore.
+        delete $3;
     }
     | declaration
     {
