@@ -17,8 +17,10 @@
 
 #include <algorithm>
 #include <memory>
+#include <set>
 #include <stdio.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <clang/Frontend/FrontendOptions.h>
@@ -399,6 +401,11 @@ class Module {
     llvm::DIBuilder *diBuilder{nullptr};
 
     llvm::DICompileUnit *diCompileUnit{nullptr};
+
+    /** Definitions of forward declared structs whose debug types have been
+        added to the compile unit, with the names of their variants; see
+        UndefinedStructType::GetDIType(). */
+    std::set<std::pair<const Type *, std::string>> diDefinedStructs;
 
     /** StructType cache.  This needs to be in the context of Module, so it's reset for
         any new Module in multi-target compilation.
