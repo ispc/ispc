@@ -4389,7 +4389,9 @@ const Type *FunctionCallExpr::GetTypeImpl() const {
         return type;
     }
     const FunctionType *ftype = CastType<FunctionType>(type);
-    return ftype ? ftype->GetReturnType() : nullptr;
+    // The function may have been declared before the struct it returns was
+    // defined.
+    return ftype ? ResolveForwardDeclaredStruct(ftype->GetReturnType(), pos) : nullptr;
 }
 
 const Type *FunctionCallExpr::GetLValueType() const {
