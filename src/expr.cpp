@@ -650,7 +650,9 @@ Expr *ispc::PossiblyResolveStructOperatorOverloads(const char *baseOpName, const
     // Check if any of the argument types are struct types (directly or via references)
     bool hasStructType = false;
     for (const auto &a : args) {
-        const Type *type = a->GetType();
+        // A reference to a forward declared struct may have been created
+        // before the struct was defined.
+        const Type *type = ResolveForwardDeclaredStruct(a->GetType(), pos);
         // Get the actual type if it's a reference
         const ReferenceType *refType = CastType<ReferenceType>(type);
         const Type *effectiveType = (refType != nullptr) ? refType->GetReferenceTarget() : type;
@@ -1570,7 +1572,7 @@ Expr *UnaryExpr::TypeCheck() {
             Error(expr->pos, "Illegal to pre/post increment \"%s\" type.", type->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt)->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt, expr->pos)->GetBaseType())) {
             Error(expr->pos,
                   "Illegal to pre/post increment pointer to "
                   "undefined struct type \"%s\".",
@@ -2916,14 +2918,14 @@ Expr *BinaryExpr::TypeCheck() {
                   type1->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt0)->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt0, pos)->GetBaseType())) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".",
                   pt0->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt1)->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt1, pos)->GetBaseType())) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".",
@@ -2966,7 +2968,7 @@ Expr *BinaryExpr::TypeCheck() {
                   pt0->GetString().c_str());
             return nullptr;
         }
-        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt0)->GetBaseType())) {
+        if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt0, pos)->GetBaseType())) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".",
@@ -3612,12 +3614,27 @@ Expr *AssignExpr::TypeCheck() {
         return nullptr;
     }
 
+    // The struct may only be defined after this assignment, in which case
+    // code generation would see the definition.
+    if (CastType<UndefinedStructType>(lhsType) != nullptr) {
+        Error(lvalue->pos, "Can't assign to declared but not defined struct type \"%s\".",
+              lhsType->GetString().c_str());
+        return nullptr;
+    }
+
     if (CastType<PointerType>(lhsType) != nullptr) {
         if (op == AddAssign || op == SubAssign) {
             if (PointerType::IsVoidPointer(lhsType)) {
                 Error(pos,
                       "Illegal to perform pointer arithmetic on \"%s\" "
                       "type.",
+                      lhsType->GetString().c_str());
+                return nullptr;
+            }
+            if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(lhsType, pos)->GetBaseType())) {
+                Error(pos,
+                      "Illegal to perform pointer arithmetic "
+                      "on undefined struct type \"%s\".",
                       lhsType->GetString().c_str());
                 return nullptr;
             }
@@ -5033,7 +5050,7 @@ static bool lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
                 return false;
             }
 
-            st = CastType<StructType>(ResolveForwardDeclaredStruct(pt)->GetBaseType());
+            st = CastType<StructType>(ResolveForwardDeclaredStruct(pt, pos)->GetBaseType());
         }
 
         if (st == nullptr) {
@@ -5154,7 +5171,7 @@ const Type *IndexExpr::GetTypeImpl() const {
     const PointerType *pointerType = CastType<PointerType>(baseExprType);
     if (pointerType != nullptr) {
         // ptr[index] -> type that the pointer points to
-        elementType = ResolveForwardDeclaredStruct(pointerType->GetBaseType());
+        elementType = ResolveForwardDeclaredStruct(pointerType->GetBaseType(), pos);
     } else if (const SequentialType *sequentialType = CastType<SequentialType>(baseExprType->GetReferenceTarget())) {
         // sequential type[index] -> element type of the sequential type
         elementType = sequentialType->GetElementType();
@@ -5427,6 +5444,13 @@ Expr *IndexExpr::TypeCheck() {
         if (const PointerType *pt = CastType<PointerType>(baseExprType)) {
             if (pt->GetBaseType()->IsVoidType()) {
                 Error(pos, "Illegal to dereference void pointer type \"%s\".", baseExprType->GetString().c_str());
+                return nullptr;
+            }
+            // Indexing needs the size of the struct, which may only be
+            // defined after this expression.
+            if (CastType<UndefinedStructType>(ResolveForwardDeclaredStruct(pt, pos)->GetBaseType())) {
+                Error(pos, "Illegal to index into pointer to undefined struct type \"%s\".",
+                      baseExprType->GetString().c_str());
                 return nullptr;
             }
         } else {
@@ -5720,7 +5744,7 @@ const StructType *StructMemberExpr::getStructType() const {
     if (type == nullptr) {
         return nullptr;
     }
-    type = ResolveForwardDeclaredStruct(type);
+    type = ResolveForwardDeclaredStruct(type, pos);
 
     // Handle reference types
     const ReferenceType *rt = CastType<ReferenceType>(type);
@@ -5990,7 +6014,7 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
 
     // A pointer to a forward declared struct may have been created before the
     // struct was defined.
-    exprType = ResolveForwardDeclaredStruct(exprType);
+    exprType = ResolveForwardDeclaredStruct(exprType, p);
     const PointerType *pointerType = CastType<PointerType>(exprType);
     if (pointerType != nullptr) {
         exprType = pointerType->GetBaseType();
@@ -8647,7 +8671,7 @@ const Type *PtrDerefExpr::GetTypeImpl() const {
         return AtomicType::Dependent;
     }
 
-    const Type *baseType = ResolveForwardDeclaredStruct(type->GetBaseType());
+    const Type *baseType = ResolveForwardDeclaredStruct(type->GetBaseType(), pos);
     if (type->IsUniformType()) {
         return baseType;
     } else {
@@ -8740,7 +8764,7 @@ const Type *RefDerefExpr::GetTypeImpl() const {
     }
 
     AssertPos(pos, CastType<ReferenceType>(type) != nullptr);
-    return ResolveForwardDeclaredStruct(type->GetReferenceTarget());
+    return ResolveForwardDeclaredStruct(type->GetReferenceTarget(), pos);
 }
 
 Expr *RefDerefExpr::TypeCheck() {
@@ -9036,7 +9060,7 @@ void SizeOfExpr::Print(Indent &indent) const {
 Expr *SizeOfExpr::TypeCheck() {
     const Type *t = expr ? expr->GetType() : type;
     if (t != nullptr) {
-        t = ResolveForwardDeclaredStruct(t->GetReferenceTarget());
+        t = ResolveForwardDeclaredStruct(t->GetReferenceTarget(), pos);
     }
     if (t == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -9508,31 +9532,31 @@ std::vector<Symbol *> FunctionSymbolExpr::getCandidateFunctions(int argCount) co
 }
 
 // Return deduced parameter (a pair of parameter name and corresponding type). In case of failure,
-// return a pair of empty strings and a nullptr type.
-static std::pair<std::string, const Type *> lDeduceParam(const Type *paramType, const Type *argType) {
+// return a pair of empty strings and a nullptr type. pos is the position of the call.
+static std::pair<std::string, const Type *> lDeduceParam(const Type *paramType, const Type *argType, SourcePos pos) {
     if (paramType == nullptr || argType == nullptr) {
         return std::pair<std::string, const Type *>("", nullptr);
     }
-    argType = ResolveForwardDeclaredStruct(argType);
+    argType = ResolveForwardDeclaredStruct(argType, pos);
 
     bool constParam = paramType->IsConstType() && !paramType->IsReferenceType();
     bool constArg = argType->IsConstType() && !argType->IsReferenceType();
 
     // Const
     if (constParam && constArg) {
-        return lDeduceParam(paramType->GetAsNonConstType(), argType->GetAsNonConstType());
+        return lDeduceParam(paramType->GetAsNonConstType(), argType->GetAsNonConstType(), pos);
     }
 
     // Reference
     if (paramType->IsReferenceType() && argType->IsReferenceType()) {
-        return lDeduceParam(paramType->GetReferenceTarget(), argType->GetReferenceTarget());
+        return lDeduceParam(paramType->GetReferenceTarget(), argType->GetReferenceTarget(), pos);
     }
 
     // Pointers
     if (paramType->IsPointerType() && argType->IsPointerType()) {
         // No additional restrictions for pointer const and variability matching, if they don't match,
         // the candidate will be rejected by conversion rules.
-        return lDeduceParam(paramType->GetBaseType(), argType->GetBaseType());
+        return lDeduceParam(paramType->GetBaseType(), argType->GetBaseType(), pos);
     }
 
     const TemplateTypeParmType *templTypeParam = CastType<TemplateTypeParmType>(paramType);
@@ -9637,7 +9661,7 @@ bool lDeduceVectorParams(TemplateInstantiation &inst, const VectorType *paramTyp
         // Here we have param type like T<N>, and argument type like int<4>
         // First, deduce the element type T from the argument type.
         const Type *argElemType = argType->GetElementType();
-        auto deduction = lDeduceParam(elemType, argElemType);
+        auto deduction = lDeduceParam(elemType, argElemType, pos);
         if (!lCheckDeductionCompatibility(inst, deduction, pos)) {
             // Deduction failed, skip to the next candidate.
             return false;
@@ -9816,7 +9840,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
                     }
                 } else {
                     // Deduce. The result is a pair of template parameter name and type.
-                    auto deduction = lDeduceParam(paramType, argType);
+                    auto deduction = lDeduceParam(paramType, argType, pos);
                     if (!lCheckDeductionCompatibility(inst, deduction, pos)) {
                         // Deduction failed, skip to the next candidate.
                         deductionFailed = true;

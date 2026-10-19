@@ -849,15 +849,28 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     types are found and returns false otherwise.
 */
 static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
-                                          SourcePos pos) {
+                                          SourcePos pos, std::vector<const StructType *> &inProgress) {
     const StructType *st = CastType<StructType>(t);
     if (st != nullptr) {
-        for (int i = 0; i < st->GetElementCount(); ++i) {
-            if (!lRecursiveCheckValidParamType(st->GetElementType(i), soaOk, vectorOk, name, pos)) {
-                return false;
+        // Pointers to forward declared structs are resolved below, so the
+        // members of a self-referential struct can lead back here.  The
+        // resolved types are created anew (e.g. aligned variants), so compare
+        // them by value.
+        for (const StructType *visited : inProgress) {
+            if (Type::Equal(visited, st)) {
+                return true;
             }
         }
-        return true;
+        inProgress.push_back(st);
+        bool valid = true;
+        for (int i = 0; i < st->GetElementCount(); ++i) {
+            if (!lRecursiveCheckValidParamType(st->GetElementType(i), soaOk, vectorOk, name, pos, inProgress)) {
+                valid = false;
+                break;
+            }
+        }
+        inProgress.pop_back();
+        return valid;
     }
 
     // Vector types are also not supported, pending ispc properly
@@ -869,7 +882,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
 
     const SequentialType *seqt = CastType<SequentialType>(t);
     if (seqt != nullptr) {
-        return lRecursiveCheckValidParamType(seqt->GetElementType(), soaOk, vectorOk, name, pos);
+        return lRecursiveCheckValidParamType(seqt->GetElementType(), soaOk, vectorOk, name, pos, inProgress);
     }
 
     const PointerType *pt = CastType<PointerType>(t);
@@ -879,7 +892,8 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
         if (pt->IsVaryingType()) {
             return false;
         } else {
-            return lRecursiveCheckValidParamType(pt->GetBaseType(), true, true, name, pos);
+            return lRecursiveCheckValidParamType(ResolveForwardDeclaredStruct(pt->GetBaseType()), true, true, name, pos,
+                                                 inProgress);
         }
     }
 
@@ -896,6 +910,12 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
         }
         return true;
     }
+}
+
+static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
+                                          SourcePos pos) {
+    std::vector<const StructType *> inProgress;
+    return lRecursiveCheckValidParamType(t, vectorOk, soaOk, name, pos, inProgress);
 }
 
 /** Given a Symbol representing a function parameter, see if it or any
@@ -918,7 +938,7 @@ static void lCheckExportedParameterTypes(const Type *type, const std::string &na
                 Error(pos, "Varying pointer type parameter \"%s\" is illegal in an exported function.", name.c_str());
             }
         }
-        if (CastType<StructType>(type->GetBaseType())) {
+        if (CastType<StructType>(ResolveForwardDeclaredStruct(type->GetBaseType()))) {
             Error(pos, "Struct parameter \"%s\" with vector typed member(s) is illegal in an exported function.",
                   name.c_str());
         } else if (CastType<VectorType>(type)) {
@@ -935,7 +955,7 @@ static void lCheckTaskParameterTypes(const Type *type, const std::string &name, 
     if (lRecursiveCheckValidParamType(type, false, false, name, pos) == false) {
         if (CastType<PointerType>(type))
             Error(pos, "Varying pointer type parameter \"%s\" is illegal in an \"task\" for Xe targets.", name.c_str());
-        if (CastType<StructType>(type->GetBaseType()))
+        if (CastType<StructType>(ResolveForwardDeclaredStruct(type->GetBaseType())))
             Error(pos, "Struct parameter \"%s\" with vector typed member(s) is illegal in an \"task\" for Xe targets.",
                   name.c_str());
         else if (CastType<VectorType>(type))

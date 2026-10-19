@@ -2,10 +2,7 @@
 // Types created from a forward-declared struct before it is defined (pointers
 // and references to it) must see the definition once it is provided.
 
-// RUN: %{ispc} %s --target=host --nostdlib --nowrap --emit-llvm-text -o - 2>&1 | FileCheck %s
-
-// CHECK-NOT: Error
-// CHECK-NOT: Assertion failed
+// RUN: %{ispc} %s --target=host --nostdlib --nowrap --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not="Assertion failed"
 
 struct Foo;
 
@@ -16,6 +13,15 @@ struct Bar {
 uniform Foo * uniform gp;
 uniform Foo &getRef();
 typedef struct Foo FooT;
+
+// Templates see the definition at the point of instantiation.
+template <typename T> uniform int early(T *uniform b) { return b->foo->x + sizeof(uniform Foo); }
+template <typename T> uniform int earlyIndex(T *uniform b) { return b->foo[1].x; }
+// Typedefs keep their uniform/varying qualifiers.
+typedef uniform struct Foo *uniform FooP;
+typedef uniform struct Foo FooU;
+typedef varying struct Foo FooV;
+FooP gq;
 
 struct Foo {
     int x;
@@ -45,6 +51,15 @@ uniform int ref() { return getRef().x + sizeof(getRef()); }
 template <typename T> uniform int value(T *uniform p) { return p->x; }
 template <typename T> uniform int valueRef(T &r) { return r.x; }
 
+// CHECK-LABEL: @instantiate___
+uniform int instantiate(uniform Bar *uniform b) { return early(b) + earlyIndex(b); }
+
+// Operator overloads are found through references created before the
+// definition.
+uniform Foo operator+(uniform Foo &a, uniform Foo &b);
+// CHECK-LABEL: @overload___
+uniform int overload() { return (getRef() + getRef()).x; }
+
 // CHECK-LABEL: @deduce___
 uniform int deduce(uniform Bar *uniform b) { return value(b->foo) + valueRef(getRef()); }
 
@@ -53,6 +68,38 @@ uniform int typedefed() {
     uniform FooT f;
     f.x = 1;
     return f.x + sizeof(FooT);
+}
+
+// The qualifiers of the typedefs must be kept: these return uniform values,
+// which is an error if FooP or FooU become varying.
+// CHECK-LABEL: @typedefQualifiers___
+uniform int typedefQualifiers(FooU &r) {
+    FooP q = gq;
+    FooU l = r;
+    return q->x + l.x;
+}
+
+// The varying qualifier of FooV must be kept too. Check it on a pointer
+// target, which is uniform by default: sizeof(*p) is the size of the
+// varying struct only if *p is varying. Compare against the size of the
+// varying struct rather than a constant, as the width of --target=host
+// differs between machines.
+// CHECK-LABEL: @typedefVarying___
+// CHECK: ret i32 1
+uniform int typedefVarying(FooV *uniform p) { return sizeof(*p) == sizeof(varying struct Foo) ? 1 : 0; }
+
+// A struct defined in a function body can be used through a pointer created
+// before its definition, after the definition.
+// CHECK-LABEL: @localAfter___
+uniform int localAfter(void *uniform v) {
+    struct L;
+    uniform L *uniform p = (uniform L * uniform)v;
+    struct L {
+        int x;
+    };
+    p += 1;
+    void *uniform q = (void *uniform)&p[1];
+    return sizeof(uniform L) + (p + 1)->x + (q == v ? 1 : 0);
 }
 
 // Self-referential struct: the "next" member is declared while Node is

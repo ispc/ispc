@@ -299,19 +299,29 @@ static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FI
     fprintf(file, "\n");
 }
 
-/** Add the given type to the vector, if that type isn't already in there.
+/** Returns true if the non-const version of the given type is in the vector.
  */
-template <typename T> static void lAddTypeIfNew(const Type *type, std::vector<const T *> *exportedTypes) {
+template <typename T> static bool lContainsType(const Type *type, const std::vector<const T *> *exportedTypes) {
     type = type->GetAsNonConstType();
 
     // Linear search, so this ends up being n^2.  It's unlikely this will
     // matter in practice, though.
-    for (unsigned int i = 0; i < exportedTypes->size(); ++i) {
-        if (Type::Equal((*exportedTypes)[i], type)) {
-            return;
+    for (const T *exported : *exportedTypes) {
+        if (Type::Equal(exported, type)) {
+            return true;
         }
     }
+    return false;
+}
 
+/** Add the given type to the vector, if that type isn't already in there.
+ */
+template <typename T> static void lAddTypeIfNew(const Type *type, std::vector<const T *> *exportedTypes) {
+    if (lContainsType(type, exportedTypes)) {
+        return;
+    }
+
+    type = type->GetAsNonConstType();
     const T *castType = CastType<T>(type);
     Assert(castType != nullptr);
     exportedTypes->push_back(castType);
@@ -345,12 +355,7 @@ static void lGetExportedTypes(const Type *type, std::vector<const StructType *> 
         // members of a self-referential struct lead back here, so visit each
         // definition only once.
         const StructType *st = ust->GetDefinition();
-        if (st != nullptr) {
-            for (const StructType *exported : *exportedStructTypes) {
-                if (Type::Equal(exported, st->GetAsNonConstType())) {
-                    return;
-                }
-            }
+        if (st != nullptr && !lContainsType(st, exportedStructTypes)) {
             lGetExportedTypes(st, exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
         }
     } else if (CastType<EnumType>(type) != nullptr) {
@@ -1164,7 +1169,7 @@ std::string lGetNanobindType(const Type *type) {
         // Both TYPE a[] and TYPE *uniform are represented as pointer types at
         // this point, except structures. We suppose that they are passed from
         // Python side as numpy arrays.
-        if (const StructType *ST = CastType<StructType>(type->GetBaseType())) {
+        if (const StructType *ST = CastType<StructType>(ResolveForwardDeclaredStruct(type->GetBaseType()))) {
             return ST->GetCStructName() + "*";
         } else {
             return "nb::ndarray<" + lGetNanobindType(type->GetBaseType()) + ">";
@@ -1203,7 +1208,7 @@ std::string lGetCallArguments(const FunctionType *ftype) {
         const std::string paramName = ftype->GetParameterName(i);
         callArgs += paramName;
         const Type *PT = ftype->GetParameterType(i);
-        if (PT->IsPointerType() && !CastType<StructType>(PT->GetBaseType())) {
+        if (PT->IsPointerType() && !CastType<StructType>(ResolveForwardDeclaredStruct(PT->GetBaseType()))) {
             callArgs += ".data()";
         }
     }

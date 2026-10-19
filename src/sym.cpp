@@ -253,14 +253,6 @@ bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
     }
 
     if (const StructType *ST = CastType<StructType>(type)) {
-        // Let the types that were created from the forward declaration
-        // (e.g. pointers to it) see the definition.
-        const UndefinedStructType *UST = CastType<UndefinedStructType>(t);
-        if (UST != nullptr && UST->GetStructName() == ST->GetStructName() &&
-            ST->GetVariability() == Variability::Unbound && !ST->IsConstType()) {
-            UST->SetDefinition(ST);
-        }
-
         if (!ST->IsCompleteType()) {
             int n = ST->GetElementCount();
             bool allComplete = true;
@@ -277,6 +269,14 @@ bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
             // is incomplete, e.g., struct where the only field is unsized array
             if (allComplete) {
                 Error(pos, "incomplete type '%s'", name);
+            }
+        } else if (const UndefinedStructType *UST = CastType<UndefinedStructType>(t)) {
+            // Let the types that were created from the forward declaration
+            // (e.g. pointers to it) see the definition.  The outermost scope
+            // is the global one.
+            if (UST->GetStructName() == ST->GetStructName() && ST->GetVariability() == Variability::Unbound &&
+                !ST->IsConstType()) {
+                UST->SetDefinition(ST, pos, types.size() > 1);
             }
         }
     }

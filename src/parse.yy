@@ -1304,7 +1304,7 @@ declaration_specifiers
                   } else
                       Error(@1, "Multiple types provided for declaration.");
               }
-              ds->baseType = $1;
+              ds->baseType = ResolveForwardDeclaredStruct($1);
           }
           $$ = ds;
       }
@@ -1444,8 +1444,10 @@ type_specifier
     | TOKEN_TYPE_NAME
     {
         // A typedef of a forward declared struct (e.g. "typedef struct Foo FooT;")
-        // refers to the struct's definition once it has been provided.
-        const Type *t = ResolveForwardDeclaredStruct(m->symbolTable->LookupType(yytext));
+        // is resolved to the struct's definition by the rules that use the
+        // type; DeclSpecs needs the type from the symbol table to recognize
+        // the typedef and keep its uniform/varying qualifier.
+        const Type *t = m->symbolTable->LookupType(yytext);
         $$ = t;
         lCleanUpString($1);
     }
@@ -1461,7 +1463,7 @@ type_specifier_list
         else {
             std::vector<std::pair<const Type *, SourcePos> > *vec =
                 new std::vector<std::pair<const Type *, SourcePos> >;
-            vec->push_back(std::make_pair($1, @1));
+            vec->push_back(std::make_pair(ResolveForwardDeclaredStruct($1), @1));
             $$ = vec;
         }
     }
@@ -1471,7 +1473,7 @@ type_specifier_list
         if ($1 == nullptr)
             Assert(m->errorCount > 0);
         else
-            $$->push_back(std::make_pair($3, @3));
+            $$->push_back(std::make_pair(ResolveForwardDeclaredStruct($3), @3));
     }
     ;
 
@@ -1665,8 +1667,8 @@ struct_declaration
     ;
 
 specifier_qualifier_list
-    : type_specifier specifier_qualifier_list
-    | type_specifier
+    : type_specifier specifier_qualifier_list { $$ = ResolveForwardDeclaredStruct($1); }
+    | type_specifier { $$ = ResolveForwardDeclaredStruct($1); }
     | short_vec_specifier
     | type_qualifier specifier_qualifier_list
     {

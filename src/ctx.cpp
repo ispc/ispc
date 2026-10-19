@@ -2745,7 +2745,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
     const PointerType *ptrType = RegularizePointer(ptrRefType);
     const Type *elType = nullptr;
     if (CastType<ReferenceType>(ptrRefType) != nullptr) {
-        elType = ptrRefType->GetReferenceTarget();
+        elType = ResolveForwardDeclaredStruct(ptrRefType)->GetReferenceTarget();
     } else {
         elType = ptrType->GetBaseType();
     }
