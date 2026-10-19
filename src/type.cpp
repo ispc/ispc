@@ -2508,8 +2508,16 @@ llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
 llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
     // Describe the struct by a forward declaration, which debuggers resolve
     // by name to the definition.  Describing the definition itself here
-    // would recurse through the members of self-referential structs.
+    // would recurse through the members of self-referential structs.  The
+    // definition may not be described anywhere else (e.g. if it is only used
+    // through pointers created before it was defined), so add it to the
+    // compile unit once.  Identify it by the definition and the name of the
+    // variant rather than by st, as GetDefinition() returns a new type for
+    // each aligned use.
     const StructType *st = GetDefinition();
+    if (st != nullptr && m->diDefinedStructs.emplace(definition->type, st->GetString()).second) {
+        m->diBuilder->retainType(st->GetDIType(scope));
+    }
     std::string diName = st ? st->GetString() : GetString();
     SourcePos diPos = st ? st->GetSourcePos() : pos;
     return m->diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, diName, diPos.GetDINamespace(),
