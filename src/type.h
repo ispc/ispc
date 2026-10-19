@@ -19,6 +19,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
 namespace ispc {
 
@@ -562,6 +563,7 @@ class PointerType : public Type {
     const PointerType *GetAsFrozenSlice() const;
 
     const PointerType *GetWithAddrSpace(AddressSpace as) const;
+    const PointerType *GetWithBaseType(const Type *newBaseType) const;
 
     static PointerType *Void;
 
@@ -578,8 +580,6 @@ class PointerType : public Type {
     PointerType *create() const override;
 
     const PointerType *createWithBaseType(const Type *newBaseType) const;
-
-    friend const Type *ResolveForwardDeclaredStruct(const Type *type);
     const PointerType *createWithAddressSpace(AddressSpace newAddrSpace) const;
     const PointerType *createWithBaseTypeAndVariability(const Type *newBaseType, Variability newVariability) const;
     const PointerType *createWithProperty(unsigned int newProperty) const;
@@ -951,18 +951,36 @@ class UndefinedStructType : public Type {
     void RegisterInStructTypeMap();
 
     /** Returns the full definition of the struct with this type's
-        variability and constness, or nullptr if the struct hasn't been
-        defined yet. */
+        variability, constness and alignment, or nullptr if the struct
+        hasn't been defined yet. */
     const StructType *GetDefinition() const;
 
-    /** Records the full definition of the struct.  The definition is
-        shared by all variants of this type (e.g. uniform, varying, const). */
-    void SetDefinition(const StructType *st) const;
+    /** Like GetDefinition(), but returns nullptr if the struct is defined
+        in a function body after usePos or in a different file.  A function body is type checked
+        after the whole body is parsed, so a definition later in the same
+        body is already recorded when the earlier uses are checked.  Uses of
+        a struct defined outside of functions are checked in source order
+        (template instantiations at the point of instantiation), so they see
+        the definition only if it comes first. */
+    const StructType *GetDefinitionBefore(SourcePos usePos) const;
+
+    /** Records the full definition of the struct, where it is defined and
+        whether it is defined in a function body.  The definition is shared
+        by all variants of this type (e.g. uniform, varying, const). */
+    void SetDefinition(const StructType *st, SourcePos pos, bool isLocal) const;
 
   private:
+    struct Definition {
+        const StructType *type = nullptr;
+        SourcePos pos;
+        bool isLocal = false;
+    };
+
     const std::string name;
     std::shared_ptr<StructIdentity> identity;
-    std::shared_ptr<const StructType *> definition;
+    /** Shared by all copies of this type that create() makes for its
+        variants, so that each of them sees the definition once it is set. */
+    std::shared_ptr<Definition> definition;
 
     UndefinedStructType(const UndefinedStructType &other);
 
@@ -1006,6 +1024,7 @@ class ReferenceType : public Type {
     AddressSpace GetAddressSpace() const { return addrSpace; }
 
     const ReferenceType *GetWithAddrSpace(AddressSpace as) const;
+    const ReferenceType *GetWithBaseType(const Type *newBaseType) const;
 
   private:
     const Type *targetType;
@@ -1015,8 +1034,6 @@ class ReferenceType : public Type {
 
     ReferenceType *create() const override;
     const ReferenceType *createWithBaseType(const Type *newBaseType) const;
-
-    friend const Type *ResolveForwardDeclaredStruct(const Type *type);
     const ReferenceType *createWithAddressSpace(AddressSpace newAddrSpace) const;
 };
 
@@ -1307,7 +1324,13 @@ inline bool IsReferenceType(const Type *t) { return CastType<ReferenceType>(t) !
     self-referential structs acyclic.  If the given type is such an
     UndefinedStructType, or a pointer or reference to one, and the struct has
     been defined since, returns the type with the definition substituted
-    (only one level deep).  Otherwise returns the given type. */
-const Type *ResolveForwardDeclaredStruct(const Type *type);
+    (only one level deep).  Otherwise returns the given type.
+
+    When type checking an expression, pass its position as usePos: a
+    definition that comes after usePos in the same function body isn't
+    substituted then; see UndefinedStructType::GetDefinitionBefore().  Omit
+    usePos once the uses can no longer come before the definition: while
+    parsing, and after type checking (code generation, header emission). */
+const Type *ResolveForwardDeclaredStruct(const Type *type, std::optional<SourcePos> usePos = std::nullopt);
 
 } // namespace ispc

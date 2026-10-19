@@ -15,6 +15,7 @@
 #include "module.h"
 #include "sym.h"
 
+#include <cstring>
 #include <map>
 #include <stdio.h>
 
@@ -1086,6 +1087,13 @@ const PointerType *PointerType::GetWithAddrSpace(AddressSpace as) const {
         return this;
     }
     return createWithAddressSpace(as);
+}
+
+const PointerType *PointerType::GetWithBaseType(const Type *newBaseType) const {
+    if (baseType == newBaseType) {
+        return this;
+    }
+    return createWithBaseType(newBaseType);
 }
 
 const PointerType *PointerType::ResolveDependence(TemplateInstantiation &templInst) const {
@@ -2339,7 +2347,7 @@ bool StructType::checkIfCanBeSOA(const StructType *st) {
 UndefinedStructType::UndefinedStructType(const std::string &n, const Variability var, bool ic, SourcePos p,
                                          unsigned int align)
     : Type(UNDEFINED_STRUCT_TYPE, var, ic, p, align), name(n), identity(lNewStructIdentity(n)),
-      definition(std::make_shared<const StructType *>(nullptr)) {
+      definition(std::make_shared<Definition>()) {
     Assert(name != "");
 }
 
@@ -2383,7 +2391,7 @@ const UndefinedStructType *UndefinedStructType::createWithAlignment(unsigned int
 bool UndefinedStructType::IsCompleteType() const { return false; }
 
 const StructType *UndefinedStructType::GetDefinition() const {
-    const Type *t = *definition;
+    const Type *t = definition->type;
     if (t == nullptr) {
         return nullptr;
     }
@@ -2401,26 +2409,53 @@ const StructType *UndefinedStructType::GetDefinition() const {
     return CastType<StructType>(t);
 }
 
-void UndefinedStructType::SetDefinition(const StructType *st) const {
-    Assert(st != nullptr && st->GetStructName() == name && st->GetVariability() == Variability::Unbound &&
-           !st->IsConstType());
-    *definition = st;
+/** Returns true if the position a comes before the position b in the
+    source.  Positions in different files can't be ordered, so they are
+    treated as being out of order. */
+static bool lPrecedes(const SourcePos &a, const SourcePos &b) {
+    if (a.name == nullptr || b.name == nullptr || strcmp(a.name, b.name) != 0) {
+        return false;
+    }
+    return a.first_line < b.first_line || (a.first_line == b.first_line && a.first_column < b.first_column);
 }
 
-const Type *ispc::ResolveForwardDeclaredStruct(const Type *type) {
-    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
-        const StructType *st = ust->GetDefinition();
-        return st ? st : type;
+const StructType *UndefinedStructType::GetDefinitionBefore(SourcePos usePos) const {
+    if (definition->type == nullptr || (definition->isLocal && !lPrecedes(definition->pos, usePos))) {
+        return nullptr;
+    }
+    return GetDefinition();
+}
+
+void UndefinedStructType::SetDefinition(const StructType *st, SourcePos pos, bool isLocal) const {
+    Assert(st != nullptr && st->GetStructName() == name && st->GetVariability() == Variability::Unbound &&
+           !st->IsConstType());
+    definition->type = st;
+    definition->pos = pos;
+    definition->isLocal = isLocal;
+}
+
+/** If the given type is a forward declared struct, returns its definition,
+    or nullptr if the struct isn't defined.  If usePos is given, a definition
+    in a function body after usePos isn't returned either. */
+static const StructType *lGetDefinition(const Type *type, const std::optional<SourcePos> &usePos) {
+    const UndefinedStructType *ust = CastType<UndefinedStructType>(type);
+    if (ust == nullptr) {
+        return nullptr;
+    }
+    return usePos ? ust->GetDefinitionBefore(*usePos) : ust->GetDefinition();
+}
+
+const Type *ispc::ResolveForwardDeclaredStruct(const Type *type, std::optional<SourcePos> usePos) {
+    if (const StructType *st = lGetDefinition(type, usePos)) {
+        return st;
     }
     if (const PointerType *pt = CastType<PointerType>(type)) {
-        const UndefinedStructType *ust = CastType<UndefinedStructType>(pt->GetBaseType());
-        const StructType *st = ust ? ust->GetDefinition() : nullptr;
-        return st ? pt->createWithBaseType(st) : type;
+        const StructType *st = lGetDefinition(pt->GetBaseType(), usePos);
+        return st ? pt->GetWithBaseType(st) : type;
     }
     if (const ReferenceType *rt = CastType<ReferenceType>(type)) {
-        const UndefinedStructType *ust = CastType<UndefinedStructType>(rt->GetReferenceTarget());
-        const StructType *st = ust ? ust->GetDefinition() : nullptr;
-        return st ? rt->createWithBaseType(st) : type;
+        const StructType *st = lGetDefinition(rt->GetReferenceTarget(), usePos);
+        return st ? rt->GetWithBaseType(st) : type;
     }
     return type;
 }
@@ -2444,6 +2479,11 @@ std::string UndefinedStructType::GetString() const {
 std::string UndefinedStructType::Mangle() const { return lMangleStruct(variability, isConst, name, *identity); }
 
 std::string UndefinedStructType::GetDeclaration(const std::string &n, DeclarationSyntax syntax) const {
+    // Once the struct is defined, name it as the definition does; e.g. a
+    // varying struct has a different C name than the uniform one.
+    if (const StructType *st = GetDefinition()) {
+        return st->GetDeclaration(n, syntax);
+    }
     std::string ret;
     if (isConst) {
         ret += "const ";
@@ -2466,16 +2506,14 @@ llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
 }
 
 llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
-    llvm::DIFile *diFile = pos.GetDIFile();
-    llvm::DINamespace *diSpace = pos.GetDINamespace();
-    llvm::DINodeArray elements;
-    uint64_t sizeInBits = 0;
-    return m->diBuilder->createStructType(diSpace, GetString(), diFile,
-                                          pos.first_line,         // Line number
-                                          sizeInBits,             // Size
-                                          0,                      // Align
-                                          llvm::DINode::FlagZero, // Flags
-                                          nullptr, elements);
+    // Describe the struct by a forward declaration, which debuggers resolve
+    // by name to the definition.  Describing the definition itself here
+    // would recurse through the members of self-referential structs.
+    const StructType *st = GetDefinition();
+    std::string diName = st ? st->GetString() : GetString();
+    SourcePos diPos = st ? st->GetSourcePos() : pos;
+    return m->diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, diName, diPos.GetDINamespace(),
+                                           diPos.GetDIFile(), diPos.first_line);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2655,6 +2693,13 @@ const ReferenceType *ReferenceType::GetWithAddrSpace(AddressSpace as) const {
     }
 
     return createWithAddressSpace(as);
+}
+
+const ReferenceType *ReferenceType::GetWithBaseType(const Type *newBaseType) const {
+    if (targetType == newBaseType) {
+        return this;
+    }
+    return createWithBaseType(newBaseType);
 }
 
 std::string ReferenceType::GetString() const {

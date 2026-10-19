@@ -362,7 +362,9 @@ void AttributeList::Print() const {
 // DeclSpecs
 
 DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) {
-    baseType = t;
+    // A typedef of a forward declared struct refers to the struct's definition
+    // once it has been provided.
+    baseType = ResolveForwardDeclaredStruct(t);
     typeQualifiers = tq;
     soaWidth = 0;
     vectorSize = std::monostate{};
