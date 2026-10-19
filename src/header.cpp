@@ -1163,13 +1163,15 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
 }
 
 std::string lGetNanobindType(const Type *type) {
+    // The function may have been declared before a struct it uses was defined.
+    type = ResolveForwardDeclaredStruct(type);
     if (type->IsAtomicType()) {
         return type->GetDeclaration("", DeclarationSyntax::CPP);
     } else if (type->IsPointerType()) {
         // Both TYPE a[] and TYPE *uniform are represented as pointer types at
         // this point, except structures. We suppose that they are passed from
         // Python side as numpy arrays.
-        if (const StructType *ST = CastType<StructType>(ResolveForwardDeclaredStruct(type->GetBaseType()))) {
+        if (const StructType *ST = CastType<StructType>(type->GetBaseType())) {
             return ST->GetCStructName() + "*";
         } else {
             return "nb::ndarray<" + lGetNanobindType(type->GetBaseType()) + ">";

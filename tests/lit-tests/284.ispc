@@ -12,6 +12,9 @@ struct Bar {
 
 uniform Foo * uniform gp;
 uniform Foo &getRef();
+Foo getVal();
+uniform Foo getUVal();
+void takeConstRef(const uniform Foo &r);
 typedef struct Foo FooT;
 
 // Templates see the definition at the point of instantiation.
@@ -47,6 +50,15 @@ uniform int global() { return gp->x; }
 
 // CHECK-LABEL: @ref___
 uniform int ref() { return getRef().x + sizeof(getRef()); }
+
+// Values returned by functions declared before the definition, which are
+// stored to temporaries.
+// CHECK-LABEL: @byValue___
+int byValue(bool c, Foo v) {
+    Foo s = c ? getVal() : v;
+    takeConstRef(getUVal());
+    return getVal().x + s.x;
+}
 
 template <typename T> uniform int value(T *uniform p) { return p->x; }
 template <typename T> uniform int valueRef(T &r) { return r.x; }

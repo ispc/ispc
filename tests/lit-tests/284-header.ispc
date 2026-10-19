@@ -29,6 +29,8 @@
 
 // NB: void early(Foo* p) {
 // NB-NEXT: ispc::early(p);
+// NB: Foo make() {
+// NB-NEXT: return ispc::make();
 
 #ifdef ISPC
 struct Foo;
@@ -48,9 +50,10 @@ struct Node {
     Bar *bar;
 };
 
-// Defined before Foo, so its parameter type refers to the forward
-// declaration.
+// Declared before Foo, so their parameter and return types refer to the
+// forward declaration.
 export void early(uniform Foo *uniform p) {}
+export uniform Foo make();
 
 struct Foo {
     int x;
