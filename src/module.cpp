@@ -864,7 +864,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
         inProgress.push_back(st);
         bool valid = true;
         for (int i = 0; i < st->GetElementCount(); ++i) {
-            if (!lRecursiveCheckValidParamType(st->GetElementType(i), soaOk, vectorOk, name, pos, inProgress)) {
+            if (!lRecursiveCheckValidParamType(st->GetElementType(i), vectorOk, soaOk, name, pos, inProgress)) {
                 valid = false;
                 break;
             }
@@ -882,7 +882,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
 
     const SequentialType *seqt = CastType<SequentialType>(t);
     if (seqt != nullptr) {
-        return lRecursiveCheckValidParamType(seqt->GetElementType(), soaOk, vectorOk, name, pos, inProgress);
+        return lRecursiveCheckValidParamType(seqt->GetElementType(), vectorOk, soaOk, name, pos, inProgress);
     }
 
     const PointerType *pt = CastType<PointerType>(t);
