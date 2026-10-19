@@ -46,6 +46,7 @@ Contents:
 
 * `Recent Changes to ISPC`_
 
+  + `Updating ISPC Programs For Changes In ISPC 1.33.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.32.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.31.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.30.0`_
@@ -269,6 +270,17 @@ of recent changes to the compiler.
 
 .. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/main/docs/ReleaseNotes.txt
 
+
+Updating ISPC Programs For Changes In ISPC 1.33.0
+-------------------------------------------------
+
+Language Changes:
+
+* A forward-declared struct can now be used through pointers, references and
+  typedefs declared before its definition, once the definition is provided;
+  for example, ``b->foo->x`` after ``struct Foo; struct Bar { Foo *foo; };
+  struct Foo { int x; };``. Previously this was rejected with "declared but
+  not defined struct type".
 
 Updating ISPC Programs For Changes In ISPC 1.32.0
 -------------------------------------------------
