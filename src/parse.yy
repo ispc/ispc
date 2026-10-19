@@ -1304,7 +1304,7 @@ declaration_specifiers
                   } else
                       Error(@1, "Multiple types provided for declaration.");
               }
-              ds->baseType = ResolveForwardDeclaredStruct($1);
+              ds->SetTypeSpecifier($1);
           }
           $$ = ds;
       }
