@@ -3778,7 +3778,9 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // First allocate memory to accumulate the various program
         // instances' return values...
         Assert(funcType != nullptr);
-        const Type *returnType = funcType->GetReturnType();
+        // The function type may have been declared before the struct it
+        // returns was defined.
+        const Type *returnType = ResolveForwardDeclaredStruct(funcType->GetReturnType());
         llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
         AddressInfo *resultPtrInfo = nullptr;
         Assert(llvmReturnType);
