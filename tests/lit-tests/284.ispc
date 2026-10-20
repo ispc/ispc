@@ -18,6 +18,7 @@ Foo getVal();
 uniform Foo getUVal();
 void takeConstRef(const uniform Foo &r);
 typedef struct Foo FooT;
+typedef Foo (*FooFn)();
 
 // Templates see the definition at the point of instantiation.
 template <typename T> uniform int early(T *uniform b) { return b->foo->x + sizeof(uniform Foo); }
@@ -61,6 +62,11 @@ int byValue(bool c, Foo v) {
     takeConstRef(getUVal());
     return getVal().x + s.x;
 }
+
+// A varying function pointer whose type was declared before the definition:
+// the per-instance calls accumulate their results in a temporary.
+// CHECK-LABEL: @viaVaryingFnPtr___
+int viaVaryingFnPtr(FooFn f) { return f().x; }
 
 template <typename T> uniform int value(T *uniform p) { return p->x; }
 template <typename T> uniform int valueRef(T &r) { return r.x; }
