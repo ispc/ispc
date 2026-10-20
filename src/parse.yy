@@ -46,6 +46,7 @@ We can safely suppress these conflicts since both paths produce identical ASTs *
           (Current).last_line    = YYRHSLOC (Rhs, N).last_line;        \
           (Current).last_column  = YYRHSLOC (Rhs, N).last_column;      \
           (Current).name         = YYRHSLOC (Rhs, 1).name    ;         \
+          (Current).order        = YYRHSLOC (Rhs, 1).order   ;         \
         }                                                              \
       else                                                             \
         { /* empty RHS */                                              \
@@ -54,6 +55,8 @@ We can safely suppress these conflicts since both paths produce identical ASTs *
           (Current).first_column = (Current).last_column =             \
             YYRHSLOC (Rhs, 0).last_column;                             \
           (Current).name = nullptr;                        /* new */ \
+          /* the first token of the preceding symbol */             \
+          (Current).order = YYRHSLOC (Rhs, 0).order;                   \
         }                                                              \
     while (0)
 

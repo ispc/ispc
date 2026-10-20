@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -28,6 +28,9 @@ static void lPragmaIgnoreWarning(SourcePos *, std::string);
 static void lPragmaUnroll(YYSTYPE *, SourcePos *, std::string, bool);
 static bool lConsumePragma(YYSTYPE *, SourcePos *);
 static void lHandleCppHash(SourcePos *);
+
+/** The order of the last lexer match; see SourcePos::order. */
+static unsigned int lTokenOrder = 0;
 static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
 extern const char *RegisterDependency(const std::string &fileName);
@@ -35,7 +38,8 @@ extern const char *RegisterDependency(const std::string &fileName);
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line; \
     yylloc.first_column = yylloc.last_column; \
-    yylloc.last_column += yyleng;
+    yylloc.last_column += yyleng; \
+    yylloc.order = ++lTokenOrder;
 
 #ifdef ISPC_HOST_IS_WINDOWS
 inline int isatty(int) { return 0; }
@@ -46,7 +50,11 @@ inline int isatty(int) { return 0; }
 std::map<int, std::string> tokenToName;
 std::map<std::string, std::string> tokenNameRemap;
 
+unsigned int ispc::GetLastTokenOrder() { return lTokenOrder; }
+
 void ParserInit() {
+    lTokenOrder = 0;
+    yylloc.order = 0;
     tokenToName[TOKEN_ASSERT] = "assert";
     tokenToName[TOKEN_BOOL] = "bool";
     tokenToName[TOKEN_BREAK] = "break";

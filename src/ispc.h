@@ -175,6 +175,12 @@ struct SourcePos {
     int first_column;
     int last_line;
     int last_column;
+    /** Order of the first token of the range in the translation unit: the
+        number of lexer matches (tokens, but also whitespace and comments)
+        up to it, counted from one in each compilation.  Unlike the filename
+        and line numbers, it follows the order of the tokens across included
+        files and #line directives.  Zero if unknown. */
+    unsigned int order;
 
     /** Prints the filename and line/column range to standard output. */
     void Print() const;
@@ -191,6 +197,10 @@ struct SourcePos {
 /** Returns a SourcePos that encompasses the extent of both of the given
     extents. */
 SourcePos Union(const SourcePos &p1, const SourcePos &p2);
+
+/** Returns the order of the last lexer match in the current compilation;
+    see SourcePos::order. */
+unsigned int GetLastTokenOrder();
 
 typedef unsigned int PerfWarningTypeUnderlyingType;
 

@@ -2409,34 +2409,32 @@ const StructType *UndefinedStructType::GetDefinition() const {
     return CastType<StructType>(t);
 }
 
-/** Returns true if the position a comes before the position b in the
-    source.  Positions in different files can't be ordered, so they are
-    treated as being out of order. */
-static bool lPrecedes(const SourcePos &a, const SourcePos &b) {
-    if (a.name == nullptr || b.name == nullptr || strcmp(a.name, b.name) != 0) {
-        return false;
-    }
-    return a.first_line < b.first_line || (a.first_line == b.first_line && a.first_column < b.first_column);
-}
-
 const StructType *UndefinedStructType::GetDefinitionBefore(SourcePos usePos) const {
-    if (definition->type == nullptr || (definition->isLocal && !lPrecedes(definition->pos, usePos))) {
+    if (definition->type == nullptr) {
+        return nullptr;
+    }
+    // Only a use in the function body of the definition can come before it.
+    // Uses in template instantiations keep the positions of the template
+    // body, which lie outside of that function body.
+    if (definition->isLocal && definition->scopeStart < usePos.order && usePos.order < definition->pos.order) {
         return nullptr;
     }
     return GetDefinition();
 }
 
-void UndefinedStructType::SetDefinition(const StructType *st, SourcePos pos, bool isLocal) const {
+void UndefinedStructType::SetDefinition(const StructType *st, SourcePos pos, bool isLocal,
+                                        unsigned int scopeStart) const {
     Assert(st != nullptr && st->GetStructName() == name && st->GetVariability() == Variability::Unbound &&
            !st->IsConstType());
     definition->type = st;
     definition->pos = pos;
     definition->isLocal = isLocal;
+    definition->scopeStart = scopeStart;
 }
 
 /** If the given type is a forward declared struct, returns its definition,
     or nullptr if the struct isn't defined.  If usePos is given, a definition
-    in a function body after usePos isn't returned either. */
+    after usePos in the same function body isn't returned either. */
 static const StructType *lGetDefinition(const Type *type, const std::optional<SourcePos> &usePos) {
     const UndefinedStructType *ust = CastType<UndefinedStructType>(type);
     if (ust == nullptr) {

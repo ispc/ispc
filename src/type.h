@@ -956,24 +956,33 @@ class UndefinedStructType : public Type {
     const StructType *GetDefinition() const;
 
     /** Like GetDefinition(), but returns nullptr if the struct is defined
-        in a function body after usePos or in a different file.  A function body is type checked
-        after the whole body is parsed, so a definition later in the same
-        body is already recorded when the earlier uses are checked.  Uses of
-        a struct defined outside of functions are checked in source order
+        in a function body after usePos in the same body.  A function body
+        is type checked after the whole body is parsed, so a definition later
+        in the same body is already recorded when the earlier uses are
+        checked; the uses are ordered by SourcePos::order, which follows the
+        tokens across included files and #line directives.  Uses in template
+        instantiations keep the positions of the template body, so they see
+        a definition in the function body that instantiates the template
+        even if the call comes before the definition (as with C++, where the
+        end of the translation unit is a point of instantiation).  Uses of a
+        struct defined outside of functions are checked in source order
         (template instantiations at the point of instantiation), so they see
         the definition only if it comes first. */
     const StructType *GetDefinitionBefore(SourcePos usePos) const;
 
-    /** Records the full definition of the struct, where it is defined and
-        whether it is defined in a function body.  The definition is shared
-        by all variants of this type (e.g. uniform, varying, const). */
-    void SetDefinition(const StructType *st, SourcePos pos, bool isLocal) const;
+    /** Records the full definition of the struct, where it is defined,
+        whether it is defined in a function body and where that body's
+        outermost scope starts (see SymbolTable::localScopeStart).  The
+        definition is shared by all variants of this type (e.g. uniform,
+        varying, const). */
+    void SetDefinition(const StructType *st, SourcePos pos, bool isLocal, unsigned int scopeStart) const;
 
   private:
     struct Definition {
         const StructType *type = nullptr;
         SourcePos pos;
         bool isLocal = false;
+        unsigned int scopeStart = 0;
     };
 
     const std::string name;

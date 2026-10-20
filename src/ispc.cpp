@@ -3601,6 +3601,7 @@ SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
     first_column = fc;
     last_line = ll != 0 ? ll : fl;
     last_column = lc != 0 ? lc : fc;
+    order = 0;
 }
 
 llvm::DIFile *
@@ -3627,8 +3628,12 @@ bool SourcePos::operator==(const SourcePos &p2) const {
 }
 
 SourcePos ispc::Union(const SourcePos &p1, const SourcePos &p2) {
+    // The order of the range is the order of its first known token.
+    unsigned int order = (p1.order == 0 || p2.order == 0) ? std::max(p1.order, p2.order) : std::min(p1.order, p2.order);
     if (strcmp(p1.name, p2.name) != 0) {
-        return p1;
+        SourcePos ret = p1;
+        ret.order = order;
+        return ret;
     }
 
     SourcePos ret;
@@ -3637,6 +3642,7 @@ SourcePos ispc::Union(const SourcePos &p1, const SourcePos &p2) {
     ret.first_column = std::min(p1.first_column, p2.first_column);
     ret.last_line = std::max(p1.last_line, p2.last_line);
     ret.last_column = std::max(p1.last_column, p2.last_column);
+    ret.order = order;
     return ret;
 }
 
