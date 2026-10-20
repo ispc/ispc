@@ -508,6 +508,9 @@ def execute_stability(stability, R, print_version):
         b_temp = run_tests.run_tests(stability1, [], print_version)
         temp = b_temp[0]
         time = b_temp[1]
+        diagnostics = b_temp[2]
+        for fail_name in sorted(temp[0] + temp[1]):
+            add_new_fail_diagnostics(fail_name, temp[4][1:-3] + stability1.ispc_flags, diagnostics.get(fail_name, ""))
         for j in range(0,4):
             R[j][0] = R[j][0] + temp[j] # new_runfails, new_compfails, new_passes_runfails, new_passes_compfails
             for i in range(0,len(temp[j])):
@@ -569,6 +572,35 @@ def output_test_results(R):
                 for opt_str in to_print[fail_name]:
                     print_debug("\t\t\t" + opt_str, True, stability_log)
 
+# Keep the diagnostics produced by run_tests.py for a new fail. The limits are
+# applied here, so massive failures neither flood the log nor exhaust memory.
+def add_new_fail_diagnostics(fail_name, opt_str, diagnostics):
+    global skipped_new_fails_diagnostics
+    if len(new_fails_diagnostics) >= max_diagnostics_fails:
+        skipped_new_fails_diagnostics += 1
+        return
+    lines = diagnostics.splitlines(True)
+    new_fails_diagnostics.append((fail_name, opt_str, "".join(lines[:max_diagnostics_lines]),
+                                  max(len(lines) - max_diagnostics_lines, 0)))
+
+# Print the diagnostics of new fails, so the reason of the fails is visible in
+# the build log without digging into the artifacts.
+def output_new_fails_diagnostics():
+    if len(new_fails_diagnostics) == 0:
+        return
+    log_hint = "see run_tests_log.log in the alloy_results_* folder"
+    print_debug("\n_____________________NEW FAILS DIAGNOSTICS_______________________\n", False, stability_log)
+    for (fail_name, opt_str, diagnostics, skipped_lines) in new_fails_diagnostics:
+        print_debug("\n=== " + fail_name + " [" + opt_str.strip() + "]\n", False, stability_log)
+        if diagnostics == "":
+            print_debug("No diagnostics were captured\n", False, stability_log)
+            continue
+        print_debug(diagnostics.rstrip("\n") + "\n", False, stability_log)
+        if skipped_lines > 0:
+            print_debug("... %d more lines are skipped, %s\n" % (skipped_lines, log_hint), False, stability_log)
+    if skipped_new_fails_diagnostics > 0:
+        print_debug("\n... diagnostics of %d more new fails are skipped, %s\n" % (skipped_new_fails_diagnostics, log_hint), False, stability_log)
+
 def concatenate_test_results(R1, R2):
     R = [[[],[]],[[],[]],[[],[]],[[],[]]]
     for j in range(0, 4):
@@ -577,6 +609,9 @@ def concatenate_test_results(R1, R2):
     return R
 
 def validation_run(only, only_targets, reference_branch, number, update, speed_number, make, perf_llvm, time):
+    global skipped_new_fails_diagnostics
+    new_fails_diagnostics.clear()
+    skipped_new_fails_diagnostics = 0
     os.chdir(os.environ["ISPC_HOME"])
     if current_OS != "Windows":
         os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
@@ -753,6 +788,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
 
         print_debug("\n----------------------------------------\nTOTAL:\n", False, stability_log)
         output_test_results(R)
+        output_new_fails_diagnostics()
         print_debug("__________________Watch stability.log for details_________________\n", False, stability_log)
 
 # *** *** ***
@@ -954,6 +990,12 @@ take_lines = common.take_lines
 print_debug = common.print_debug
 make_sure_dir_exists = common.make_sure_dir_exists
 return_status = 0
+# (test, run options, run_tests.py diagnostics, number of skipped lines) for new fails
+new_fails_diagnostics = []
+# Number of new fails, which diagnostics are not kept due to the limit
+skipped_new_fails_diagnostics = 0
+max_diagnostics_fails = 50
+max_diagnostics_lines = 200
 if __name__ == '__main__':
     # parsing options
     class MyParser(OptionParser):
