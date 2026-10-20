@@ -2,7 +2,9 @@
 // Types created from a forward-declared struct before it is defined (pointers
 // and references to it) must see the definition once it is provided.
 
-// RUN: %{ispc} %s --target=host --nostdlib --nowrap --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not="Assertion failed"
+// RUN: mkdir -p %t.dir
+// RUN: echo "struct I { int x; };" > %t.dir/284-local-def.isph
+// RUN: %{ispc} %s -I %t.dir --target=host --nostdlib --nowrap --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not="Assertion failed"
 
 struct Foo;
 
@@ -123,3 +125,56 @@ struct Node {
 
 // CHECK-LABEL: @node___
 int node(Node * uniform n) { return n->next->v + (n->next + 1)->v; }
+
+// A struct defined in a function body by an included file or under a #line
+// directive can be used after the definition.
+// CHECK-LABEL: @localInclude___
+uniform int localInclude(void *uniform v) {
+    struct I;
+    uniform I *uniform p = (uniform I * uniform)v;
+#include "284-local-def.isph"
+    return p->x;
+}
+
+// CHECK-LABEL: @localLine___
+uniform int localLine(void *uniform v) {
+    struct N;
+    uniform N *uniform p = (uniform N * uniform)v;
+#line 1 "other.ispc"
+    struct N {
+        int x;
+    };
+#line 1 "third.ispc"
+    return p->x;
+}
+
+// A template instantiated after a struct defined in a function body sees the
+// definition, although the template body comes earlier in the file.
+template <typename T> uniform int nextX(T *uniform p) { return p->next->x; }
+
+// CHECK-LABEL: @localTemplate___
+uniform int localTemplate(void *uniform v) {
+    struct LNode {
+        LNode *next;
+        int x;
+    };
+    uniform LNode *uniform p = (uniform LNode * uniform)v;
+    return nextX(p);
+}
+
+// Like in C++, a template sees a struct defined in the function body that
+// instantiates it even if the call comes before the definition.
+template <typename T> uniform int pointeeSize(T p) { return sizeof(*p); }
+
+// CHECK-LABEL: @templateBefore___
+// CHECK: ret i32 8
+uniform int templateBefore(void *uniform v) {
+    struct TB;
+    uniform TB *uniform p = (uniform TB * uniform)v;
+    uniform int n = pointeeSize(p);
+    struct TB {
+        int x;
+        int y;
+    };
+    return n;
+}

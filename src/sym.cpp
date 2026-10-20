@@ -76,6 +76,9 @@ void SymbolTable::PushScope() {
         sm = new SymbolMapType;
     }
 
+    if (types.size() == 1) {
+        localScopeStart = GetLastTokenOrder();
+    }
     variables.push_back(sm);
     types.emplace_back();
 }
@@ -86,6 +89,9 @@ void SymbolTable::PopScope() {
     freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
     types.pop_back();
+    if (types.size() == 1) {
+        localScopeStart = 0;
+    }
 }
 
 void SymbolTable::PopInnerScopes() {
@@ -276,7 +282,7 @@ bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
             // is the global one.
             if (UST->GetStructName() == ST->GetStructName() && ST->GetVariability() == Variability::Unbound &&
                 !ST->IsConstType()) {
-                UST->SetDefinition(ST, pos, types.size() > 1);
+                UST->SetDefinition(ST, pos, types.size() > 1, localScopeStart);
             }
         }
     }

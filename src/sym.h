@@ -348,6 +348,13 @@ class SymbolTable {
      */
     typedef std::map<std::string, const Type *> TypeMapType;
     std::vector<TypeMapType> types;
+
+    /** The order of the last lexer match when the outermost scope inside
+        the global one was started, or zero at the global scope; see
+        SourcePos::order.  For a function this is after its declarator, for
+        a template after its template parameters; either way, before its
+        body. */
+    unsigned int localScopeStart = 0;
 };
 
 template <typename Predicate>
