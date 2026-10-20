@@ -325,6 +325,8 @@ def build_ispc_extension(module_name, ispc_object, nb_wrapper, header, test_sig,
 def run_command(cmd, timeout=600, cwd="."):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
+    elif test_output is not None:
+        test_output.append("Running: %s\n" % cmd)
 
     # Here's a bit tricky part. To pass a command for execution we should
     # break down the line in to arguments. shlex class is designed exactly
@@ -825,8 +827,10 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
     else:
         olddir = ""
 
+    global test_output
     for filename in iter(queue.get, 'STOP'):
         status = Status.Skip
+        test_output = []
         if not check_if_skip_test(filename, host, target):
             try:
                 status = run_test(filename, host, target, jit_lib_path)
@@ -835,10 +839,15 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
                 # Count it as runfail and continue with next test.
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_tb(exc_traceback, file=sys.stderr)
+                # Keep the traceback in the log file and in the test diagnostics.
+                print_debug("".join(traceback.format_tb(exc_traceback)), True, run_tests_log)
                 print_debug("ERROR: run_test function raised an exception: %s\n" % (sys.exc_info()[1]), s, run_tests_log)
                 status = Status.Runfail
 
-        queue_ret.put((filename, status))
+        # Keep the diagnostics of failed tests, so callers can report them.
+        diagnostics = "".join(test_output) if status in (Status.Compfail, Status.Runfail) else ""
+        test_output = None
+        queue_ret.put((filename, status, diagnostics))
         with mutex:
             update_progress(filename, total_tests_arg, counter, max_test_length_arg)
 
@@ -1290,8 +1299,12 @@ def run_tests(options1, args, print_version):
 
     # Queue.empty() can return True while a worker's result is still being flushed.
     # Each test queues one result before marking its task done.
+    diagnostics = {}
     for _ in range(total_tests):
-        results.append(qret.get(timeout=30))
+        (filename, status, test_diagnostics) = qret.get(timeout=30)
+        results.append((filename, status))
+        if test_diagnostics:
+            diagnostics[filename] = test_diagnostics
 
     # populate ex_state test table and run info with testing results
     populate_ex_state(options, target, total_tests, results)
@@ -1328,7 +1341,7 @@ def run_tests(options1, args, print_version):
     if options.time:
         print_debug("Elapsed time: " + elapsed_time + "\n", s, run_tests_log)
 
-    return [R, elapsed_time]
+    return [R, elapsed_time, diagnostics]
 
 
 from optparse import OptionParser
@@ -1351,8 +1364,17 @@ import time
 # our functions
 import common
 import traceback
-print_debug = common.print_debug
-error = common.error
+# Diagnostics printed while running the current test in a worker process.
+# It is None when no test is running.
+test_output = None
+def print_debug(line, silent, filename):
+    if test_output is not None:
+        test_output.append(line)
+    common.print_debug(line, silent, filename)
+def error(line, error_type = 1):
+    if test_output is not None:
+        test_output.append(line + "\n")
+    common.error(line, error_type)
 exit_code = 0
 
 # Use different default targets on different architectures.
