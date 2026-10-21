@@ -1567,27 +1567,27 @@ struct_or_union_specifier
     // explicit here.
     | struct_or_union_definition_head struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
-          if ($2 != nullptr) {
+          if ($1 != nullptr && $2 != nullptr) {
               const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
                                                                  : CastType<UndefinedStructType>($1)->GetStructName();
               $$ = lCreateStructType(name, $1, $2, nullptr, @1);
-              // struct_declaration_list returns a vector that is not needed anymore.
-              delete $2;
           } else {
               $$ = nullptr;
           }
+          // struct_declaration_list returns a vector that is not needed anymore.
+          delete $2;
       }
     | struct_or_union_definition_head struct_declaration_list '}' attribute_specifier
       {
-          if ($2 != nullptr) {
+          if ($1 != nullptr && $2 != nullptr) {
               const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
                                                                  : CastType<UndefinedStructType>($1)->GetStructName();
               $$ = lCreateStructType(name, $1, $2, $4, @1);
-              // attribute_specifier returns an object that is not needed anymore.
-              delete $4;
           } else {
               $$ = nullptr;
           }
+          // attribute_specifier returns an object that is not needed anymore.
+          delete $4;
           // struct_declaration_list returns a vector that is not needed anymore.
           delete $2;
       }
@@ -1625,15 +1625,23 @@ struct_or_union_specifier
       }
     | struct_or_union_definition_head '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
-          const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
-                                                             : CastType<UndefinedStructType>($1)->GetStructName();
-          $$ = lCreateStructType(name, $1, nullptr, nullptr, @1);
+          if ($1 != nullptr) {
+              const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                                 : CastType<UndefinedStructType>($1)->GetStructName();
+              $$ = lCreateStructType(name, $1, nullptr, nullptr, @1);
+          } else {
+              $$ = nullptr;
+          }
       }
     | struct_or_union_definition_head '}' attribute_specifier
       {
-          const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
-                                                             : CastType<UndefinedStructType>($1)->GetStructName();
-          $$ = lCreateStructType(name, $1, nullptr, $3, @1);
+          if ($1 != nullptr) {
+              const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                                 : CastType<UndefinedStructType>($1)->GetStructName();
+              $$ = lCreateStructType(name, $1, nullptr, $3, @1);
+          } else {
+              $$ = nullptr;
+          }
           // attribute_specifier returns an object that is not needed anymore.
           delete $3;
       }
