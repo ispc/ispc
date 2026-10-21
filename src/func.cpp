@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1027,7 +1027,58 @@ void FunctionTemplate::Print() const {
     fflush(stdout);
 };
 
-llvm::GlobalValue::LinkageTypes lGetTemplateInstantiationLinkage(TemplateInstantiationKind kind) {
+/** Returns true if the type refers to a struct declared in a function body or
+    to an anonymous struct.  Such structs are mangled by a name that is unique
+    only within a translation unit (see StructIdentity::localIndex), so the
+    same mangled name can refer to different structs in different translation
+    units. */
+static bool lHasLocalStructType(const Type *type) {
+    if (type == nullptr) {
+        return false;
+    }
+    if (const StructType *st = CastType<StructType>(type)) {
+        // No need to check members: the mangled name of a named struct
+        // doesn't depend on them.
+        return st->GetIdentity()->localIndex != 0 || st->IsAnonymousType();
+    }
+    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
+        return ust->GetIdentity()->localIndex != 0;
+    }
+    if (const PointerType *pt = CastType<PointerType>(type)) {
+        return lHasLocalStructType(pt->GetBaseType());
+    }
+    if (const ReferenceType *rt = CastType<ReferenceType>(type)) {
+        return lHasLocalStructType(rt->GetReferenceTarget());
+    }
+    if (const SequentialType *st = CastType<SequentialType>(type)) {
+        return lHasLocalStructType(st->GetElementType());
+    }
+    if (const FunctionType *ft = CastType<FunctionType>(type)) {
+        if (lHasLocalStructType(ft->GetReturnType())) {
+            return true;
+        }
+        for (int i = 0; i < ft->GetNumParameters(); ++i) {
+            if (lHasLocalStructType(ft->GetParameterType(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+    return false;
+}
+
+/** Returns true if any type template argument refers to a local or an
+    anonymous struct; see lHasLocalStructType(). */
+static bool lHasLocalStructTemplateArg(const TemplateArgs &args) {
+    for (const auto &arg : args) {
+        if (arg.IsType() && lHasLocalStructType(arg.GetAsType())) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static llvm::GlobalValue::LinkageTypes lGetTemplateInstantiationLinkage(TemplateInstantiationKind kind) {
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::LinkageTypes::InternalLinkage;
     switch (kind) {
     // Function can be defined multiple times across different translation units without causing conflicts.
@@ -1055,8 +1106,14 @@ void FunctionTemplate::GenerateIR() const {
         const Function *func = inst.symbol->parentFunction;
         if (func != nullptr) {
             func->GenerateIR();
-            // Update linkage for not internal functions
-            if (!func->IsInternal()) {
+            // Instantiations over local or anonymous structs must not be merged
+            // with same-named instantiations from other translation units. Check
+            // this before IsInternal(): on Xe, GenerateIR() marks functions
+            // AlwaysInline but keeps their external linkage.
+            if (lHasLocalStructTemplateArg(inst.args)) {
+                func->UpdateLinkage(llvm::GlobalValue::InternalLinkage);
+            } else if (!func->IsInternal()) {
+                // Update linkage for not internal functions
                 func->UpdateLinkage(lGetTemplateInstantiationLinkage(inst.kind));
             }
         } else {

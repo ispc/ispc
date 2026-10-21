@@ -191,8 +191,8 @@ export void typedef_definition(uniform Q *uniform q) { globalQ = q; }
 // template gets a separate instantiation for each of them.
 // CHECK_TYPES-DAG: %v8_uniform_S = type { i32 }
 // CHECK_TYPES-DAG: %v8_uniform_S.1 = type { float }
-// CHECK_TYPES-DAG: define {{.*}} @read___s_5B_unS.1_5D_{{.*}}(%v8_uniform_S %s,
-// CHECK_TYPES-DAG: define {{.*}} @read___s_5B_unS.2_5D_{{.*}}(%v8_uniform_S.1 %s,
+// CHECK_TYPES-DAG: define {{.*}} @read___s_5B_unS.1_5D_{{.*}}(%v8_uniform_S %s{{[,)]}}
+// CHECK_TYPES-DAG: define {{.*}} @read___s_5B_unS.2_5D_{{.*}}(%v8_uniform_S.1 %s{{[,)]}}
 template <typename U> noinline uniform int read(U s) { return s.x; }
 
 export uniform int template_int(uniform int x) {
