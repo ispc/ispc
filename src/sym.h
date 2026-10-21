@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -161,6 +161,9 @@ class SymbolTable {
     /** Pop all scopes except the outermost scope. It's needed to clean up SymbolTable in case of any error during
         parsing to avoid assertion in destructor. */
     void PopInnerScopes();
+
+    /** Returns true if the current scope is the outermost (global) one. */
+    bool IsGlobalScope() const { return types.size() == 1; }
 
     /** Adds the given variable symbol to the symbol table.
         @param symbol The symbol to be added

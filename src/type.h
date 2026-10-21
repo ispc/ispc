@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -16,6 +16,9 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Type.h>
+
+#include <map>
+#include <memory>
 
 namespace ispc {
 
@@ -800,13 +803,36 @@ class VectorType : public SequentialType {
     int getVectorMemoryCount() const;
 };
 
+/** Identifies a struct.  Structs with the same name may be declared in
+    different scopes (e.g. local structs in different functions) with
+    different members, so the name alone doesn't identify a struct.  It is
+    shared by all variants (uniform, varying, const, etc.) of a struct type,
+    and by a forward declaration of the struct (see UndefinedStructType) and
+    its definition in the same scope.
+ */
+struct StructIdentity {
+    /** Zero for structs declared in the global scope.  For structs declared
+        in function bodies, a positive number that distinguishes them from
+        the other structs with the same name; see StructType::Mangle(). */
+    int localIndex = 0;
+
+    /** The LLVM struct types of the struct, by lMangleStructName() of the
+        variability.  A forward declaration creates opaque ones, and the
+        definition sets their bodies. */
+    std::map<std::string, llvm::StructType *> llvmTypes;
+};
+
 /** @brief Representation of a structure holding a number of members.
  */
 class StructType : public CollectionType {
   public:
+    /** If identity is nullptr, the struct gets a new identity.  Pass the
+        identity of the forward declaration of the struct in the same scope
+        when defining it. */
     StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts,
                const llvm::SmallVector<std::string, 8> &eltNames, const llvm::SmallVector<SourcePos, 8> &eltPositions,
-               bool isConst, Variability variability, SourcePos pos, unsigned int alignment = 0);
+               bool isConst, Variability variability, SourcePos pos, unsigned int alignment = 0,
+               std::shared_ptr<StructIdentity> identity = nullptr);
 
     bool IsCompleteType() const override;
 
@@ -851,12 +877,15 @@ class StructType : public CollectionType {
     const std::string &GetStructName() const { return name; }
     const std::string GetCStructName() const;
 
+    const std::shared_ptr<StructIdentity> &GetIdentity() const { return identity; }
+
     void RegisterInStructTypeMap();
 
   private:
     static bool checkIfCanBeSOA(const StructType *st);
 
     /*const*/ std::string name;
+    std::shared_ptr<StructIdentity> identity;
     /** The types of the struct elements.  Note that we store these with
         uniform/varying exactly as they were declared in the source file.
         (In other words, even if this struct has a varying qualifier and
@@ -910,10 +939,15 @@ class UndefinedStructType : public Type {
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
 
+    /** Returns the identity of the struct, which its definition in the same
+        scope shares. */
+    const std::shared_ptr<StructIdentity> &GetIdentity() const { return identity; }
+
     void RegisterInStructTypeMap();
 
   private:
     const std::string name;
+    std::shared_ptr<StructIdentity> identity;
 
     UndefinedStructType(const UndefinedStructType &other);
 
