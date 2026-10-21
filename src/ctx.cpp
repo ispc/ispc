@@ -369,23 +369,6 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
            code about this new function */
         diFile = funcStartPos.GetDIFile();
         diSpace = funcStartPos.GetDINamespace();
-        llvm::DIScope *scope = m->diCompileUnit;
-        llvm::DIType *diSubprogramType = nullptr;
-
-        const FunctionType *functionType = function->GetType();
-        if (functionType == nullptr) {
-            AssertPos(currentPos, m->errorCount > 0);
-        } else {
-            diSubprogramType = functionType->GetDIType(scope);
-            /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6 // 3.2, 3.3, 3.4, 3.5, 3.6
-                        AssertPos(currentPos, diSubprogramType.Verify());
-            #else // LLVM 3.7+
-                        // comming soon
-            #endif*/
-        }
-        /* LLVM 4.0+ */
-        Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
-        llvm::DISubroutineType *diSubprogramType_n = llvm::cast<llvm::DISubroutineType>(diSubprogramType);
         llvm::DINode::DIFlags flags = llvm::DINode::FlagPrototyped;
 
         std::string mangledName = std::string(llvmFunction->getName());
@@ -406,9 +389,24 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
             SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
         }
 
+        // Create the subprogram before the debug type of the function, so
+        // that the types it refers to are described in the scope of the
+        // function (and the function owns the debug types of the structs
+        // declared in function bodies it refers to; see
+        // Module::GetStructDIType()).
+        llvm::DISubroutineType *emptyType = m->diBuilder->createSubroutineType(m->diBuilder->getOrCreateTypeArray({}));
         diSubprogram = m->diBuilder->createFunction(diSpace /* scope */, funSym->name, mangledName, diFile, firstLine,
-                                                    diSubprogramType_n, firstLine, flags, SPFlags);
+                                                    emptyType, firstLine, flags, SPFlags);
         llvmFunction->setSubprogram(diSubprogram);
+
+        const FunctionType *functionType = function->GetType();
+        if (functionType == nullptr) {
+            AssertPos(currentPos, m->errorCount > 0);
+        } else {
+            llvm::DIType *diSubprogramType = functionType->GetDIType(diSubprogram);
+            Assert(llvm::isa<llvm::DISubroutineType>(diSubprogramType));
+            diSubprogram->replaceType(llvm::cast<llvm::DISubroutineType>(diSubprogramType));
+        }
 
         /* And start a scope representing the initial function scope */
         StartScope();

@@ -421,6 +421,11 @@ int Module::CompileFile() {
         }
     }
     ast->GenerateIR();
+    if (diBuilder) {
+        // Before the libraries are linked and optimizations run, so that
+        // they don't see placeholder debug types.
+        completeStructDITypes();
+    }
 
     debugDumpModule(module, "GenerateIR", pre_stage++);
 
@@ -456,6 +461,88 @@ int Module::CompileFile() {
     }
 
     return errorCount;
+}
+
+llvm::DIType *Module::GetStructDIType(const Type *type, llvm::DIScope *scope) {
+    Assert(!diStructsCompleted);
+    const StructType *st = CastType<StructType>(type);
+    const UndefinedStructType *ust = CastType<UndefinedStructType>(type);
+    const StructIdentity *identity = GetStructIdentity(type);
+    Assert(identity != nullptr);
+    // A struct declared in a function body is described in the scope of each
+    // function that uses it (also e.g. a template instantiated with it), by
+    // its own copy of the debug type: the copy then goes away with the
+    // function if it is removed (e.g. an unused template instantiation), and
+    // is kept as the scope of the inlined code if the function is inlined.
+    // Such structs are only used in functions; the namespace of the file is
+    // used only as a fallback.
+    llvm::DISubprogram *owner = nullptr;
+    if (identity->localIndex != 0) {
+        if (auto *localScope = llvm::dyn_cast_or_null<llvm::DILocalScope>(scope)) {
+            owner = localScope->getSubprogram();
+        }
+    }
+    // Keep the placeholders of forward declarations apart, as only the ones
+    // of structs that are defined get their sizes.
+    auto [it, inserted] =
+        diStructs.try_emplace(StructDIKey(identity, type->GetString(), ust != nullptr, owner), StructDIType{type, {}});
+    if (inserted) {
+        // The debug types of arrays and members take the size and alignment
+        // of their element types right away.  A forward declared struct is
+        // used only through pointers and references.
+        uint64_t size = 0;
+        uint32_t align = 0;
+        llvm::DINode::DIFlags flags = llvm::DINode::FlagFwdDecl;
+        if (const llvm::StructLayout *layout = st ? st->GetLayout() : nullptr) {
+            size = layout->getSizeInBits();
+            align = layout->getAlignment().value() * 8;
+            flags = llvm::DINode::FlagZero;
+        }
+        SourcePos pos = type->GetSourcePos();
+        it->second.diType.reset(diBuilder->createReplaceableCompositeType(
+            llvm::dwarf::DW_TAG_structure_type, std::get<1>(it->first), pos.GetDINamespace(), pos.GetDIFile(),
+            pos.first_line, 0, size, align, flags));
+        diStructPlaceholders.push_back(it);
+    }
+    return it->second.diType;
+}
+
+void Module::completeStructDITypes() {
+    // The debug types of the definitions may add placeholders for the
+    // structs their members refer to, which are completed in turn.
+    for (size_t i = 0; i < diStructPlaceholders.size(); ++i) {
+        StructDIType &entry = diStructPlaceholders[i]->second;
+        llvm::DISubprogram *owner = std::get<3>(diStructPlaceholders[i]->first);
+        const UndefinedStructType *ust = CastType<UndefinedStructType>(entry.type);
+        // Don't describe the definitions once there are errors (e.g. in
+        // them), as their members may be invalid; nothing is compiled then
+        // anyway.
+        const StructType *definition = nullptr;
+        if (errorCount == 0) {
+            definition = ust ? ust->GetDefinition() : CastType<StructType>(entry.type);
+        }
+        llvm::DIType *replacement = nullptr;
+        if (errorCount == 0 && definition != nullptr && definition->GetLayout() != nullptr) {
+            llvm::DIScope *scope = owner;
+            if (scope == nullptr) {
+                scope = definition->GetSourcePos().GetDINamespace();
+            }
+            // For a forward declaration, this may be the placeholder of the
+            // definition used in the same function, which is completed later.
+            replacement = ust ? definition->GetDIType(scope) : definition->CreateDIType(scope, scope);
+        } else {
+            SourcePos pos = entry.type->GetSourcePos();
+            llvm::DIScope *scope = owner;
+            if (scope == nullptr) {
+                scope = pos.GetDINamespace();
+            }
+            replacement = diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, entry.type->GetString(),
+                                                       scope, pos.GetDIFile(), pos.first_line);
+        }
+        diBuilder->replaceTemporary(llvm::TempDIType(entry.diType.get()), replacement);
+    }
+    diStructPlaceholders.clear();
+    diStructsCompleted = true;
 }
 
 void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos) {

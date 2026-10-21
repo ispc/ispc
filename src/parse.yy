@@ -3938,18 +3938,6 @@ static StructType *lCreateStructType(const std::string &name, const Type *declTy
     return st;
 }
 
-/* Returns the identity of the given struct type, or nullptr if it isn't a
-   struct type. */
-static const StructIdentity *lGetStructIdentity(const Type *type) {
-    if (const StructType *st = CastType<StructType>(type)) {
-        return st->GetIdentity().get();
-    }
-    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
-        return ust->GetIdentity().get();
-    }
-    return nullptr;
-}
-
 /* Declares the struct "name" in the current scope, as C does for a struct
    definition (isDefinition) or a "struct name;" declaration, and returns it.
    That is a new struct, unless the struct is already declared in the current
@@ -3960,7 +3948,7 @@ static const StructIdentity *lGetStructIdentity(const Type *type) {
    current scope.  Returns nullptr after an error. */
 static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos, bool isDefinition) {
     const Type *type = m->symbolTable->LookupType(name);
-    if (type != nullptr && lGetStructIdentity(type) == nullptr) {
+    if (type != nullptr && GetStructIdentity(type) == nullptr) {
         Error(pos, "Type \"%s\" is not a struct type! (%s)", name, type->GetString().c_str());
         return nullptr;
     }
@@ -3983,7 +3971,7 @@ static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos,
             // The struct may be declared in the current scope, also through a
             // typedef there, e.g. "typedef uniform Foo FooT;".
             const Type *local = lookupLocal(structName);
-            if (local != nullptr && lGetStructIdentity(local) == lGetStructIdentity(type)) {
+            if (local != nullptr && GetStructIdentity(local) == GetStructIdentity(type)) {
                 return local;
             }
             if (isLocalTypedef) {
