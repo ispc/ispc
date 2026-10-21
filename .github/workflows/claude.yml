@@ -5,7 +5,7 @@ name: Claude Code
 # To ask for a review of a fork PR, write "@claude review" as a top-level PR
 # comment: review and review-comment events from forks run without secrets.
 on:
-  issue_comment:
+  issue_comment: # zizmor: ignore[dangerous-triggers] - only OWNER/MEMBER/COLLABORATOR comments run the job; fork PRs get a read-only session
     types: [created]
   pull_request_review_comment:
     types: [created]
