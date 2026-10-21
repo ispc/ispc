@@ -993,10 +993,13 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     llvm::DINodeArray elementArray = m->diBuilder->getOrCreateArray(enumeratorDescriptors);
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
+    // An enum declared in a function body has no identifier: LLVM would merge
+    // enums with the same identifier, e.g. when linking modules.
+    const std::string identifier = identity->localIndex == 0 ? name : "";
     llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
         m->diBuilder->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
-                                            32 /* align in bits */, elementArray, underlyingType, 0, name);
+                                            32 /* align in bits */, elementArray, underlyingType, 0, identifier);
     switch (variability.type) {
     case Variability::Uniform:
         return diType;
@@ -2028,8 +2031,8 @@ void StructType::RegisterInStructTypeMap() {
                     Assert(m->errorCount > 0);
                     return;
                 } else if (CastType<FunctionType>(type) != nullptr) {
-                    Error(elementPositions[i], "Method declarations are not "
-                                               "supported.");
+                    // Reported when the struct is declared.
+                    Assert(m->errorCount > 0);
                     return;
                 } else {
                     llvm::Type *llvmType = type->LLVMStorageType(g->ctx);
@@ -2254,11 +2257,33 @@ llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
     return it->second;
 }
 
-// Versioning of this function becomes really messy, so versioning the whole function.
 llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
-    llvm::Type *llvm_type = LLVMStorageType(g->ctx);
+    // Describe a struct declared in a function body in the scope of the
+    // function, as C/C++ compilers do, so that debuggers don't find it by
+    // name when resolving a forward declaration of another struct with the
+    // same name.
+    if (identity->localIndex != 0) {
+        return m->GetStructDIType(this, scope);
+    }
+    return CreateDIType(pos.GetDINamespace(), scope);
+}
+
+const llvm::StructLayout *StructType::GetLayout() const {
+    auto llvmType = llvm::dyn_cast_or_null<llvm::StructType>(LLVMStorageType(g->ctx));
+    if (llvmType == nullptr || llvmType->isOpaque() || !llvmType->isSized()) {
+        return nullptr;
+    }
+    return m->module->getDataLayout().getStructLayout(llvmType);
+}
+
+llvm::DIType *StructType::CreateDIType(llvm::DIScope *structScope, llvm::DIScope *scope) const {
     auto &dataLayout = m->module->getDataLayout();
-    auto layout = dataLayout.getStructLayout(llvm::dyn_cast_or_null<llvm::StructType>(llvm_type));
+    const llvm::StructLayout *layout = GetLayout();
+    if (layout == nullptr) {
+        Assert(m->errorCount > 0);
+        return m->diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, GetString(), structScope,
+                                               pos.GetDIFile(), pos.first_line);
+    }
     std::vector<llvm::Metadata *> elementLLVMTypes;
     // Walk through the elements of the struct; for each one figure out its
     // alignment and size, using that to figure out its offset w.r.t. the
@@ -2282,8 +2307,7 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
 
     llvm::DINodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile *diFile = pos.GetDIFile();
-    llvm::DINamespace *diSpace = pos.GetDINamespace();
-    return m->diBuilder->createStructType(diSpace, GetString(), diFile,
+    return m->diBuilder->createStructType(structScope, GetString(), diFile,
                                           pos.first_line,                     // Line number
                                           layout->getSizeInBits(),            // Size in bits
                                           layout->getAlignment().value() * 8, // Alignment in bits
@@ -2483,6 +2507,16 @@ const Type *ispc::ResolveForwardDeclaredStruct(const Type *type, std::optional<S
     return type;
 }
 
+const StructIdentity *ispc::GetStructIdentity(const Type *type) {
+    if (const StructType *st = CastType<StructType>(type)) {
+        return st->GetIdentity().get();
+    }
+    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
+        return ust->GetIdentity().get();
+    }
+    return nullptr;
+}
+
 const UndefinedStructType *UndefinedStructType::GetAsSOAType(int width) const {
     FATAL("UndefinedStructType::GetAsSOAType() shouldn't be called.");
     return nullptr;
@@ -2529,22 +2563,14 @@ llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
 }
 
 llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
-    // Describe the struct by a forward declaration, which debuggers resolve
-    // by name to the definition.  Describing the definition itself here
-    // would recurse through the members of self-referential structs.  The
-    // definition may not be described anywhere else (e.g. if it is only used
-    // through pointers created before it was defined), so add it to the
-    // compile unit once.  Identify it by the definition and the name of the
-    // variant rather than by st, as GetDefinition() returns a new type for
-    // each aligned use.
-    const StructType *st = GetDefinition();
-    if (st != nullptr && m->diDefinedStructs.emplace(definition->type, st->GetString()).second) {
-        m->diBuilder->retainType(st->GetDIType(scope));
-    }
-    std::string diName = st ? st->GetString() : GetString();
-    SourcePos diPos = st ? st->GetSourcePos() : pos;
-    return m->diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, diName, diPos.GetDINamespace(),
-                                           diPos.GetDIFile(), diPos.first_line);
+    // The struct may be defined after this use (e.g. by a global variable
+    // declared before the definition), so describe it by a placeholder that
+    // is replaced by the debug type of the definition once the code of all
+    // functions is generated.  This also keeps the members of
+    // self-referential structs from recursing.  Debuggers would resolve a
+    // forward declaration by name, which may find another struct with the
+    // same name declared in a different scope.
+    return m->GetStructDIType(this, scope);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3623,9 +3649,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
 
         const std::string &namea = sta ? sta->GetStructName() : usta->GetStructName();
         const std::string &nameb = stb ? stb->GetStructName() : ustb->GetStructName();
-        const StructIdentity *identitya = sta ? sta->GetIdentity().get() : usta->GetIdentity().get();
-        const StructIdentity *identityb = stb ? stb->GetIdentity().get() : ustb->GetIdentity().get();
-        return (namea == nameb && identitya == identityb);
+        return (namea == nameb && GetStructIdentity(a) == GetStructIdentity(b));
     }
 
     const PointerType *pta = CastType<PointerType>(a);
