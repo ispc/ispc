@@ -407,8 +407,15 @@ class Module {
         uniquely get the llvm::StructType * for a given ispc struct type.  Note
         that we need to mangle the name a bit so that we can e.g. differentiate
         between the uniform and varying variants of a given struct type.  This
-        is handled by lMangleStructName() below. */
+        is handled by lMangleStructName() below.  Structs with the same name
+        in different scopes get different LLVM struct types (see
+        StructIdentity), so the names of all but the first one get a ".N"
+        suffix. */
     std::map<std::string, llvm::StructType *> structTypeMap;
+
+    /** Number of structs with a given name declared in function bodies; see
+        StructIdentity::localIndex. */
+    std::map<std::string, int> localStructCount;
 
   private:
     const char *srcFile{nullptr};

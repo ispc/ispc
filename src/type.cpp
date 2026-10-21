@@ -18,6 +18,7 @@
 #include <map>
 #include <stdio.h>
 
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/DebugInfo.h>
@@ -1912,11 +1913,50 @@ static std::string lMangleStructName(const std::string &name, Variability variab
     return n;
 }
 
+/** Returns a new identity for a struct with the given name declared in the
+    current scope. */
+static std::shared_ptr<StructIdentity> lNewStructIdentity(const std::string &name) {
+    auto identity = std::make_shared<StructIdentity>();
+    if (!name.empty() && m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope()) {
+        identity->localIndex = ++m->localStructCount[name];
+    }
+    return identity;
+}
+
+/** Creates an opaque LLVM struct type named mname, or mname with a ".N"
+    suffix if another struct with the same name has the name already. */
+static llvm::StructType *lCreateLLVMStructType(const std::string &mname) {
+    std::string llvmName = mname;
+    for (int i = 1; m->structTypeMap.find(llvmName) != m->structTypeMap.end(); ++i) {
+        llvmName = mname + "." + std::to_string(i);
+    }
+    llvm::StructType *st = llvm::StructType::create(*g->ctx, llvmName);
+    m->structTypeMap[llvmName] = st;
+    return st;
+}
+
+/** Returns true if the given LLVM type is st or contains it as an element,
+    directly or through arrays, vectors and other structs. */
+static bool lContainsLLVMType(llvm::Type *type, llvm::StructType *st, llvm::SmallPtrSet<llvm::Type *, 8> &visited) {
+    if (type == st) {
+        return true;
+    }
+    if (!visited.insert(type).second) {
+        return false;
+    }
+    for (llvm::Type *subtype : type->subtypes()) {
+        if (lContainsLLVMType(subtype, st, visited)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 StructType::StructType(const std::string &n, const llvm::SmallVector<const Type *, 8> &elts,
                        const llvm::SmallVector<std::string, 8> &en, const llvm::SmallVector<SourcePos, 8> &ep, bool ic,
-                       Variability v, SourcePos p, unsigned int align)
-    : CollectionType(STRUCT_TYPE, v, ic, p, align), name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
-      isAnonymous(name.empty()) {
+                       Variability v, SourcePos p, unsigned int align, std::shared_ptr<StructIdentity> id)
+    : CollectionType(STRUCT_TYPE, v, ic, p, align), name(n), identity(id ? std::move(id) : lNewStructIdentity(n)),
+      elementTypes(elts), elementNames(en), elementPositions(ep), isAnonymous(name.empty()) {
     oppositeConstStructType = nullptr;
     finalElementTypes.resize(elts.size(), nullptr);
 }
@@ -1936,11 +1976,12 @@ void StructType::RegisterInStructTypeMap() {
         // correspoing LLVM struct type now, if one hasn't been made
         // already.
 
-        // If a non-opaque LLVM struct for this type has already been
+        // If a non-opaque LLVM struct for this struct has already been
         // created, we're done.  For an opaque struct type, we'll override
         // the old definition now that we have a full definition.
         std::string mname = lMangleStructName(name, variability);
-        if (m->structTypeMap.find(mname) != m->structTypeMap.end() && m->structTypeMap[mname]->isOpaque() == false) {
+        auto it = identity->llvmTypes.find(mname);
+        if (it != identity->llvmTypes.end() && it->second->isOpaque() == false) {
             return;
         }
 
@@ -1960,26 +2001,42 @@ void StructType::RegisterInStructTypeMap() {
                                                "supported.");
                     return;
                 } else {
-                    elementTypes.push_back(type->LLVMStorageType(g->ctx));
+                    llvm::Type *llvmType = type->LLVMStorageType(g->ctx);
+                    if (llvmType == nullptr) {
+                        Assert(m->errorCount > 0);
+                        return;
+                    }
+                    elementTypes.push_back(llvmType);
                 }
             }
         }
 
-        if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
+        // The members may have created an opaque LLVM struct type for this
+        // struct, e.g. through an array of its forward declaration.
+        it = identity->llvmTypes.find(mname);
+        if (it == identity->llvmTypes.end()) {
             // New struct definition
-            llvm::StructType *st = llvm::StructType::create(*g->ctx, elementTypes, mname);
-            m->structTypeMap[mname] = st;
+            it = identity->llvmTypes.emplace(mname, lCreateLLVMStructType(mname)).first;
         } else {
-            // Definition for what was before just a declaration
-            m->structTypeMap[mname]->setBody(elementTypes);
+            // A struct with a member of its own type is incomplete, which has
+            // been reported; LLVM doesn't allow recursive struct types.
+            llvm::SmallPtrSet<llvm::Type *, 8> visited;
+            for (llvm::Type *elementType : elementTypes) {
+                if (lContainsLLVMType(elementType, it->second, visited)) {
+                    Assert(m->errorCount > 0);
+                    return;
+                }
+            }
         }
+        // Otherwise, a definition for what was before just a declaration
+        it->second->setBody(elementTypes);
     }
 }
 
 StructType::StructType(const StructType &other)
     : CollectionType(STRUCT_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
-      elementTypes(other.elementTypes), elementNames(other.elementNames), elementPositions(other.elementPositions),
-      isAnonymous(other.isAnonymous) {
+      identity(other.identity), elementTypes(other.elementTypes), elementNames(other.elementNames),
+      elementPositions(other.elementPositions), isAnonymous(other.isAnonymous) {
     oppositeConstStructType = nullptr;
     finalElementTypes.resize(other.elementTypes.size(), nullptr);
 }
@@ -2073,6 +2130,7 @@ const StructType *StructType::GetAsNamed(const std::string &n) const {
     Assert(n != "" && "We should not create anonymous structs here.");
     StructType *t = create();
     t->name = n;
+    t->identity = lNewStructIdentity(n);
     t->isAnonymous = false;
     t->RegisterInStructTypeMap();
     return t;
@@ -2103,8 +2161,12 @@ std::string StructType::GetString() const {
     return ret;
 }
 
-/** Mangle a struct name for use in function name mangling. */
-static std::string lMangleStruct(Variability variability, bool isConst, const std::string &name) {
+/** Mangle a struct name for use in function name mangling.  Structs declared
+    in function bodies get the local index of their identity as a suffix, so
+    that e.g. template instantiations for different local structs with the
+    same name get different names. */
+static std::string lMangleStruct(Variability variability, bool isConst, const std::string &name,
+                                 const StructIdentity &identity) {
     Assert(variability != Variability::Unbound);
 
     std::string ret;
@@ -2116,11 +2178,17 @@ static std::string lMangleStruct(Variability variability, bool isConst, const st
     ret += variability.MangleString();
 
     //    ret += name + std::string("]");
-    ret += name + std::string("_5D_");
+    ret += name;
+    if (identity.localIndex != 0) {
+        // Identifiers can't contain '.', so this doesn't collide with the
+        // name of another struct.
+        ret += "." + std::to_string(identity.localIndex);
+    }
+    ret += std::string("_5D_");
     return ret;
 }
 
-std::string StructType::Mangle() const { return lMangleStruct(variability, isConst, name); }
+std::string StructType::Mangle() const { return lMangleStruct(variability, isConst, name, *identity); }
 
 std::string StructType::GetDeclaration(const std::string &n, DeclarationSyntax syntax) const {
     std::string ret;
@@ -2147,12 +2215,12 @@ std::string StructType::GetDeclaration(const std::string &n, DeclarationSyntax s
 
 llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
-    std::string mname = lMangleStructName(name, variability);
-    if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
+    auto it = identity->llvmTypes.find(lMangleStructName(name, variability));
+    if (it == identity->llvmTypes.end()) {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return m->structTypeMap[mname];
+    return it->second;
 }
 
 // Versioning of this function becomes really messy, so versioning the whole function.
@@ -2270,19 +2338,20 @@ bool StructType::checkIfCanBeSOA(const StructType *st) {
 
 UndefinedStructType::UndefinedStructType(const std::string &n, const Variability var, bool ic, SourcePos p,
                                          unsigned int align)
-    : Type(UNDEFINED_STRUCT_TYPE, var, ic, p, align), name(n) {
+    : Type(UNDEFINED_STRUCT_TYPE, var, ic, p, align), name(n), identity(lNewStructIdentity(n)) {
     Assert(name != "");
 }
 
 UndefinedStructType::UndefinedStructType(const UndefinedStructType &other)
-    : Type(UNDEFINED_STRUCT_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name) {}
+    : Type(UNDEFINED_STRUCT_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
+      identity(other.identity) {}
 
 void UndefinedStructType::RegisterInStructTypeMap() {
     if (variability != Variability::Unbound) {
-        // Create a new opaque LLVM struct type for this struct name
+        // Create a new opaque LLVM struct type for this struct
         std::string mname = lMangleStructName(name, variability);
-        if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
-            m->structTypeMap[mname] = llvm::StructType::create(*g->ctx, mname);
+        if (identity->llvmTypes.find(mname) == identity->llvmTypes.end()) {
+            identity->llvmTypes[mname] = lCreateLLVMStructType(mname);
         }
     }
 }
@@ -2328,7 +2397,7 @@ std::string UndefinedStructType::GetString() const {
     return ret;
 }
 
-std::string UndefinedStructType::Mangle() const { return lMangleStruct(variability, isConst, name); }
+std::string UndefinedStructType::Mangle() const { return lMangleStruct(variability, isConst, name, *identity); }
 
 std::string UndefinedStructType::GetDeclaration(const std::string &n, DeclarationSyntax syntax) const {
     std::string ret;
@@ -2344,12 +2413,12 @@ std::string UndefinedStructType::GetDeclaration(const std::string &n, Declaratio
 
 llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
-    std::string mname = lMangleStructName(name, variability);
-    if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
+    auto it = identity->llvmTypes.find(lMangleStructName(name, variability));
+    if (it == identity->llvmTypes.end()) {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return m->structTypeMap[mname];
+    return it->second;
 }
 
 llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
@@ -3427,15 +3496,17 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     const UndefinedStructType *usta = CastType<UndefinedStructType>(a);
     const UndefinedStructType *ustb = CastType<UndefinedStructType>(b);
     if ((sta != nullptr || usta != nullptr) && (stb != nullptr || ustb != nullptr)) {
-        // Report both defuned and undefined structs as equal if their
-        // names are the same.
+        // Report both defuned and undefined structs as equal if they are
+        // the same struct: their names and identities are the same.
         if (a->GetVariability() != b->GetVariability()) {
             return false;
         }
 
         const std::string &namea = sta ? sta->GetStructName() : usta->GetStructName();
         const std::string &nameb = stb ? stb->GetStructName() : ustb->GetStructName();
-        return (namea == nameb);
+        const StructIdentity *identitya = sta ? sta->GetIdentity().get() : usta->GetIdentity().get();
+        const StructIdentity *identityb = stb ? stb->GetIdentity().get() : ustb->GetIdentity().get();
+        return (namea == nameb && identitya == identityb);
     }
 
     const PointerType *pta = CastType<PointerType>(a);

@@ -144,8 +144,10 @@ static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
 static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
-static StructType *lCreateStructType(const std::string &name, const std::vector<StructDeclaration *> *decl,
-                                     AttributeList *attrs, SourcePos pos);
+static StructType *lCreateStructType(const std::string &name, const Type *declType,
+                                     const std::vector<StructDeclaration *> *decl, AttributeList *attrs,
+                                     SourcePos pos);
+static const Type *lDeclareStructInCurrentScope(const Type *type, SourcePos pos);
 
 enum class TemplateType { Template, Instantiation, Specialization };
 static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
@@ -295,7 +297,7 @@ struct ForeachDimension {
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
-%type <type> struct_or_union_and_name
+%type <type> struct_or_union_and_name struct_or_union_definition_head
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <typeList> type_specifier_list
@@ -333,6 +335,8 @@ struct ForeachDimension {
 
 %precedence STRUCT_WITHOUT_ATTRIBUTE
 %precedence TOKEN_ATTRIBUTE
+%precedence STRUCT_NAME_WITHOUT_SEMICOLON
+%precedence ';'
 
 %destructor { lCleanUpString($$); } <stringVal>
 %destructor { delete $$; } <storageClass>
@@ -1125,6 +1129,29 @@ declaration
           }
           $$ = new Declaration($1);
       }
+    | struct_or_union struct_or_union_name ';'
+      {
+          // "struct Foo;" declares the struct in the current scope, even if
+          // a struct with the same name is declared in an outer scope.
+          const Type *t = m->symbolTable->LookupType($2);
+          if (t == nullptr) {
+              t = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              m->symbolTable->AddType($2, t, @2);
+          } else if (CastType<StructType>(t) == nullptr && CastType<UndefinedStructType>(t) == nullptr) {
+              Error(@2, "Type \"%s\" is not a struct type! (%s)", $2, t->GetString().c_str());
+              t = nullptr;
+          } else {
+              const std::string &name = CastType<StructType>(t) ? CastType<StructType>(t)->GetStructName()
+                                                                : CastType<UndefinedStructType>(t)->GetStructName();
+              // Not if the name is a typedef of a struct with another name.
+              if (name == $2) {
+                  t = lDeclareStructInCurrentScope(t, @2);
+              }
+          }
+          $$ = new Declaration(new DeclSpecs(t));
+          // allocated by strdup in struct_or_union_name
+          free((char*)$2);
+      }
     | declaration_specifiers init_declarator_list ';'
       {
           $$ = new Declaration($1, $2);
@@ -1489,7 +1516,9 @@ struct_or_union_name
     ;
 
 struct_or_union_and_name
-    : struct_or_union struct_or_union_name
+    // "struct Foo;" is a declaration of the struct (see the declaration rule)
+    // rather than a declaration with the struct type.
+    : struct_or_union struct_or_union_name %prec STRUCT_NAME_WITHOUT_SEMICOLON
       {
           const Type *st = m->symbolTable->LookupType($2);
           if (st == nullptr) {
@@ -1512,6 +1541,16 @@ struct_or_union_and_name
       }
     ;
 
+struct_or_union_definition_head
+    : struct_or_union_and_name '{'
+      {
+          // The struct is declared in the current scope before its members,
+          // so that they refer to it rather than to a struct with the same
+          // name in an outer scope.
+          $$ = lDeclareStructInCurrentScope($1, @1);
+      }
+    ;
+
 struct_or_union_specifier
     : struct_or_union_and_name
     // We explicitly use here precedence to lower this rule priority in comparison
@@ -1519,36 +1558,36 @@ struct_or_union_specifier
     // This is needed to avoid shift/reduce conflict, although the default
     // behavior (shifting) does same in our situation, but it is better to be
     // explicit here.
-    | struct_or_union_and_name '{' struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
+    | struct_or_union_definition_head struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
-          if ($3 != nullptr) {
+          if ($2 != nullptr) {
               const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
                                                                  : CastType<UndefinedStructType>($1)->GetStructName();
-              $$ = lCreateStructType(name, $3, nullptr, @1);
+              $$ = lCreateStructType(name, $1, $2, nullptr, @1);
               // struct_declaration_list returns a vector that is not needed anymore.
-              delete $3;
+              delete $2;
           } else {
               $$ = nullptr;
           }
       }
-    | struct_or_union_and_name '{' struct_declaration_list '}' attribute_specifier
+    | struct_or_union_definition_head struct_declaration_list '}' attribute_specifier
       {
-          if ($3 != nullptr) {
+          if ($2 != nullptr) {
               const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
                                                                  : CastType<UndefinedStructType>($1)->GetStructName();
-              $$ = lCreateStructType(name, $3, $5, @1);
+              $$ = lCreateStructType(name, $1, $2, $4, @1);
               // attribute_specifier returns an object that is not needed anymore.
-              delete $5;
+              delete $4;
           } else {
               $$ = nullptr;
           }
           // struct_declaration_list returns a vector that is not needed anymore.
-          delete $3;
+          delete $2;
       }
     | struct_or_union '{' struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
           if ($3 != nullptr) {
-              $$ = lCreateStructType("", $3, nullptr, @1);
+              $$ = lCreateStructType("", nullptr, $3, nullptr, @1);
               // struct_declaration_list returns a vector that is not needed anymore.
               delete $3;
           } else {
@@ -1558,7 +1597,7 @@ struct_or_union_specifier
     | struct_or_union '{' struct_declaration_list '}' attribute_specifier
       {
           if ($3 != nullptr) {
-              $$ = lCreateStructType("", $3, $5, @1);
+              $$ = lCreateStructType("", nullptr, $3, $5, @1);
               // struct_declaration_list returns a vector that is not needed anymore.
               delete $3;
           } else {
@@ -1569,27 +1608,27 @@ struct_or_union_specifier
       }
     | struct_or_union '{' '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
-          $$ = lCreateStructType("", nullptr, nullptr, @1);
+          $$ = lCreateStructType("", nullptr, nullptr, nullptr, @1);
       }
     | struct_or_union '{' '}' attribute_specifier
       {
-          $$ = lCreateStructType("", nullptr, $4, @1);
+          $$ = lCreateStructType("", nullptr, nullptr, $4, @1);
           // attribute_specifier returns an object that is not needed anymore.
           delete $4;
       }
-    | struct_or_union_and_name '{' '}' %prec STRUCT_WITHOUT_ATTRIBUTE
+    | struct_or_union_definition_head '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
           const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
                                                              : CastType<UndefinedStructType>($1)->GetStructName();
-          $$ = lCreateStructType(name, nullptr, nullptr, @1);
+          $$ = lCreateStructType(name, $1, nullptr, nullptr, @1);
       }
-    | struct_or_union_and_name '{' '}' attribute_specifier
+    | struct_or_union_definition_head '}' attribute_specifier
       {
           const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
                                                              : CastType<UndefinedStructType>($1)->GetStructName();
-          $$ = lCreateStructType(name, nullptr, $4, @1);
+          $$ = lCreateStructType(name, $1, nullptr, $3, @1);
           // attribute_specifier returns an object that is not needed anymore.
-          delete $4;
+          delete $3;
       }
     ;
 
@@ -3790,9 +3829,12 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
     return enumType;
 }
 
-/* Create StructType and add it to the symbol table if it's not anonymous */
-static StructType *lCreateStructType(const std::string &name, const std::vector<StructDeclaration *> *decl,
-                                     AttributeList *attrs, SourcePos pos) {
+/* Create StructType and add it to the symbol table if it's not anonymous.
+   declType is the type that the struct name refers to in the current scope
+   before this definition (see struct_or_union_definition_head), if any. */
+static StructType *lCreateStructType(const std::string &name, const Type *declType,
+                                     const std::vector<StructDeclaration *> *decl, AttributeList *attrs,
+                                     SourcePos pos) {
     llvm::SmallVector<const Type *, 8> elementTypes;
     llvm::SmallVector<std::string, 8> elementNames;
     llvm::SmallVector<SourcePos, 8> elementPositions;
@@ -3806,8 +3848,15 @@ static StructType *lCreateStructType(const std::string &name, const std::vector<
         GetStructTypesNamesPositions(*decl, &elementTypes, &elementNames, &elementPositions);
     }
 
-    StructType *st =
-        new StructType(name, elementTypes, elementNames, elementPositions, false, Variability::Unbound, pos, alignment);
+    // The definition of a struct forward declared in the same scope is the
+    // same struct as the forward declaration.
+    std::shared_ptr<StructIdentity> identity;
+    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(declType)) {
+        identity = ust->GetIdentity();
+    }
+
+    StructType *st = new StructType(name, elementTypes, elementNames, elementPositions, false, Variability::Unbound, pos,
+                                    alignment, identity);
     st->RegisterInStructTypeMap();
 
     if (!name.empty()) {
@@ -3815,6 +3864,41 @@ static StructType *lCreateStructType(const std::string &name, const std::vector<
     }
 
     return st;
+}
+
+/* Returns the identity of the given struct type, or nullptr if it isn't a
+   struct type. */
+static const StructIdentity *lGetStructIdentity(const Type *type) {
+    if (const StructType *st = CastType<StructType>(type)) {
+        return st->GetIdentity().get();
+    }
+    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
+        return ust->GetIdentity().get();
+    }
+    return nullptr;
+}
+
+/* If the given type is a struct declared in an outer scope, declare a new
+   struct with the same name in the current scope, as C does for a struct
+   definition or a "struct Foo;" declaration, and return it.  Otherwise
+   return the struct as declared in the current scope, or the given type if
+   it isn't a struct. */
+static const Type *lDeclareStructInCurrentScope(const Type *type, SourcePos pos) {
+    const StructIdentity *identity = lGetStructIdentity(type);
+    if (identity == nullptr) {
+        return type;
+    }
+    const StructType *st = CastType<StructType>(type);
+    const std::string &name = st ? st->GetStructName() : CastType<UndefinedStructType>(type)->GetStructName();
+    // The type may be a variant of the struct in the current scope, e.g.
+    // through "typedef uniform Foo FooT;".
+    const Type *local = m->symbolTable->LookupLocalType(name.c_str());
+    if (local != nullptr && lGetStructIdentity(local) == identity) {
+        return local;
+    }
+    UndefinedStructType *ust = new UndefinedStructType(name, Variability::Unbound, false, pos);
+    m->symbolTable->AddType(name.c_str(), ust, pos);
+    return ust;
 }
 
 /** Given an array of enumerator symbols, make sure each of them has a
