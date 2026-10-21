@@ -1269,6 +1269,8 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
 
             if (d->type->IsVoidType()) {
                 Error(d->pos, "\"void\" type illegal for struct member.");
+            } else if (CastType<FunctionType>(d->type) != nullptr) {
+                Error(d->pos, "Method declarations are not supported.");
             }
 
             elementTypes->push_back(d->type);

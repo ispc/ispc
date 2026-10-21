@@ -21,6 +21,10 @@
 #include <memory>
 #include <optional>
 
+namespace llvm {
+class StructLayout;
+} // namespace llvm
+
 namespace ispc {
 
 class ConstExpr;
@@ -862,6 +866,15 @@ class StructType : public CollectionType {
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
     llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
 
+    /** Creates the debug type of the struct in structScope, with the debug
+        types of its members created in scope, or a forward declaration if
+        the layout of the struct isn't known. */
+    llvm::DIType *CreateDIType(llvm::DIScope *structScope, llvm::DIScope *scope) const;
+
+    /** Returns the layout of the struct, or nullptr if it isn't known
+        because its definition has errors. */
+    const llvm::StructLayout *GetLayout() const;
+
     /** Returns the type of the i'th structure element.  The value of \c i must
         be between 0 and NumElements()-1. */
     const Type *GetElementType(int i) const override;
@@ -1356,5 +1369,9 @@ inline bool IsReferenceType(const Type *t) { return CastType<ReferenceType>(t) !
     usePos once the uses can no longer come before the definition: while
     parsing, and after type checking (code generation, header emission). */
 const Type *ResolveForwardDeclaredStruct(const Type *type, std::optional<SourcePos> usePos = std::nullopt);
+
+/** Returns the identity of the given struct type, or nullptr if it isn't a
+    struct type. */
+const StructIdentity *GetStructIdentity(const Type *type);
 
 } // namespace ispc
