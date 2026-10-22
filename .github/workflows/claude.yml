@@ -52,6 +52,16 @@ on:
         required: false
         type: string
         default: ""
+      llvm_artifact:
+        description: "Artifact of the calling run with a CI build of LLVM llvm_version to build with instead of the released LLVM"
+        required: false
+        type: string
+        default: ""
+      llvm_version:
+        description: "Version of the LLVM in llvm_artifact, such as trunk: its tarball is llvm-<llvm_version>-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz"
+        required: false
+        type: string
+        default: ""
     secrets:
       AWS_REGION:
         required: true
@@ -193,9 +203,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends bubblewrap socat
 
+      # An LLVM build the caller uploaded to this run, such as the LLVM trunk
+      # build a trunk failure needs.
+      - name: Download LLVM
+        if: steps.build_check.outputs.needed == 'true' && inputs.llvm_artifact != ''
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: ${{ inputs.llvm_artifact }}
+          path: ${{ runner.temp }}/llvm
+
       # The same setup as the CodeQL investigators and the other CI jobs.
       - name: Install build dependencies and LLVM
         if: steps.build_check.outputs.needed == 'true'
+        env:
+          # Empty means the released LLVM.
+          LLVM_TAR: ${{ inputs.llvm_artifact && format('{0}/llvm/llvm-{1}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz', runner.temp, inputs.llvm_version) || '' }}
+          LLVM_VERSION: ${{ inputs.llvm_artifact && inputs.llvm_version || '' }}
         run: |
           # Keep the downloaded files out of Claude's git status and commits.
           printf '%s\n' '/bin-*/' '/sde-external-*/' '/*.tar.xz' '/log[0-9]*.txt' >> .git/info/exclude

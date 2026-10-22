@@ -103,7 +103,8 @@ if [ -n "$INSTALL_COMPUTE_RUNTIME" ]; then
     fi
 fi
 
-if [ "$LLVM_VERSION" != "trunk" ]; then
+# A tarball already here, such as an LLVM trunk build, isn't downloaded.
+if [ ! -f "$LLVM_TAR" ]; then
   [ -n "$LLVM_REPO" ] && wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
 fi
 tar xf $LLVM_TAR
