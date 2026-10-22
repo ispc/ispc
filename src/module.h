@@ -425,6 +425,10 @@ class Module {
         StructIdentity::localIndex. */
     std::map<std::string, int> localStructCount;
 
+    /** Number of enums with a given name declared outside of the global
+        scope; see EnumIdentity::localIndex. */
+    std::map<std::string, int> localEnumCount;
+
   private:
     const char *srcFile{nullptr};
     AST *ast{nullptr};
