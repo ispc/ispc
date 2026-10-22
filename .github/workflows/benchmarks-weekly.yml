@@ -1,0 +1,208 @@
+# Copyright 2026, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Weekly run of the micro-benchmarks on a dedicated machine, published to the performance dashboard
+# (github-action-benchmark: https://<owner>.github.io/<repo>/benchmarks/<target>/, and
+# benchmarks/dispatch/ for the auto-dispatch binary).
+#
+# Setup:
+# - Self-hosted Linux runner with the "perf" label and docker. Nothing else should run on it while
+#   the benchmarks run. Its runner group must be limited to this workflow on main ("Selected
+#   workflows"), so that workflows from pull requests can't use the machine.
+# - A gh-pages branch: it keeps the results. GitHub Pages with the "GitHub Actions" source: the
+#   deploy job publishes gh-pages (pushes with GITHUB_TOKEN don't trigger a Pages build). The
+#   github-pages environment should only allow main.
+# - Repository variables (optional):
+#   BENCHMARKS_FAIL_ON_REGRESSION  "true" to fail the job when a gated case regresses. Leave it unset
+#                                  for the first runs, until the noise of the runner is known.
+#   BENCHMARKS_CPU                 CPU to run the benchmarks on (default: 1).
+
+name: Benchmarks
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # The night from Saturday to Sunday.
+    - cron: '0 1 * * 0'
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Comma separated ISPC targets (the runner CPU must support all of them)'
+        required: false
+        type: string
+        default: 'sse4-i32x4,avx2-i32x8,avx2-i32x16,avx2-i16x16,avx512gnr-x8,avx512gnr-x16'
+
+# Runs must not overlap on the runner, and a started run is not cancelled: it would leave a gap.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  TARGETS: ${{ inputs.targets || 'sse4-i32x4,avx2-i32x8,avx2-i32x16,avx2-i16x16,avx512gnr-x8,avx512gnr-x16' }}
+  CONTAINER: ispc-benchmarks-${{ github.run_id }}
+
+jobs:
+  run-benchmarks:
+    # Only run in the main ispc/ispc repo: forks have no perf runner.
+    if: github.repository == 'ispc/ispc'
+    runs-on: [self-hosted, Linux, perf]
+    timeout-minutes: 360
+    outputs:
+      targets: ${{ steps.run.outputs.targets }}
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        submodules: true
+        persist-credentials: false
+
+    - name: Check environment
+      run: |
+        lscpu
+        docker --version
+        # Containers of cancelled runs would disturb the timings.
+        docker ps -q --filter name=ispc-benchmarks- | xargs -r docker rm -f
+
+    - name: Build docker image
+      run: |
+        source .github/workflows/scripts/init-env.sh
+        IMAGE="ispc-benchmarks:llvm-${LLVM_VERSION}"
+        echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+        # The base image is not pulled again: newer system libraries could change the timings.
+        docker build --tag "${IMAGE}" \
+            --build-arg http_proxy --build-arg https_proxy --build-arg no_proxy \
+            --build-arg LLVM_REPO="${LLVM_REPO}" \
+            --build-arg LLVM_VERSION="${LLVM_VERSION}" \
+            --build-arg LLVM_TAR="${LLVM_TAR}" \
+            docker/ubuntu/22.04/benchmarks
+        # Images of earlier LLVM versions.
+        docker images ispc-benchmarks --format '{{.Repository}}:{{.Tag}}' | grep -vxF "${IMAGE}" | xargs -r docker rmi
+        docker image prune -f
+
+    - name: Build and run benchmarks
+      id: run
+      env:
+        BENCHMARK_CPU: ${{ vars.BENCHMARKS_CPU || '1' }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/build" "$RUNNER_TEMP/results"
+        # The container has no network and no capabilities. The default seccomp profile is replaced
+        # because it doesn't allow disabling ASLR (setarch -R), which keeps the stack placement fixed.
+        # --init with TINI_KILL_PROCESS_GROUP passes a cancellation on to the running benchmark, so the
+        # container stops with the job.
+        docker run --rm --init -e TINI_KILL_PROCESS_GROUP=1 --name "$CONTAINER" \
+            --network none --cap-drop ALL --security-opt no-new-privileges \
+            --security-opt seccomp=unconfined \
+            --user "$(id -u):$(id -g)" \
+            -e TARGETS -e BENCHMARK_CPU \
+            -v "$GITHUB_WORKSPACE:/src:ro" -v "$RUNNER_TEMP/build:/build" -v "$RUNNER_TEMP/results:/results" \
+            "$IMAGE" /src/.github/workflows/scripts/run-benchmarks.sh /src /build /results
+        echo "targets=$(cat "$RUNNER_TEMP/results/targets.json")" >> "$GITHUB_OUTPUT"
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: benchmark_results
+        path: ${{ runner.temp }}/results
+
+    - name: Stop container
+      if: always()
+      run: docker rm -f "$CONTAINER" 2>/dev/null || true
+
+  publish:
+    name: publish (${{ matrix.name }})
+    needs: [run-benchmarks]
+    # Results of other branches would become the baseline of the next run on main.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      # Push to gh-pages.
+      contents: write
+    strategy:
+      # Every target is a separate commit to gh-pages.
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        # target: the page, name: the name of its charts.
+        include: ${{ fromJSON(needs.run-benchmarks.outputs.targets) }}
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - name: Download results
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      with:
+        name: benchmark_results
+        path: ${{ runner.temp }}/results
+
+    # The action fails on a file without cases.
+    - name: Count cases
+      id: cases
+      env:
+        TARGET: ${{ matrix.target }}
+      run: |
+        echo "not_gated=$(jq '.benchmarks | length' "$RUNNER_TEMP/results/dashboard/$TARGET.not-gated.json")" >> "$GITHUB_OUTPUT"
+
+    # Shown on the dashboard, a regression doesn't fail the job.
+    - name: Publish not gated cases
+      if: steps.cases.outputs.not_gated != '0'
+      uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+      with:
+        name: ${{ matrix.name }} (not gated)
+        tool: googlecpp
+        output-file-path: ${{ runner.temp }}/results/dashboard/${{ matrix.target }}.not-gated.json
+        benchmark-data-dir-path: benchmarks/${{ matrix.target }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        ref: ${{ github.sha }}
+        auto-push: true
+        max-items-in-chart: 104
+
+    # Every case is compared with the last result of an earlier commit. A result is the minimum of
+    # the per-process medians, so a single slow process doesn't raise an alert. The results are
+    # pushed before the job fails: re-running the job adds them again and doesn't clear the alert.
+    - name: Publish gated cases
+      if: ${{ !cancelled() }}
+      uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+      with:
+        name: ${{ matrix.name }}
+        tool: googlecpp
+        output-file-path: ${{ runner.temp }}/results/dashboard/${{ matrix.target }}.gated.json
+        benchmark-data-dir-path: benchmarks/${{ matrix.target }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        ref: ${{ github.sha }}
+        auto-push: true
+        max-items-in-chart: 104
+        summary-always: true
+        alert-threshold: '125%'
+        fail-on-alert: ${{ vars.BENCHMARKS_FAIL_ON_REGRESSION == 'true' }}
+
+  deploy:
+    needs: [run-benchmarks, publish]
+    # Also after a regression failed publish: the results are pushed before the job fails.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.run-benchmarks.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        ref: gh-pages
+        persist-credentials: false
+
+    - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      with:
+        path: .
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

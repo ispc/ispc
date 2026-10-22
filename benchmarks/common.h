@@ -34,13 +34,15 @@ inline void fail_benchmark(benchmark::State &state) {
     state.SkipWithError("Incorrect results");
 }
 
-// Same as BENCHMARK_MAIN(), but returns 1 if a correctness check failed.
+// Same as BENCHMARK_MAIN(), but returns 1 if a correctness check failed. The ISPC targets of the
+// executable are added to the context of the results.
 #define CHECKED_BENCHMARK_MAIN()                                                                                       \
     int main(int argc, char **argv) {                                                                                  \
         benchmark::MaybeReenterWithoutASLR(argc, argv);                                                                \
         benchmark::Initialize(&argc, argv);                                                                            \
         if (benchmark::ReportUnrecognizedArguments(argc, argv))                                                        \
             return 1;                                                                                                  \
+        benchmark::AddCustomContext("ispc_targets", BENCHMARKS_ISPC_TARGETS);                                          \
         benchmark::RunSpecifiedBenchmarks();                                                                           \
         benchmark::Shutdown();                                                                                         \
         return benchmark_check_failed ? 1 : 0;                                                                         \

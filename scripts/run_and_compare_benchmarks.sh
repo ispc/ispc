@@ -47,6 +47,8 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     exit 0
 fi
 
+set -eo pipefail
+
 BASE=${1:-base}
 PEAK=${2:-peak}
 TEST=${3:-08_masked_load_store.avx512icl-x32}
@@ -56,12 +58,6 @@ RUNS=${RUNS:-3}
 SCRIPTS_DIR=$(cd "$(dirname "$0")" && pwd)
 
 COMPARE_PY="$SCRIPTS_DIR/../benchmarks/vendor/google/benchmark/tools/compare.py"
-
-# Build filter argument if provided
-FILTER_ARG=""
-if [ -n "$FILTER" ]; then
-    FILTER_ARG="--benchmark_filter=$FILTER"
-fi
 
 if [[ ! $RUNS =~ ^[1-9][0-9]*$ ]]; then
     echo "RUNS must be a positive integer, got '$RUNS'" >&2
@@ -73,31 +69,13 @@ rm -f $BASE-$TEST.json $BASE-$TEST.run*.json $PEAK-$TEST.json $PEAK-$TEST.run*.j
 
 for RUN in $(seq 1 "$RUNS"); do
     for BUILD in $BASE $PEAK; do
-        setarch -R x86_64 taskset --cpu-list 1 ./$BUILD/bin/$TEST --benchmark_repetitions=3 --benchmark_out=$BUILD-$TEST.run$RUN.json --benchmark_out_format=json --benchmark_report_aggregates_only=true $FILTER_ARG || exit 1
+        setarch -R x86_64 taskset --cpu-list 1 ./$BUILD/bin/$TEST --benchmark_repetitions=3 --benchmark_out=$BUILD-$TEST.run$RUN.json --benchmark_out_format=json --benchmark_report_aggregates_only=true ${FILTER:+"--benchmark_filter=$FILTER"}
     done
 done
 
 # Keep the median of the process with the minimum time for every case.
 for BUILD in $BASE $PEAK; do
-    python3 - $BUILD-$TEST.json $(seq -f "$BUILD-$TEST.run%g.json" 1 "$RUNS") <<'PY' || exit 1
-import json
-import sys
-
-out, runs = sys.argv[1], sys.argv[2:]
-best = {}
-for path in runs:
-    with open(path) as f:
-        doc = json.load(f)
-    for b in doc["benchmarks"]:
-        if b.get("aggregate_name") != "median":
-            continue
-        if b["name"] not in best or b["cpu_time"] < best[b["name"]]["cpu_time"]:
-            best[b["name"]] = b
-doc["benchmarks"] = list(best.values())
-with open(out, "w") as f:
-    json.dump(doc, f, indent=2)
-PY
+    python3 "$SCRIPTS_DIR/merge_benchmark_runs.py" $BUILD-$TEST.json $(seq -f "$BUILD-$TEST.run%g.json" 1 "$RUNS")
 done
 
-set -o pipefail
 python3 $COMPARE_PY benchmarks ./$BASE-$TEST.json ./$PEAK-$TEST.json | grep median
