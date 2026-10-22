@@ -114,6 +114,7 @@ typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 #include <inttypes.h>
 #include <llvm/IR/Constants.h>
 #include <stdio.h>
+#include <unordered_set>
 #include <variant>
 
 using namespace ispc;
@@ -3074,7 +3075,7 @@ template_declaration
     : template_head
       {
           // Scope for template parameters definition
-          m->symbolTable->PushScope();
+          m->symbolTable->PushTemplateParameterScope();
           TemplateParms *list = (TemplateParms *) $1;
           for(size_t i = 0; i < list->GetCount(); i++) {
               std::string name = (*list)[i]->GetName();
@@ -3089,11 +3090,16 @@ template_declaration
       declaration_specifiers declarator
       {
           lAddTemplateDeclaration($1, $3, $4);
-          lAddFunctionParams($4);
-          lAddMaskToSymbolTable(@4);
-          const FunctionType *ft = CastType<FunctionType>($4->type);
-          // Creating a new TemplateSymbol just to pass it further seems to be a waste
-          $$ = new TemplateSymbol($1, $4->name, ft, $3->storageClass, @4, false /*not used*/, false /*not used*/);
+          if ($3 == nullptr || $4 == nullptr) {
+              // Error happened earlier during parsing
+              $$ = nullptr;
+          } else {
+              lAddFunctionParams($4);
+              lAddMaskToSymbolTable(@4);
+              const FunctionType *ft = CastType<FunctionType>($4->type);
+              // Creating a new TemplateSymbol just to pass it further seems to be a waste
+              $$ = new TemplateSymbol($1, $4->name, ft, $3->storageClass, @4, false /*not used*/, false /*not used*/);
+          }
       }
     ;
 
@@ -3842,8 +3848,51 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
     enumType->SetEnumerators(*enums);
     lFinalizeEnumeratorSymbols(*enums, enumType);
     for (unsigned int i = 0; i < enums->size(); ++i)
-        m->symbolTable->AddVariable((*enums)[i]);
+        m->symbolTable->AddEnumerator((*enums)[i]);
     return enumType;
+}
+
+/* Returns true if the given type depends on a template parameter, through
+   its element types or its element counts. */
+static bool lIsDependentType(const Type *type, std::unordered_set<const StructIdentity *> &visited) {
+    if (type == nullptr) {
+        return false;
+    }
+    if (CastType<AtomicType>(type) != nullptr || CastType<TemplateTypeParmType>(type) != nullptr) {
+        return type->IsTypeDependent();
+    }
+    if (const PointerType *pt = CastType<PointerType>(type)) {
+        return lIsDependentType(pt->GetBaseType(), visited);
+    }
+    if (const ReferenceType *rt = CastType<ReferenceType>(type)) {
+        return lIsDependentType(rt->GetReferenceTarget(), visited);
+    }
+    if (const SequentialType *st = CastType<SequentialType>(type)) {
+        return st->IsCountDependent() || lIsDependentType(st->GetElementType(), visited);
+    }
+    if (const StructType *st = CastType<StructType>(type)) {
+        // All the variants of a struct have the same members.
+        if (!visited.insert(st->GetIdentity().get()).second) {
+            return false;
+        }
+        for (int i = 0; i < st->GetElementCount(); ++i) {
+            if (lIsDependentType(st->GetRawElementType(i), visited)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    if (const FunctionType *ft = CastType<FunctionType>(type)) {
+        if (lIsDependentType(ft->GetReturnType(), visited)) {
+            return true;
+        }
+        for (int i = 0; i < ft->GetNumParameters(); ++i) {
+            if (lIsDependentType(ft->GetParameterType(i), visited)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 /* Create StructType and add it to the symbol table if it's not anonymous.
@@ -3865,10 +3914,29 @@ static StructType *lCreateStructType(const std::string &name, const Type *declTy
         GetStructTypesNamesPositions(*decl, &elementTypes, &elementNames, &elementPositions);
     }
 
+    // A named struct defined in the declaration of a function template is
+    // global (see SymbolTable::IsTemplateParameterScope()), so its members
+    // can't depend on the template parameters.  Such a struct isn't declared.
+    bool isDeclared = !name.empty();
+    if (isDeclared && m->symbolTable->IsTemplateParameterScope()) {
+        std::unordered_set<const StructIdentity *> visited;
+        for (size_t i = 0; i < elementTypes.size(); ++i) {
+            if (lIsDependentType(elementTypes[i], visited)) {
+                Error(elementPositions[i],
+                      "Member \"%s\" of struct \"%s\" defined in the declaration of a function template "
+                      "can't depend on the template parameters.",
+                      elementNames[i].c_str(), name.c_str());
+                isDeclared = false;
+                break;
+            }
+        }
+    }
+
     // The definition of a struct forward declared in the same scope is the
     // same struct as the forward declaration.
     std::shared_ptr<StructIdentity> identity;
-    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(declType)) {
+    const UndefinedStructType *ust = CastType<UndefinedStructType>(declType);
+    if (ust != nullptr && isDeclared) {
         identity = ust->GetIdentity();
     }
 
@@ -3876,7 +3944,7 @@ static StructType *lCreateStructType(const std::string &name, const Type *declTy
                                     alignment, identity);
     st->RegisterInStructTypeMap();
 
-    if (!name.empty()) {
+    if (isDeclared) {
         m->symbolTable->AddType(name.c_str(), st, pos);
     }
 
@@ -3903,6 +3971,12 @@ static const StructIdentity *lGetStructIdentity(const Type *type) {
 static const Type *lDeclareStructInCurrentScope(const Type *type, SourcePos pos) {
     const StructIdentity *identity = lGetStructIdentity(type);
     if (identity == nullptr) {
+        return type;
+    }
+    // Structs declared in the declaration of a function template are global
+    // (see SymbolTable::IsTemplateParameterScope()), and the template
+    // parameter scope has no structs, so the struct is a global one.
+    if (m->symbolTable->IsTemplateParameterScope()) {
         return type;
     }
     const StructType *st = CastType<StructType>(type);

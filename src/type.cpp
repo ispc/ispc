@@ -1922,10 +1922,12 @@ static std::string lMangleStructName(const std::string &name, Variability variab
 }
 
 /** Returns a new identity for a struct with the given name declared in the
-    current scope. */
+    current scope.  Structs declared in the template parameter scope are
+    global; see SymbolTable::IsTemplateParameterScope(). */
 static std::shared_ptr<StructIdentity> lNewStructIdentity(const std::string &name) {
     auto identity = std::make_shared<StructIdentity>();
-    if (!name.empty() && m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope()) {
+    if (!name.empty() && m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope() &&
+        !m->symbolTable->IsTemplateParameterScope()) {
         identity->localIndex = ++m->localStructCount[name];
     }
     return identity;

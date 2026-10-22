@@ -83,9 +83,17 @@ void SymbolTable::PushScope() {
     types.emplace_back();
 }
 
+void SymbolTable::PushTemplateParameterScope() {
+    PushScope();
+    templateParameterScope = types.size();
+}
+
 void SymbolTable::PopScope() {
     Assert(variables.size() > 0);
     Assert(types.size() > 0);
+    if (types.size() == templateParameterScope) {
+        templateParameterScope = 0;
+    }
     freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
     types.pop_back();
@@ -124,6 +132,19 @@ bool SymbolTable::AddVariable(Symbol *symbol) {
 
     // No matches, so go ahead and add it...
     (*variables.back())[symbol->name] = symbol;
+    return true;
+}
+
+bool SymbolTable::AddEnumerator(Symbol *symbol) {
+    if (!IsTemplateParameterScope()) {
+        return AddVariable(symbol);
+    }
+    SymbolMapType &sm = *(variables.front());
+    if (sm.find(symbol->name) != sm.end()) {
+        Error(symbol->pos, "Ignoring redeclaration of symbol \"%s\".", symbol->name.c_str());
+        return false;
+    }
+    sm[symbol->name] = symbol;
     return true;
 }
 
@@ -248,7 +269,16 @@ TemplateSymbol *SymbolTable::LookupFunctionTemplate(const TemplateParms *templat
 }
 
 bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
-    const Type *t = LookupLocalType(name);
+    Assert(types.size() > 0);
+
+    // Structs and enums declared in the template parameter scope are global;
+    // see IsTemplateParameterScope().
+    const bool isStructOrEnum = CastType<StructType>(type) != nullptr ||
+                                CastType<UndefinedStructType>(type) != nullptr || CastType<EnumType>(type) != nullptr;
+    const bool isGlobal = IsGlobalScope() || (isStructOrEnum && IsTemplateParameterScope());
+    TypeMapType &scope = isGlobal ? types.front() : types.back();
+    auto found = scope.find(name);
+    const Type *t = found != scope.end() ? found->second : nullptr;
     if (t != nullptr && CastType<UndefinedStructType>(t) == nullptr) {
         // If we have a previous declaration of anything other than an
         // UndefinedStructType with this struct name, issue an error.  If
@@ -278,18 +308,15 @@ bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
             }
         } else if (const UndefinedStructType *UST = CastType<UndefinedStructType>(t)) {
             // Let the types that were created from the forward declaration
-            // (e.g. pointers to it) see the definition.  The outermost scope
-            // is the global one.
+            // (e.g. pointers to it) see the definition.
             if (UST->GetStructName() == ST->GetStructName() && ST->GetVariability() == Variability::Unbound &&
                 !ST->IsConstType()) {
-                UST->SetDefinition(ST, pos, types.size() > 1, localScopeStart);
+                UST->SetDefinition(ST, pos, !isGlobal, localScopeStart);
             }
         }
     }
 
-    Assert(types.size() > 0);
-
-    types.back()[name] = type;
+    scope[name] = type;
     return true;
 }
 
