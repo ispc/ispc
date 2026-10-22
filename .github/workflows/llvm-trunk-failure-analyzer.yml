@@ -23,9 +23,16 @@ permissions: {}
 jobs:
   analyze-failure:
     # Disabling this workflow for non ispc/ispc repo, since number of build submissions is limited.
-    # Only run if the nightly workflow failed, or if manually triggered
-    if: github.repository == 'ispc/ispc' && (github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
+    # Only run if the nightly workflow failed, or if manually triggered.
+    # Not for a pull_request run: a fork PR can add that trigger to its copy
+    # of the nightly, and its logs would reach Claude and the issue.
+    if: >-
+      github.repository == 'ispc/ispc' &&
+      ((github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event != 'pull_request') ||
+       github.event_name == 'workflow_dispatch')
+    # Not ubuntu-latest: from 24.04 on, AppArmor keeps bubblewrap from
+    # creating user namespaces, so every Bash command fails.
+    runs-on: ubuntu-22.04
     timeout-minutes: 45
     # Read-only: Claude can't change anything on GitHub. The issue is filed by
     # the next job, which doesn't run Claude.
