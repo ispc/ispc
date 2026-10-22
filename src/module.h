@@ -20,6 +20,7 @@
 #include <set>
 #include <stdio.h>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -427,6 +428,16 @@ class Module {
   private:
     const char *srcFile{nullptr};
     AST *ast{nullptr};
+
+    /** Exported functions and Xe tasks whose types reach forward declared
+        structs that weren't defined when the function was declared, with
+        their names and positions.  Their types are checked at the end of
+        the translation unit; see CheckDeferredApplicationFunctions(). */
+    std::vector<std::tuple<std::string, const FunctionType *, SourcePos>> deferredApplicationFunctions;
+
+    /** Checks the types of the functions in deferredApplicationFunctions,
+        once all of the structs that can be defined are defined. */
+    void CheckDeferredApplicationFunctions();
 
     Output output{};
     CompilationMode m_compilationMode{};

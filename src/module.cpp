@@ -393,6 +393,8 @@ int Module::CompileFile() {
         }
     }
 
+    CheckDeferredApplicationFunctions();
+
     debugDumpModule(module, "Parsed", pre_stage++);
 
     ast->Print(g->astDump);
@@ -850,12 +852,13 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
 */
 static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
                                           SourcePos pos, std::vector<const StructType *> &inProgress) {
+    t = ResolveForwardDeclaredStruct(t);
     const StructType *st = CastType<StructType>(t);
     if (st != nullptr) {
-        // Pointers to forward declared structs are resolved below, so the
-        // members of a self-referential struct can lead back here.  The
-        // resolved types are created anew (e.g. aligned variants), so compare
-        // them by value.
+        // Forward declared structs are resolved above, so the members of a
+        // self-referential struct can lead back here.  The resolved types
+        // are created anew (e.g. aligned variants), so compare them by
+        // value.
         for (const StructType *visited : inProgress) {
             if (Type::Equal(visited, st)) {
                 return true;
@@ -892,8 +895,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
         if (pt->IsVaryingType()) {
             return false;
         } else {
-            return lRecursiveCheckValidParamType(ResolveForwardDeclaredStruct(pt->GetBaseType()), true, true, name, pos,
-                                                 inProgress);
+            return lRecursiveCheckValidParamType(pt->GetBaseType(), true, true, name, pos, inProgress);
         }
     }
 
@@ -968,6 +970,88 @@ static void lCheckTaskParameterTypes(const Type *type, const std::string &name, 
     }
 }
 #endif
+
+/** Returns true if the given type reaches a forward declared struct that
+    isn't defined yet through the types that lRecursiveCheckValidParamType()
+    checks. */
+static bool lReachesUndefinedStruct(const Type *t, std::set<const StructIdentity *> &visited) {
+    t = ResolveForwardDeclaredStruct(t);
+    if (CastType<UndefinedStructType>(t) != nullptr) {
+        return true;
+    }
+    if (const StructType *st = CastType<StructType>(t)) {
+        if (!visited.insert(st->GetIdentity().get()).second) {
+            return false;
+        }
+        for (int i = 0; i < st->GetElementCount(); ++i) {
+            if (lReachesUndefinedStruct(st->GetElementType(i), visited)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    if (const SequentialType *seqt = CastType<SequentialType>(t)) {
+        return lReachesUndefinedStruct(seqt->GetElementType(), visited);
+    }
+    if (const PointerType *pt = CastType<PointerType>(t)) {
+        return lReachesUndefinedStruct(pt->GetBaseType(), visited);
+    }
+    return false;
+}
+
+/** Returns true if the return type or a parameter type of the given function
+    type reaches a forward declared struct that isn't defined yet. */
+static bool lReachesUndefinedStruct(const FunctionType *ftype) {
+    std::set<const StructIdentity *> visited;
+    if (lReachesUndefinedStruct(ftype->GetReturnType(), visited)) {
+        return true;
+    }
+    for (int i = 0; i < ftype->GetNumParameters(); ++i) {
+        if (lReachesUndefinedStruct(ftype->GetParameterType(i), visited)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Checks that the return type and the parameter types of an exported
+    function, or the parameter types of a task for Xe targets, can be passed
+    to and from the application. */
+static void lCheckApplicationFunctionTypes(const std::string &name, const FunctionType *functionType, SourcePos pos) {
+    // Make sure that the return type isn't 'varying' or vector typed if
+    // the function is 'export'ed.
+    if (functionType->IsExported() &&
+        lRecursiveCheckValidParamType(functionType->GetReturnType(), false, false, name, pos) == false) {
+        Error(pos,
+              "Illegal to return a \"varying\" or vector type from "
+              "exported function \"%s\"",
+              name.c_str());
+    }
+
+    // If the function is exported or in case of Xe target is task, make sure
+    // that the parameters don't have any funky stuff going on in them.
+    // JCB nomosoa - Varying is now a-ok.
+    for (int i = 0; i < functionType->GetNumParameters(); ++i) {
+        const Type *argType = functionType->GetParameterType(i);
+        const std::string &argName = functionType->GetParameterName(i);
+        const SourcePos &argPos = functionType->GetParameterSourcePos(i);
+        if (functionType->IsExported()) {
+            lCheckExportedParameterTypes(argType, argName, argPos);
+        }
+#ifdef ISPC_XE_ENABLED
+        if (functionType->IsISPCKernel()) {
+            lCheckTaskParameterTypes(argType, argName, argPos);
+        }
+#endif
+    }
+}
+
+void Module::CheckDeferredApplicationFunctions() {
+    for (const auto &[name, functionType, pos] : deferredApplicationFunctions) {
+        lCheckApplicationFunctionTypes(name, functionType, pos);
+    }
+    deferredApplicationFunctions.clear();
+}
 
 /** Given a function type, loop through the function parameters and see if
     any are StructTypes.  If so, issue an error; this is currently broken
@@ -1170,14 +1254,14 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     function->setCallingConv(functionType->GetCallingConv());
     g->target->markFuncWithTargetAttr(function);
 
-    // Make sure that the return type isn't 'varying' or vector typed if
-    // the function is 'export'ed.
-    if (functionType->IsExported() &&
-        lRecursiveCheckValidParamType(functionType->GetReturnType(), false, false, name, pos) == false) {
-        Error(pos,
-              "Illegal to return a \"varying\" or vector type from "
-              "exported function \"%s\"",
-              name.c_str());
+    // A forward declared struct that the function passes to or from the
+    // application may be defined later, so check its members then.
+    if (functionType->IsExported() || functionType->IsISPCKernel()) {
+        if (lReachesUndefinedStruct(functionType)) {
+            deferredApplicationFunctions.emplace_back(name, functionType, pos);
+        } else {
+            lCheckApplicationFunctionTypes(name, functionType, pos);
+        }
     }
 
     if (functionType->IsTask() && functionType->GetReturnType()->IsVoidType() == false) {
@@ -1207,18 +1291,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         const std::string &argName = functionType->GetParameterName(i);
         Expr *defaultValue = functionType->GetParameterDefault(i);
         const SourcePos &argPos = functionType->GetParameterSourcePos(i);
-
-        // If the function is exported or in case of Xe target is task, make sure that the parameter
-        // doesn't have any funky stuff going on in it.
-        // JCB nomosoa - Varying is now a-ok.
-        if (functionType->IsExported()) {
-            lCheckExportedParameterTypes(argType, argName, argPos);
-        }
-#ifdef ISPC_XE_ENABLED
-        if (functionType->IsISPCKernel()) {
-            lCheckTaskParameterTypes(argType, argName, argPos);
-        }
-#endif
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
