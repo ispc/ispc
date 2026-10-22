@@ -14,7 +14,7 @@ For some features it also makes sense to compare with alternative implementation
 
 Use ``-DISPC_INCLUDE_BENCHMARKS=ON`` in your CMake configuration flags to enable building benchmarks. If ``--recurse-submodules`` was not used during repo cloning, CMake will fetch [Google Benchmark](https://github.com/google/benchmark) submodule. By default ISPC built from sources will used for building benchmarks. If you need to use pre-build ISPC binary, you can turn off building ISPC by setting ``-DISPC_BUILD=OFF`` and provide ISPC in your `PATH` environment variable.
 
-You can use CMake options ``BENCHMARKS_ISPC_TARGETS`` and ``BENCHMARKS_ISPC_FLAGS`` to set specific target or ISPC compilation switches. For example, ``-DBENCHMARKS_ISPC_TARGETS=avx512skx-x8,avx2-i32x8 -DBENCHMARKS_ISPC_FLAGS="-O3 --woff"``. Note that using auto-dispatch (i.e. specifying more than one target on the command line) will noticeably affect short benchmark runs.
+You can use CMake options ``BENCHMARKS_ISPC_TARGETS`` and ``BENCHMARKS_ISPC_FLAGS`` to set specific targets or ISPC compilation switches. For example, ``-DBENCHMARKS_ISPC_TARGETS=sse4-i32x4,avx2-i32x8,avx512skx-x16 -DBENCHMARKS_ISPC_FLAGS="-O3 --woff"``. Every benchmark is built separately for each target in the list, e.g. ``01_aossoa.sse4-i32x4``, ``01_aossoa.avx2-i32x8`` and ``01_aossoa.avx512skx-x16``. The C++ part of each executable is compiled for the same ISA as its ISPC target. If the list has at least two ISAs, ``16_dispatcher_overhead`` is additionally built as ``16_dispatcher_overhead.dispatch``, an auto-dispatch binary with the first target of every ISA from the list. Executables for an ISA that the host doesn't support can't be run, and their tests fail.
 
 To run benchmarks, you need to execute them individually. They will be located in `benchmarks` folder of your install location. You can also run `make test` to verify that benchmarks are built correctly and executed successfully.
 
@@ -22,7 +22,7 @@ To do a performance measurements, it is recommended to do a frequency stabilizat
 1. Disable CPU frequency scaling on Linux, as suggested in Google Benchmark [documentation](https://github.com/google/benchmark/blob/main/docs/user_guide.md#disabling-cpu-frequency-scaling)
 2. Control the CPU core where the benchmark is running. This is especially important for heterogeneous CPUs. On Linux you can use `taskset` to pin the process to specific core. For example:
 ```
-taskset --cpu-list 0 bin/01_aossoa
+taskset --cpu-list 0 bin/01_aossoa.avx2-i32x8
 ```
 
 ## TODO

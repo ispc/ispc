@@ -1,39 +1,33 @@
 #!/bin/bash
-# Copyright (c) 2025, Intel Corporation
+# Copyright (c) 2025-2026, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 show_usage() {
     cat <<EOF
 Usage: $0 [BENCHMARK_NAME] [FILTER]
 
-Run benchmark comparisons for all target pairs in the current directory.
+Run benchmark comparisons for all targets built in base/ and peak/ directories.
 
 ARGUMENTS:
   BENCHMARK_NAME  Name of benchmark test to run (default: 13_rotate)
   FILTER          Optional benchmark filter pattern (default: none)
 
 EXAMPLES:
-  $0                               # Run 13_rotate for all target pairs
+  $0                               # Run 13_rotate for all targets
   $0 08_masked_load_store          # Run specific benchmark for all targets
   $0 01_simple ".*vector"          # Run with benchmark filter
 
 DIRECTORY STRUCTURE:
-The script expects paired directories in the format:
-  <target>-base/    - Base version build
-  <target>-peak/    - Peak version build
-
-Example directory structure:
-  avx512skx-x16-base/
-  avx512skx-x16-peak/
-  avx512icl-x32-base/
-  avx512icl-x32-peak/
+The script expects base/ and peak/ build directories created by
+build_benchmarks.sh. Every benchmark is built once per target:
+  base/bin/<benchmark>.<target>
+  peak/bin/<benchmark>.<target>
 
 BEHAVIOR:
-1. Scans current directory for directories ending with '-base'
-2. For each base directory, looks for corresponding '-peak' directory
-3. Verifies benchmark executable exists in both directories
-4. Runs performance comparison using run_and_compare_benchmarks.sh
-5. Provides colored output and summary statistics
+1. Finds all base/bin/<benchmark>.<target> executables
+2. Verifies the same executable exists in peak/bin
+3. Runs performance comparison using run_and_compare_benchmarks.sh
+4. Provides colored output and summary statistics
 
 OUTPUT:
 - Green: Successful comparisons
@@ -69,13 +63,15 @@ if [ -n "$FILTER" ]; then
 fi
 echo
 
-# Find all base directories
-BASE_DIRS=$(ls -d */ 2>/dev/null | grep '\-base/$' | sed 's|/$||' | sort)
+BASE_DIR=base
+PEAK_DIR=peak
 
-if [ -z "$BASE_DIRS" ]; then
-    echo -e "${RED}Error: No base directories found (directories ending with '-base')${NC}"
-    echo -e "${YELLOW}Available directories:${NC}"
-    ls -d */ 2>/dev/null | sed 's|/$||'
+# Find all targets the benchmark was built for
+shopt -s nullglob
+EXECUTABLES=("$BASE_DIR/bin/$BENCHMARK".*)
+
+if [ ${#EXECUTABLES[@]} -eq 0 ]; then
+    echo -e "${RED}Error: No '${BENCHMARK}.<target>' executables found in $BASE_DIR/bin/${NC}"
     exit 1
 fi
 
@@ -84,32 +80,15 @@ TOTAL_COMPARISONS=0
 SUCCESSFUL_COMPARISONS=0
 FAILED_COMPARISONS=0
 
-for BASE_DIR in $BASE_DIRS; do
-    # Extract the target prefix (everything before '-base')
-    TARGET_PREFIX=${BASE_DIR%-base}
-    PEAK_DIR="${TARGET_PREFIX}-peak"
+for EXECUTABLE in "${EXECUTABLES[@]}"; do
+    EXECUTABLE=${EXECUTABLE##*/}
+    TARGET=${EXECUTABLE#${BENCHMARK}.}
 
-    echo -e "${YELLOW}=== Processing target: ${TARGET_PREFIX} ===${NC}"
+    echo -e "${YELLOW}=== Processing target: ${TARGET} ===${NC}"
 
-    # Check if corresponding peak directory exists
-    if [ ! -d "$PEAK_DIR" ]; then
-        echo -e "${RED}Warning: Peak directory '$PEAK_DIR' not found for base '$BASE_DIR'${NC}"
-        echo -e "${YELLOW}Skipping ${TARGET_PREFIX}${NC}"
-        echo
-        continue
-    fi
-
-    # Check if benchmark executable exists in both directories
-    if [ ! -f "$BASE_DIR/bin/$BENCHMARK" ]; then
-        echo -e "${RED}Warning: Benchmark '$BENCHMARK' not found in $BASE_DIR/bin/${NC}"
-        echo -e "${YELLOW}Skipping ${TARGET_PREFIX}${NC}"
-        echo
-        continue
-    fi
-
-    if [ ! -f "$PEAK_DIR/bin/$BENCHMARK" ]; then
-        echo -e "${RED}Warning: Benchmark '$BENCHMARK' not found in $PEAK_DIR/bin/${NC}"
-        echo -e "${YELLOW}Skipping ${TARGET_PREFIX}${NC}"
+    if [ ! -f "$PEAK_DIR/bin/$EXECUTABLE" ]; then
+        echo -e "${RED}Warning: Benchmark '$EXECUTABLE' not found in $PEAK_DIR/bin/${NC}"
+        echo -e "${YELLOW}Skipping ${TARGET}${NC}"
         echo
         continue
     fi
@@ -119,22 +98,12 @@ for BASE_DIR in $BASE_DIRS; do
     # Run the comparison
     TOTAL_COMPARISONS=$((TOTAL_COMPARISONS + 1))
 
-    if [ -n "$FILTER" ]; then
-        if "$COMPARE_SCRIPT" "$BASE_DIR" "$PEAK_DIR" "$BENCHMARK" "$FILTER"; then
-            SUCCESSFUL_COMPARISONS=$((SUCCESSFUL_COMPARISONS + 1))
-            echo -e "${GREEN}✓ Comparison successful for ${TARGET_PREFIX}${NC}"
-        else
-            FAILED_COMPARISONS=$((FAILED_COMPARISONS + 1))
-            echo -e "${RED}✗ Comparison failed for ${TARGET_PREFIX}${NC}"
-        fi
+    if "$COMPARE_SCRIPT" "$BASE_DIR" "$PEAK_DIR" "$EXECUTABLE" ${FILTER:+"$FILTER"}; then
+        SUCCESSFUL_COMPARISONS=$((SUCCESSFUL_COMPARISONS + 1))
+        echo -e "${GREEN}✓ Comparison successful for ${TARGET}${NC}"
     else
-        if "$COMPARE_SCRIPT" "$BASE_DIR" "$PEAK_DIR" "$BENCHMARK"; then
-            SUCCESSFUL_COMPARISONS=$((SUCCESSFUL_COMPARISONS + 1))
-            echo -e "${GREEN}✓ Comparison successful for ${TARGET_PREFIX}${NC}"
-        else
-            FAILED_COMPARISONS=$((FAILED_COMPARISONS + 1))
-            echo -e "${RED}✗ Comparison failed for ${TARGET_PREFIX}${NC}"
-        fi
+        FAILED_COMPARISONS=$((FAILED_COMPARISONS + 1))
+        echo -e "${RED}✗ Comparison failed for ${TARGET}${NC}"
     fi
 
     echo -e "${BLUE}------------------------------------------------${NC}"
@@ -151,7 +120,7 @@ fi
 
 if [ $TOTAL_COMPARISONS -eq 0 ]; then
     echo -e "${YELLOW}No valid target pairs found.${NC}"
-    echo -e "${YELLOW}Expected directory structure: <target>-base and <target>-peak${NC}"
+    echo -e "${YELLOW}Expected executables: base/bin/<benchmark>.<target> and peak/bin/<benchmark>.<target>${NC}"
     exit 1
 elif [ $FAILED_COMPARISONS -gt 0 ]; then
     exit 1

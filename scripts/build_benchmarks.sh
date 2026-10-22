@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2025, Intel Corporation
+# Copyright (c) 2025-2026, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 set -euo pipefail
@@ -26,11 +26,10 @@ EXAMPLES:
   $0 HEAD~5 HEAD "avx2-i32x8 avx512skx-x16"  # Compare commits with custom targets
 
 The script will:
-1. Check out PEAK_SHA and build benchmarks for each target
-2. Check out BASE_SHA and build benchmarks for each target
-3. Create separate build directories for each target/version combination
+1. Check out PEAK_SHA and build benchmarks for all targets in "peak" directory
+2. Check out BASE_SHA and build benchmarks for all targets in "base" directory
 
-Build directories will be named: {target}-peak and {target}-base
+Every benchmark is built once per target, e.g. peak/bin/01_aossoa.avx512skx-x16.
 EOF
 }
 
@@ -43,69 +42,54 @@ BASE_SHA="${1:-HEAD^}"
 PEAK_SHA="${2:-HEAD}"
 BUILD_TARGETS="${3:-$DEFAULT_TARGETS}"
 
+# Resolve before the first checkout, which changes what HEAD^ means.
+BASE_SHA=$(git rev-parse --verify "$BASE_SHA^{commit}")
+PEAK_SHA=$(git rev-parse --verify "$PEAK_SHA^{commit}")
+
+# Both commits must build one executable per target, otherwise their binaries can't be compared.
+for SHA in "$BASE_SHA" "$PEAK_SHA"; do
+    if ! git grep -q BENCHMARKS_ISPC_TARGET_LIST "$SHA" -- :/benchmarks/cmake/AddBenchmark.cmake; then
+        echo "Error: $SHA predates per-target benchmark executables, it can't be compared with this script."
+        exit 1
+    fi
+done
+
 echo "Building benchmarks for ISPC with base SHA: $BASE_SHA and peak SHA: $PEAK_SHA"
 echo "Targets: $BUILD_TARGETS"
 
-# Convert space-separated targets to array
-IFS=' ' read -ra TARGET_ARRAY <<< "$BUILD_TARGETS"
+# CMake expects a comma separated list of targets
+CMAKE_TARGETS="${BUILD_TARGETS// /,}"
 
-# Build peak version for each target
+build() {
+    local BUILD_DIR="$1"
+
+    rm -rf "$BUILD_DIR"
+
+    cmake ../ -G Ninja \
+        -DISPC_SLIM_BINARY=ON \
+        -DISPC_INCLUDE_EXAMPLES=OFF \
+        -DISPC_INCLUDE_RT=OFF \
+        -DISPC_INCLUDE_UTILS=OFF \
+        -DISPC_INCLUDE_TESTS=OFF \
+        -DISPC_INCLUDE_BENCHMARKS=ON \
+        -DARM_ENABLED=OFF \
+        -B "$BUILD_DIR" \
+        -DBENCHMARKS_ISPC_FLAGS="-O3 -woff" \
+        -DBENCHMARKS_ISPC_TARGETS="$CMAKE_TARGETS"
+
+    echo ""
+    echo "Build phase:"
+    echo "============"
+
+    cmake --build "$BUILD_DIR"
+}
+
 echo "Checking out peak SHA: $PEAK_SHA"
 git checkout "$PEAK_SHA"
+build peak
 
-for target in "${TARGET_ARRAY[@]}"; do
-    echo "Building peak version for target: $target"
-    BUILD_DIR="${target}-peak"
-    LOG_FILE="${target}-peak.build.log"
-
-    rm -rf "$BUILD_DIR"
-
-    cmake ../ -G Ninja \
-        -DISPC_SLIM_BINARY=ON \
-        -DISPC_INCLUDE_EXAMPLES=OFF \
-        -DISPC_INCLUDE_RT=OFF \
-        -DISPC_INCLUDE_UTILS=OFF \
-        -DISPC_INCLUDE_TESTS=OFF \
-        -DISPC_INCLUDE_BENCHMARKS=ON \
-        -DARM_ENABLED=OFF \
-        -B "$BUILD_DIR" \
-        -DBENCHMARKS_ISPC_FLAGS="-O3 -woff" \
-        -DBENCHMARKS_ISPC_TARGETS="$target"
-
-    echo ""
-    echo "Build phase:"
-    echo "============"
-
-    cmake --build "$BUILD_DIR"
-done
-
-# Build base version for each target
 echo "Checking out base SHA: $BASE_SHA"
 git checkout "$BASE_SHA"
-
-for target in "${TARGET_ARRAY[@]}"; do
-    echo "Building base version for target: $target"
-    BUILD_DIR="${target}-base"
-
-    rm -rf "$BUILD_DIR"
-
-    cmake ../ -G Ninja \
-        -DISPC_SLIM_BINARY=ON \
-        -DISPC_INCLUDE_EXAMPLES=OFF \
-        -DISPC_INCLUDE_RT=OFF \
-        -DISPC_INCLUDE_UTILS=OFF \
-        -DISPC_INCLUDE_TESTS=OFF \
-        -DISPC_INCLUDE_BENCHMARKS=ON \
-        -DARM_ENABLED=OFF \
-        -B "$BUILD_DIR" \
-        -DBENCHMARKS_ISPC_FLAGS="-O3 -woff" \
-        -DBENCHMARKS_ISPC_TARGETS="$target"
-
-    echo ""
-    echo "Build phase:"
-    echo "============"
-
-    cmake --build "$BUILD_DIR"
-done
+build base
 
 echo "Build completed for all targets: $BUILD_TARGETS"

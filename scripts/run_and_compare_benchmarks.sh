@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2025, Intel Corporation
+# Copyright (c) 2025-2026, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 show_usage() {
@@ -9,15 +9,16 @@ Usage: $0 [BASE_BUILD] [PEAK_BUILD] [TEST_NAME] [FILTER]
 Run and compare ISPC benchmark performance between two builds.
 
 ARGUMENTS:
-  BASE_BUILD      Directory name of base build (default: avx512icl-x32)
-  PEAK_BUILD      Directory name of peak build (default: avx512icl-x32-new)
-  TEST_NAME       Name of the benchmark test to run (default: 08_masked_load_store)
+  BASE_BUILD      Directory name of base build (default: base)
+  PEAK_BUILD      Directory name of peak build (default: peak)
+  TEST_NAME       Name of the benchmark executable, i.e. <test>.<target>
+                  (default: 08_masked_load_store.avx512icl-x32)
   FILTER          Optional benchmark filter pattern (default: none)
 
 EXAMPLES:
   $0                                          # Run default comparison
-  $0 avx2-base avx2-peak 01_simple           # Compare specific builds and test
-  $0 base peak 08_masked_load_store ".*load" # Run with benchmark filter
+  $0 base peak 01_aossoa.avx2-i32x8          # Compare specific builds and test
+  $0 base peak 08_masked_load_store.avx2-i32x8 ".*load" # Run with benchmark filter
 
 The script will:
 1. Run the benchmark test on BASE_BUILD with 3 repetitions
@@ -41,9 +42,9 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     exit 0
 fi
 
-BASE=${1:-avx512icl-x32}
-PEAK=${2:-avx512icl-x32-new}
-TEST=${3:-08_masked_load_store}
+BASE=${1:-base}
+PEAK=${2:-peak}
+TEST=${3:-08_masked_load_store.avx512icl-x32}
 FILTER=${4:-}
 
 SCRIPTS_DIR=$(cd "$(dirname "$0")" && pwd)
