@@ -207,6 +207,7 @@ void Function::typeCheckAndOptimize() {
     const Type *retType = GetType()->GetReturnType();
     if (!retType->IsCompleteType()) {
         Error(funcType->GetSourcePos(), "return type is an incomplete type: %s", retType->GetString().c_str());
+        hasIncompleteSignature = true;
     }
 
     for (int i = 0; i < funcType->GetNumParameters(); i++) {
@@ -215,6 +216,7 @@ void Function::typeCheckAndOptimize() {
             const SourcePos &pos = funcType->GetParameterSourcePos(i);
             const std::string &paramName = funcType->GetParameterName(i);
             Error(pos, "parameter '%s' is an incomplete type: %s", paramName.c_str(), paramType->GetString().c_str());
+            hasIncompleteSignature = true;
         }
     }
 
@@ -675,6 +677,13 @@ void Function::GenerateIR() const {
 
     if (type->IsExternSYCL()) {
         Error(sym->pos, "\n\'extern \"SYCL\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
+        return;
+    }
+
+    // The error was reported by typeCheckAndOptimize().  The struct may be
+    // defined after the function, so code generation would see a mix of the
+    // incomplete and the complete type.
+    if (hasIncompleteSignature) {
         return;
     }
 

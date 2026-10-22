@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -55,6 +55,9 @@ class Function {
     Symbol *taskIndexSym0, *taskCountSym0;
     Symbol *taskIndexSym1, *taskCountSym1;
     Symbol *taskIndexSym2, *taskCountSym2;
+    /** True if the return type or a parameter type is incomplete; no code is
+        generated for the function then. */
+    bool hasIncompleteSignature = false;
 };
 
 // Represents a single template parameter, which can either be a type (TemplateTypeParmType) or a non-type
