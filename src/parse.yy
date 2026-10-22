@@ -344,6 +344,7 @@ struct ForeachDimension {
 
 %destructor { lCleanUpString($$); } <stringVal>
 %destructor { delete $$; } <storageClass>
+%destructor { delete $$; } <typeList>
 %destructor { delete $$; } <attributeList>
 %destructor { delete $$; } <attr>
 %destructor { delete $$; } <attrArg>
@@ -1460,21 +1461,20 @@ type_specifier
     ;
 
 type_specifier_list
+    // A type that is null after an error is left out, so that the other
+    // types are still exported.
     : type_specifier
     {
+        $$ = new std::vector<std::pair<const Type *, SourcePos> >;
         if ($1 == nullptr)
-            $$ = nullptr;
-        else {
-            std::vector<std::pair<const Type *, SourcePos> > *vec =
-                new std::vector<std::pair<const Type *, SourcePos> >;
-            vec->push_back(std::make_pair(ResolveForwardDeclaredStruct($1), @1));
-            $$ = vec;
-        }
+            Assert(m->errorCount > 0);
+        else
+            $$->push_back(std::make_pair(ResolveForwardDeclaredStruct($1), @1));
     }
     | type_specifier_list ',' type_specifier
     {
         $$ = $1;
-        if ($1 == nullptr)
+        if ($3 == nullptr)
             Assert(m->errorCount > 0);
         else
             $$->push_back(std::make_pair(ResolveForwardDeclaredStruct($3), @3));
@@ -2900,8 +2900,7 @@ external_declaration
     | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL '{' declaration '}'
     | TOKEN_EXPORT '{' type_specifier_list '}' ';'
     {
-        if ($3 != nullptr)
-            m->AddExportedTypes(*$3);
+        m->AddExportedTypes(*$3);
         // type_specifier_list returns a vector that is not needed anymore.
         delete $3;
     }
