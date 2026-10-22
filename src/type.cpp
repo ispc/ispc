@@ -2447,8 +2447,10 @@ const StructType *UndefinedStructType::GetDefinitionBefore(SourcePos usePos) con
 
 void UndefinedStructType::SetDefinition(const StructType *st, SourcePos pos, bool isLocal,
                                         unsigned int scopeStart) const {
-    Assert(st != nullptr && st->GetStructName() == name && st->GetVariability() == Variability::Unbound &&
-           !st->IsConstType());
+    // The definition of a forward declared struct is created with the
+    // identity of the forward declaration; see lCreateStructType().
+    Assert(st != nullptr && st->GetStructName() == name && st->GetIdentity() == identity &&
+           st->GetVariability() == Variability::Unbound && !st->IsConstType());
     definition->type = st;
     definition->pos = pos;
     definition->isLocal = isLocal;
