@@ -232,6 +232,9 @@ jobs:
     # Sanity checks
     - name: Run tests for Linux/macOS
       if: inputs.platform == 'linux' || inputs.platform == 'macos'
+      env:
+        # Show the output of failed tests, e.g. the cases of a failed benchmark.
+        CTEST_OUTPUT_ON_FAILURE: 1
       run: |
         if [[ "${{ inputs.enable_xe }}" == "true" ]]; then
           # XE tests
@@ -254,6 +257,9 @@ jobs:
 
     - name: Run tests for Windows
       if: inputs.platform == 'windows'
+      env:
+        # Show the output of failed tests, e.g. the cases of a failed benchmark.
+        CTEST_OUTPUT_ON_FAILURE: 1
       shell: cmd
       run: |
         set VSVARS="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
