@@ -13,7 +13,7 @@ project(${BENCHMARKS_PROJECT_NAME}
 #################### Add Google Benchmark to the project #####################
 
 # Benchmarks depend on Google Benchmark submodule
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/benchmarks/vendor/google/benchmark/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vendor/google/benchmark/CMakeLists.txt")
     message(STATUS "Google Beanchmark submodule update")
     execute_process(COMMAND ${GIT_BINARY} submodule update --init --recursive
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
