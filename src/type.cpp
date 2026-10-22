@@ -862,18 +862,27 @@ llvm::DIType *TemplateTypeParmType::GetDIType(llvm::DIScope *scope) const { UNRE
 ///////////////////////////////////////////////////////////////////////////
 // EnumType
 
-EnumType::EnumType(SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p) {
+/** Returns a new identity for an enum with the given name declared in the
+    current scope.  Enums declared in the template parameter scope are
+    global; see SymbolTable::IsTemplateParameterScope(). */
+static std::shared_ptr<const EnumIdentity> lNewEnumIdentity(const std::string &name) {
+    auto identity = std::make_shared<EnumIdentity>();
+    if (m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope() && !m->symbolTable->IsTemplateParameterScope()) {
+        identity->localIndex = ++m->localEnumCount[name];
+    }
+    return identity;
+}
+
+EnumType::EnumType(SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p), identity(lNewEnumIdentity("")) {
     //    name = "/* (anonymous) */";
 }
 
-EnumType::EnumType(const char *n, SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p), name(n) {}
-
-EnumType::EnumType(const std::string &n, Variability v, bool ic, SourcePos p, const std::vector<Symbol *> &enums)
-    : Type(ENUM_TYPE, v, ic, p), name(n), enumerators(enums) {}
+EnumType::EnumType(const char *n, SourcePos p)
+    : Type(ENUM_TYPE, Variability::Unbound, false, p), name(n), identity(lNewEnumIdentity(name)) {}
 
 EnumType::EnumType(const EnumType &other)
     : Type(ENUM_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
-      enumerators(other.enumerators) {}
+      identity(other.identity), enumerators(other.enumerators) {}
 
 EnumType *EnumType::create() const { return new EnumType(*this); }
 
@@ -904,7 +913,19 @@ std::string EnumType::Mangle() const {
     }
     ret += variability.MangleString();
     //    ret += std::string("enum[") + name + std::string("]");
-    ret += std::string("enum_5B_") + name + std::string("_5D_");
+    ret += std::string("enum_5B_") + name;
+    // Identifiers can't contain '.', so these suffixes don't collide with the
+    // name of another enum.
+    if (identity->localIndex != 0) {
+        ret += "." + std::to_string(identity->localIndex);
+    } else if (name.empty() && !enumerators.empty()) {
+        // The first enumerator of a global anonymous enum is a global symbol,
+        // so it distinguishes the enum from the other ones in the
+        // translation unit, and it is the same in each translation unit that
+        // includes the enum, e.g. through "typedef enum { A } E;".
+        ret += "." + enumerators[0]->name;
+    }
+    ret += std::string("_5D_");
     return ret;
 }
 
@@ -3570,8 +3591,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     const EnumType *eta = CastType<EnumType>(a);
     const EnumType *etb = CastType<EnumType>(b);
     if (eta != nullptr && etb != nullptr) {
-        // Kind of goofy, but this sufficies to check
-        return (eta->GetSourcePos() == etb->GetSourcePos() && eta->GetVariability() == etb->GetVariability());
+        return (eta->GetIdentity() == etb->GetIdentity() && eta->GetVariability() == etb->GetVariability());
     }
 
     const ArrayType *arta = CastType<ArrayType>(a);

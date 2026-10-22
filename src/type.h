@@ -465,6 +465,18 @@ class TemplateTypeParmType : public Type {
  *
  *  Note that ISPC enum assumes 32 bit int as underlying type.
  */
+/** Identifies an enum.  Enums with the same name may be declared in
+    different scopes (e.g. local enums in different functions), so the name
+    alone doesn't identify an enum.  It is shared by all variants (uniform,
+    varying, const, etc.) of an enum type.
+ */
+struct EnumIdentity {
+    /** Zero for enums declared in the global scope.  For enums declared in
+        other scopes, a positive number that distinguishes them from the
+        other enums with the same name; see EnumType::Mangle(). */
+    int localIndex = 0;
+};
+
 class EnumType : public Type {
   public:
     /** Constructor for anonymous enumerated types */
@@ -485,6 +497,9 @@ class EnumType : public Type {
     /** Returns the name of the enum type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetEnumName() const { return name; }
 
+    /** Returns the identity of the enum, shared by all of its variants. */
+    const std::shared_ptr<const EnumIdentity> &GetIdentity() const { return identity; }
+
     /** Provides the enumerators defined in the enum definition. */
     void SetEnumerators(const std::vector<Symbol *> &enumerators);
     /** Returns the total number of enuemrators in this enum type. */
@@ -494,9 +509,9 @@ class EnumType : public Type {
 
   private:
     const std::string name;
+    std::shared_ptr<const EnumIdentity> identity;
     std::vector<Symbol *> enumerators;
 
-    EnumType(const std::string &name, Variability v, bool ic, SourcePos pos, const std::vector<Symbol *> &enumerators);
     EnumType(const EnumType &other);
 
     EnumType *create() const override;
