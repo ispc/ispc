@@ -42,9 +42,9 @@ static void check(struct FVector *dst, struct FVector *src0, struct FVector *src
 
 static void test01_1(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    FVector *src0 = new FVector[count];
-    FVector *src1 = new FVector[count];
-    FVector *dst = new FVector[count];
+    FVector *src0 = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
+    FVector *src1 = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
+    FVector *dst = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
     init(dst, src0, src1, count);
 
     for (auto _ : state) {
@@ -52,17 +52,17 @@ static void test01_1(benchmark::State &state) {
     }
 
     check(dst, src0, src1, count);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
 }
 BENCHMARK(test01_1)->ARGS;
 
 static void test01_2(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    FVector *src0 = new FVector[count];
-    FVector *src1 = new FVector[count];
-    FVector *dst = new FVector[count];
+    FVector *src0 = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
+    FVector *src1 = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
+    FVector *dst = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
     init(dst, src0, src1, count);
 
     for (auto _ : state) {
@@ -70,17 +70,17 @@ static void test01_2(benchmark::State &state) {
     }
 
     check(dst, src0, src1, count);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
 }
 BENCHMARK(test01_2)->ARGS;
 
 static void test01_3(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    FVector *src0 = new FVector[count];
-    FVector *src1 = new FVector[count];
-    FVector *dst = new FVector[count];
+    FVector *src0 = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
+    FVector *src1 = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
+    FVector *dst = static_cast<FVector *>(aligned_alloc_helper(sizeof(FVector) * count));
     init(dst, src0, src1, count);
 
     for (auto _ : state) {
@@ -88,9 +88,9 @@ static void test01_3(benchmark::State &state) {
     }
 
     check(dst, src0, src1, count);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
 }
 BENCHMARK(test01_3)->ARGS;
 

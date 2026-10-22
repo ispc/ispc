@@ -1,20 +1,18 @@
-// Copyright (c) 2021-2025, Intel Corporation
+// Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <string>
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <malloc.h>
-#else
-#include <cstdlib>
-#endif
 
 #include "config.h"
 
 // Set maximum alignment for existing ISPC targets.
 #define ALIGNMENT 64
+
+// Granularity of 4K aliasing between loads and stores.
+#define ALIASING_PAGE_SIZE 4096
 
 class Docs {
   public:
@@ -25,23 +23,54 @@ class Docs {
     }
 };
 
-// Helper function to enabled allocated allocations.
-// Despite aligned_alloc() is part of C++, MSVS doesn't support it.
-void *aligned_alloc_helper(size_t size, size_t alignment = ALIGNMENT) {
-    assert(size % alignment == 0 && "Size is not multiple of alignment");
-#if defined(_WIN32) || defined(_WIN64)
-    return _aligned_malloc(size, alignment);
-#else
-    return aligned_alloc(alignment, size);
-#endif
+// Number of buffer slots in a page and the mask of slots taken by live aligned_alloc_helper() buffers.
+#define BUFFER_SLOTS (ALIASING_PAGE_SIZE / ALIGNMENT)
+inline uint64_t used_buffer_slots = 0;
+
+// Helper function to allocate aligned buffers.
+// Performance of many kernels depends on the distance between their buffers modulo the page size
+// (4K aliasing of loads from one buffer with stores to another one), so placing buffers wherever
+// malloc() puts them makes results depend on the heap state, i.e. on everything allocated before.
+// To make the placement deterministic, a buffer starts at a fixed offset from a page boundary: the
+// first free slot in bit-reversed order, i.e. 0, 2048, 1024, 3072, 512, ... for 4K pages. So buffers
+// allocated together are as far from each other as possible.
+inline void *aligned_alloc_helper(size_t size, size_t alignment = ALIGNMENT) {
+    if (ALIGNMENT % alignment != 0) {
+        std::cerr << "aligned_alloc_helper: alignment " << alignment << " is bigger than " << ALIGNMENT << std::endl;
+        std::abort();
+    }
+    static_assert(BUFFER_SLOTS <= 64, "Slots don't fit in used_buffer_slots");
+    unsigned slot = 0;
+    for (unsigned n = 0; n < BUFFER_SLOTS; n++) {
+        slot = 0;
+        for (unsigned bit = 1, rest = n; bit < BUFFER_SLOTS; bit <<= 1, rest >>= 1) {
+            slot = (slot << 1) | (rest & 1);
+        }
+        if (!(used_buffer_slots & (uint64_t(1) << slot))) {
+            break;
+        }
+    }
+    // Buffer start and the malloc() pointer and slot stored right before it fit in 2 extra pages.
+    char *raw = static_cast<char *>(malloc(size + 2 * ALIASING_PAGE_SIZE));
+    if (raw == nullptr) {
+        return nullptr;
+    }
+    used_buffer_slots |= uint64_t(1) << slot;
+    uintptr_t page = (reinterpret_cast<uintptr_t>(raw) + 2 * sizeof(void *) + ALIASING_PAGE_SIZE - 1) &
+                     ~uintptr_t(ALIASING_PAGE_SIZE - 1);
+    void **ptr = reinterpret_cast<void **>(page + slot * ALIGNMENT);
+    ptr[-1] = raw;
+    ptr[-2] = reinterpret_cast<void *>(uintptr_t(slot));
+    return ptr;
 }
 
-void aligned_free_helper(void *ptr) {
-#if defined(_WIN32) || defined(_WIN64)
-    _aligned_free(ptr);
-#else
-    free(ptr);
-#endif
+inline void aligned_free_helper(void *ptr) {
+    if (ptr == nullptr) {
+        return;
+    }
+    void **header = static_cast<void **>(ptr);
+    used_buffer_slots &= ~(uint64_t(1) << reinterpret_cast<uintptr_t>(header[-2]));
+    free(header[-1]);
 }
 
 // Warm up run
@@ -67,4 +96,3 @@ void aligned_free_helper(void *ptr) {
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
     BENCHMARK(warm_up)->Arg(256)->Arg(256 << 4)->Arg(256 << 7)->Arg(256 << 12);
-

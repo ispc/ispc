@@ -73,10 +73,10 @@ template <typename F> static void check(int *src0, int *src1, int *dst, int *mas
 
 static void ArrayIntDivFullISPC(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    int *src0 = new int[count];
-    int *src1 = new int[count];
-    int *dst = new int[count];
-    int *mask = new int[count];
+    int *src0 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *src1 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *dst = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *mask = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
     init_random(src0, count);
     init_random(src1, count);
     init_full_mask(mask, count);
@@ -86,19 +86,19 @@ static void ArrayIntDivFullISPC(benchmark::State &state) {
     }
 
     check(src0, src1, dst, mask, count, div_i);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
-    delete[] mask;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
+    aligned_free_helper(mask);
 }
 BENCHMARK(ArrayIntDivFullISPC)->ARGS;
 
 static void ArrayIntDivFullCPP(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    int *src0 = new int[count];
-    int *src1 = new int[count];
-    int *dst = new int[count];
-    int *mask = new int[count];
+    int *src0 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *src1 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *dst = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *mask = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
     init_random(src0, count);
     init_random(src1, count);
     init_full_mask(mask, count);
@@ -108,19 +108,19 @@ static void ArrayIntDivFullCPP(benchmark::State &state) {
     }
 
     check(src0, src1, dst, mask, count, div_i);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
-    delete[] mask;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
+    aligned_free_helper(mask);
 }
 BENCHMARK(ArrayIntDivFullCPP)->ARGS;
 
 static void ArrayIntDivHalfISPC(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    int *src0 = new int[count];
-    int *src1 = new int[count];
-    int *dst = new int[count];
-    int *mask = new int[count];
+    int *src0 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *src1 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *dst = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *mask = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
     init_random(src0, count);
     init_random(src1, count);
     init_half_mask(mask, count);
@@ -130,19 +130,19 @@ static void ArrayIntDivHalfISPC(benchmark::State &state) {
     }
 
     check(src0, src1, dst, mask, count, div_i_mask);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
-    delete[] mask;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
+    aligned_free_helper(mask);
 }
 BENCHMARK(ArrayIntDivHalfISPC)->ARGS;
 
 static void ArrayIntDivHalfCPP(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    int *src0 = new int[count];
-    int *src1 = new int[count];
-    int *dst = new int[count];
-    int *mask = new int[count];
+    int *src0 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *src1 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *dst = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *mask = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
     init_random(src0, count);
     init_random(src1, count);
     init_half_mask(mask, count);
@@ -152,19 +152,19 @@ static void ArrayIntDivHalfCPP(benchmark::State &state) {
     }
 
     check(src0, src1, dst, mask, count, div_i_mask);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
-    delete[] mask;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
+    aligned_free_helper(mask);
 }
 BENCHMARK(ArrayIntDivHalfCPP)->ARGS;
 
 static void ArrayIntDivQuatISPC(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    int *src0 = new int[count];
-    int *src1 = new int[count];
-    int *dst = new int[count];
-    int *mask = new int[count];
+    int *src0 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *src1 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *dst = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *mask = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
     init_random(src0, count);
     init_random(src1, count);
     init_quat_mask(mask, count);
@@ -174,19 +174,19 @@ static void ArrayIntDivQuatISPC(benchmark::State &state) {
     }
 
     check(src0, src1, dst, mask, count, div_i_mask);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
-    delete[] mask;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
+    aligned_free_helper(mask);
 }
 BENCHMARK(ArrayIntDivQuatISPC)->ARGS;
 
 static void ArrayIntDivQuatCPP(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    int *src0 = new int[count];
-    int *src1 = new int[count];
-    int *dst = new int[count];
-    int *mask = new int[count];
+    int *src0 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *src1 = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *dst = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
+    int *mask = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));
     init_random(src0, count);
     init_random(src1, count);
     init_quat_mask(mask, count);
@@ -196,10 +196,10 @@ static void ArrayIntDivQuatCPP(benchmark::State &state) {
     }
 
     check(src0, src1, dst, mask, count, div_i_mask);
-    delete[] src0;
-    delete[] src1;
-    delete[] dst;
-    delete[] mask;
+    aligned_free_helper(src0);
+    aligned_free_helper(src1);
+    aligned_free_helper(dst);
+    aligned_free_helper(mask);
 }
 BENCHMARK(ArrayIntDivQuatCPP)->ARGS;
 
