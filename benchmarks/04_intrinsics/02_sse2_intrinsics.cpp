@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "02_sse2_intrinsics_ispc.h"
@@ -2432,7 +2432,7 @@ class mm_cmpord_sd : public TestBase {
             for (int k = 0; k < Iterations; k++) {
                 double Value;
                 if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                    Value = 0xFFFFFFFF;
+                    Value = *reinterpret_cast<double *>(&IntAllSet);
                 } else {
                     Value = 0.0f;
                 }
@@ -2458,18 +2458,8 @@ class mm_cmpord_sd : public TestBase {
 
     virtual bool ResultsCorrect(const ::benchmark::State &state, const unsigned int TestNumber) {
         for (int k = 0; k < Iterations; k++) {
-            double Value;
-            if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                Value = 0xFFFFFFFF;
-            } else {
-                Value = 0.0f;
-            }
-
-            if (IS_NAN(Value) && IS_NAN(Result[k])) {
-                continue; // Both are NaN, considered equal for this test
-            }
-
-            if (Result[k] != Value) {
+            uint64 Expected = ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) ? IntAllSet : 0;
+            if (*reinterpret_cast<uint64 *>(&Result[k]) != Expected) {
                 return false;
             }
         }
@@ -2524,7 +2514,7 @@ class mm_cmpord_pd : public TestBase {
             for (int k = 0; k < Iterations; k++) {
                 double Value;
                 if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                    Value = 0xFFFFFFFF;
+                    Value = *reinterpret_cast<double *>(&IntAllSet);
                 } else {
                     Value = 0.0f;
                 }
@@ -2550,17 +2540,8 @@ class mm_cmpord_pd : public TestBase {
 
     virtual bool ResultsCorrect(const ::benchmark::State &state, const unsigned int TestNumber) {
         for (int k = 0; k < Iterations; k++) {
-            double Value;
-            if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                Value = 0xFFFFFFFF;
-            } else {
-                Value = 0.0f;
-            }
-
-            if (IS_NAN(Value) && IS_NAN(Result[k])) {
-                continue; // Both are NaN, considered equal for this test
-            }
-            if (Result[k] != Value) {
+            uint64 Expected = ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) ? IntAllSet : 0;
+            if (*reinterpret_cast<uint64 *>(&Result[k]) != Expected) {
                 return false;
             }
         }
@@ -14452,4 +14433,4 @@ BENCHMARK_CASE_POW2(mm_cvtsi128_si64, Intrinsic, 1);
 BENCHMARK_CASE_POW2(mm_cvtsi128_si64, ISPC, 2);
 
 // Main function
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

@@ -64,7 +64,7 @@ template <typename T> static T ref_pext(T value, T mask) {
 
 // Elements with (src[i] % stride) != 0 are skipped and must keep dst[i] == 0.
 template <typename T>
-static void check(const T *src, const T *mask, const T *dst, int count, bool is_pdep, int stride) {
+static bool check(const T *src, const T *mask, const T *dst, int count, bool is_pdep, int stride) {
     for (int i = 0; i < count; ++i) {
         T expected = 0;
         if (src[i] % stride == 0)
@@ -72,9 +72,10 @@ static void check(const T *src, const T *mask, const T *dst, int count, bool is_
         if (expected != dst[i]) {
             printf("Error i=%d expected=%llx result=%llx\n", i, (unsigned long long)expected,
                    (unsigned long long)dst[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 #define BENCHMARK_BIT_OP(OP, W, V, STRIDE, IS_PDEP)                                                                    \
@@ -90,7 +91,8 @@ static void check(const T *src, const T *mask, const T *dst, int count, bool is_
             ispc::OP##W##_##V(src, mask, dst, count);                                                                  \
         }                                                                                                              \
                                                                                                                        \
-        check(src, mask, dst, count, IS_PDEP, STRIDE);                                                                 \
+        if (!check(src, mask, dst, count, IS_PDEP, STRIDE))                                                            \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(mask);                                                                                     \
         aligned_free_helper(dst);                                                                                      \
@@ -125,7 +127,8 @@ BENCHMARK_BIT_OPS(pext, 64, false)
             ispc::OP##W##_##NAME##_##KIND##_##V(src, dst, count __VA_ARGS__);                                          \
         }                                                                                                              \
                                                                                                                        \
-        check(src, mask, dst, count, IS_PDEP, 1);                                                                      \
+        if (!check(src, mask, dst, count, IS_PDEP, 1))                                                                 \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(mask);                                                                                     \
         aligned_free_helper(dst);                                                                                      \
@@ -172,6 +175,7 @@ static uint64_t ref_morton(uint32_t x, uint32_t y) {
         for (int i = 0; i < count; ++i) {                                                                              \
             if (dst[i] != ref_morton(x[i], y[i])) {                                                                    \
                 printf("Error i=%d\n", i);                                                                             \
+                fail_benchmark(state);                                                                                 \
                 break;                                                                                                 \
             }                                                                                                          \
         }                                                                                                              \
@@ -202,6 +206,7 @@ static uint64_t ref_morton(uint32_t x, uint32_t y) {
         for (int i = 0; i < count; ++i) {                                                                              \
             if (ref_morton(x[i], y[i]) != src[i]) {                                                                    \
                 printf("Error i=%d\n", i);                                                                             \
+                fail_benchmark(state);                                                                                 \
                 break;                                                                                                 \
             }                                                                                                          \
         }                                                                                                              \
@@ -219,4 +224,4 @@ BENCHMARK_MORTON_DECODE(pext_const, )
 BENCHMARK_MORTON_DECODE(pext_runtime, , 0x5555555555555555ull, 0xAAAAAAAAAAAAAAAAull)
 BENCHMARK_MORTON_DECODE(shifts, )
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

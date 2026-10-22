@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
@@ -22,6 +22,8 @@
 #include <benchmark/benchmark.h>
 #include <cfloat>
 #include <malloc.h>
+
+#include "../common.h"
 // #include "benchmark_markers.h"
 
 #define RESTRICT __restrict /* no alias hint */
@@ -49,16 +51,12 @@ typedef double FReal;
 #define ARGS_SMALL Arg(3)
 #define ARGS_POW2 Arg(128)->Arg(1024)->Arg(8192)
 
-static bool bErrorReturn;
-
 #define BENCHMARK_DEFINE(ClassName, TestName, TestNumber)                                                              \
     BENCHMARK_DEFINE_F(ClassName, TestName)(benchmark::State & st) {                                                   \
         for (auto _ : st)                                                                                              \
             Run(st, TestNumber);                                                                                       \
-        if (!ResultsCorrect(st, TestNumber)) {                                                                         \
-            bErrorReturn = true;                                                                                       \
-            st.SkipWithError("Incorrect results");                                                                     \
-        }                                                                                                              \
+        if (!ResultsCorrect(st, TestNumber))                                                                           \
+            fail_benchmark(st);                                                                                        \
     }
 
 #define BENCHMARK_CASE_INNER(ClassName, TestName, TestNumber, ArgSize)                                                 \

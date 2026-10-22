@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024, Intel Corporation
+// Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -33,7 +33,7 @@ template <typename T> static void init(T *src, T *dst, int count) {
     }
 }
 
-template <typename T> static void check(T *dst, int factor, int count) {
+template <typename T> static bool check(T *dst, int factor, int count) {
     int width = ispc::width();
     int chunk = width * factor;
     for (int i = 0; i < count; i++) {
@@ -46,9 +46,10 @@ template <typename T> static void check(T *dst, int factor, int count) {
         // values are only copied, but not manipulated in any other way.
         if (dst[i] != static_cast<T>(expected)) {
             printf("Error i=%d, expected %d, returned %d\n", i, expected, static_cast<int>(dst[i]));
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 #define AOS_TO_SOA_STDLIB(N, T_C, T_ISPC)                                                                              \
@@ -62,7 +63,8 @@ template <typename T> static void check(T *dst, int factor, int count) {
             ispc::aos_to_soa##N##_stdlib_##T_ISPC(src, dst, count);                                                    \
         }                                                                                                              \
                                                                                                                        \
-        check(dst, N, count);                                                                                          \
+        if (!check(dst, N, count))                                                                                     \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -79,7 +81,8 @@ template <typename T> static void check(T *dst, int factor, int count) {
             ispc::aos_to_soa##N##_ispc_##T_ISPC(src, dst, count);                                                      \
         }                                                                                                              \
                                                                                                                        \
-        check(dst, N, count);                                                                                          \
+        if (!check(dst, N, count))                                                                                     \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -115,4 +118,4 @@ AOS_TO_SOA_ISPC(2, float, float);
 AOS_TO_SOA_ISPC(2, int64_t, int64);
 AOS_TO_SOA_ISPC(2, double, double);
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

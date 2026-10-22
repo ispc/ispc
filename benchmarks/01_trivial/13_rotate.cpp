@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -37,7 +37,7 @@ template <typename T> static void init_output(T *dst, int count) {
 }
 
 // Check function for rotate operation
-template <typename T> static void check_rotate(T *dst, T *src, int count, int offset) {
+template <typename T> static bool check_rotate(T *dst, T *src, int count, int offset) {
     int width = ispc::width();
     for (int i = 0; i < count; i++) {
         int chunk_start = (i / width) * width;
@@ -50,10 +50,11 @@ template <typename T> static void check_rotate(T *dst, T *src, int count, int of
             if (dst[i] != expected) {
                 printf("Error at i=%d: expected %d, got %d (offset=%d, lane=%d, src_lane=%d, expected_index=%d)\n", i,
                        static_cast<int>(expected), static_cast<int>(dst[i]), offset, lane, src_lane, expected_index);
-                return;
+                return false;
             }
         }
     }
+    return true;
 }
 
 // Type-specific rotate benchmarks
@@ -71,7 +72,8 @@ template <typename T> static void check_rotate(T *dst, T *src, int count, int of
             ispc::rotate_##TYPE_NAME(src, dst, count, offset);                                                         \
         }                                                                                                              \
                                                                                                                        \
-        check_rotate(dst, src, count, offset);                                                                         \
+        if (!check_rotate(dst, src, count, offset))                                                                    \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -91,7 +93,8 @@ template <typename T> static void check_rotate(T *dst, T *src, int count, int of
             ispc::rotate_const_##TYPE_NAME(src, dst, count);                                                           \
         }                                                                                                              \
                                                                                                                        \
-        check_rotate(dst, src, count, -1);                                                                             \
+        if (!check_rotate(dst, src, count, -1))                                                                        \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -136,6 +139,7 @@ static void rotate_float16(benchmark::State &state) {
             if (dst[i] != expected) {
                 printf("Error at i=%d: expected %f, got %f (offset=%d)\n", i, static_cast<float>(expected),
                        static_cast<float>(dst[i]), offset);
+                fail_benchmark(state);
                 break;
             }
         }
@@ -174,6 +178,7 @@ static void rotate_const_float16(benchmark::State &state) {
             if (dst[i] != expected) {
                 printf("Error at i=%d: expected %f, got %f (const offset=-1)\n", i, static_cast<float>(expected),
                        static_cast<float>(dst[i]));
+                fail_benchmark(state);
                 break;
             }
         }
@@ -190,4 +195,4 @@ ROTATE_CONST_TYPE_BENCHMARK(float, float)
 ROTATE_TYPE_BENCHMARK(double, double)
 ROTATE_CONST_TYPE_BENCHMARK(double, double)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

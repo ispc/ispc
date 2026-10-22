@@ -1,4 +1,4 @@
-// Copyright (c) 2024-2025, Intel Corporation
+// Copyright (c) 2024-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "../common.h"
@@ -47,7 +47,7 @@ template <typename T> static void init2(T *src_a, T *src_b, T *dst, int count) {
 }
 
 // Check function for single vector shuffle
-template <typename T> static void check1(T *src_a, T *dst, int count) {
+template <typename T> static bool check1(T *src_a, T *dst, int count) {
     for (int i = 0; i < count; ++i) {
         if (dst[i] != src_a[i]) {
             if constexpr (std::is_same<T, int8_t>::value || std::is_same<T, int16_t>::value ||
@@ -63,13 +63,14 @@ template <typename T> static void check1(T *src_a, T *dst, int count) {
             } else if constexpr (std::is_same<T, double>::value) {
                 printf("Error at i=%d: dst[%i]=%lf, but expected: %lf\n", i, i, dst[i], src_a[i]);
             }
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 // Check function for two vector shuffle
-template <typename T> static void check2(T *src_a, T *src_b, T *dst, int count) {
+template <typename T> static bool check2(T *src_a, T *src_b, T *dst, int count) {
     for (int i = 0; i < count; ++i) {
         if (dst[i] != src_a[i]) {
             if constexpr (std::is_same<T, int8_t>::value || std::is_same<T, int16_t>::value ||
@@ -85,9 +86,10 @@ template <typename T> static void check2(T *src_a, T *src_b, T *dst, int count) 
             } else if constexpr (std::is_same<T, double>::value) {
                 printf("Error at i=%d: dst[%i]=%lf, but expected: %lf\n", i, i, dst[i], src_a[i]);
             }
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 // Macro to define benchmark functions for single vector shuffle
@@ -100,7 +102,8 @@ template <typename T> static void check2(T *src_a, T *src_b, T *dst, int count) 
         for (auto _ : state) {                                                                                         \
             ispc::Shuffle1_##T_ISPC(src_a, dst, permutation, count);                                                   \
         }                                                                                                              \
-        check1(src_a, dst, count);                                                                                     \
+        if (!check1(src_a, dst, count))                                                                                \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src_a);                                                                                    \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
@@ -128,7 +131,8 @@ SHUFFLE_1(int64_t, int64)
         for (auto _ : state) {                                                                                         \
             ispc::Shuffle2_##T_ISPC(src_a, src_b, dst, permutation, count);                                            \
         }                                                                                                              \
-        check2(src_a, src_b, dst, count);                                                                              \
+        if (!check2(src_a, src_b, dst, count))                                                                         \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src_a);                                                                                    \
         aligned_free_helper(src_b);                                                                                    \
         aligned_free_helper(dst);                                                                                      \
@@ -146,4 +150,4 @@ SHUFFLE_2(float, float)
 SHUFFLE_2(double, double)
 SHUFFLE_2(int64_t, int64)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

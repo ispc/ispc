@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024, Intel Corporation
+// Copyright (c) 2023-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -28,12 +28,12 @@ template <typename T> void init_dst(T *buf, size_t num_elems) {
     }
 }
 
-template <typename T> void check(T *src, T *dst, size_t num_elems) {
+template <typename T> bool check(T *src, T *dst, size_t num_elems) {
     // Allocate a buffer to perform the computation (prefix scan)
     T *buf = static_cast<T *>(aligned_alloc_helper(sizeof(T) * num_elems));
     if (buf == nullptr) {
         std::cerr << "[07_loop_unroll_varying] Failed to allocate buffer." << std::endl;
-        return;
+        return false;
     }
 
     // Perform the prefix scan
@@ -43,16 +43,19 @@ template <typename T> void check(T *src, T *dst, size_t num_elems) {
     }
 
     // Check the output with the previously computed destination buffer
+    bool correct = true;
     for (int i = 0; i < static_cast<int>(num_elems); i++) {
         if (buf[i] != dst[i]) {
             std::cerr << "[07_loop_unroll_varying] Error: "
                       << "buf[" << i << "] != dst[" << i << "]"
                       << "(" << buf[i] << " != " << dst[i] << ")" << std::endl;
+            correct = false;
             break;
         }
     }
 
     aligned_free_helper(buf);
+    return correct;
 }
 
 // Minimum size is maximum target width * 4, i.e. 64*4 = 256.
@@ -73,7 +76,8 @@ template <typename T> void check(T *src, T *dst, size_t num_elems) {
         for (auto _ : state) {                                                                                         \
             ispc::unroll_varying_##T_FOR##_##T_ISPC##_##UNROLL_FACTOR(src, dst, num_elems);                            \
         }                                                                                                              \
-        check(src, dst, num_elems);                                                                                    \
+        if (!check(src, dst, num_elems))                                                                               \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
@@ -147,4 +151,4 @@ UNROLL_VARYING_BENCH(for,     int8_t,    int8,   4);
 UNROLL_VARYING_BENCH(for,     double,    double, 4);
 UNROLL_VARYING_BENCH(for,     float,     float,  4);
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();
