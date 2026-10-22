@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025, Intel Corporation
+// Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -43,24 +43,26 @@ static void init_mask(int *mask, int count) {
     }
 }
 
-template <typename T> static void check(T *src, T *dst, int divisor, int count) {
+template <typename T> static bool check(T *src, T *dst, int divisor, int count) {
     for (int i = 0; i < count; i++) {
         T val = src[i] / divisor;
         if (val != dst[i]) {
             printf("Error i=%d\n", i);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
-template <typename T> static void check_mask(T *src, T *dst, int *mask, int divisor, int count) {
+template <typename T> static bool check_mask(T *src, T *dst, int *mask, int divisor, int count) {
     for (int i = 0; i < count; i++) {
         T val = src[i] / divisor;
         if (mask[i] && val != dst[i]) {
             printf("Error i=%d\n", i);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 #define FASTDIV(T_C, T_ISPC, DIV_VAL)                                                                                  \
@@ -75,7 +77,8 @@ template <typename T> static void check_mask(T *src, T *dst, int *mask, int divi
             ispc::fastdiv_##T_ISPC##_##DIV_VAL(src, dst, count);                                                       \
         }                                                                                                              \
                                                                                                                        \
-        check(src, dst, DIV_VAL, count);                                                                               \
+        if (!check(src, dst, DIV_VAL, count))                                                                          \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
@@ -120,7 +123,8 @@ FASTDIV(int8_t, int8, 16)
             ispc::fastdiv_mask_##T_ISPC##_##DIV_VAL(src, dst, mask, count);                                            \
         }                                                                                                              \
                                                                                                                        \
-        check_mask(src, dst, mask, DIV_VAL, count);                                                                    \
+        if (!check_mask(src, dst, mask, DIV_VAL, count))                                                               \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         aligned_free_helper(mask);                                                                                     \
@@ -152,4 +156,4 @@ FASTDIV_MASK(int16_t, int16, 16)
 FASTDIV_MASK(uint8_t, uint8, 16)
 FASTDIV_MASK(int8_t, int8, 16)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

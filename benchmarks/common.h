@@ -1,6 +1,7 @@
 // Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
+#include <benchmark/benchmark.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -22,6 +23,28 @@ class Docs {
         std::cout << message << "\n";
     }
 };
+
+// Set when a correctness check of any benchmark failed.
+inline bool benchmark_check_failed = false;
+
+// Reports wrong results of the running benchmark: it is shown with an error, and the executable
+// exits with a non-zero code (see CHECKED_BENCHMARK_MAIN).
+inline void fail_benchmark(benchmark::State &state) {
+    benchmark_check_failed = true;
+    state.SkipWithError("Incorrect results");
+}
+
+// Same as BENCHMARK_MAIN(), but returns 1 if a correctness check failed.
+#define CHECKED_BENCHMARK_MAIN()                                                                                       \
+    int main(int argc, char **argv) {                                                                                  \
+        benchmark::MaybeReenterWithoutASLR(argc, argv);                                                                \
+        benchmark::Initialize(&argc, argv);                                                                            \
+        if (benchmark::ReportUnrecognizedArguments(argc, argv))                                                        \
+            return 1;                                                                                                  \
+        benchmark::RunSpecifiedBenchmarks();                                                                           \
+        benchmark::Shutdown();                                                                                         \
+        return benchmark_check_failed ? 1 : 0;                                                                         \
+    }
 
 // Number of buffer slots in a page and the mask of slots taken by live aligned_alloc_helper() buffers.
 #define BUFFER_SLOTS (ALIASING_PAGE_SIZE / ALIGNMENT)

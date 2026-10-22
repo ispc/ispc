@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 #if _MSC_VER
 #pragma warning(disable : 4305)
@@ -1531,7 +1531,7 @@ class mm_or_ps : public TestBase {
             int *S1 = reinterpret_cast<int *>(&Source1[k]);
             int *S2 = reinterpret_cast<int *>(&Source2[k]);
             int R = ((*S1) | (*S2));
-            if (Result[k] != *reinterpret_cast<float *>(&R)) {
+            if (*reinterpret_cast<int *>(&Result[k]) != R) {
                 return false;
             }
         }
@@ -2702,7 +2702,7 @@ class mm_cmpord_ss : public TestBase {
             for (int k = 0; k < Iterations; k++) {
                 float Value;
                 if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                    Value = (float)0xFFFFFFFF;
+                    Value = *reinterpret_cast<float *>(&IntAllSet);
                 } else {
                     Value = 0.0f;
                 }
@@ -2728,14 +2728,8 @@ class mm_cmpord_ss : public TestBase {
 
     virtual bool ResultsCorrect(const ::benchmark::State &state, const unsigned int TestNumber) {
         for (int k = 0; k < Iterations; k++) {
-            float Value;
-            if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                Value = (float)0xFFFFFFFF;
-            } else {
-                Value = 0.0f;
-            }
-
-            if (Result[k] != Value) {
+            uint32 Expected = ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) ? IntAllSet : 0;
+            if (*reinterpret_cast<uint32 *>(&Result[k]) != Expected) {
                 return false;
             }
         }
@@ -2790,7 +2784,7 @@ class mm_cmpord_ps : public TestBase {
             for (int k = 0; k < Iterations; k++) {
                 float Value;
                 if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                    Value = (float)0xFFFFFFFF;
+                    Value = *reinterpret_cast<float *>(&IntAllSet);
                 } else {
                     Value = 0.0f;
                 }
@@ -2816,14 +2810,8 @@ class mm_cmpord_ps : public TestBase {
 
     virtual bool ResultsCorrect(const ::benchmark::State &state, const unsigned int TestNumber) {
         for (int k = 0; k < Iterations; k++) {
-            float Value;
-            if ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) {
-                Value = (float)0xFFFFFFFF;
-            } else {
-                Value = 0.0f;
-            }
-
-            if (Result[k] != Value) {
+            uint32 Expected = ((!IS_NAN(Source1[k])) && (!IS_NAN(Source2[k]))) ? IntAllSet : 0;
+            if (*reinterpret_cast<uint32 *>(&Result[k]) != Expected) {
                 return false;
             }
         }
@@ -5916,4 +5904,4 @@ BENCHMARK_CASE_POW2(mm_move_ss, Intrinsic, 1);
 BENCHMARK_CASE_POW2(mm_move_ss, ISPC, 2);
 
 // Main function
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

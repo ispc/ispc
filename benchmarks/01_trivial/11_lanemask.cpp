@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -39,19 +39,21 @@ static void init_src(int *src, int count) {
     }
 }
 
-static void check_lanemask(int *src, uint64_t *dst, int count, int programCount) {
+static bool check_lanemask(int *src, uint64_t *dst, int count, int programCount) {
     for (int i = 0, k = 0; i < count; i += programCount, k++) {
         uint64_t mask = 0;
         for (int j = 0; j < programCount; j++) {
             if (src[i + j]) {
-                mask |= 1 << j;
+                mask |= uint64_t(1) << j;
             }
         }
         if (mask != dst[k]) {
-            printf("Mismatch at index %d: expected %016lx, got %016lx\n", k, mask, dst[k]);
-            return;
+            printf("Mismatch at index %d: expected %016llx, got %016llx\n", k, (unsigned long long)mask,
+                   (unsigned long long)dst[k]);
+            return false;
         }
     }
+    return true;
 }
 
 static void lanemask_test(benchmark::State &state) {
@@ -66,11 +68,12 @@ static void lanemask_test(benchmark::State &state) {
     }
 
     // Get programCount from the target width
-    check_lanemask(src, dst, count, ispc::get_ispc_program_count());
+    if (!check_lanemask(src, dst, count, ispc::get_ispc_program_count()))
+        fail_benchmark(state);
 
     aligned_free_helper(src);
     aligned_free_helper(dst);
 }
 BENCHMARK(lanemask_test)->ARGS;
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -17,7 +17,9 @@ WARM_UP_RUN();
 
 namespace ispc {
 
-static void dispatcher_overhead_test() {
+// Returns false on wrong results. The results are checked only if check is set, to keep the check out of
+// the measured loop.
+static bool dispatcher_overhead_test(bool check) {
 
     const int M = 100;
     const int N = 100;
@@ -38,9 +40,17 @@ static void dispatcher_overhead_test() {
         for (int j = 0; j < N; j++)
             C[i][j] = mul(A[i][j], B[i][j]);
 
-    for (int i = 0; i < M; i++)
-        for (int j = 0; j < N; j++)
-            assert(C[i][j] == (i + j) * (i - j));
+    if (check) {
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < N; j++) {
+                if (C[i][j] != (i + j) * (i - j)) {
+                    printf("Error i=%d j=%d\n", i, j);
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
 }
 
 } // namespace ispc
@@ -50,8 +60,10 @@ static void dispatcher_overhead_test(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
     for (auto _ : state)
         for (int i = 0; i < count; i++)
-            ispc::dispatcher_overhead_test();
+            ispc::dispatcher_overhead_test(false);
 
+    if (!ispc::dispatcher_overhead_test(true))
+        fail_benchmark(state);
     state.SetComplexityN(state.range(0));
 }
 
@@ -62,16 +74,18 @@ static void dispatcher_overhead_test_multithread(benchmark::State &state) {
 
         std::vector<std::thread> v;
         for (int i = 0; i < count; i++)
-            v.emplace_back(ispc::dispatcher_overhead_test);
+            v.emplace_back(ispc::dispatcher_overhead_test, false);
 
         for (auto &t : v)
             t.join();
     }
 
+    if (!ispc::dispatcher_overhead_test(true))
+        fail_benchmark(state);
     state.SetComplexityN(state.range(0));
 }
 
 BENCHMARK(dispatcher_overhead_test)->ARGS;
 BENCHMARK(dispatcher_overhead_test_multithread)->Arg(100)->Arg(1000)->Arg(10000);
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

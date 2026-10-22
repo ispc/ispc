@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -36,7 +36,7 @@ template <typename T> static void init_output(T *dst, int count) {
 }
 
 // Check function for simple broadcast (should all be value from index 0)
-template <typename T> static void check_simple_broadcast(T *dst, T *src, int count) {
+template <typename T> static bool check_simple_broadcast(T *dst, T *src, int count) {
     int width = ispc::width();
     for (int i = 0; i < count; i++) {
         int chunk_start = (i / width) * width;
@@ -44,13 +44,14 @@ template <typename T> static void check_simple_broadcast(T *dst, T *src, int cou
         if (dst[i] != expected) {
             printf("Error at i=%d: expected %d, got %d (chunk_start=%d)\n", i, static_cast<int>(expected),
                    static_cast<int>(dst[i]), chunk_start);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 // Check function for broadcast with computation
-static void check_broadcast_computation(float *dst, float *src, int count) {
+static bool check_broadcast_computation(float *dst, float *src, int count) {
     const float rel_epsilon = 1e-5f; // Relative tolerance for floating-point comparison
     int width = ispc::width();
     for (int i = 0; i < count; i++) {
@@ -61,9 +62,10 @@ static void check_broadcast_computation(float *dst, float *src, int count) {
         if (std::abs(actual - expected) > tolerance) {
             printf("Error at i=%d: expected %f, got %f, diff=%f, tolerance=%f (chunk_start=%d)\n", i, expected, actual,
                    std::abs(actual - expected), tolerance, chunk_start);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 static void broadcast_varying_index(benchmark::State &state) {
@@ -92,6 +94,7 @@ static void broadcast_varying_index(benchmark::State &state) {
             if (dst[i] != expected) {
                 printf("Error at i=%d: expected %d, got %d (from src[%d], chunk_start=%d)\n", i, expected, dst[i],
                        expected_index, chunk_start);
+                fail_benchmark(state);
                 break;
             }
         }
@@ -114,7 +117,8 @@ static void broadcast_with_computation(benchmark::State &state) {
         ispc::broadcast_with_computation(src, dst, count);
     }
 
-    check_broadcast_computation(dst, src, count);
+    if (!check_broadcast_computation(dst, src, count))
+        fail_benchmark(state);
     aligned_free_helper(src);
     aligned_free_helper(dst);
 }
@@ -134,7 +138,8 @@ BENCHMARK(broadcast_with_computation)->ARGS;
             ispc::broadcast_##TYPE_NAME(src, dst, count);                                                              \
         }                                                                                                              \
                                                                                                                        \
-        check_simple_broadcast(dst, src, count);                                                                       \
+        if (!check_simple_broadcast(dst, src, count))                                                                  \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -173,6 +178,7 @@ static void broadcast_float16(benchmark::State &state) {
         if (dst[i] != expected) {
             printf("Error at i=%d: expected %f, got %f (chunk_start=%d)\n", i, static_cast<float>(expected),
                    static_cast<float>(dst[i]), chunk_start);
+            fail_benchmark(state);
             break;
         }
     }
@@ -186,4 +192,4 @@ BENCHMARK(broadcast_float16)->ARGS;
 BROADCAST_TYPE_BENCHMARK(float, float)
 BROADCAST_TYPE_BENCHMARK(double, double)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

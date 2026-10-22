@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -35,7 +35,7 @@ template <typename T> static void init_output(T *dst, int count) {
 }
 
 // Check function for shift operation
-template <typename T> static void check_shift(T *dst, T *src, int count, int offset) {
+template <typename T> static bool check_shift(T *dst, T *src, int count, int offset) {
     int width = ispc::width();
 
     for (int i = 0; i < count; i++) {
@@ -57,9 +57,10 @@ template <typename T> static void check_shift(T *dst, T *src, int count, int off
         if (dst[i] != expected) {
             printf("Error at i=%d: expected %d, got %d (offset=%d, lane=%d, src_lane=%d, width=%d)\n", i,
                    static_cast<int>(expected), static_cast<int>(dst[i]), offset, lane, src_lane, width);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 // Type-specific shift benchmarks
@@ -77,7 +78,8 @@ template <typename T> static void check_shift(T *dst, T *src, int count, int off
             ispc::shift_##TYPE_NAME(src, dst, count, offset);                                                          \
         }                                                                                                              \
                                                                                                                        \
-        check_shift(dst, src, count, offset);                                                                          \
+        if (!check_shift(dst, src, count, offset))                                                                     \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -97,7 +99,8 @@ template <typename T> static void check_shift(T *dst, T *src, int count, int off
             ispc::shift_const_##TYPE_NAME(src, dst, count);                                                            \
         }                                                                                                              \
                                                                                                                        \
-        check_shift(dst, src, count, -1);                                                                              \
+        if (!check_shift(dst, src, count, -1))                                                                         \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -149,6 +152,7 @@ static void shift_float16(benchmark::State &state) {
         if (dst[i] != expected) {
             printf("Error at i=%d: expected %f, got %f (offset=%d)\n", i, static_cast<float>(expected),
                    static_cast<float>(dst[i]), offset);
+            fail_benchmark(state);
             break;
         }
     }
@@ -192,6 +196,7 @@ static void shift_const_float16(benchmark::State &state) {
         if (dst[i] != expected) {
             printf("Error at i=%d: expected %f, got %f (offset=-1)\n", i, static_cast<float>(expected),
                    static_cast<float>(dst[i]));
+            fail_benchmark(state);
             break;
         }
     }
@@ -207,4 +212,4 @@ SHIFT_CONST_BENCHMARK(float, float)
 SHIFT_TYPE_BENCHMARK(double, double)
 SHIFT_CONST_BENCHMARK(double, double)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

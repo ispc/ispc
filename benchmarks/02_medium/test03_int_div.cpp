@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -61,14 +61,15 @@ void array_int_div_mask_cpp(int *src0, int *src1, int *dst, int *mask, int count
     }
 }
 
-template <typename F> static void check(int *src0, int *src1, int *dst, int *mask, int count, F check_foo) {
+template <typename F> static bool check(int *src0, int *src1, int *dst, int *mask, int count, F check_foo) {
     for (int i = 0; i < count; i++) {
         int ans = check_foo(src0, src1, mask, i);
         if (dst[i] != ans) {
             printf("Error at %d: expected %d, return %d\n", i, ans, dst[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 static void ArrayIntDivFullISPC(benchmark::State &state) {
@@ -85,7 +86,8 @@ static void ArrayIntDivFullISPC(benchmark::State &state) {
         ispc::ArrayIntDivFull(src0, src1, dst, mask, count);
     }
 
-    check(src0, src1, dst, mask, count, div_i);
+    if (!check(src0, src1, dst, mask, count, div_i))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -107,7 +109,8 @@ static void ArrayIntDivFullCPP(benchmark::State &state) {
         array_int_div_full_cpp(src0, src1, dst, mask, count);
     }
 
-    check(src0, src1, dst, mask, count, div_i);
+    if (!check(src0, src1, dst, mask, count, div_i))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -129,7 +132,8 @@ static void ArrayIntDivHalfISPC(benchmark::State &state) {
         ispc::ArrayIntDivMask(src0, src1, dst, mask, count);
     }
 
-    check(src0, src1, dst, mask, count, div_i_mask);
+    if (!check(src0, src1, dst, mask, count, div_i_mask))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -151,7 +155,8 @@ static void ArrayIntDivHalfCPP(benchmark::State &state) {
         array_int_div_mask_cpp(src0, src1, dst, mask, count);
     }
 
-    check(src0, src1, dst, mask, count, div_i_mask);
+    if (!check(src0, src1, dst, mask, count, div_i_mask))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -173,7 +178,8 @@ static void ArrayIntDivQuatISPC(benchmark::State &state) {
         ispc::ArrayIntDivMask(src0, src1, dst, mask, count);
     }
 
-    check(src0, src1, dst, mask, count, div_i_mask);
+    if (!check(src0, src1, dst, mask, count, div_i_mask))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -195,7 +201,8 @@ static void ArrayIntDivQuatCPP(benchmark::State &state) {
         array_int_div_mask_cpp(src0, src1, dst, mask, count);
     }
 
-    check(src0, src1, dst, mask, count, div_i_mask);
+    if (!check(src0, src1, dst, mask, count, div_i_mask))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -203,4 +210,4 @@ static void ArrayIntDivQuatCPP(benchmark::State &state) {
 }
 BENCHMARK(ArrayIntDivQuatCPP)->ARGS;
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

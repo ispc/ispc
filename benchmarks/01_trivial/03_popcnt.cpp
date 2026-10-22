@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024, Intel Corporation
+// Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -33,28 +33,30 @@ template <typename T> static void init(T *src, T *dst, int count) {
     }
 }
 
-template <typename T> static void check_all(T *src, T *dst, int count) {
+template <typename T> static bool check_all(T *src, T *dst, int count) {
     for (int i = 0; i < count; i++) {
         // for single popcnt() here's the formula, but we chain 8 popcnt()
         // int count = std::bitset< std::numeric_limits<T>::digits >(src[i]).count();
         int count = (i == 0) ? 0 : 1;
         if (dst[i] != count) {
             printf("Error i=%d\n", i);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
-template <typename T> static void check_even(T *src, T *dst, int count) {
+template <typename T> static bool check_even(T *src, T *dst, int count) {
     for (int i = 0; i < count; i += 2) {
         // for single popcnt() here's the formula, but we chain 8 popcnt()
         // int count = std::bitset< std::numeric_limits<T>::digits >(src[i]).count();
         int count = (i == 0) ? 0 : 1;
         if (dst[i] != count) {
             printf("Error i=%d\n", i);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 #define POPCNT(T_C, T_ISPC, V, ALL)                                                                                    \
@@ -68,7 +70,8 @@ template <typename T> static void check_even(T *src, T *dst, int count) {
             ispc::popcnt_##V##_##T_ISPC##_##ALL(src, dst, count);                                                      \
         }                                                                                                              \
                                                                                                                        \
-        check_##ALL(src, dst, count);                                                                                  \
+        if (!check_##ALL(src, dst, count))                                                                             \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
@@ -84,4 +87,4 @@ POPCNT(int64_t, int64, varying, all)
 POPCNT(int64_t, int64, uniform, even)
 POPCNT(int64_t, int64, varying, even)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

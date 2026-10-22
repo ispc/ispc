@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024, Intel Corporation
+// Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -91,49 +91,53 @@ template <typename T> static void init_one(T *src, T *dst, int count) {
     }
 }
 
-template <typename T, typename F> static void check(T *src, T *dst, int count, F fp) {
+template <typename T, typename F> static bool check(T *src, T *dst, int count, F fp) {
     T eps = 0.001f;
     for (int i = 0; i < count; i++) {
         T expected = fp(src[i]);
         if (std::abs(expected - dst[i]) > eps) {
             printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
-template <typename T, typename F> static void check2(T *src1, T *src2, T *dst, int count, F fp) {
+template <typename T, typename F> static bool check2(T *src1, T *src2, T *dst, int count, F fp) {
     T eps = 0.001f;
     for (int i = 0; i < count; i++) {
         T expected = fp(src1[i], src2[i]);
         if (std::abs(expected - dst[i]) > eps) {
             printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
-template <typename T> static void check_ldexp(T *src1, int *src2, T *dst, int count) {
+template <typename T> static bool check_ldexp(T *src1, int *src2, T *dst, int count) {
     T eps = 0.001f;
     for (int i = 0; i < count; i++) {
         T expected = std::ldexp(src1[i], src2[i]);
         if (std::abs(expected - dst[i]) > eps) {
             printf("Error i=%d, expected %g, return %g\n", i, expected, dst[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
-template <typename T> static void check_frexp(T *src, T *dst1, int *dst2, int count) {
+template <typename T> static bool check_frexp(T *src, T *dst1, int *dst2, int count) {
     T eps = 0.001f;
     for (int i = 0; i < count; i++) {
         int pow = 0;
         T expected = std::frexp(src[i], &pow);
         if (std::abs(expected - dst1[i]) > eps || pow != dst2[i]) {
             printf("Error i=%d, expected %g, return %g\n", i, expected, dst1[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 // Functions with single source, single destination.
@@ -148,7 +152,8 @@ template <typename T> static void check_frexp(T *src, T *dst1, int *dst2, int co
             ispc::NAME##_##T(src, dst, count);                                                                         \
         }                                                                                                              \
                                                                                                                        \
-        check(src, dst, count, [](T x) { return CHECK; });                                                             \
+        if (!check(src, dst, count, [](T x) { return CHECK; }))                                                        \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
     }                                                                                                                  \
@@ -167,7 +172,8 @@ template <typename T> static void check_frexp(T *src, T *dst1, int *dst2, int co
             ispc::NAME##_##T(src1, src2, dst, count);                                                                  \
         }                                                                                                              \
                                                                                                                        \
-        check2(src1, src2, dst, count, [](T x, T y) { return CHECK; });                                                \
+        if (!check2(src1, src2, dst, count, [](T x, T y) { return CHECK; }))                                           \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src1);                                                                                     \
         aligned_free_helper(src2);                                                                                     \
         aligned_free_helper(dst);                                                                                      \
@@ -187,7 +193,8 @@ template <typename T> static void check_frexp(T *src, T *dst1, int *dst2, int co
             ispc::NAME##_##T(src1, src2, dst, count);                                                                  \
         }                                                                                                              \
                                                                                                                        \
-        check_##NAME(src1, src2, dst, count);                                                                          \
+        if (!check_##NAME(src1, src2, dst, count))                                                                     \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src1);                                                                                     \
         aligned_free_helper(src2);                                                                                     \
         aligned_free_helper(dst);                                                                                      \
@@ -207,7 +214,8 @@ template <typename T> static void check_frexp(T *src, T *dst1, int *dst2, int co
             ispc::NAME##_##T(src, dst1, dst2, count);                                                                  \
         }                                                                                                              \
                                                                                                                        \
-        check_##NAME(src, dst1, dst2, count);                                                                          \
+        if (!check_##NAME(src, dst1, dst2, count))                                                                     \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst1);                                                                                     \
         aligned_free_helper(dst2);                                                                                     \
@@ -251,4 +259,4 @@ TEST(log, double, init_linear, std::log(x))
 TEST2(pow, float, init_linear2, std::pow(x, y))
 TEST2(pow, double, init_linear2, std::pow(x, y))
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

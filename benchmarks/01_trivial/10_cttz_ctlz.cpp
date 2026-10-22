@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -57,14 +57,14 @@ template <typename T> static T count_leading_zeros(T value) {
         return sizeof(T) * CHAR_BIT;
 
 #if defined(_MSC_VER)
+    // _BitScanReverse gives the index of the highest set bit.
     unsigned long index;
     if constexpr (sizeof(T) == 8) {
         _BitScanReverse64(&index, value);
-        return index;
     } else {
         _BitScanReverse(&index, value);
-        return index;
     }
+    return sizeof(T) * CHAR_BIT - 1 - index;
 #else
     if constexpr (sizeof(T) == 8) {
         return __builtin_clzll(value);
@@ -75,24 +75,26 @@ template <typename T> static T count_leading_zeros(T value) {
 }
 
 // Checking functions
-template <typename T> static void check_cttz(const T *src, const T *dst, int count) {
+template <typename T> static bool check_cttz(const T *src, const T *dst, int count) {
     for (int i = 0; i < count; ++i) {
         T expected = count_trailing_zeros(src[i]);
         if (expected != dst[i]) {
             printf("Error i=%d expected=%d result=%d\n", i, (int)expected, (int)dst[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
-template <typename T> static void check_ctlz(const T *src, const T *dst, int count) {
+template <typename T> static bool check_ctlz(const T *src, const T *dst, int count) {
     for (int i = 0; i < count; ++i) {
         T expected = count_leading_zeros(src[i]);
         if (expected != dst[i]) {
             printf("Error i=%d expected=%d result=%d\n", i, (int)expected, (int)dst[i]);
-            return;
+            return false;
         }
     }
+    return true;
 }
 
 // Benchmark macro
@@ -107,7 +109,8 @@ template <typename T> static void check_ctlz(const T *src, const T *dst, int cou
             ispc::OP##_##V##_##T_ISPC(src, dst, count);                                                                \
         }                                                                                                              \
                                                                                                                        \
-        check_##OP(src, dst, count);                                                                                   \
+        if (!check_##OP(src, dst, count))                                                                              \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
@@ -125,4 +128,4 @@ BENCHMARK_BIT_OP(ctlz, int, int32, varying)
 BENCHMARK_BIT_OP(ctlz, int64_t, int64, uniform)
 BENCHMARK_BIT_OP(ctlz, int64_t, int64, varying)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

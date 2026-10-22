@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -33,7 +33,7 @@ template <typename T> static void init_data(T *src, int count) {
 }
 
 template <typename T>
-static void verify_reduce_equal(T *src, bool *dst, int count, int programCount, const char *typeName) {
+static bool verify_reduce_equal(T *src, bool *dst, int count, int programCount, const char *typeName) {
     // Verify each result
     for (int i = 0; i < count; i += programCount) {
         T firstValue = src[i];
@@ -52,10 +52,11 @@ static void verify_reduce_equal(T *src, bool *dst, int count, int programCount, 
             if (dst[i + j] != expected) {
                 printf("ERROR: %s reduce_equal mismatch at index %d: expected %s, got %s\n", typeName, i + j,
                        expected ? "true" : "false", dst[i + j] ? "true" : "false");
-                return;
+                return false;
             }
         }
     }
+    return true;
 }
 
 #define REDUCE_EQUAL_BENCHMARK(T_C, T_ISPC)                                                                            \
@@ -71,7 +72,8 @@ static void verify_reduce_equal(T *src, bool *dst, int count, int programCount, 
                                                                                                                        \
         /* Verify correctness after benchmarking */                                                                    \
         ispc::reduce_equal_##T_ISPC(src, dst, count);                                                                  \
-        verify_reduce_equal(src, dst, count, ispc::width(), #T_ISPC);                                                  \
+        if (!verify_reduce_equal(src, dst, count, ispc::width(), #T_ISPC))                                             \
+            fail_benchmark(state);                                                                                     \
                                                                                                                        \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
@@ -90,4 +92,4 @@ REDUCE_EQUAL_BENCHMARK(int16_t, int16)
 REDUCE_EQUAL_BENCHMARK(__fp16, float16)
 #endif
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

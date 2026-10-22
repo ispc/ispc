@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025, Intel Corporation
+// Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -40,7 +40,7 @@ template <typename T> static void init(T *src, T *dst, int count) {
 }
 
 template <typename T>
-static void check_packed_load_active_eq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
+static bool check_packed_load_active_eq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
     int width = ispc::width();
     int loc = 0;
     int checkVal = 0;
@@ -53,11 +53,13 @@ static void check_packed_load_active_eq(T *src, T *dst, const unsigned int index
     }
     if (checkVal != num) {
         printf("Error check_packed_load_active index=%d.\n", index);
+        return false;
     }
+    return true;
 }
 
 template <typename T>
-static void check_packed_load_active_neq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
+static bool check_packed_load_active_neq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
     int width = ispc::width();
     int loc = 0;
     int checkVal = 0;
@@ -70,51 +72,59 @@ static void check_packed_load_active_neq(T *src, T *dst, const unsigned int inde
     }
     if (checkVal != num) {
         printf("Error check_packed_load_active index=%d.\n", index);
+        return false;
     }
+    return true;
 }
 
 template <typename T>
-static void check_packed_store_active_eq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
+static bool check_packed_store_active_eq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
     int width = ispc::width();
     int srcLoc = 0;
     int dstLoc = 0;
+    bool correct = true;
     for (int i = 0; i < count / width; i++) {
         for (int programIndex = 0; programIndex < width; programIndex++) {
             if ((programIndex & index) == 0) {
                 if (src[srcLoc] != dst[dstLoc++]) {
                     printf("Error check_packed_store_active loc=%d.\n", index);
+                    correct = false;
                 }
             }
             srcLoc++;
         }
     }
+    return correct;
 }
 
 template <typename T>
-static void check_packed_store_active_neq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
+static bool check_packed_store_active_neq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
     int width = ispc::width();
     int srcLoc = 0;
     int dstLoc = 0;
+    bool correct = true;
     for (int i = 0; i < count / width; i++) {
         for (int programIndex = 0; programIndex < width; programIndex++) {
             if ((programIndex & index) != 0) {
                 if (src[srcLoc] != dst[dstLoc++]) {
                     printf("Error check_packed_store_active loc=%d.\n", index);
+                    correct = false;
                 }
             }
             srcLoc++;
         }
     }
+    return correct;
 }
 
 template <typename T>
-static void check_packed_store_active2_eq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
-    check_packed_store_active_eq(src, dst, index, num, count);
+static bool check_packed_store_active2_eq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
+    return check_packed_store_active_eq(src, dst, index, num, count);
 }
 
 template <typename T>
-static void check_packed_store_active2_neq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
-    check_packed_store_active_neq(src, dst, index, num, count);
+static bool check_packed_store_active2_neq(T *src, T *dst, const unsigned int index, unsigned int num, int count) {
+    return check_packed_store_active_neq(src, dst, index, num, count);
 }
 
 #define PACKED_LOAD_STORE_COND(T_C, T_ISPC, FUNC, ACTIVE_RATIO)                                                        \
@@ -130,7 +140,8 @@ static void check_packed_store_active2_neq(T *src, T *dst, const unsigned int in
             num = ispc::FUNC##_##T_ISPC##_eq(src, dst, index, count);                                                  \
         }                                                                                                              \
                                                                                                                        \
-        check_##FUNC##_eq(src, dst, index, num, count);                                                                \
+        if (!check_##FUNC##_eq(src, dst, index, num, count))                                                           \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
@@ -149,7 +160,8 @@ static void check_packed_store_active2_neq(T *src, T *dst, const unsigned int in
             num = ispc::FUNC##_##T_ISPC##_neq(src, dst, index, count);                                                 \
         }                                                                                                              \
                                                                                                                        \
-        check_##FUNC##_neq(src, dst, index, num, count);                                                               \
+        if (!check_##FUNC##_neq(src, dst, index, num, count))                                                          \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
@@ -235,4 +247,4 @@ PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 3)
 PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 7)
 PACKED_LOAD_STORE_COND(int64_t, int64, packed_store_active2, 15)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

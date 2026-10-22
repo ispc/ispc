@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024, Intel Corporation
+// Copyright (c) 2021-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -29,15 +29,16 @@ static void init(struct FVector *dst, struct FVector *src0, struct FVector *src1
     }
 }
 
-static void check(struct FVector *dst, struct FVector *src0, struct FVector *src1, int count) {
+static bool check(struct FVector *dst, struct FVector *src0, struct FVector *src1, int count) {
     for (int i = 0; i < count; i++) {
         for (int j = 0; j < 3; j++) {
             if (std::abs(dst[i].V[j] - src0[i].V[j] * src1[i].V[j]) > eps) {
                 printf("Error i=%d\n", i);
-                return;
+                return false;
             }
         }
     }
+    return true;
 }
 
 static void test01_1(benchmark::State &state) {
@@ -51,7 +52,8 @@ static void test01_1(benchmark::State &state) {
         TestUniform1(dst, src0, src1, count);
     }
 
-    check(dst, src0, src1, count);
+    if (!check(dst, src0, src1, count))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -69,7 +71,8 @@ static void test01_2(benchmark::State &state) {
         TestUniform2(dst, src0, src1, count);
     }
 
-    check(dst, src0, src1, count);
+    if (!check(dst, src0, src1, count))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
@@ -87,11 +90,12 @@ static void test01_3(benchmark::State &state) {
         TestUniform3(dst, src0, src1, count);
     }
 
-    check(dst, src0, src1, count);
+    if (!check(dst, src0, src1, count))
+        fail_benchmark(state);
     aligned_free_helper(src0);
     aligned_free_helper(src1);
     aligned_free_helper(dst);
 }
 BENCHMARK(test01_3)->ARGS;
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();

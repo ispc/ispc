@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024, Intel Corporation
+// Copyright (c) 2023-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -46,20 +46,21 @@ static void init_mask_half_on(bool *mask, int count) {
     }
 }
 
-template <typename T> static void check(T *src_a, T *src_b, T *dst, bool *mask, int count) {
+template <typename T> static bool check(T *src_a, T *src_b, T *dst, bool *mask, int count) {
     for (int i = 0; i < count; i++) {
         if (mask[i] == 1) {
             if (dst[i] != src_b[i] - src_a[i]) {
                 printf("Error i=%d\n", i);
-                return;
+                return false;
             }
         } else {
             if (dst[i] != 0) {
                 printf("Error kuku i=%d\n", i);
-                return;
+                return false;
             }
         }
     }
+    return true;
 }
 
 #define LOAD_STORE_ALL_ON(T_C, T_ISPC)                                                                                 \
@@ -75,7 +76,8 @@ template <typename T> static void check(T *src_a, T *src_b, T *dst, bool *mask, 
             ispc::masked_load_store_##T_ISPC(src_a, src_b, dst, count, mask);                                          \
         }                                                                                                              \
                                                                                                                        \
-        check(src_a, src_b, dst, mask, count);                                                                         \
+        if (!check(src_a, src_b, dst, mask, count))                                                                    \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src_a);                                                                                    \
         aligned_free_helper(src_b);                                                                                    \
         aligned_free_helper(dst);                                                                                      \
@@ -97,7 +99,8 @@ template <typename T> static void check(T *src_a, T *src_b, T *dst, bool *mask, 
             ispc::masked_load_store_##T_ISPC(src_a, src_b, dst, count, mask);                                          \
         }                                                                                                              \
                                                                                                                        \
-        check(src_a, src_b, dst, mask, count);                                                                         \
+        if (!check(src_a, src_b, dst, mask, count))                                                                    \
+            fail_benchmark(state);                                                                                     \
         aligned_free_helper(src_a);                                                                                    \
         aligned_free_helper(src_b);                                                                                    \
         aligned_free_helper(dst);                                                                                      \
@@ -120,4 +123,4 @@ LOAD_STORE_HALF_ON(float, float)
 LOAD_STORE_HALF_ON(double, double)
 LOAD_STORE_HALF_ON(int64_t, int64)
 
-BENCHMARK_MAIN();
+CHECKED_BENCHMARK_MAIN();
