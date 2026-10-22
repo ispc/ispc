@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2025, Intel Corporation
+#  Copyright (c) 2025-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -32,23 +32,19 @@ def parse_benchmark_file(filename):
 def extract_target_and_benchmark_from_filename(filename):
     """Extract target name and benchmark name from filename."""
     basename = os.path.basename(filename)
-    # Pattern: target-base-benchmark.json or target-peak-benchmark.json
-    match = re.match(r'(.+?)-(base|peak)-(.+)\.json$', basename)
+    # Pattern: base-benchmark.target.json or peak-benchmark.target.json.
+    # Per-process files (*.run<N>.json) are skipped.
+    match = re.match(r'(base|peak)-([^.]+)\.(?!.*\.run\d+\.json$)(.+)\.json$', basename)
     if match:
-        target = match.group(1)
-        variant = match.group(2)  # 'base' or 'peak'
-        benchmark = match.group(3)
+        variant = match.group(1)  # 'base' or 'peak'
+        benchmark = match.group(2)
+        target = match.group(3)
         return target, variant, benchmark
     return None, None, None
 
 def find_json_files(directory='.'):
     """Find all benchmark JSON files in the directory."""
-    pattern = os.path.join(directory, '*-{base,peak}-*.json')
-    files = []
-    for suffix in ['base', 'peak']:
-        pattern = os.path.join(directory, f'*-{suffix}-*.json')
-        files.extend(glob.glob(pattern))
-    return files
+    return [f for f in glob.glob(os.path.join(directory, '*.json')) if extract_target_and_benchmark_from_filename(f)[0]]
 
 def calculate_improvement(base_time, peak_time):
     """Calculate performance improvement percentage.
@@ -255,7 +251,7 @@ Examples:
     # Find JSON files
     json_files = find_json_files(args.directory)
     if not json_files:
-        print("Error: No benchmark JSON files found matching pattern '*-{base,peak}-*.json'", file=sys.stderr)
+        print("Error: No benchmark JSON files found matching pattern '{base,peak}-*.json'", file=sys.stderr)
         sys.exit(1)
 
     # Group files by target and benchmark
