@@ -153,6 +153,11 @@ class SymbolTable {
         scope. */
     void PushScope();
 
+    /** Like PushScope(), for the scope of the template parameters of a
+        function template, where the parser also parses the declaration of
+        the function. */
+    void PushTemplateParameterScope();
+
     /** For each scope started by a call to SymbolTable::PushScope(), there
         must be a matching call to SymbolTable::PopScope() at the end of
         that scope. */
@@ -165,6 +170,14 @@ class SymbolTable {
     /** Returns true if the current scope is the outermost (global) one. */
     bool IsGlobalScope() const { return types.size() == 1; }
 
+    /** Returns true if the current scope is the one started by
+        PushTemplateParameterScope().  As for a regular function, structs
+        and enums declared in the declaration of a function template (e.g.
+        by "struct Foo *p" in its parameters) are declared in the global
+        scope, so that a later definition of the struct there is the same
+        struct; see AddType() and AddEnumerator(). */
+    bool IsTemplateParameterScope() const { return types.size() == templateParameterScope; }
+
     /** Adds the given variable symbol to the symbol table.
         @param symbol The symbol to be added
 
@@ -173,6 +186,11 @@ class SymbolTable {
         symbols in outer scopes; a warning is issued in this case, but this
         method still returns true.) */
     bool AddVariable(Symbol *symbol);
+
+    /** Adds the given enumerator symbol to the symbol table, as
+        AddVariable() does.  As for the enum (see AddType()), enumerators
+        declared in the template parameter scope are global. */
+    bool AddEnumerator(Symbol *symbol);
 
     /** Looks for a variable with the given name in the symbol table.  This
         method searches outward from the innermost scope to the outermost,
@@ -355,6 +373,10 @@ class SymbolTable {
         a template after its template parameters; either way, before its
         body. */
     unsigned int localScopeStart = 0;
+
+    /** The size of types while the scope started by
+        PushTemplateParameterScope() is the current one, or zero. */
+    size_t templateParameterScope = 0;
 };
 
 template <typename Predicate>
