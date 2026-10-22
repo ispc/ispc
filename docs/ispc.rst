@@ -282,6 +282,18 @@ Language Changes:
   struct Foo { int x; };``. Previously this was rejected with "declared but
   not defined struct type".
 
+* Structs with the same name declared in different scopes, for example a
+  struct declared in a function body and a global struct, are now different
+  types, as in C. Previously they shared one layout, which led to wrong
+  member offsets and pointer arithmetic. A pointer to one of them can no
+  longer be passed where a pointer to the other one is expected.
+
+* A ``struct Foo;`` declaration in a function body now declares a new struct
+  ``Foo`` in that scope, hiding a struct ``Foo`` declared in an outer scope,
+  as in C. Previously it referred to the outer struct. Code that relied on
+  that now fails with "incomplete struct type" or "declared but not defined
+  struct type" errors; remove the declaration to use the outer struct.
+
 Updating ISPC Programs For Changes In ISPC 1.32.0
 -------------------------------------------------
 
