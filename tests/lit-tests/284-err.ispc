@@ -42,6 +42,10 @@ void *uniform address(uniform Foo *uniform p) {
     return (void *uniform)&p[1];
 }
 
+// No code is generated for the function, which would see the definition.
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: Error: return type is an incomplete type: varying struct Foo
+Foo byValue(Foo *p) { return *p; }
+
 struct Foo {
     int x;
 };
