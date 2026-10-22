@@ -151,7 +151,7 @@ static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int
 static StructType *lCreateStructType(const std::string &name, const Type *declType,
                                      const std::vector<StructDeclaration *> *decl, AttributeList *attrs,
                                      SourcePos pos);
-static const Type *lDeclareStructInCurrentScope(const Type *type, SourcePos pos);
+static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos, bool isDefinition);
 
 enum class TemplateType { Template, Instantiation, Specialization };
 static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
@@ -1138,21 +1138,7 @@ declaration
       {
           // "struct Foo;" declares the struct in the current scope, even if
           // a struct with the same name is declared in an outer scope.
-          const Type *t = m->symbolTable->LookupType($2);
-          if (t == nullptr) {
-              t = new UndefinedStructType($2, Variability::Unbound, false, @2);
-              m->symbolTable->AddType($2, t, @2);
-          } else if (CastType<StructType>(t) == nullptr && CastType<UndefinedStructType>(t) == nullptr) {
-              Error(@2, "Type \"%s\" is not a struct type! (%s)", $2, t->GetString().c_str());
-              t = nullptr;
-          } else {
-              const std::string &name = CastType<StructType>(t) ? CastType<StructType>(t)->GetStructName()
-                                                                : CastType<UndefinedStructType>(t)->GetStructName();
-              // Not if the name is a typedef of a struct with another name.
-              if (name == $2) {
-                  t = lDeclareStructInCurrentScope(t, @2);
-              }
-          }
+          const Type *t = lDeclareStructInCurrentScope($2, @2, false);
           $$ = new Declaration(new DeclSpecs(t));
           // allocated by strdup in struct_or_union_name
           free((char*)$2);
@@ -1550,12 +1536,14 @@ struct_or_union_and_name
     ;
 
 struct_or_union_definition_head
-    : struct_or_union_and_name '{'
+    : struct_or_union struct_or_union_name '{'
       {
           // The struct is declared in the current scope before its members,
           // so that they refer to it rather than to a struct with the same
           // name in an outer scope.
-          $$ = lDeclareStructInCurrentScope($1, @1);
+          $$ = lDeclareStructInCurrentScope($2, @2, true);
+          // allocated by strdup in struct_or_union_name
+          free((char*)$2);
       }
     ;
 
@@ -3962,32 +3950,52 @@ static const StructIdentity *lGetStructIdentity(const Type *type) {
     return nullptr;
 }
 
-/* If the given type is a struct declared in an outer scope, declare a new
-   struct with the same name in the current scope, as C does for a struct
-   definition or a "struct Foo;" declaration, and return it.  Otherwise
-   return the struct as declared in the current scope, or the given type if
-   it isn't a struct. */
-static const Type *lDeclareStructInCurrentScope(const Type *type, SourcePos pos) {
-    const StructIdentity *identity = lGetStructIdentity(type);
-    if (identity == nullptr) {
-        return type;
+/* Declares the struct "name" in the current scope, as C does for a struct
+   definition (isDefinition) or a "struct name;" declaration, and returns it.
+   That is a new struct, unless the struct is already declared in the current
+   scope.  If the name is a typedef of a struct with another name, the new
+   struct has the name of the typedef, as the struct tag in C, but if the
+   typedef is in the current scope, a declaration refers to the struct of the
+   typedef, and a definition defines that struct if it is declared in the
+   current scope.  Returns nullptr after an error. */
+static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos, bool isDefinition) {
+    const Type *type = m->symbolTable->LookupType(name);
+    if (type != nullptr && lGetStructIdentity(type) == nullptr) {
+        Error(pos, "Type \"%s\" is not a struct type! (%s)", name, type->GetString().c_str());
+        return nullptr;
     }
-    // Structs declared in the declaration of a function template are global
-    // (see SymbolTable::IsTemplateParameterScope()), and the template
-    // parameter scope has no structs, so the struct is a global one.
-    if (m->symbolTable->IsTemplateParameterScope()) {
-        return type;
-    }
-    const StructType *st = CastType<StructType>(type);
-    const std::string &name = st ? st->GetStructName() : CastType<UndefinedStructType>(type)->GetStructName();
-    // The type may be a variant of the struct in the current scope, e.g.
-    // through "typedef uniform Foo FooT;".
-    const Type *local = m->symbolTable->LookupLocalType(name.c_str());
-    if (local != nullptr && lGetStructIdentity(local) == identity) {
-        return local;
+    // Looks up a type in the scope of the new struct.  Structs declared in
+    // the template parameter scope are global (see
+    // SymbolTable::IsTemplateParameterScope()), and that scope has only
+    // template parameters.
+    auto lookupLocal = [](const std::string &n) {
+        return m->symbolTable->IsTemplateParameterScope() ? m->symbolTable->LookupType(n.c_str())
+                                                          : m->symbolTable->LookupLocalType(n.c_str());
+    };
+    if (type != nullptr) {
+        const StructType *st = CastType<StructType>(type);
+        const std::string structName = st ? st->GetStructName() : CastType<UndefinedStructType>(type)->GetStructName();
+        const bool isLocalTypedef = structName != name && lookupLocal(name) != nullptr;
+        if (isLocalTypedef && !isDefinition) {
+            return type;
+        }
+        if (structName == name || isLocalTypedef) {
+            // The struct may be declared in the current scope, also through a
+            // typedef there, e.g. "typedef uniform Foo FooT;".
+            const Type *local = lookupLocal(structName);
+            if (local != nullptr && lGetStructIdentity(local) == lGetStructIdentity(type)) {
+                return local;
+            }
+            if (isLocalTypedef) {
+                Error(pos, "Ignoring redefinition of type \"%s\".", name);
+                return nullptr;
+            }
+        }
     }
     UndefinedStructType *ust = new UndefinedStructType(name, Variability::Unbound, false, pos);
-    m->symbolTable->AddType(name.c_str(), ust, pos);
+    if (!m->symbolTable->AddType(name, ust, pos)) {
+        return nullptr;
+    }
     return ust;
 }
 
