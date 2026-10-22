@@ -29,6 +29,7 @@
 #include <set>
 #include <stdarg.h>
 #include <stdio.h>
+#include <tuple>
 #include <utility>
 
 #include <clang/Basic/Version.h>
@@ -850,30 +851,30 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     This functions returns true and issues an error if are any illegal
     types are found and returns false otherwise.
 */
+/** Structs, by identity, variability, constness and the vectorOk and soaOk
+    arguments of lRecursiveCheckValidParamType(), that it is checking or has
+    found valid.  An invalid struct makes the whole check fail, so it needs
+    no entry. */
+using CheckedStructs = std::set<std::tuple<const StructIdentity *, Variability::VarType, int, bool, bool, bool>>;
+
 static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
-                                          SourcePos pos, std::vector<const StructType *> &inProgress) {
+                                          SourcePos pos, CheckedStructs &checked) {
     t = ResolveForwardDeclaredStruct(t);
     const StructType *st = CastType<StructType>(t);
     if (st != nullptr) {
-        // Forward declared structs are resolved above, so the members of a
-        // self-referential struct can lead back here.  The resolved types
-        // are created anew (e.g. aligned variants), so compare them by
-        // value.
-        for (const StructType *visited : inProgress) {
-            if (Type::Equal(visited, st)) {
-                return true;
-            }
+        // A struct reached again, through the members of a self-referential
+        // struct or another path, has been checked or is being checked.
+        // Checking each struct once also keeps the check linear.
+        const Variability v = st->GetVariability();
+        if (!checked.insert({st->GetIdentity().get(), v.type, v.soaWidth, st->IsConstType(), vectorOk, soaOk}).second) {
+            return true;
         }
-        inProgress.push_back(st);
-        bool valid = true;
         for (int i = 0; i < st->GetElementCount(); ++i) {
-            if (!lRecursiveCheckValidParamType(st->GetElementType(i), vectorOk, soaOk, name, pos, inProgress)) {
-                valid = false;
-                break;
+            if (!lRecursiveCheckValidParamType(st->GetElementType(i), vectorOk, soaOk, name, pos, checked)) {
+                return false;
             }
         }
-        inProgress.pop_back();
-        return valid;
+        return true;
     }
 
     // Vector types are also not supported, pending ispc properly
@@ -885,7 +886,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
 
     const SequentialType *seqt = CastType<SequentialType>(t);
     if (seqt != nullptr) {
-        return lRecursiveCheckValidParamType(seqt->GetElementType(), vectorOk, soaOk, name, pos, inProgress);
+        return lRecursiveCheckValidParamType(seqt->GetElementType(), vectorOk, soaOk, name, pos, checked);
     }
 
     const PointerType *pt = CastType<PointerType>(t);
@@ -895,7 +896,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
         if (pt->IsVaryingType()) {
             return false;
         } else {
-            return lRecursiveCheckValidParamType(pt->GetBaseType(), true, true, name, pos, inProgress);
+            return lRecursiveCheckValidParamType(pt->GetBaseType(), true, true, name, pos, checked);
         }
     }
 
@@ -916,8 +917,8 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
 
 static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
                                           SourcePos pos) {
-    std::vector<const StructType *> inProgress;
-    return lRecursiveCheckValidParamType(t, vectorOk, soaOk, name, pos, inProgress);
+    CheckedStructs checked;
+    return lRecursiveCheckValidParamType(t, vectorOk, soaOk, name, pos, checked);
 }
 
 /** Given a Symbol representing a function parameter, see if it or any
