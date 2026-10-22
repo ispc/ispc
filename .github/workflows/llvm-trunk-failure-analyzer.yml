@@ -43,6 +43,7 @@ jobs:
     outputs:
       run_id: ${{ steps.get-run-id.outputs.run_id }}
       current_sha: ${{ steps.download-sha.outputs.current_sha }}
+      llvm_trunk: ${{ steps.upload-llvm-trunk.outcome == 'success' }}
 
     steps:
     # The default branch, never the commit of the triggering run: Claude runs
@@ -202,6 +203,42 @@ jobs:
         if-no-files-found: error
         retention-days: 14
 
+    # The fix job builds with the LLVM trunk that failed, so pass the
+    # nightly's LLVM build on to it as an artifact of this run. Its bin goes
+    # first on PATH in a job that can push, so only this repository's own
+    # nightly counts: a fork PR could run a changed copy of the nightly, with
+    # the same name, that uploads its own llvm_trunk_linux. Without a build
+    # (LLVM itself failed, or the artifact expired) no fix is requested.
+    - name: Download the LLVM trunk build
+      id: llvm-trunk
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        RUN_ID: ${{ steps.get-run-id.outputs.run_id }}
+      run: |
+        run=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID" --jq '"\(.path) \(.event) \(.head_repository.full_name)"')
+        read -r path event head <<< "$run"
+        if [ "$path" != .github/workflows/linux-nightly-trunk.yml ] || [ "$head" != "$GH_REPO" ] ||
+           [[ ! "$event" =~ ^(schedule|workflow_dispatch|push)$ ]]; then
+          echo "::warning::Run $RUN_ID is not a nightly LLVM trunk run of $GH_REPO: $run"
+        elif gh run download "$RUN_ID" --name llvm_trunk_linux --dir "$RUNNER_TEMP/llvm-trunk"; then
+          echo "found=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::Run $RUN_ID has no LLVM trunk build."
+        fi
+
+    - name: Upload the LLVM trunk build
+      id: upload-llvm-trunk
+      if: steps.llvm-trunk.outputs.found == 'true'
+      continue-on-error: true # the issue is still filed, without a fix request
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: llvm_trunk_linux
+        path: ${{ runner.temp }}/llvm-trunk/llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
+        if-no-files-found: error
+        compression-level: 0 # already compressed
+        retention-days: 7 # long enough to re-run the fix job
+
   file-issue:
     needs: analyze-failure
     runs-on: ubuntu-latest
@@ -294,9 +331,13 @@ jobs:
         fi
 
   request-fix:
-    # Request Claude to fix LLVM trunk failures via reusable workflow
-    needs: file-issue
-    if: needs.file-issue.outputs.issue_number != '' && needs.file-issue.outputs.has_pr == 'false'
+    # Request Claude to fix LLVM trunk failures via reusable workflow, only
+    # with the LLVM trunk build that failed: without it, nothing in ISPC can
+    # be reproduced or tested.
+    needs: [analyze-failure, file-issue]
+    if: >-
+      needs.file-issue.outputs.issue_number != '' && needs.file-issue.outputs.has_pr == 'false' &&
+      needs.analyze-failure.outputs.llvm_trunk == 'true'
     permissions:
       contents: write
       pull-requests: write
@@ -305,7 +346,16 @@ jobs:
       id-token: write
     uses: ./.github/workflows/claude.yml
     with:
-      prompt: "Fix issue #${{ needs.file-issue.outputs.issue_number }} and open a draft PR"
+      prompt: >-
+        Fix issue #${{ needs.file-issue.outputs.issue_number }} and open a draft PR.
+        The LLVM on PATH is the LLVM trunk build of the failed nightly. Configure
+        with -DCMAKE_CXX_FLAGS=-Werror, as the nightly does, so new deprecation
+        warnings fail the build too. ISPC must still build with released LLVM,
+        which PR CI checks: put uses of trunk-only LLVM API under
+        ISPC_LLVM_VERSION checks from src/ispc_version.h.
+      # Build with the LLVM trunk that failed, not the released LLVM.
+      llvm_artifact: llvm_trunk_linux
+      llvm_version: trunk
     secrets:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
