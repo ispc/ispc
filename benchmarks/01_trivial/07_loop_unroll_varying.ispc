@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2025, Intel Corporation
+// Copyright (c) 2023-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "../../ispcrt/ispcrt.isph"
@@ -14,11 +14,20 @@
         dst[i] = src[i] + src[i - 1];                                                                                  \
     }
 
+// The loop processes full gangs only, the remaining elements are processed with a mask after it,
+// as foreach does.
 #define UNROLL_VARYING_FOR_BODY                                                                                        \
-    for (uniform int i = 1; i < num_elems; i += programCount) {                                                        \
+    for (uniform int i = 1; i + programCount <= num_elems; i += programCount) {                                        \
         int cur = i + programIndex;                                                                                    \
         int prv = i - 1 + programIndex;                                                                                \
         dst[cur] = src[cur] + src[prv];                                                                                \
+    }                                                                                                                  \
+    {                                                                                                                  \
+        uniform int tail = (uniform int)(1 + (num_elems - 1) / programCount * programCount);                           \
+        int cur = tail + programIndex;                                                                                 \
+        if (cur < num_elems) {                                                                                         \
+            dst[cur] = src[cur] + src[cur - 1];                                                                        \
+        }                                                                                                              \
     }
 
 // uint64
