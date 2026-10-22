@@ -49,8 +49,7 @@ template <typename F> static void check(float *src, float dst, int count, F fp) 
 
 static void ArrayMeanISPC(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    // float *src = static_cast<float *>(aligned_alloc_helper(sizeof(float) * count));
-    float *src = new float[count];
+    float *src = static_cast<float *>(aligned_alloc_helper(sizeof(float) * count));
     float dst = 0;
     init_linear(src, count);
 
@@ -59,15 +58,13 @@ static void ArrayMeanISPC(benchmark::State &state) {
     }
 
     check(src, dst, count, array_mean_cpp);
-    // aligned_free_helper(src);
-    delete[] src;
+    aligned_free_helper(src);
 }
 BENCHMARK(ArrayMeanISPC)->ARGS;
 
 static void ArrayMeanCPP(benchmark::State &state) {
     int count = static_cast<int>(state.range(0));
-    // float *src = static_cast<float *>(aligned_alloc_helper(sizeof(float) * count));
-    float *src = new float[count];
+    float *src = static_cast<float *>(aligned_alloc_helper(sizeof(float) * count));
     float dst = 0;
     init_linear(src, count);
 
@@ -76,8 +73,7 @@ static void ArrayMeanCPP(benchmark::State &state) {
     }
 
     check(src, dst, count, array_mean_cpp);
-    // aligned_free_helper(src);
-    delete[] src;
+    aligned_free_helper(src);
 }
 BENCHMARK(ArrayMeanCPP)->ARGS;
 
