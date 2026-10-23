@@ -2269,7 +2269,12 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
     // the module is all ok.
     llvm::ModulePassManager mpm;
     llvm::ModuleAnalysisManager mam;
-    llvm::PassBuilder pb = llvm::PassBuilder();
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // LLVM 24's PassBuilder reads its options from the context.
+    llvm::PassBuilder pb(module->getContext());
+#else
+    llvm::PassBuilder pb;
+#endif
     pb.registerModuleAnalyses(mam);
     mpm.addPass(llvm::GlobalDCEPass());
     mpm.addPass(llvm::VerifierPass());

@@ -242,7 +242,12 @@ llvm::PreservedAnalyses ReplaceMaskedMemOpsPass::run(llvm::Function &F, llvm::Fu
         return llvm::PreservedAnalyses::all();
     }
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // LLVM 24 deprecated the IRBuilder constructor that takes a context.
+    llvm::IRBuilder<> builder(*F.getParent());
+#else
     llvm::IRBuilder<> builder(F.getParent()->getContext());
+#endif
     std::unordered_map<llvm::CallInst *, unsigned> storesToReplace;
     std::unordered_map<llvm::CallInst *, unsigned> loadsToReplace;
     for (auto &BB : F) {

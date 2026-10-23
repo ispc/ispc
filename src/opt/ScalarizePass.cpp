@@ -49,9 +49,7 @@ static llvm::Value *lMatchAndScalarize(llvm::Instruction *inst) {
 
                 llvm::Type *VecType = Vec->getType();
                 llvm::Value *PV = llvm::PoisonValue::get(VecType);
-                llvm::IRBuilder<> Builder(inst->getParent()->getParent()->getContext());
-
-                Builder.SetInsertPoint(inst);
+                llvm::IRBuilder<> Builder(inst);
 
                 llvm::Value *ScalarBinOp = Builder.CreateBinOp(Opc, Op1, Op2);
                 llvm::Value *newVec = Builder.CreateInsertElement(PV, ScalarBinOp, (uint64_t)0);
