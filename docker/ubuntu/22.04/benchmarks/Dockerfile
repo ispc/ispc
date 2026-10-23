@@ -8,7 +8,7 @@
 # CI uses (see .github/workflows/scripts/init-env.sh). Sources are not part of the image: they are
 # mounted by benchmarks-weekly.yml and built by .github/workflows/scripts/run-benchmarks.sh.
 
-FROM ubuntu:22.04
+FROM ubuntu:22.04@sha256:0a9887931b0e38af2e3487ed39e29436b0535c4f3f52e57745baaf79d1898956
 SHELL ["/bin/bash", "-c"]
 
 ARG LLVM_REPO=https://github.com/ispc/ispc.dependencies
