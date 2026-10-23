@@ -233,7 +233,12 @@ void lRemoveUnused(llvm::Module *M) {
     llvm::FunctionAnalysisManager FAM;
     llvm::ModuleAnalysisManager MAM;
     llvm::ModulePassManager PM;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // LLVM 24's PassBuilder reads its options from the context.
+    llvm::PassBuilder PB(M->getContext());
+#else
     llvm::PassBuilder PB;
+#endif
     PB.registerModuleAnalyses(MAM);
     PM.addPass(llvm::GlobalDCEPass());
     PM.run(*M, MAM);

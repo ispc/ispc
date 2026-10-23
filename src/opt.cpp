@@ -141,7 +141,13 @@ DebugModulePassManager::DebugModulePassManager(llvm::Module &M, int optLevel) : 
     }
     // Create the new pass manager builder using our target machine.
     // llvm::PassBuilder is not assignable in newer LLVM, so construct it in place.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // LLVM 24's PassBuilder reads its options from the context.
+    pb = std::make_unique<llvm::PassBuilder>(m->getContext(), targetMachine, llvm::PipelineTuningOptions(),
+                                             std::nullopt, &PIC);
+#else
     pb = std::make_unique<llvm::PassBuilder>(targetMachine, llvm::PipelineTuningOptions(), std::nullopt, &PIC);
+#endif
 
     // Register all the basic analyses with the managers.
     pb->registerModuleAnalyses(mam);
