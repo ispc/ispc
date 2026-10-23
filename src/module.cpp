@@ -29,6 +29,7 @@
 #include <set>
 #include <stdarg.h>
 #include <stdio.h>
+#include <tuple>
 #include <utility>
 
 #include <clang/Basic/Version.h>
@@ -393,6 +394,8 @@ int Module::CompileFile() {
         }
     }
 
+    CheckDeferredApplicationFunctions();
+
     debugDumpModule(module, "Parsed", pre_stage++);
 
     ast->Print(g->astDump);
@@ -418,6 +421,11 @@ int Module::CompileFile() {
         }
     }
     ast->GenerateIR();
+    if (diBuilder) {
+        // Before the libraries are linked and optimizations run, so that
+        // they don't see placeholder debug types.
+        completeStructDITypes();
+    }
 
     debugDumpModule(module, "GenerateIR", pre_stage++);
 
@@ -453,6 +461,88 @@ int Module::CompileFile() {
     }
 
     return errorCount;
+}
+
+llvm::DIType *Module::GetStructDIType(const Type *type, llvm::DIScope *scope) {
+    Assert(!diStructsCompleted);
+    const StructType *st = CastType<StructType>(type);
+    const UndefinedStructType *ust = CastType<UndefinedStructType>(type);
+    const StructIdentity *identity = GetStructIdentity(type);
+    Assert(identity != nullptr);
+    // A struct declared in a function body is described in the scope of each
+    // function that uses it (also e.g. a template instantiated with it), by
+    // its own copy of the debug type: the copy then goes away with the
+    // function if it is removed (e.g. an unused template instantiation), and
+    // is kept as the scope of the inlined code if the function is inlined.
+    // Such structs are only used in functions; the namespace of the file is
+    // used only as a fallback.
+    llvm::DISubprogram *owner = nullptr;
+    if (identity->localIndex != 0) {
+        if (auto *localScope = llvm::dyn_cast_or_null<llvm::DILocalScope>(scope)) {
+            owner = localScope->getSubprogram();
+        }
+    }
+    // Keep the placeholders of forward declarations apart, as only the ones
+    // of structs that are defined get their sizes.
+    auto [it, inserted] =
+        diStructs.try_emplace(StructDIKey(identity, type->GetString(), ust != nullptr, owner), StructDIType{type, {}});
+    if (inserted) {
+        // The debug types of arrays and members take the size and alignment
+        // of their element types right away.  A forward declared struct is
+        // used only through pointers and references.
+        uint64_t size = 0;
+        uint32_t align = 0;
+        llvm::DINode::DIFlags flags = llvm::DINode::FlagFwdDecl;
+        if (const llvm::StructLayout *layout = st ? st->GetLayout() : nullptr) {
+            size = layout->getSizeInBits();
+            align = layout->getAlignment().value() * 8;
+            flags = llvm::DINode::FlagZero;
+        }
+        SourcePos pos = type->GetSourcePos();
+        it->second.diType.reset(diBuilder->createReplaceableCompositeType(
+            llvm::dwarf::DW_TAG_structure_type, std::get<1>(it->first), pos.GetDINamespace(), pos.GetDIFile(),
+            pos.first_line, 0, size, align, flags));
+        diStructPlaceholders.push_back(it);
+    }
+    return it->second.diType;
+}
+
+void Module::completeStructDITypes() {
+    // The debug types of the definitions may add placeholders for the
+    // structs their members refer to, which are completed in turn.
+    for (size_t i = 0; i < diStructPlaceholders.size(); ++i) {
+        StructDIType &entry = diStructPlaceholders[i]->second;
+        llvm::DISubprogram *owner = std::get<3>(diStructPlaceholders[i]->first);
+        const UndefinedStructType *ust = CastType<UndefinedStructType>(entry.type);
+        // Don't describe the definitions once there are errors (e.g. in
+        // them), as their members may be invalid; nothing is compiled then
+        // anyway.
+        const StructType *definition = nullptr;
+        if (errorCount == 0) {
+            definition = ust ? ust->GetDefinition() : CastType<StructType>(entry.type);
+        }
+        llvm::DIType *replacement = nullptr;
+        if (errorCount == 0 && definition != nullptr && definition->GetLayout() != nullptr) {
+            llvm::DIScope *scope = owner;
+            if (scope == nullptr) {
+                scope = definition->GetSourcePos().GetDINamespace();
+            }
+            // For a forward declaration, this may be the placeholder of the
+            // definition used in the same function, which is completed later.
+            replacement = ust ? definition->GetDIType(scope) : definition->CreateDIType(scope, scope);
+        } else {
+            SourcePos pos = entry.type->GetSourcePos();
+            llvm::DIScope *scope = owner;
+            if (scope == nullptr) {
+                scope = pos.GetDINamespace();
+            }
+            replacement = diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, entry.type->GetString(),
+                                                       scope, pos.GetDIFile(), pos.first_line);
+        }
+        diBuilder->replaceTemporary(llvm::TempDIType(entry.diType.get()), replacement);
+    }
+    diStructPlaceholders.clear();
+    diStructsCompleted = true;
 }
 
 void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos) {
@@ -848,29 +938,30 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     This functions returns true and issues an error if are any illegal
     types are found and returns false otherwise.
 */
+/** Structs, by identity, variability, constness and the vectorOk and soaOk
+    arguments of lRecursiveCheckValidParamType(), that it is checking or has
+    found valid.  An invalid struct makes the whole check fail, so it needs
+    no entry. */
+using CheckedStructs = std::set<std::tuple<const StructIdentity *, Variability::VarType, int, bool, bool, bool>>;
+
 static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
-                                          SourcePos pos, std::vector<const StructType *> &inProgress) {
+                                          SourcePos pos, CheckedStructs &checked) {
+    t = ResolveForwardDeclaredStruct(t);
     const StructType *st = CastType<StructType>(t);
     if (st != nullptr) {
-        // Pointers to forward declared structs are resolved below, so the
-        // members of a self-referential struct can lead back here.  The
-        // resolved types are created anew (e.g. aligned variants), so compare
-        // them by value.
-        for (const StructType *visited : inProgress) {
-            if (Type::Equal(visited, st)) {
-                return true;
-            }
+        // A struct reached again, through the members of a self-referential
+        // struct or another path, has been checked or is being checked.
+        // Checking each struct once also keeps the check linear.
+        const Variability v = st->GetVariability();
+        if (!checked.insert({st->GetIdentity().get(), v.type, v.soaWidth, st->IsConstType(), vectorOk, soaOk}).second) {
+            return true;
         }
-        inProgress.push_back(st);
-        bool valid = true;
         for (int i = 0; i < st->GetElementCount(); ++i) {
-            if (!lRecursiveCheckValidParamType(st->GetElementType(i), vectorOk, soaOk, name, pos, inProgress)) {
-                valid = false;
-                break;
+            if (!lRecursiveCheckValidParamType(st->GetElementType(i), vectorOk, soaOk, name, pos, checked)) {
+                return false;
             }
         }
-        inProgress.pop_back();
-        return valid;
+        return true;
     }
 
     // Vector types are also not supported, pending ispc properly
@@ -882,7 +973,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
 
     const SequentialType *seqt = CastType<SequentialType>(t);
     if (seqt != nullptr) {
-        return lRecursiveCheckValidParamType(seqt->GetElementType(), vectorOk, soaOk, name, pos, inProgress);
+        return lRecursiveCheckValidParamType(seqt->GetElementType(), vectorOk, soaOk, name, pos, checked);
     }
 
     const PointerType *pt = CastType<PointerType>(t);
@@ -892,8 +983,7 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
         if (pt->IsVaryingType()) {
             return false;
         } else {
-            return lRecursiveCheckValidParamType(ResolveForwardDeclaredStruct(pt->GetBaseType()), true, true, name, pos,
-                                                 inProgress);
+            return lRecursiveCheckValidParamType(pt->GetBaseType(), true, true, name, pos, checked);
         }
     }
 
@@ -914,8 +1004,8 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
 
 static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
                                           SourcePos pos) {
-    std::vector<const StructType *> inProgress;
-    return lRecursiveCheckValidParamType(t, vectorOk, soaOk, name, pos, inProgress);
+    CheckedStructs checked;
+    return lRecursiveCheckValidParamType(t, vectorOk, soaOk, name, pos, checked);
 }
 
 /** Given a Symbol representing a function parameter, see if it or any
@@ -968,6 +1058,88 @@ static void lCheckTaskParameterTypes(const Type *type, const std::string &name, 
     }
 }
 #endif
+
+/** Returns true if the given type reaches a forward declared struct that
+    isn't defined yet through the types that lRecursiveCheckValidParamType()
+    checks. */
+static bool lReachesUndefinedStruct(const Type *t, std::set<const StructIdentity *> &visited) {
+    t = ResolveForwardDeclaredStruct(t);
+    if (CastType<UndefinedStructType>(t) != nullptr) {
+        return true;
+    }
+    if (const StructType *st = CastType<StructType>(t)) {
+        if (!visited.insert(st->GetIdentity().get()).second) {
+            return false;
+        }
+        for (int i = 0; i < st->GetElementCount(); ++i) {
+            if (lReachesUndefinedStruct(st->GetElementType(i), visited)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    if (const SequentialType *seqt = CastType<SequentialType>(t)) {
+        return lReachesUndefinedStruct(seqt->GetElementType(), visited);
+    }
+    if (const PointerType *pt = CastType<PointerType>(t)) {
+        return lReachesUndefinedStruct(pt->GetBaseType(), visited);
+    }
+    return false;
+}
+
+/** Returns true if the return type or a parameter type of the given function
+    type reaches a forward declared struct that isn't defined yet. */
+static bool lReachesUndefinedStruct(const FunctionType *ftype) {
+    std::set<const StructIdentity *> visited;
+    if (lReachesUndefinedStruct(ftype->GetReturnType(), visited)) {
+        return true;
+    }
+    for (int i = 0; i < ftype->GetNumParameters(); ++i) {
+        if (lReachesUndefinedStruct(ftype->GetParameterType(i), visited)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Checks that the return type and the parameter types of an exported
+    function, or the parameter types of a task for Xe targets, can be passed
+    to and from the application. */
+static void lCheckApplicationFunctionTypes(const std::string &name, const FunctionType *functionType, SourcePos pos) {
+    // Make sure that the return type isn't 'varying' or vector typed if
+    // the function is 'export'ed.
+    if (functionType->IsExported() &&
+        lRecursiveCheckValidParamType(functionType->GetReturnType(), false, false, name, pos) == false) {
+        Error(pos,
+              "Illegal to return a \"varying\" or vector type from "
+              "exported function \"%s\"",
+              name.c_str());
+    }
+
+    // If the function is exported or in case of Xe target is task, make sure
+    // that the parameters don't have any funky stuff going on in them.
+    // JCB nomosoa - Varying is now a-ok.
+    for (int i = 0; i < functionType->GetNumParameters(); ++i) {
+        const Type *argType = functionType->GetParameterType(i);
+        const std::string &argName = functionType->GetParameterName(i);
+        const SourcePos &argPos = functionType->GetParameterSourcePos(i);
+        if (functionType->IsExported()) {
+            lCheckExportedParameterTypes(argType, argName, argPos);
+        }
+#ifdef ISPC_XE_ENABLED
+        if (functionType->IsISPCKernel()) {
+            lCheckTaskParameterTypes(argType, argName, argPos);
+        }
+#endif
+    }
+}
+
+void Module::CheckDeferredApplicationFunctions() {
+    for (const auto &[name, functionType, pos] : deferredApplicationFunctions) {
+        lCheckApplicationFunctionTypes(name, functionType, pos);
+    }
+    deferredApplicationFunctions.clear();
+}
 
 /** Given a function type, loop through the function parameters and see if
     any are StructTypes.  If so, issue an error; this is currently broken
@@ -1170,14 +1342,14 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     function->setCallingConv(functionType->GetCallingConv());
     g->target->markFuncWithTargetAttr(function);
 
-    // Make sure that the return type isn't 'varying' or vector typed if
-    // the function is 'export'ed.
-    if (functionType->IsExported() &&
-        lRecursiveCheckValidParamType(functionType->GetReturnType(), false, false, name, pos) == false) {
-        Error(pos,
-              "Illegal to return a \"varying\" or vector type from "
-              "exported function \"%s\"",
-              name.c_str());
+    // A forward declared struct that the function passes to or from the
+    // application may be defined later, so check its members then.
+    if (functionType->IsExported() || functionType->IsISPCKernel()) {
+        if (lReachesUndefinedStruct(functionType)) {
+            deferredApplicationFunctions.emplace_back(name, functionType, pos);
+        } else {
+            lCheckApplicationFunctionTypes(name, functionType, pos);
+        }
     }
 
     if (functionType->IsTask() && functionType->GetReturnType()->IsVoidType() == false) {
@@ -1207,18 +1379,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         const std::string &argName = functionType->GetParameterName(i);
         Expr *defaultValue = functionType->GetParameterDefault(i);
         const SourcePos &argPos = functionType->GetParameterSourcePos(i);
-
-        // If the function is exported or in case of Xe target is task, make sure that the parameter
-        // doesn't have any funky stuff going on in it.
-        // JCB nomosoa - Varying is now a-ok.
-        if (functionType->IsExported()) {
-            lCheckExportedParameterTypes(argType, argName, argPos);
-        }
-#ifdef ISPC_XE_ENABLED
-        if (functionType->IsISPCKernel()) {
-            lCheckTaskParameterTypes(argType, argName, argPos);
-        }
-#endif
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the

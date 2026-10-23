@@ -299,19 +299,26 @@ static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FI
     fprintf(file, "\n");
 }
 
-/** Returns true if the non-const version of the given type is in the vector.
+/** Returns the entry of the vector that is equal to the non-const version of
+    the given type, or nullptr if there is none.
  */
-template <typename T> static bool lContainsType(const Type *type, const std::vector<const T *> *exportedTypes) {
+template <typename T> static const T *lFindType(const Type *type, const std::vector<const T *> *exportedTypes) {
     type = type->GetAsNonConstType();
 
     // Linear search, so this ends up being n^2.  It's unlikely this will
     // matter in practice, though.
     for (const T *exported : *exportedTypes) {
         if (Type::Equal(exported, type)) {
-            return true;
+            return exported;
         }
     }
-    return false;
+    return nullptr;
+}
+
+/** Returns true if the non-const version of the given type is in the vector.
+ */
+template <typename T> static bool lContainsType(const Type *type, const std::vector<const T *> *exportedTypes) {
+    return lFindType(type, exportedTypes) != nullptr;
 }
 
 /** Add the given type to the vector, if that type isn't already in there.
@@ -333,30 +340,49 @@ template <typename T> static void lAddTypeIfNew(const Type *type, std::vector<co
  */
 static void lGetExportedTypes(const Type *type, std::vector<const StructType *> *exportedStructTypes,
                               std::vector<const EnumType *> *exportedEnumTypes,
-                              std::vector<const VectorType *> *exportedVectorTypes) {
+                              std::vector<const VectorType *> *exportedVectorTypes,
+                              std::set<const StructType *> &walked) {
     const ArrayType *arrayType = CastType<ArrayType>(type);
     const StructType *structType = CastType<StructType>(type);
     const FunctionType *ftype = CastType<FunctionType>(type);
 
     if (CastType<ReferenceType>(type) != nullptr) {
-        lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes,
+                          walked);
     } else if (CastType<PointerType>(type) != nullptr) {
-        lGetExportedTypes(type->GetBaseType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        lGetExportedTypes(type->GetBaseType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes, walked);
     } else if (arrayType != nullptr) {
-        lGetExportedTypes(arrayType->GetElementType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        lGetExportedTypes(arrayType->GetElementType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes,
+                          walked);
     } else if (structType != nullptr) {
-        lAddTypeIfNew(type, exportedStructTypes);
+        // Once the members of a struct have been processed, processing them
+        // again finds no new types, but would take exponential time for
+        // structs reached on many paths, so it is skipped (walked has the
+        // entries of the vector whose members have been processed).  While
+        // that is still in progress, the members are processed again, as
+        // before: that adds the types of the remaining members earlier, and
+        // the order of the types is the order of their declarations in the
+        // header.
+        const StructType *entry = lFindType(type, exportedStructTypes);
+        if (entry != nullptr && walked.count(entry) != 0) {
+            return;
+        }
+        if (entry == nullptr) {
+            lAddTypeIfNew(type, exportedStructTypes);
+            entry = exportedStructTypes->back();
+        }
         for (int i = 0; i < structType->GetElementCount(); ++i) {
             lGetExportedTypes(structType->GetElementType(i), exportedStructTypes, exportedEnumTypes,
-                              exportedVectorTypes);
+                              exportedVectorTypes, walked);
         }
+        walked.insert(entry);
     } else if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
         // The struct may have been defined after this type was created.  The
         // members of a self-referential struct lead back here, so visit each
         // definition only once.
         const StructType *st = ust->GetDefinition();
         if (st != nullptr && !lContainsType(st, exportedStructTypes)) {
-            lGetExportedTypes(st, exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+            lGetExportedTypes(st, exportedStructTypes, exportedEnumTypes, exportedVectorTypes, walked);
         }
     } else if (CastType<EnumType>(type) != nullptr) {
         lAddTypeIfNew(type, exportedEnumTypes);
@@ -364,11 +390,12 @@ static void lGetExportedTypes(const Type *type, std::vector<const StructType *> 
         lAddTypeIfNew(type, exportedVectorTypes);
     } else if (ftype != nullptr) {
         // Handle Return Types
-        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes, walked);
 
         // And now the parameter types...
         for (int j = 0; j < ftype->GetNumParameters(); ++j) {
-            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes,
+                              walked);
         }
     } else {
         Assert(CastType<AtomicType>(type) != nullptr);
@@ -382,16 +409,18 @@ static void lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
                                    std::vector<const StructType *> *exportedStructTypes,
                                    std::vector<const EnumType *> *exportedEnumTypes,
                                    std::vector<const VectorType *> *exportedVectorTypes) {
+    std::set<const StructType *> walked;
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         Assert(ftype != nullptr);
 
         // Handle the return type
-        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes, walked);
 
         // And now the parameter types...
         for (int j = 0; j < ftype->GetNumParameters(); ++j) {
-            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
+            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes,
+                              walked);
         }
     }
 }

@@ -114,6 +114,7 @@ typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 #include <inttypes.h>
 #include <llvm/IR/Constants.h>
 #include <stdio.h>
+#include <unordered_set>
 #include <variant>
 
 using namespace ispc;
@@ -150,7 +151,7 @@ static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int
 static StructType *lCreateStructType(const std::string &name, const Type *declType,
                                      const std::vector<StructDeclaration *> *decl, AttributeList *attrs,
                                      SourcePos pos);
-static const Type *lDeclareStructInCurrentScope(const Type *type, SourcePos pos);
+static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos, bool isDefinition);
 
 enum class TemplateType { Template, Instantiation, Specialization };
 static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
@@ -343,6 +344,7 @@ struct ForeachDimension {
 
 %destructor { lCleanUpString($$); } <stringVal>
 %destructor { delete $$; } <storageClass>
+%destructor { delete $$; } <typeList>
 %destructor { delete $$; } <attributeList>
 %destructor { delete $$; } <attr>
 %destructor { delete $$; } <attrArg>
@@ -1136,21 +1138,7 @@ declaration
       {
           // "struct Foo;" declares the struct in the current scope, even if
           // a struct with the same name is declared in an outer scope.
-          const Type *t = m->symbolTable->LookupType($2);
-          if (t == nullptr) {
-              t = new UndefinedStructType($2, Variability::Unbound, false, @2);
-              m->symbolTable->AddType($2, t, @2);
-          } else if (CastType<StructType>(t) == nullptr && CastType<UndefinedStructType>(t) == nullptr) {
-              Error(@2, "Type \"%s\" is not a struct type! (%s)", $2, t->GetString().c_str());
-              t = nullptr;
-          } else {
-              const std::string &name = CastType<StructType>(t) ? CastType<StructType>(t)->GetStructName()
-                                                                : CastType<UndefinedStructType>(t)->GetStructName();
-              // Not if the name is a typedef of a struct with another name.
-              if (name == $2) {
-                  t = lDeclareStructInCurrentScope(t, @2);
-              }
-          }
+          const Type *t = lDeclareStructInCurrentScope($2, @2, false);
           $$ = new Declaration(new DeclSpecs(t));
           // allocated by strdup in struct_or_union_name
           free((char*)$2);
@@ -1459,21 +1447,20 @@ type_specifier
     ;
 
 type_specifier_list
+    // A type that is null after an error is left out, so that the other
+    // types are still exported.
     : type_specifier
     {
+        $$ = new std::vector<std::pair<const Type *, SourcePos> >;
         if ($1 == nullptr)
-            $$ = nullptr;
-        else {
-            std::vector<std::pair<const Type *, SourcePos> > *vec =
-                new std::vector<std::pair<const Type *, SourcePos> >;
-            vec->push_back(std::make_pair(ResolveForwardDeclaredStruct($1), @1));
-            $$ = vec;
-        }
+            Assert(m->errorCount > 0);
+        else
+            $$->push_back(std::make_pair(ResolveForwardDeclaredStruct($1), @1));
     }
     | type_specifier_list ',' type_specifier
     {
         $$ = $1;
-        if ($1 == nullptr)
+        if ($3 == nullptr)
             Assert(m->errorCount > 0);
         else
             $$->push_back(std::make_pair(ResolveForwardDeclaredStruct($3), @3));
@@ -1549,12 +1536,14 @@ struct_or_union_and_name
     ;
 
 struct_or_union_definition_head
-    : struct_or_union_and_name '{'
+    : struct_or_union struct_or_union_name '{'
       {
           // The struct is declared in the current scope before its members,
           // so that they refer to it rather than to a struct with the same
           // name in an outer scope.
-          $$ = lDeclareStructInCurrentScope($1, @1);
+          $$ = lDeclareStructInCurrentScope($2, @2, true);
+          // allocated by strdup in struct_or_union_name
+          free((char*)$2);
       }
     ;
 
@@ -2899,8 +2888,7 @@ external_declaration
     | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL '{' declaration '}'
     | TOKEN_EXPORT '{' type_specifier_list '}' ';'
     {
-        if ($3 != nullptr)
-            m->AddExportedTypes(*$3);
+        m->AddExportedTypes(*$3);
         // type_specifier_list returns a vector that is not needed anymore.
         delete $3;
     }
@@ -3074,7 +3062,7 @@ template_declaration
     : template_head
       {
           // Scope for template parameters definition
-          m->symbolTable->PushScope();
+          m->symbolTable->PushTemplateParameterScope();
           TemplateParms *list = (TemplateParms *) $1;
           for(size_t i = 0; i < list->GetCount(); i++) {
               std::string name = (*list)[i]->GetName();
@@ -3089,11 +3077,16 @@ template_declaration
       declaration_specifiers declarator
       {
           lAddTemplateDeclaration($1, $3, $4);
-          lAddFunctionParams($4);
-          lAddMaskToSymbolTable(@4);
-          const FunctionType *ft = CastType<FunctionType>($4->type);
-          // Creating a new TemplateSymbol just to pass it further seems to be a waste
-          $$ = new TemplateSymbol($1, $4->name, ft, $3->storageClass, @4, false /*not used*/, false /*not used*/);
+          if ($3 == nullptr || $4 == nullptr) {
+              // Error happened earlier during parsing
+              $$ = nullptr;
+          } else {
+              lAddFunctionParams($4);
+              lAddMaskToSymbolTable(@4);
+              const FunctionType *ft = CastType<FunctionType>($4->type);
+              // Creating a new TemplateSymbol just to pass it further seems to be a waste
+              $$ = new TemplateSymbol($1, $4->name, ft, $3->storageClass, @4, false /*not used*/, false /*not used*/);
+          }
       }
     ;
 
@@ -3842,8 +3835,51 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
     enumType->SetEnumerators(*enums);
     lFinalizeEnumeratorSymbols(*enums, enumType);
     for (unsigned int i = 0; i < enums->size(); ++i)
-        m->symbolTable->AddVariable((*enums)[i]);
+        m->symbolTable->AddEnumerator((*enums)[i]);
     return enumType;
+}
+
+/* Returns true if the given type depends on a template parameter, through
+   its element types or its element counts. */
+static bool lIsDependentType(const Type *type, std::unordered_set<const StructIdentity *> &visited) {
+    if (type == nullptr) {
+        return false;
+    }
+    if (CastType<AtomicType>(type) != nullptr || CastType<TemplateTypeParmType>(type) != nullptr) {
+        return type->IsTypeDependent();
+    }
+    if (const PointerType *pt = CastType<PointerType>(type)) {
+        return lIsDependentType(pt->GetBaseType(), visited);
+    }
+    if (const ReferenceType *rt = CastType<ReferenceType>(type)) {
+        return lIsDependentType(rt->GetReferenceTarget(), visited);
+    }
+    if (const SequentialType *st = CastType<SequentialType>(type)) {
+        return st->IsCountDependent() || lIsDependentType(st->GetElementType(), visited);
+    }
+    if (const StructType *st = CastType<StructType>(type)) {
+        // All the variants of a struct have the same members.
+        if (!visited.insert(st->GetIdentity().get()).second) {
+            return false;
+        }
+        for (int i = 0; i < st->GetElementCount(); ++i) {
+            if (lIsDependentType(st->GetRawElementType(i), visited)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    if (const FunctionType *ft = CastType<FunctionType>(type)) {
+        if (lIsDependentType(ft->GetReturnType(), visited)) {
+            return true;
+        }
+        for (int i = 0; i < ft->GetNumParameters(); ++i) {
+            if (lIsDependentType(ft->GetParameterType(i), visited)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 /* Create StructType and add it to the symbol table if it's not anonymous.
@@ -3865,10 +3901,29 @@ static StructType *lCreateStructType(const std::string &name, const Type *declTy
         GetStructTypesNamesPositions(*decl, &elementTypes, &elementNames, &elementPositions);
     }
 
+    // A named struct defined in the declaration of a function template is
+    // global (see SymbolTable::IsTemplateParameterScope()), so its members
+    // can't depend on the template parameters.  Such a struct isn't declared.
+    bool isDeclared = !name.empty();
+    if (isDeclared && m->symbolTable->IsTemplateParameterScope()) {
+        std::unordered_set<const StructIdentity *> visited;
+        for (size_t i = 0; i < elementTypes.size(); ++i) {
+            if (lIsDependentType(elementTypes[i], visited)) {
+                Error(elementPositions[i],
+                      "Member \"%s\" of struct \"%s\" defined in the declaration of a function template "
+                      "can't depend on the template parameters.",
+                      elementNames[i].c_str(), name.c_str());
+                isDeclared = false;
+                break;
+            }
+        }
+    }
+
     // The definition of a struct forward declared in the same scope is the
     // same struct as the forward declaration.
     std::shared_ptr<StructIdentity> identity;
-    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(declType)) {
+    const UndefinedStructType *ust = CastType<UndefinedStructType>(declType);
+    if (ust != nullptr && isDeclared) {
         identity = ust->GetIdentity();
     }
 
@@ -3876,45 +3931,59 @@ static StructType *lCreateStructType(const std::string &name, const Type *declTy
                                     alignment, identity);
     st->RegisterInStructTypeMap();
 
-    if (!name.empty()) {
+    if (isDeclared) {
         m->symbolTable->AddType(name.c_str(), st, pos);
     }
 
     return st;
 }
 
-/* Returns the identity of the given struct type, or nullptr if it isn't a
-   struct type. */
-static const StructIdentity *lGetStructIdentity(const Type *type) {
-    if (const StructType *st = CastType<StructType>(type)) {
-        return st->GetIdentity().get();
+/* Declares the struct "name" in the current scope, as C does for a struct
+   definition (isDefinition) or a "struct name;" declaration, and returns it.
+   That is a new struct, unless the struct is already declared in the current
+   scope.  If the name is a typedef of a struct with another name, the new
+   struct has the name of the typedef, as the struct tag in C, but if the
+   typedef is in the current scope, a declaration refers to the struct of the
+   typedef, and a definition defines that struct if it is declared in the
+   current scope.  Returns nullptr after an error. */
+static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos, bool isDefinition) {
+    const Type *type = m->symbolTable->LookupType(name);
+    if (type != nullptr && GetStructIdentity(type) == nullptr) {
+        Error(pos, "Type \"%s\" is not a struct type! (%s)", name, type->GetString().c_str());
+        return nullptr;
     }
-    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
-        return ust->GetIdentity().get();
-    }
-    return nullptr;
-}
-
-/* If the given type is a struct declared in an outer scope, declare a new
-   struct with the same name in the current scope, as C does for a struct
-   definition or a "struct Foo;" declaration, and return it.  Otherwise
-   return the struct as declared in the current scope, or the given type if
-   it isn't a struct. */
-static const Type *lDeclareStructInCurrentScope(const Type *type, SourcePos pos) {
-    const StructIdentity *identity = lGetStructIdentity(type);
-    if (identity == nullptr) {
-        return type;
-    }
-    const StructType *st = CastType<StructType>(type);
-    const std::string &name = st ? st->GetStructName() : CastType<UndefinedStructType>(type)->GetStructName();
-    // The type may be a variant of the struct in the current scope, e.g.
-    // through "typedef uniform Foo FooT;".
-    const Type *local = m->symbolTable->LookupLocalType(name.c_str());
-    if (local != nullptr && lGetStructIdentity(local) == identity) {
-        return local;
+    // Looks up a type in the scope of the new struct.  Structs declared in
+    // the template parameter scope are global (see
+    // SymbolTable::IsTemplateParameterScope()), and that scope has only
+    // template parameters.
+    auto lookupLocal = [](const std::string &n) {
+        return m->symbolTable->IsTemplateParameterScope() ? m->symbolTable->LookupType(n.c_str())
+                                                          : m->symbolTable->LookupLocalType(n.c_str());
+    };
+    if (type != nullptr) {
+        const StructType *st = CastType<StructType>(type);
+        const std::string structName = st ? st->GetStructName() : CastType<UndefinedStructType>(type)->GetStructName();
+        const bool isLocalTypedef = structName != name && lookupLocal(name) != nullptr;
+        if (isLocalTypedef && !isDefinition) {
+            return type;
+        }
+        if (structName == name || isLocalTypedef) {
+            // The struct may be declared in the current scope, also through a
+            // typedef there, e.g. "typedef uniform Foo FooT;".
+            const Type *local = lookupLocal(structName);
+            if (local != nullptr && GetStructIdentity(local) == GetStructIdentity(type)) {
+                return local;
+            }
+            if (isLocalTypedef) {
+                Error(pos, "Ignoring redefinition of type \"%s\".", name);
+                return nullptr;
+            }
+        }
     }
     UndefinedStructType *ust = new UndefinedStructType(name, Variability::Unbound, false, pos);
-    m->symbolTable->AddType(name.c_str(), ust, pos);
+    if (!m->symbolTable->AddType(name, ust, pos)) {
+        return nullptr;
+    }
     return ust;
 }
 

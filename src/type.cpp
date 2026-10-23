@@ -862,18 +862,27 @@ llvm::DIType *TemplateTypeParmType::GetDIType(llvm::DIScope *scope) const { UNRE
 ///////////////////////////////////////////////////////////////////////////
 // EnumType
 
-EnumType::EnumType(SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p) {
+/** Returns a new identity for an enum with the given name declared in the
+    current scope.  Enums declared in the template parameter scope are
+    global; see SymbolTable::IsTemplateParameterScope(). */
+static std::shared_ptr<const EnumIdentity> lNewEnumIdentity(const std::string &name) {
+    auto identity = std::make_shared<EnumIdentity>();
+    if (m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope() && !m->symbolTable->IsTemplateParameterScope()) {
+        identity->localIndex = ++m->localEnumCount[name];
+    }
+    return identity;
+}
+
+EnumType::EnumType(SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p), identity(lNewEnumIdentity("")) {
     //    name = "/* (anonymous) */";
 }
 
-EnumType::EnumType(const char *n, SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p), name(n) {}
-
-EnumType::EnumType(const std::string &n, Variability v, bool ic, SourcePos p, const std::vector<Symbol *> &enums)
-    : Type(ENUM_TYPE, v, ic, p), name(n), enumerators(enums) {}
+EnumType::EnumType(const char *n, SourcePos p)
+    : Type(ENUM_TYPE, Variability::Unbound, false, p), name(n), identity(lNewEnumIdentity(name)) {}
 
 EnumType::EnumType(const EnumType &other)
     : Type(ENUM_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
-      enumerators(other.enumerators) {}
+      identity(other.identity), enumerators(other.enumerators) {}
 
 EnumType *EnumType::create() const { return new EnumType(*this); }
 
@@ -904,7 +913,19 @@ std::string EnumType::Mangle() const {
     }
     ret += variability.MangleString();
     //    ret += std::string("enum[") + name + std::string("]");
-    ret += std::string("enum_5B_") + name + std::string("_5D_");
+    ret += std::string("enum_5B_") + name;
+    // Identifiers can't contain '.', so these suffixes don't collide with the
+    // name of another enum.
+    if (identity->localIndex != 0) {
+        ret += "." + std::to_string(identity->localIndex);
+    } else if (name.empty() && !enumerators.empty()) {
+        // The first enumerator of a global anonymous enum is a global symbol,
+        // so it distinguishes the enum from the other ones in the
+        // translation unit, and it is the same in each translation unit that
+        // includes the enum, e.g. through "typedef enum { A } E;".
+        ret += "." + enumerators[0]->name;
+    }
+    ret += std::string("_5D_");
     return ret;
 }
 
@@ -972,10 +993,13 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     llvm::DINodeArray elementArray = m->diBuilder->getOrCreateArray(enumeratorDescriptors);
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
+    // An enum declared in a function body has no identifier: LLVM would merge
+    // enums with the same identifier, e.g. when linking modules.
+    const std::string identifier = identity->localIndex == 0 ? name : "";
     llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
         m->diBuilder->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
-                                            32 /* align in bits */, elementArray, underlyingType, 0, name);
+                                            32 /* align in bits */, elementArray, underlyingType, 0, identifier);
     switch (variability.type) {
     case Variability::Uniform:
         return diType;
@@ -1922,10 +1946,12 @@ static std::string lMangleStructName(const std::string &name, Variability variab
 }
 
 /** Returns a new identity for a struct with the given name declared in the
-    current scope. */
+    current scope.  Structs declared in the template parameter scope are
+    global; see SymbolTable::IsTemplateParameterScope(). */
 static std::shared_ptr<StructIdentity> lNewStructIdentity(const std::string &name) {
     auto identity = std::make_shared<StructIdentity>();
-    if (!name.empty() && m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope()) {
+    if (!name.empty() && m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope() &&
+        !m->symbolTable->IsTemplateParameterScope()) {
         identity->localIndex = ++m->localStructCount[name];
     }
     return identity;
@@ -2005,8 +2031,8 @@ void StructType::RegisterInStructTypeMap() {
                     Assert(m->errorCount > 0);
                     return;
                 } else if (CastType<FunctionType>(type) != nullptr) {
-                    Error(elementPositions[i], "Method declarations are not "
-                                               "supported.");
+                    // Reported when the struct is declared.
+                    Assert(m->errorCount > 0);
                     return;
                 } else {
                     llvm::Type *llvmType = type->LLVMStorageType(g->ctx);
@@ -2231,11 +2257,33 @@ llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
     return it->second;
 }
 
-// Versioning of this function becomes really messy, so versioning the whole function.
 llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
-    llvm::Type *llvm_type = LLVMStorageType(g->ctx);
+    // Describe a struct declared in a function body in the scope of the
+    // function, as C/C++ compilers do, so that debuggers don't find it by
+    // name when resolving a forward declaration of another struct with the
+    // same name.
+    if (identity->localIndex != 0) {
+        return m->GetStructDIType(this, scope);
+    }
+    return CreateDIType(pos.GetDINamespace(), scope);
+}
+
+const llvm::StructLayout *StructType::GetLayout() const {
+    auto llvmType = llvm::dyn_cast_or_null<llvm::StructType>(LLVMStorageType(g->ctx));
+    if (llvmType == nullptr || llvmType->isOpaque() || !llvmType->isSized()) {
+        return nullptr;
+    }
+    return m->module->getDataLayout().getStructLayout(llvmType);
+}
+
+llvm::DIType *StructType::CreateDIType(llvm::DIScope *structScope, llvm::DIScope *scope) const {
     auto &dataLayout = m->module->getDataLayout();
-    auto layout = dataLayout.getStructLayout(llvm::dyn_cast_or_null<llvm::StructType>(llvm_type));
+    const llvm::StructLayout *layout = GetLayout();
+    if (layout == nullptr) {
+        Assert(m->errorCount > 0);
+        return m->diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, GetString(), structScope,
+                                               pos.GetDIFile(), pos.first_line);
+    }
     std::vector<llvm::Metadata *> elementLLVMTypes;
     // Walk through the elements of the struct; for each one figure out its
     // alignment and size, using that to figure out its offset w.r.t. the
@@ -2259,8 +2307,7 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
 
     llvm::DINodeArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile *diFile = pos.GetDIFile();
-    llvm::DINamespace *diSpace = pos.GetDINamespace();
-    return m->diBuilder->createStructType(diSpace, GetString(), diFile,
+    return m->diBuilder->createStructType(structScope, GetString(), diFile,
                                           pos.first_line,                     // Line number
                                           layout->getSizeInBits(),            // Size in bits
                                           layout->getAlignment().value() * 8, // Alignment in bits
@@ -2424,8 +2471,10 @@ const StructType *UndefinedStructType::GetDefinitionBefore(SourcePos usePos) con
 
 void UndefinedStructType::SetDefinition(const StructType *st, SourcePos pos, bool isLocal,
                                         unsigned int scopeStart) const {
-    Assert(st != nullptr && st->GetStructName() == name && st->GetVariability() == Variability::Unbound &&
-           !st->IsConstType());
+    // The definition of a forward declared struct is created with the
+    // identity of the forward declaration; see lCreateStructType().
+    Assert(st != nullptr && st->GetStructName() == name && st->GetIdentity() == identity &&
+           st->GetVariability() == Variability::Unbound && !st->IsConstType());
     definition->type = st;
     definition->pos = pos;
     definition->isLocal = isLocal;
@@ -2456,6 +2505,16 @@ const Type *ispc::ResolveForwardDeclaredStruct(const Type *type, std::optional<S
         return st ? rt->GetWithBaseType(st) : type;
     }
     return type;
+}
+
+const StructIdentity *ispc::GetStructIdentity(const Type *type) {
+    if (const StructType *st = CastType<StructType>(type)) {
+        return st->GetIdentity().get();
+    }
+    if (const UndefinedStructType *ust = CastType<UndefinedStructType>(type)) {
+        return ust->GetIdentity().get();
+    }
+    return nullptr;
 }
 
 const UndefinedStructType *UndefinedStructType::GetAsSOAType(int width) const {
@@ -2504,22 +2563,14 @@ llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
 }
 
 llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
-    // Describe the struct by a forward declaration, which debuggers resolve
-    // by name to the definition.  Describing the definition itself here
-    // would recurse through the members of self-referential structs.  The
-    // definition may not be described anywhere else (e.g. if it is only used
-    // through pointers created before it was defined), so add it to the
-    // compile unit once.  Identify it by the definition and the name of the
-    // variant rather than by st, as GetDefinition() returns a new type for
-    // each aligned use.
-    const StructType *st = GetDefinition();
-    if (st != nullptr && m->diDefinedStructs.emplace(definition->type, st->GetString()).second) {
-        m->diBuilder->retainType(st->GetDIType(scope));
-    }
-    std::string diName = st ? st->GetString() : GetString();
-    SourcePos diPos = st ? st->GetSourcePos() : pos;
-    return m->diBuilder->createForwardDecl(llvm::dwarf::DW_TAG_structure_type, diName, diPos.GetDINamespace(),
-                                           diPos.GetDIFile(), diPos.first_line);
+    // The struct may be defined after this use (e.g. by a global variable
+    // declared before the definition), so describe it by a placeholder that
+    // is replaced by the debug type of the definition once the code of all
+    // functions is generated.  This also keeps the members of
+    // self-referential structs from recursing.  Debuggers would resolve a
+    // forward declaration by name, which may find another struct with the
+    // same name declared in a different scope.
+    return m->GetStructDIType(this, scope);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3568,8 +3619,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     const EnumType *eta = CastType<EnumType>(a);
     const EnumType *etb = CastType<EnumType>(b);
     if (eta != nullptr && etb != nullptr) {
-        // Kind of goofy, but this sufficies to check
-        return (eta->GetSourcePos() == etb->GetSourcePos() && eta->GetVariability() == etb->GetVariability());
+        return (eta->GetIdentity() == etb->GetIdentity() && eta->GetVariability() == etb->GetVariability());
     }
 
     const ArrayType *arta = CastType<ArrayType>(a);
@@ -3599,9 +3649,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
 
         const std::string &namea = sta ? sta->GetStructName() : usta->GetStructName();
         const std::string &nameb = stb ? stb->GetStructName() : ustb->GetStructName();
-        const StructIdentity *identitya = sta ? sta->GetIdentity().get() : usta->GetIdentity().get();
-        const StructIdentity *identityb = stb ? stb->GetIdentity().get() : ustb->GetIdentity().get();
-        return (namea == nameb && identitya == identityb);
+        return (namea == nameb && GetStructIdentity(a) == GetStructIdentity(b));
     }
 
     const PointerType *pta = CastType<PointerType>(a);

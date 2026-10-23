@@ -21,6 +21,10 @@
 #include <memory>
 #include <optional>
 
+namespace llvm {
+class StructLayout;
+} // namespace llvm
+
 namespace ispc {
 
 class ConstExpr;
@@ -465,6 +469,18 @@ class TemplateTypeParmType : public Type {
  *
  *  Note that ISPC enum assumes 32 bit int as underlying type.
  */
+/** Identifies an enum.  Enums with the same name may be declared in
+    different scopes (e.g. local enums in different functions), so the name
+    alone doesn't identify an enum.  It is shared by all variants (uniform,
+    varying, const, etc.) of an enum type.
+ */
+struct EnumIdentity {
+    /** Zero for enums declared in the global scope.  For enums declared in
+        other scopes, a positive number that distinguishes them from the
+        other enums with the same name; see EnumType::Mangle(). */
+    int localIndex = 0;
+};
+
 class EnumType : public Type {
   public:
     /** Constructor for anonymous enumerated types */
@@ -485,6 +501,9 @@ class EnumType : public Type {
     /** Returns the name of the enum type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetEnumName() const { return name; }
 
+    /** Returns the identity of the enum, shared by all of its variants. */
+    const std::shared_ptr<const EnumIdentity> &GetIdentity() const { return identity; }
+
     /** Provides the enumerators defined in the enum definition. */
     void SetEnumerators(const std::vector<Symbol *> &enumerators);
     /** Returns the total number of enuemrators in this enum type. */
@@ -494,9 +513,9 @@ class EnumType : public Type {
 
   private:
     const std::string name;
+    std::shared_ptr<const EnumIdentity> identity;
     std::vector<Symbol *> enumerators;
 
-    EnumType(const std::string &name, Variability v, bool ic, SourcePos pos, const std::vector<Symbol *> &enumerators);
     EnumType(const EnumType &other);
 
     EnumType *create() const override;
@@ -846,6 +865,15 @@ class StructType : public CollectionType {
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
     llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
+
+    /** Creates the debug type of the struct in structScope, with the debug
+        types of its members created in scope, or a forward declaration if
+        the layout of the struct isn't known. */
+    llvm::DIType *CreateDIType(llvm::DIScope *structScope, llvm::DIScope *scope) const;
+
+    /** Returns the layout of the struct, or nullptr if it isn't known
+        because its definition has errors. */
+    const llvm::StructLayout *GetLayout() const;
 
     /** Returns the type of the i'th structure element.  The value of \c i must
         be between 0 and NumElements()-1. */
@@ -1341,5 +1369,9 @@ inline bool IsReferenceType(const Type *t) { return CastType<ReferenceType>(t) !
     usePos once the uses can no longer come before the definition: while
     parsing, and after type checking (code generation, header emission). */
 const Type *ResolveForwardDeclaredStruct(const Type *type, std::optional<SourcePos> usePos = std::nullopt);
+
+/** Returns the identity of the given struct type, or nullptr if it isn't a
+    struct type. */
+const StructIdentity *GetStructIdentity(const Type *type);
 
 } // namespace ispc

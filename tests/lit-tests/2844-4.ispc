@@ -14,11 +14,14 @@ struct S1 func() {
 }
 
 struct S3 { struct S4 a; };
+// CHECK: Error: return type is an incomplete type: varying struct S3
 struct S3 foo() {
 // CHECK: Error: variable 'y' has incomplete struct type 'varying struct S3' and cannot be defined
     struct S3 y;
-// CHECK: Error: Attempt to allocate memory for incomplete type "varying struct S3".
-// CHECK: Error: Malformed return value in function with non-void return type.
+// No code is generated for a function with an incomplete return type, so code
+// generation reports no further errors.
+// CHECK-NOT: Error: Attempt to allocate memory for incomplete type
+// CHECK-NOT: Error: Malformed return value in function with non-void return type.
     return y;
 }
 

@@ -16,15 +16,18 @@
 #include "ispc.h"
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <set>
 #include <stdio.h>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include <clang/Frontend/FrontendOptions.h>
 #include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/TrackingMDRef.h>
 
 #include <llvm/Support/TimeProfiler.h>
 
@@ -37,6 +40,8 @@ class raw_string_ostream;
 }
 
 namespace ispc {
+
+struct StructIdentity;
 
 #ifdef ISPC_XE_ENABLED
 // Derived from ocloc_api.h
@@ -121,6 +126,15 @@ class Module {
     /** Adds the given type to the set of types that have their definitions
         included in automatically generated header files. */
     void AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types);
+
+    /** Returns the debug type of the given forward declared struct type or
+        struct type declared in a function body, used in the given scope.  It
+        is the same for all uses of the struct with the same variability and
+        constness (in the same function, for a struct declared in a function
+        body), and a placeholder until the code of all functions is
+        generated, when the struct may have been defined; see
+        completeStructDITypes(). */
+    llvm::DIType *GetStructDIType(const Type *type, llvm::DIScope *scope);
 
     /** Verify LLVM intrinsic called from ISPC source code is valid and return
         function symbol for it. */
@@ -402,11 +416,6 @@ class Module {
 
     llvm::DICompileUnit *diCompileUnit{nullptr};
 
-    /** Definitions of forward declared structs whose debug types have been
-        added to the compile unit, with the names of their variants; see
-        UndefinedStructType::GetDIType(). */
-    std::set<std::pair<const Type *, std::string>> diDefinedStructs;
-
     /** StructType cache.  This needs to be in the context of Module, so it's reset for
         any new Module in multi-target compilation.
 
@@ -424,9 +433,23 @@ class Module {
         StructIdentity::localIndex. */
     std::map<std::string, int> localStructCount;
 
+    /** Number of enums with a given name declared outside of the global
+        scope; see EnumIdentity::localIndex. */
+    std::map<std::string, int> localEnumCount;
+
   private:
     const char *srcFile{nullptr};
     AST *ast{nullptr};
+
+    /** Exported functions and Xe tasks whose types reach forward declared
+        structs that weren't defined when the function was declared, with
+        their names and positions.  Their types are checked at the end of
+        the translation unit; see CheckDeferredApplicationFunctions(). */
+    std::vector<std::tuple<std::string, const FunctionType *, SourcePos>> deferredApplicationFunctions;
+
+    /** Checks the types of the functions in deferredApplicationFunctions,
+        once all of the structs that can be defined are defined. */
+    void CheckDeferredApplicationFunctions();
 
     Output output{};
     CompilationMode m_compilationMode{};
@@ -558,6 +581,34 @@ class Module {
 
     int preprocessAndParse();
     int parse();
+
+    /** Replaces the placeholders that GetStructDIType() returned by the
+        debug types of the definitions of the structs, or by forward
+        declarations for the structs that are never defined. */
+    void completeStructDITypes();
+
+    /** Debug types of forward declared structs and structs declared in
+        function bodies by the identity of the struct, the name of the
+        variant, whether it is a forward declaration and the function that
+        uses it (for structs declared in function bodies), with the type they
+        were created for; see GetStructDIType().  Completing the placeholders
+        may merge the debug types that refer to them with equal ones, so
+        track the replacements. */
+    struct StructDIType {
+        const Type *type;
+        llvm::TypedTrackingMDRef<llvm::DIType> diType;
+    };
+    using StructDIKey = std::tuple<const StructIdentity *, std::string, bool, llvm::DISubprogram *>;
+    using StructDITypeMap = std::map<StructDIKey, StructDIType>;
+    StructDITypeMap diStructs;
+
+    /** The entries of diStructs whose debug types are still placeholders;
+        see completeStructDITypes(). */
+    std::vector<StructDITypeMap::iterator> diStructPlaceholders;
+
+    /** Whether completeStructDITypes() has run, after which no more
+        placeholders may be created. */
+    bool diStructsCompleted{false};
 };
 
 } // namespace ispc

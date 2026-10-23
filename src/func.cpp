@@ -207,6 +207,7 @@ void Function::typeCheckAndOptimize() {
     const Type *retType = GetType()->GetReturnType();
     if (!retType->IsCompleteType()) {
         Error(funcType->GetSourcePos(), "return type is an incomplete type: %s", retType->GetString().c_str());
+        hasIncompleteSignature = true;
     }
 
     for (int i = 0; i < funcType->GetNumParameters(); i++) {
@@ -215,6 +216,7 @@ void Function::typeCheckAndOptimize() {
             const SourcePos &pos = funcType->GetParameterSourcePos(i);
             const std::string &paramName = funcType->GetParameterName(i);
             Error(pos, "parameter '%s' is an incomplete type: %s", paramName.c_str(), paramType->GetString().c_str());
+            hasIncompleteSignature = true;
         }
     }
 
@@ -678,6 +680,13 @@ void Function::GenerateIR() const {
         return;
     }
 
+    // The error was reported by typeCheckAndOptimize().  The struct may be
+    // defined after the function, so code generation would see a mix of the
+    // incomplete and the complete type.
+    if (hasIncompleteSignature) {
+        return;
+    }
+
     // Figure out a reasonable source file position for the start of the
     // function body.  If possible, get the position of the first actual
     // non-StmtList statment...
@@ -1027,14 +1036,18 @@ void FunctionTemplate::Print() const {
     fflush(stdout);
 };
 
-/** Returns true if the type refers to a struct declared in a function body or
-    to an anonymous struct.  Such structs are mangled by a name that is unique
-    only within a translation unit (see StructIdentity::localIndex), so the
-    same mangled name can refer to different structs in different translation
-    units. */
-static bool lHasLocalStructType(const Type *type) {
+/** Returns true if the type refers to a struct or an enum declared in a
+    function body or to an anonymous struct or enum.  Such types are mangled
+    by a name that is unique only within a translation unit (see
+    StructIdentity::localIndex, EnumIdentity::localIndex and
+    EnumType::Mangle()), so the same mangled name can refer to different types
+    in different translation units. */
+static bool lHasLocalType(const Type *type) {
     if (type == nullptr) {
         return false;
+    }
+    if (const EnumType *et = CastType<EnumType>(type)) {
+        return et->GetIdentity()->localIndex != 0 || et->GetEnumName().empty();
     }
     if (const StructType *st = CastType<StructType>(type)) {
         // No need to check members: the mangled name of a named struct
@@ -1045,20 +1058,20 @@ static bool lHasLocalStructType(const Type *type) {
         return ust->GetIdentity()->localIndex != 0;
     }
     if (const PointerType *pt = CastType<PointerType>(type)) {
-        return lHasLocalStructType(pt->GetBaseType());
+        return lHasLocalType(pt->GetBaseType());
     }
     if (const ReferenceType *rt = CastType<ReferenceType>(type)) {
-        return lHasLocalStructType(rt->GetReferenceTarget());
+        return lHasLocalType(rt->GetReferenceTarget());
     }
     if (const SequentialType *st = CastType<SequentialType>(type)) {
-        return lHasLocalStructType(st->GetElementType());
+        return lHasLocalType(st->GetElementType());
     }
     if (const FunctionType *ft = CastType<FunctionType>(type)) {
-        if (lHasLocalStructType(ft->GetReturnType())) {
+        if (lHasLocalType(ft->GetReturnType())) {
             return true;
         }
         for (int i = 0; i < ft->GetNumParameters(); ++i) {
-            if (lHasLocalStructType(ft->GetParameterType(i))) {
+            if (lHasLocalType(ft->GetParameterType(i))) {
                 return true;
             }
         }
@@ -1067,11 +1080,19 @@ static bool lHasLocalStructType(const Type *type) {
     return false;
 }
 
-/** Returns true if any type template argument refers to a local or an
-    anonymous struct; see lHasLocalStructType(). */
-static bool lHasLocalStructTemplateArg(const TemplateArgs &args) {
-    for (const auto &arg : args) {
-        if (arg.IsType() && lHasLocalStructType(arg.GetAsType())) {
+/** Returns true if any type template argument, or the declared type of a
+    non-type template parameter, refers to a local struct or enum or to an
+    anonymous struct or enum; see lHasLocalType().  A non-type argument is
+    converted to the declared type of its parameter on instantiation, so the
+    type of the argument itself doesn't matter: e.g. the instantiations for a
+    value of an anonymous enum passed to an int parameter are the same in
+    every translation unit and can be merged. */
+static bool lHasLocalTypeTemplateArg(const TemplateParms &parms, const TemplateArgs &args) {
+    Assert(parms.GetCount() == args.size());
+    for (size_t i = 0; i < args.size(); ++i) {
+        const Type *type =
+            args[i].IsNonType() && parms[i]->IsNonTypeParam() ? parms[i]->GetNonTypeParam()->type : args[i].GetAsType();
+        if (lHasLocalType(type)) {
             return true;
         }
     }
@@ -1110,7 +1131,7 @@ void FunctionTemplate::GenerateIR() const {
             // with same-named instantiations from other translation units. Check
             // this before IsInternal(): on Xe, GenerateIR() marks functions
             // AlwaysInline but keeps their external linkage.
-            if (lHasLocalStructTemplateArg(inst.args)) {
+            if (lHasLocalTypeTemplateArg(*GetTemplateParms(), inst.args)) {
                 func->UpdateLinkage(llvm::GlobalValue::InternalLinkage);
             } else if (!func->IsInternal()) {
                 // Update linkage for not internal functions
