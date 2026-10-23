@@ -167,6 +167,9 @@ jobs:
         # Remove secrets such as the Bedrock token from the environment of
         # Claude's commands.
         CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        # The action ends the session at Claude's first result, and Claude
+        # Code then kills background work, such as a subagent left running.
+        CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
         AWS_REGION: ${{ secrets.AWS_REGION }}
         AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
       with:

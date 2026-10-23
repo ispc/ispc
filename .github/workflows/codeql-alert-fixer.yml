@@ -68,7 +68,9 @@ jobs:
     needs: select-alerts
     if: needs.select-alerts.outputs.matrix != '[]'
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    # Up to ~12 min of setup, one 45-minute command (BASH_MAX_TIMEOUT_MS
+    # below) and the rest of the session.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -109,6 +111,14 @@ jobs:
         # Remove secrets such as the Bedrock token from the environment of
         # Claude's commands, which build and run the proposed fix.
         CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        # The action ends the session at Claude's first result, and Claude
+        # Code then kills background commands, so a build left in the
+        # background dies before the result is exported. Run everything in
+        # the foreground, for up to 45 minutes a command; the job timeout
+        # leaves room for the setup steps and for exporting afterwards.
+        CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+        BASH_DEFAULT_TIMEOUT_MS: "2700000"
+        BASH_MAX_TIMEOUT_MS: "2700000"
         AWS_REGION: ${{ secrets.AWS_REGION }}
         AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
       with:
