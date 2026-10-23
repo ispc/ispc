@@ -219,7 +219,8 @@ jobs:
         GH_REPO: ${{ github.repository }}
         RUN_ID: ${{ steps.get-run-id.outputs.run_id }}
       run: |
-        run=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID" --jq '"\(.path) \(.event) \(.head_repository.full_name)"')
+        # A failed lookup only skips the fix request, not the issue.
+        run=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID" --jq '"\(.path) \(.event) \(.head_repository.full_name)"') || run=
         read -r path event head <<< "$run"
         if [ "$path" != .github/workflows/linux-nightly-trunk.yml ] || [ "$head" != "$GH_REPO" ] ||
            [[ ! "$event" =~ ^(schedule|workflow_dispatch|push)$ ]]; then
