@@ -75,6 +75,29 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline {
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; round
+
+define float @__round_uniform_float(float) nounwind readonly alwaysinline {
+  %res = call float @llvm.roundeven(float %0)
+  ret float %res
+}
+
+define double @__round_uniform_double(double) nounwind readonly alwaysinline {
+  %res = call double @llvm.roundeven(double %0)
+  ret double %res
+}
+
+define <WIDTH x float> @__round_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x float> @llvm.roundeven(<WIDTH x float> %0)
+  ret <WIDTH x float> %res
+}
+
+define <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x double> @llvm.roundeven(<WIDTH x double> %0)
+  ret <WIDTH x double> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; math
 
 define(`math_flags_functions',
