@@ -69,6 +69,11 @@ bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
         // value.  The last time through, it eventually has to give up, and
         // replaces any remaining ones with 'false' constants.
         if (isLastTry) {
+            // Keep calls in functions still awaiting forced inlining: inlining
+            // may make the argument constant. A later run resolves them (#3804).
+            if (skipDeferredInline && bb.getParent()->hasFnAttribute("ispc-defer-alwaysinline")) {
+                continue;
+            }
             ReplaceInstWithValueWrapper(curIter, LLVMFalse);
             modifiedAny = true;
             continue;
