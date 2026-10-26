@@ -109,6 +109,9 @@ static void lSetAsInternal(llvm::Module *module, llvm::StringSet<> &functions) {
     for (llvm::Function &F : module->functions()) {
         if (!F.isDeclaration() && functions.find(F.getName()) != functions.end()) {
             F.setLinkage(llvm::GlobalValue::InternalLinkage);
+            // An internal function in a COMDAT would be discarded with the
+            // COMDAT of another object.
+            F.setComdat(nullptr);
         }
     }
 }

@@ -309,7 +309,10 @@ Linkage Changes:
   separate in each translation unit. Mangled names of anonymous enums at
   global scope, such as ``typedef enum { A } E;``, have changed; rebuild ISPC
   objects that call each other's non-exported functions with these types
-  together.
+  together. Implicit and explicit template instantiations are now in COMDATs
+  on all targets except macOS and Xe, so a template instantiated in several
+  translation units no longer causes duplicate symbol errors when linking on
+  Windows.
 
 Updating ISPC Programs For Changes In ISPC 1.32.0
 -------------------------------------------------
