@@ -3,13 +3,15 @@
 // internal linkage, as for local structs (see 3959.ispc and 3962.ispc).
 // Global enums keep their mangled names and linkonce_odr linkage.  Global
 // anonymous enums are mangled by their first enumerator, which is the same in
-// each translation unit, and template instantiations over them, including
-// over non-type template parameters of their types, get internal linkage.
-// A value of a local or anonymous enum passed to an int parameter is converted
-// to int, so the instantiation keeps linkonce_odr linkage and can be merged
-// with the same instantiation from other translation units.  Enums are distinguished by identity, not by source
-// position, so two enums whose names have the same position (e.g. after #line
-// directives or when a header is included twice) are different types.
+// each translation unit, so template instantiations over them, including over
+// non-type template parameters of their types, keep linkonce_odr linkage, and
+// a function-local static in such an instantiation is shared by all
+// translation units, as for "typedef struct { ... } S;".  A value of a local
+// enum passed to an int parameter is converted to int, so the code of the
+// instantiation doesn't depend on the enum and it keeps linkonce_odr linkage.
+// Enums are distinguished by identity, not by source position, so two enums
+// whose names have the same position (e.g. after #line directives or when a
+// header is included twice) are different types.
 
 // RUN: %{ispc} %s --emit-llvm-text --target=host --nostdlib --nowrap -O0 -o - | FileCheck %s
 
@@ -51,8 +53,8 @@ enum Q { Q0 };
 uniform int h(uniform P p) { return 1; }
 uniform int h(uniform Q q) { return 2; }
 
-// CHECK-DAG: define internal i32 @conv___vyenum_5B_.GA_5D____unenum_5B_.GA_5D_(
-// CHECK-DAG: define internal i32 @conv___vyenum_5B_.GB_5D____unenum_5B_.GB_5D_(
+// CHECK-DAG: define linkonce_odr i32 @conv___vyenum_5B_.GA_5D____unenum_5B_.GA_5D_(
+// CHECK-DAG: define linkonce_odr i32 @conv___vyenum_5B_.GB_5D____unenum_5B_.GB_5D_(
 // CHECK-DAG: define i32 @k___unenum_5B_.GA_5D_(
 #line 200
 typedef enum { GA = 1 } GAE;
@@ -63,7 +65,7 @@ uniform int k(uniform GAE a) {
     return conv(a) + conv(b);
 }
 
-// CHECK-DAG: define internal i32 @nt___Cunenum_5B_.GA_5D_1___(
+// CHECK-DAG: define linkonce_odr i32 @nt___Cunenum_5B_.GA_5D_1___(
 template <GAE V> noinline uniform int nt() { return V; }
 uniform int n() { return nt<GA>(); }
 
