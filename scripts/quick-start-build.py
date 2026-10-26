@@ -422,6 +422,9 @@ Examples:
   # Build with specific LLVM version
   $ python quick-start-build.py 19
 
+  # Build with extra CMake options (an existing build directory is configured again)
+  $ python quick-start-build.py -DARM32_ENABLED=OFF
+
   # Build with custom LLVM location
   $ LLVM_HOME=/path/to/llvm python quick-start-build.py
 
@@ -435,7 +438,8 @@ Examples:
 
     parser.add_argument("llvm_version", type=str, nargs="?", default="23.1.2",
                         help="LLVM version to use (default: 23.1.2)")
-    args = parser.parse_args()
+    # Unknown arguments, such as -D options, are passed to CMake.
+    args, cmake_args = parser.parse_known_args()
 
     # Set up default values and paths
     llvm_version = args.llvm_version
@@ -490,24 +494,29 @@ Examples:
         print(f"{llvm_dir} already exists")
 
     build_type = "RelWithDebInfo" if is_windows else "Debug"
-    if not build_dir.exists():
+    # An existing build directory is configured again only when new CMake options are given.
+    create_build_dir = not build_dir.exists()
+    if create_build_dir or cmake_args:
         env = os.environ.copy()
         env["PATH"] = f"{llvm_dir / 'bin'}{os.pathsep}{env['PATH']}"
 
         configure_cmd = [
             "cmake",
             "-B", str(build_dir),
-            str(ispc_root),
-            f"-DCMAKE_BUILD_TYPE={build_type}",
-            "-DISPC_SLIM_BINARY=ON"
+            str(ispc_root)
         ]
+        on_error = None
+        if create_build_dir:
+            # Pass the defaults only here, so that configuring again keeps earlier values.
+            configure_cmd += [f"-DCMAKE_BUILD_TYPE={build_type}", "-DISPC_SLIM_BINARY=ON"]
+            # Delete the build directory on failure only if this run created it.
+            on_error = lambda: (
+                print(f"CMake failed, cleaning up build directory {build_dir}"),
+                shutil.rmtree(build_dir)
+                )
+        configure_cmd += cmake_args
         print("Configure build of ISPC")
-        run_command(configure_cmd,
-                    lambda: (
-                        print(f"CMake failed, cleaning up build directory {build_dir}"),
-                        shutil.rmtree(build_dir)
-                        ),
-                    env=env)
+        run_command(configure_cmd, on_error, env=env)
     else:
         print(f"{build_dir} already exists")
 
