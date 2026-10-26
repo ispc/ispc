@@ -1037,17 +1037,21 @@ void FunctionTemplate::Print() const {
 };
 
 /** Returns true if the type refers to a struct or an enum declared in a
-    function body or to an anonymous struct or enum.  Such types are mangled
-    by a name that is unique only within a translation unit (see
-    StructIdentity::localIndex, EnumIdentity::localIndex and
-    EnumType::Mangle()), so the same mangled name can refer to different types
-    in different translation units. */
+    function body, to an anonymous struct or to an anonymous enum without
+    enumerators.  Such types are mangled by a name that is unique only within
+    a translation unit (see StructIdentity::localIndex and
+    EnumIdentity::localIndex), so the same mangled name can refer to different
+    types in different translation units.  A global anonymous enum is mangled
+    by its first enumerator, which is the same in each translation unit that
+    includes it (see EnumType::Mangle()), so it isn't local. */
 static bool lHasLocalType(const Type *type) {
     if (type == nullptr) {
         return false;
     }
     if (const EnumType *et = CastType<EnumType>(type)) {
-        return et->GetIdentity()->localIndex != 0 || et->GetEnumName().empty();
+        // An anonymous enum without enumerators gets no suffix in
+        // EnumType::Mangle(); this only happens after errors.
+        return et->GetIdentity()->localIndex != 0 || (et->GetEnumName().empty() && et->GetEnumeratorCount() == 0);
     }
     if (const StructType *st = CastType<StructType>(type)) {
         // No need to check members: the mangled name of a named struct
@@ -1082,11 +1086,11 @@ static bool lHasLocalType(const Type *type) {
 
 /** Returns true if any type template argument, or the declared type of a
     non-type template parameter, refers to a local struct or enum or to an
-    anonymous struct or enum; see lHasLocalType().  A non-type argument is
+    anonymous struct; see lHasLocalType().  A non-type argument is
     converted to the declared type of its parameter on instantiation, so the
-    type of the argument itself doesn't matter: e.g. the instantiations for a
-    value of an anonymous enum passed to an int parameter are the same in
-    every translation unit and can be merged. */
+    type of the argument itself doesn't matter: e.g. the code of an
+    instantiation for a value of a local enum passed to an int parameter
+    doesn't depend on the enum, so it doesn't need internal linkage. */
 static bool lHasLocalTypeTemplateArg(const TemplateParms &parms, const TemplateArgs &args) {
     Assert(parms.GetCount() == args.size());
     for (size_t i = 0; i < args.size(); ++i) {
@@ -1127,7 +1131,7 @@ void FunctionTemplate::GenerateIR() const {
         const Function *func = inst.symbol->parentFunction;
         if (func != nullptr) {
             func->GenerateIR();
-            // Instantiations over local or anonymous structs must not be merged
+            // Instantiations over local or anonymous types must not be merged
             // with same-named instantiations from other translation units. Check
             // this before IsInternal(): on Xe, GenerateIR() marks functions
             // AlwaysInline but keeps their external linkage.
