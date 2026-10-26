@@ -29,9 +29,7 @@ DASHBOARD_SIZE = 4096
 MEMORY_BENCHMARKS = {"01_aossoa", "02_soaaos", "test02_array"}
 
 # Benchmarks that are too noisy to fail the weekly job.
-NOT_GATED = {"05_packed_load_store", "09_shuffle", "17_pdep_pext"}
-# Same for avx2-* targets: variable shift/rotate go through the stack, whose alignment changes the timing.
-NOT_GATED_AVX2 = {"13_rotate", "14_shift"}
+NOT_GATED = {"05_packed_load_store", "17_pdep_pext"}
 
 
 def parse_case(run_name):
@@ -94,11 +92,10 @@ def main():
             doc = json.load(f)
         context = context or doc["context"]
         shown = set(select(bench, [b["run_name"] for b in doc["benchmarks"]]))
-        skip_gate = bench in NOT_GATED or (args.target.startswith("avx2-") and bench in NOT_GATED_AVX2)
         for b in doc["benchmarks"]:
             if b["run_name"] in shown:
                 b = dict(b, name=bench + "/" + b["run_name"])
-                (not_gated if skip_gate else gated).append(b)
+                (not_gated if bench in NOT_GATED else gated).append(b)
 
     if not gated:
         sys.exit(f"{args.target}: no gated cases")

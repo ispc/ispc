@@ -13,8 +13,8 @@
 #   deploy job publishes gh-pages (pushes with GITHUB_TOKEN don't trigger a Pages build). The
 #   github-pages environment should only allow main.
 # - Repository variables (optional):
-#   BENCHMARKS_FAIL_ON_REGRESSION  "true" to fail the job when a gated case regresses. Leave it unset
-#                                  for the first runs, until the noise of the runner is known.
+#   BENCHMARKS_FAIL_ON_REGRESSION  "true" to fail the job when a gated case regresses. Unset, the
+#                                  cases aren't checked, the job summary only shows the changes.
 #   BENCHMARKS_CPU                 CPU to run the benchmarks on (default: 1).
 
 name: Benchmarks
@@ -162,8 +162,10 @@ jobs:
         max-items-in-chart: 104
 
     # Every case is compared with the last result of an earlier commit. A result is the minimum of
-    # the per-process medians, so a single slow process doesn't raise an alert. The results are
-    # pushed before the job fails: re-running the job adds them again and doesn't clear the alert.
+    # the per-process medians, so a single slow process doesn't raise an alert. The threshold is well
+    # above the noise of the runner: gated cases differed by up to 3% in the runs of October 2026.
+    # The results are pushed before the job fails: re-running the job adds them again and doesn't
+    # clear the alert.
     - name: Publish gated cases
       if: ${{ !cancelled() }}
       uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
@@ -177,7 +179,7 @@ jobs:
         auto-push: true
         max-items-in-chart: 104
         summary-always: true
-        alert-threshold: '125%'
+        alert-threshold: '110%'
         fail-on-alert: ${{ vars.BENCHMARKS_FAIL_ON_REGRESSION == 'true' }}
 
   deploy:
