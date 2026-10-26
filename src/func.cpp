@@ -62,6 +62,18 @@ void Function::UpdateLinkage(llvm::GlobalValue::LinkageTypes linkage) const {
     llvm::Function *function = sym->function;
     if (function != nullptr) {
         function->setLinkage(linkage);
+        // As Clang does, put definitions that may be in several translation
+        // units in a COMDAT, so the linker keeps only one of them.  COFF
+        // linkers reject them as duplicates otherwise.  The standard library
+        // is linked into each module and made internal there (see
+        // lSetAsInternal()), so its functions get no COMDAT.
+        const bool mayBeDuplicated =
+            linkage == llvm::GlobalValue::LinkOnceODRLinkage || linkage == llvm::GlobalValue::WeakODRLinkage;
+        if (mayBeDuplicated && !g->genStdlib && g->target->GetTriple().supportsCOMDAT() && !g->target->isXeTarget()) {
+            function->setComdat(function->getParent()->getOrInsertComdat(function->getName()));
+        } else {
+            function->setComdat(nullptr);
+        }
     }
 }
 
