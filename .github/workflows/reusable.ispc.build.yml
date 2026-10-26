@@ -170,7 +170,7 @@ jobs:
               -DCMAKE_CXX_FLAGS=-Werror \
               -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}" \
               -DMACOS_UNIVERSAL_BIN=ON \
-              -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
+              -DISPC_ANDROID_NDK_PATH="${ANDROID_NDK_HOME:-$ISPC_ANDROID_NDK_PATH}"
           cmake --build build
         else
           # Standard build

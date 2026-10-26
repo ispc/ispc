@@ -32,13 +32,13 @@ RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-e
     update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-11 100 && \
     rm -rf /var/lib/apt/lists/*
 
-# Install multilib libc needed to build clang_rt
+# Install multilib libc and ARM target headers
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
-        export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; \
+        export CROSS_LIBS=("libc6-dev-i386=2.27-3ubuntu*" "libc6-dev-armhf-cross" "libc6-dev-arm64-cross"); \
     else \
-        export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu*"; \
+        export CROSS_LIBS=("libc6-dev-armhf-cross=2.27-3ubuntu*"); \
     fi && \
-    apt-get -y update && apt-get --no-install-recommends install -y "$CROSS_LIBS" && \
+    apt-get -y update && apt-get --no-install-recommends install -y "${CROSS_LIBS[@]}" && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
@@ -91,6 +91,15 @@ RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison fle
 
 WORKDIR /usr/local/src
 
+# Install the Android NDK C headers for the Android target builtins (no NDK tools).
+RUN apt-get -y update && apt-get --no-install-recommends install -y unzip && \
+    rm -rf /var/lib/apt/lists/* && \
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 \
+        https://dl.google.com/android/repository/android-ndk-r27d-linux.zip && \
+    unzip -q android-ndk-r27d-linux.zip 'android-ndk-r27d/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/*' \
+        -d /usr/local/share && \
+    rm android-ndk-r27d-linux.zip
+
 # Create new non-root user and switch to it
 RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
     chown -R ispc_user:ispc_user /usr
@@ -108,6 +117,7 @@ RUN git clone https://github.com/$REPO.git ispc && \
         -DXE_DEPS=$XE_DEPS \
         -DINSTALL_ISPC=ON \
         -DINSTALL_TOOLCHAIN=ON \
+        -DISPC_ANDROID_NDK_PATH=/usr/local/share/android-ndk-r27d \
         -DCMAKE_INSTALL_PREFIX=/usr/local && \
     cmake --build build && \
     (cmake --build build --target ispc-stage2-check-all || true) && \

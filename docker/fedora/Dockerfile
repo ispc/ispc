@@ -36,9 +36,11 @@ USER ispc_user
 
 # Clone, configure and build ISPC
 # Some check-all tests may fail because we use system LLVM here
+# Fedora has no ARM32 glibc headers and keeps its AArch64 headers in a sysroot
+# that the build does not search, so build without ARM.
 RUN git clone https://github.com/$REPO.git ispc && \
     git -C ispc checkout $SHA && \
-    cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr/local -DARM_ENABLED=OFF && \
     cmake --build build-ispc -v -j "$(nproc)" && \
     (cmake --build build-ispc --target check-all || true) && \
     (echo "shared libs deps of ispc" && ldd ./build-ispc/bin/ispc) && \
