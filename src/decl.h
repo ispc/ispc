@@ -305,6 +305,11 @@ struct StructDeclaration : public Traceable {
     std::vector<Declarator *> *declarators;
 };
 
+/** Returns true if the given type of declaration specifiers is an anonymous
+    struct defined there rather than named by a typedef; such a struct is
+    illegal in function parameter and return types. */
+extern bool IsAnonymousStructDefinition(const Type *specifierType);
+
 /** Given a set of StructDeclaration instances, this returns the types of
     the elements of the corresponding struct and their names. */
 extern void GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
