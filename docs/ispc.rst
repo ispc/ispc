@@ -279,20 +279,37 @@ Language Changes:
 * A forward-declared struct can now be used through pointers, references and
   typedefs declared before its definition, once the definition is provided;
   for example, ``b->foo->x`` after ``struct Foo; struct Bar { Foo *foo; };
-  struct Foo { int x; };``. Previously this was rejected with "declared but
-  not defined struct type".
+  struct Foo { int x; };``. Member access, ``sizeof``, indexing and pointer
+  arithmetic still require the definition first. Exported functions are now
+  checked against the definition as well, so a pointer to a struct with
+  varying pointer members is rejected even when the struct is defined after
+  the function; pass such handles to the application as ``void *`` and cast
+  them back inside ISPC.
 
-* Structs with the same name declared in different scopes, for example a
-  struct declared in a function body and a global struct, are now different
-  types, as in C. Previously they shared one layout, which led to wrong
-  member offsets and pointer arithmetic. A pointer to one of them can no
-  longer be passed where a pointer to the other one is expected.
+* Structs follow the C scoping rules. Structs with the same name in
+  different scopes, for example a struct in a function body and a global
+  struct, are now different types; previously they shared one layout, which
+  led to wrong member offsets. ``struct Foo;`` or ``struct Foo { ... };`` in a
+  function body now declares a new ``Foo`` that hides an outer struct or
+  typedef named ``Foo``. Code that relied on ``struct Foo;`` referring to the
+  outer type now fails with "incomplete struct type" or "declared but not
+  defined struct type" errors; remove the declaration to use the outer type.
 
-* A ``struct Foo;`` declaration in a function body now declares a new struct
-  ``Foo`` in that scope, hiding a struct ``Foo`` declared in an outer scope,
-  as in C. Previously it referred to the outer struct. Code that relied on
-  that now fails with "incomplete struct type" or "declared but not defined
-  struct type" errors; remove the declaration to use the outer struct.
+* A typedef's ``uniform`` or ``varying`` qualifier is now kept when other
+  declaration specifiers follow the typedef name: after ``typedef varying int
+  VI;``, ``VI const *uniform p`` points to a varying ``int`` instead of a
+  uniform one. This can change data layouts and mangled names.
+
+Linkage Changes:
+
+* Template instantiations over structs or enums declared in function bodies,
+  or over anonymous structs not named by a typedef, now have internal linkage,
+  so the linker no longer merges instantiations for different types from
+  different translation units, and their function-local static variables are
+  separate in each translation unit. Mangled names of anonymous enums at
+  global scope, such as ``typedef enum { A } E;``, have changed; rebuild ISPC
+  objects that call each other's non-exported functions with these types
+  together.
 
 Updating ISPC Programs For Changes In ISPC 1.32.0
 -------------------------------------------------
