@@ -102,6 +102,5 @@ jobs:
           -DCMAKE_C_FLAGS="/WX" ^
           -DCMAKE_CXX_FLAGS="/WX" ^
           -DISPC_CROSS=ON ^
-          -DCMAKE_BUILD_TYPE=Release ^
-          -DISPC_GNUWIN32_PATH=%CROSS_TOOLS_GNUWIN32%
+          -DCMAKE_BUILD_TYPE=Release
         cmake --build build --target package -j4 --config Release

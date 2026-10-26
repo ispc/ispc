@@ -72,11 +72,11 @@ $ cmake --build . --target package-stage2
 $ cmake ${ISPC_HOME}/superbuild --preset os -DLLVM_DISABLE_ASSERTIONS=OFF
 
 # macOS universal builds
-$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=<ndk-path>
+$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=ON
 
 # macOS x86_64 and arm64 only builds
-$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=OFF -DCMAKE_OSX_ARCHITECTURES=arm64 -DISPC_ANDROID_NDK_PATH=<ndk-path>
-$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64 -DISPC_ANDROID_NDK_PATH=<ndk-path>
+$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=OFF -DCMAKE_OSX_ARCHITECTURES=arm64
+$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64
 
 ```
 

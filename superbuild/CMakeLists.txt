@@ -44,7 +44,6 @@ set(BUILD_TYPE_LLVM "Release" CACHE STRING "Set the build type for LLVM build")
 set(BUILD_TYPE_SPIRV_TRANSLATOR "Release" CACHE STRING "Set the build type for SPIR-V Translator build")
 set(BUILD_TYPE_VC_INTRINSICS "Release" CACHE STRING "Set the build type for VC Intrinsics build")
 set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
-set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
 set(ISPC_WINDOWS_SDK_PATH "NO" CACHE STRING "Path to Windows SDK. It is needed to ISPC_CROSS=ON on Linux.")
 set(ISPC_WINDOWS_VCTOOLS_PATH "NO" CACHE STRING "Path to Windows VC Tools. It is needed to ISPC_CROSS=ON on Linux.")
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
@@ -196,10 +195,6 @@ if (APPLE)
         set(MACOS_VERSION_MIN 11.0)
     endif()
 
-    if (APPLE AND ISPC_ANDROID_NDK_PATH STREQUAL "NO")
-        message(FATAL_ERROR "You need provide path to ANDROID NDK on macOS via -DISPC_ANDROID_NDK_PATH=..")
-    endif()
-
     if (MACOS_UNIVERSAL_BIN AND CMAKE_OSX_ARCHITECTURES)
         message(WARNING "CMAKE_OSX_ARCHITECTURES value ${CMAKE_OSX_ARCHITECTURES} is "
                         "discarded due to MACOS_UNIVERSAL_BIN is ON")
@@ -328,7 +323,6 @@ message(STATUS "PREBUILT_XE_STAGE2_PATH is ${PREBUILT_XE_STAGE2_PATH}")
 message(STATUS "EXTERNAL_VERBOSE is ${EXTERNAL_VERBOSE}")
 message(STATUS "EXPLICIT_ENV_PATH is ${EXPLICIT_ENV_PATH}")
 message(STATUS "FULL_STAGE2_LLVM is ${FULL_STAGE2_LLVM}")
-message(STATUS "ISPC_ANDROID_NDK_PATH is ${ISPC_ANDROID_NDK_PATH}")
 message(STATUS "ISPC_WINDOWS_SDK_PATH is ${ISPC_WINDOWS_SDK_PATH}")
 message(STATUS "ISPC_WINDOWS_VCTOOLS_PATH is ${ISPC_WINDOWS_VCTOOLS_PATH}")
 if (ISPC_SIGN_KEY STREQUAL "NO")
@@ -776,7 +770,6 @@ endif()
 if (WIN32)
     # XPU examples are not buildable on windows, issue: TODO!
     list(APPEND ISPC_COMMON_CMAKE_ARGS
-        -DISPC_GNUWIN32_PATH=${GNUWIN32}
         -DISPC_INCLUDE_EXAMPLES=OFF
         -DISPC_INCLUDE_XE_EXAMPLES=OFF
         )
@@ -795,13 +788,6 @@ if (NOT WIN32 AND ISPC_CROSS)
     )
 endif()
 if (APPLE)
-    # It is needed because of ISPC_CROSS=ON
-    if (ISPC_CROSS)
-        list(APPEND ISPC_COMMON_CMAKE_ARGS
-            -DISPC_ANDROID_NDK_PATH=${ISPC_ANDROID_NDK_PATH}
-            )
-    endif()
-
     # For APPLE explicitly enabled both arch.
     list(APPEND ISPC_COMMON_CMAKE_ARGS
         -DX86_ENABLED=ON

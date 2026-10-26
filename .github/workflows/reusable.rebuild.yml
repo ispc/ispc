@@ -314,8 +314,7 @@ jobs:
           -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
           -DXE_DEPS=OFF \
           -DMACOS_UNIVERSAL_BIN=ON \
-          -DLLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }} \
-          -DISPC_ANDROID_NDK_PATH="/Users/Shared/android-ndk-r20b"
+          -DLLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }}
         cmake --build "build-${INPUTS_VERSION}"
         rm -rf "build-${INPUTS_VERSION}"
       env:
