@@ -139,6 +139,14 @@ platforms, please refer to our
 [ISPC Development Guide](https://github.com/ispc/ispc/wiki/ISPC-Development-Guide)
 for build and test instructions.
 
+`-DISPC_CROSS=ON` enables targets for other operating systems. Linux, Android,
+FreeBSD, macOS, iOS and PlayStation targets need no SDK and no C library
+headers. The Windows target on Linux and macOS needs the Windows SDK and the
+Visual C++ tools, set with `-DISPC_WINDOWS_SDK_PATH` and
+`-DISPC_WINDOWS_VCTOOLS_PATH`; if they are not given, the Windows target is
+disabled. The macOS target on Linux and Windows is enabled with
+`-DISPC_MACOS_TARGET=ON`. A given SDK path must exist.
+
 ## Additional Resources
 
 Latest `ispc` binaries corresponding to `main` branch can be downloaded from

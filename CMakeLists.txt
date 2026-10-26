@@ -162,8 +162,6 @@ endif()
 
 option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ${LLVM_SUPPORTS_ARM})
-# 32-bit ARM builtins are compiled against 32-bit ARM C library headers. Turn this
-# option off on systems that don't provide them, e.g. Termux on Android.
 # ARM32_ENABLED is OFF while ARM_ENABLED is OFF, without changing its cached value.
 include(CMakeDependentOption)
 cmake_dependent_option(ARM32_ENABLED "Enable 32-bit ARM support (requires ARM_ENABLED)" ON "ARM_ENABLED" OFF)
@@ -174,6 +172,14 @@ option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
 option(XE_ENABLED "Enable Intel Xe support" OFF)
 
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
+
+# A target whose SDK path is not given is disabled. A path that is given must exist.
+function(check_sdk_path var)
+    if (${var} AND NOT IS_DIRECTORY "${${var}}")
+        message(FATAL_ERROR "${var} is set to ${${var}}, which is not a directory")
+    endif()
+endfunction()
+
 # Default settings for cross compilation
 if (ISPC_CROSS)
     option(ISPC_WINDOWS_TARGET "Build ISPC with windows target support" ON)
@@ -184,46 +190,29 @@ if (ISPC_CROSS)
     option(ISPC_IOS_TARGET "Build ISPC with ios target support" ON)
     option(ISPC_ANDROID_TARGET "Build ISPC with android target support" ON)
     option(ISPC_PS_TARGET "Build ISPC with ps4 and ps5 targets support" ON)
-    # We silently disable some of cross targets. We should probably warn user or issue an error,
-    # but it seems good enough.
+    # The Windows target is disabled if the Windows SDK is not given. The other targets
+    # do not need SDKs or C library headers.
     if (WIN32)
         set(ISPC_IOS_TARGET OFF)
-        if ((ISPC_LINUX_TARGET OR ISPC_ANDROID_TARGET OR ISPC_PS_TARGET) AND NOT ISPC_GNUWIN32_PATH)
-            message (FATAL_ERROR "Set ISPC_GNUWIN32_PATH variable for cross compilation to Linux/Android/PS4 e.g. C:/gnuwin32")
-        endif()
-        if (ISPC_MACOS_TARGET AND NOT ISPC_MACOS_SDK_PATH)
-            message (FATAL_ERROR "Set ISPC_MACOS_SDK_PATH variable for cross compilation to MacOS e.g. C:/iusers/MacOSX10.14.sdk")
-        endif()
     elseif (APPLE)
         set(ISPC_MACOS_TARGET ON)
-        # If the Windows SDK and CRT are available, enable Windows
-        if (NOT ISPC_WINDOWS_SDK_PATH OR NOT ISPC_WINDOWS_VCTOOLS_PATH)
+        check_sdk_path(ISPC_WINDOWS_SDK_PATH)
+        check_sdk_path(ISPC_WINDOWS_VCTOOLS_PATH)
+        if (ISPC_WINDOWS_TARGET AND (NOT ISPC_WINDOWS_SDK_PATH OR NOT ISPC_WINDOWS_VCTOOLS_PATH))
+            message(STATUS "ISPC_WINDOWS_SDK_PATH or ISPC_WINDOWS_VCTOOLS_PATH is not set, disabling Windows target")
             set(ISPC_WINDOWS_TARGET OFF)
         endif()
         set(ISPC_PS_TARGET OFF)
         set(ISPC_FREEBSD_TARGET OFF)
-        if ((ISPC_LINUX_TARGET OR ISPC_ANDROID_TARGET) AND NOT ISPC_ANDROID_NDK_PATH)
-            message (FATAL_ERROR "Set ISPC_ANDROID_NDK_PATH variable for cross compilation to Linux/Android e.g. /Users/Shared/android-ndk-r20")
-        endif()
-        if (ISPC_IOS_TARGET AND NOT ISPC_IOS_SDK_PATH)
-            # Use standard iOS SDK location if this is not specified.
-            set(command "xcrun" "--show-sdk-path" "--sdk" "iphoneos")
-            execute_process(COMMAND ${command}
-                OUTPUT_VARIABLE ISPC_IOS_SDK_PATH
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-            message(STATUS "Using iOS SDK path ${ISPC_IOS_SDK_PATH}")
-        endif()
     else()
-        # If the Windows SDK and CRT are available, enable Windows
-        if (NOT ISPC_WINDOWS_SDK_PATH OR NOT ISPC_WINDOWS_VCTOOLS_PATH)
+        check_sdk_path(ISPC_WINDOWS_SDK_PATH)
+        check_sdk_path(ISPC_WINDOWS_VCTOOLS_PATH)
+        if (ISPC_WINDOWS_TARGET AND (NOT ISPC_WINDOWS_SDK_PATH OR NOT ISPC_WINDOWS_VCTOOLS_PATH))
+            message(STATUS "ISPC_WINDOWS_SDK_PATH or ISPC_WINDOWS_VCTOOLS_PATH is not set, disabling Windows target")
             set(ISPC_WINDOWS_TARGET OFF)
         endif()
         set(ISPC_PS_TARGET OFF)
         set(ISPC_IOS_TARGET OFF)
-        if (ISPC_MACOS_TARGET AND NOT ISPC_MACOS_SDK_PATH)
-            message (FATAL_ERROR "Set ISPC_MACOS_SDK_PATH variable for cross compilation to MacOS e.g. /iusers/MacOSX10.14.sdk")
-        endif()
     endif()
 else()
     if (WIN32)
@@ -243,6 +232,7 @@ else()
     set(ISPC_UNIX_TARGET OFF)
 endif()
 
+check_sdk_path(ISPC_MACOS_SDK_PATH)
 if (APPLE)
     # Use standard macOS SDK location if this is not specified.
     if (NOT ISPC_MACOS_SDK_PATH)
@@ -304,6 +294,9 @@ if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
     else()
         message(STATUS "MacOS_SDK does NOT supports ARM (SDK ver < 11.0)")
     endif()
+elseif (ISPC_MACOS_TARGET)
+    # The macOS target does not need an SDK. Without one, assume macOS 11.0 or later.
+    set(ISPC_MACOS_ARM_TARGET ON)
 endif()
 
 # If Xe target is enabled, generate build targets for Xe examples and ISPCRT on Linux
