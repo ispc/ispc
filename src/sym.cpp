@@ -271,19 +271,20 @@ TemplateSymbol *SymbolTable::LookupFunctionTemplate(const TemplateParms *templat
 bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
     Assert(types.size() > 0);
 
+    const bool isStruct = CastType<StructType>(type) != nullptr || CastType<UndefinedStructType>(type) != nullptr;
     // Structs and enums declared in the template parameter scope are global;
     // see IsTemplateParameterScope().
-    const bool isStructOrEnum = CastType<StructType>(type) != nullptr ||
-                                CastType<UndefinedStructType>(type) != nullptr || CastType<EnumType>(type) != nullptr;
+    const bool isStructOrEnum = isStruct || CastType<EnumType>(type) != nullptr;
     const bool isGlobal = IsGlobalScope() || (isStructOrEnum && IsTemplateParameterScope());
     TypeMapType &scope = isGlobal ? types.front() : types.back();
     auto found = scope.find(name);
     const Type *t = found != scope.end() ? found->second : nullptr;
-    if (t != nullptr && CastType<UndefinedStructType>(t) == nullptr) {
+    if (t != nullptr && (CastType<UndefinedStructType>(t) == nullptr || !isStruct)) {
         // If we have a previous declaration of anything other than an
-        // UndefinedStructType with this struct name, issue an error.  If
-        // we have an UndefinedStructType, then we'll fall through to the
-        // code below that adds the definition to the type map.
+        // UndefinedStructType with this struct name, or the new type isn't
+        // a struct (e.g. an enum), issue an error.  If we have an
+        // UndefinedStructType, then we'll fall through to the code below
+        // that adds the definition to the type map.
         Error(pos, "Ignoring redefinition of type \"%s\".", name);
         return false;
     }

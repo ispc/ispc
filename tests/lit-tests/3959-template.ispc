@@ -84,7 +84,7 @@ export void incD1(uniform D1 *uniform p) { p->x++; }
 #ifdef ENUM_REDEF
 // An enum defined in the declaration of a function template is global, so
 // another enum with the same name is an error, as for regular functions.
-// CHECK-ENUM-REDEF: Error: syntax error, unexpected TOKEN_TYPE_NAME
+// CHECK-ENUM-REDEF: 3959-template.ispc:[[#@LINE+3]]:{{[0-9]+}}: Error: Ignoring redefinition of type "RE".
 // CHECK-ENUM-REDEF-NOT: FATAL
 template <typename T> void redef1(uniform struct R1 { enum RE { R1A } e; } *uniform p, T t);
 template <typename T> void redef2(uniform struct R2 { enum RE { R2A } e; } *uniform p, T t);
