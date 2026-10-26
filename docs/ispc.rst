@@ -294,6 +294,9 @@ Language Changes:
   typedef named ``Foo``. Code that relied on ``struct Foo;`` referring to the
   outer type now fails with "incomplete struct type" or "declared but not
   defined struct type" errors; remove the declaration to use the outer type.
+  Likewise, a struct or an enum in a function body can now reuse the name of
+  any outer type, but not of a template parameter, and an enum can be referred
+  to as ``enum Foo``.
 
 * A typedef's ``uniform`` or ``varying`` qualifier is now kept when other
   declaration specifiers follow the typedef name: after ``typedef varying int

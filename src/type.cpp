@@ -865,7 +865,7 @@ llvm::DIType *TemplateTypeParmType::GetDIType(llvm::DIScope *scope) const { UNRE
 /** Returns a new identity for an enum with the given name declared in the
     current scope.  Enums declared in the template parameter scope are
     global; see SymbolTable::IsTemplateParameterScope(). */
-static std::shared_ptr<const EnumIdentity> lNewEnumIdentity(const std::string &name) {
+static std::shared_ptr<EnumIdentity> lNewEnumIdentity(const std::string &name) {
     auto identity = std::make_shared<EnumIdentity>();
     if (m->symbolTable != nullptr && !m->symbolTable->IsGlobalScope() && !m->symbolTable->IsTemplateParameterScope()) {
         identity->localIndex = ++m->localEnumCount[name];
@@ -882,7 +882,7 @@ EnumType::EnumType(const char *n, SourcePos p)
 
 EnumType::EnumType(const EnumType &other)
     : Type(ENUM_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
-      identity(other.identity), enumerators(other.enumerators) {}
+      identity(other.identity) {}
 
 EnumType *EnumType::create() const { return new EnumType(*this); }
 
@@ -918,12 +918,12 @@ std::string EnumType::Mangle() const {
     // name of another enum.
     if (identity->localIndex != 0) {
         ret += "." + std::to_string(identity->localIndex);
-    } else if (name.empty() && !enumerators.empty()) {
+    } else if (name.empty() && !identity->enumerators.empty()) {
         // The first enumerator of a global anonymous enum is a global symbol,
         // so it distinguishes the enum from the other ones in the
         // translation unit, and it is the same in each translation unit that
         // includes the enum, e.g. through "typedef enum { A } E;".
-        ret += "." + enumerators[0]->name;
+        ret += "." + identity->enumerators[0]->name;
     }
     ret += std::string("_5D_");
     return ret;
@@ -979,6 +979,7 @@ llvm::Type *EnumType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
 
+    const std::vector<Symbol *> &enumerators = identity->enumerators;
     std::vector<llvm::Metadata *> enumeratorDescriptors;
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue[1];
@@ -1022,11 +1023,11 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     }
 }
 
-void EnumType::SetEnumerators(const std::vector<Symbol *> &e) { enumerators = e; }
+void EnumType::SetEnumerators(const std::vector<Symbol *> &e) { identity->enumerators = e; }
 
-int EnumType::GetEnumeratorCount() const { return (int)enumerators.size(); }
+int EnumType::GetEnumeratorCount() const { return (int)identity->enumerators.size(); }
 
-const Symbol *EnumType::GetEnumerator(int i) const { return enumerators[i]; }
+const Symbol *EnumType::GetEnumerator(int i) const { return identity->enumerators[i]; }
 
 ///////////////////////////////////////////////////////////////////////////
 // PointerType

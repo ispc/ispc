@@ -479,6 +479,12 @@ struct EnumIdentity {
         other scopes, a positive number that distinguishes them from the
         other enums with the same name; see EnumType::Mangle(). */
     int localIndex = 0;
+
+    /** The enumerators, which are set once all of them are parsed.  Variants
+        of the enum may be created before that, e.g. by "sizeof(uniform E)"
+        in an enumerator value, so they are kept here rather than in each
+        variant. */
+    std::vector<Symbol *> enumerators;
 };
 
 class EnumType : public Type {
@@ -502,7 +508,7 @@ class EnumType : public Type {
     const std::string &GetEnumName() const { return name; }
 
     /** Returns the identity of the enum, shared by all of its variants. */
-    const std::shared_ptr<const EnumIdentity> &GetIdentity() const { return identity; }
+    std::shared_ptr<const EnumIdentity> GetIdentity() const { return identity; }
 
     /** Provides the enumerators defined in the enum definition. */
     void SetEnumerators(const std::vector<Symbol *> &enumerators);
@@ -513,8 +519,7 @@ class EnumType : public Type {
 
   private:
     const std::string name;
-    std::shared_ptr<const EnumIdentity> identity;
-    std::vector<Symbol *> enumerators;
+    std::shared_ptr<EnumIdentity> identity;
 
     EnumType(const EnumType &other);
 

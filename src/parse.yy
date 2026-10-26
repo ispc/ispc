@@ -152,12 +152,13 @@ static StructType *lCreateStructType(const std::string &name, const Type *declTy
                                      const std::vector<StructDeclaration *> *decl, AttributeList *attrs,
                                      SourcePos pos);
 static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos, bool isDefinition);
+static bool lIsTemplateParameterName(const char *name);
 
 enum class TemplateType { Template, Instantiation, Specialization };
 static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
 
-static EnumType *lCreateEnumType(const char *name, std::vector<Symbol *> *enums,
-                                 SourcePos pos);
+static EnumType *lDeclareEnumType(const char *name, SourcePos pos);
+static const EnumType *lDefineEnumType(EnumType *enumType, std::vector<Symbol *> *enums);
 static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                        const EnumType *enumType);
 
@@ -217,6 +218,7 @@ struct ForeachDimension {
     StructDeclaration *structDeclaration;
     std::vector<StructDeclaration *> *structDeclarationList;
     const EnumType *enumType;
+    EnumType *enumDefinition;
     Symbol *symbol;
     std::vector<Symbol *> *symbolList;
     ForeachDimension *foreachDimension;
@@ -299,6 +301,7 @@ struct ForeachDimension {
 %type <symbolList> enumerator_list
 %type <symbol> enumerator foreach_identifier foreach_active_identifier template_int_parameter template_typename_parameter
 %type <enumType> enum_specifier
+%type <enumDefinition> enum_definition_head
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
 %type <type> struct_or_union_and_name struct_or_union_definition_head
@@ -316,7 +319,7 @@ struct ForeachDimension {
 %type <attrArg> attribute_argument
 
 %type <stringVal> string_constant intrinsic_name
-%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
+%type <constCharPtr> struct_or_union_name enum_identifier enum_tag_name goto_identifier
 %type <constCharPtr> foreach_unique_identifier
 
 %type <intVal> int_constant soa_width_specifier rate_qualified_new
@@ -1830,38 +1833,51 @@ enum_identifier
       }
     ;
 
+// The name of an enum is a type name once the enum is declared, or the name
+// of a type in an outer scope, which a definition hides.
+enum_tag_name
+    : TOKEN_IDENTIFIER
+      {
+          $$ = strdup(yytext);
+          lCleanUpString($1);
+      }
+    | TOKEN_TYPE_NAME
+      {
+          $$ = strdup(yytext);
+          lCleanUpString($1);
+      }
+    ;
+
+enum_definition_head
+    : TOKEN_ENUM '{'
+      {
+          $$ = lDeclareEnumType(nullptr, @1);
+      }
+    | TOKEN_ENUM enum_tag_name '{'
+      {
+          // The enum is declared before its enumerators, so that their
+          // values refer to it rather than to a type with the same name in
+          // an outer scope.
+          $$ = lDeclareEnumType($2, @2);
+          // allocated by strdup in enum_tag_name
+          free((char*)$2);
+      }
+    ;
+
 enum_specifier
-    : TOKEN_ENUM '{' enumerator_list '}'
+    : enum_definition_head enumerator_list '}'
       {
-          $$ = lCreateEnumType(nullptr, $3, @1);
+          $$ = lDefineEnumType($1, $2);
           // enumerator_list returns aux vector that is not needed anymore.
-          delete $3;
+          delete $2;
       }
-    | TOKEN_ENUM enum_identifier '{' enumerator_list '}'
+    | enum_definition_head enumerator_list ',' '}'
       {
-          $$ = lCreateEnumType($2, $4, @2);
-          // allocated by strdup in enum_identifier
-          free((char*)$2);
-
+          $$ = lDefineEnumType($1, $2);
           // enumerator_list returns aux vector that is not needed anymore.
-          delete $4;
+          delete $2;
       }
-    | TOKEN_ENUM '{' enumerator_list ',' '}'
-      {
-          $$ = lCreateEnumType(nullptr, $3, @1);
-          // enumerator_list returns aux vector that is not needed anymore.
-          delete $3;
-      }
-    | TOKEN_ENUM enum_identifier '{' enumerator_list ',' '}'
-      {
-          $$ = lCreateEnumType($2, $4, @2);
-          // allocated by strdup in enum_identifier
-          free((char*)$2);
-
-          // enumerator_list returns aux vector that is not needed anymore.
-          delete $4;
-      }
-    | TOKEN_ENUM enum_identifier
+    | TOKEN_ENUM enum_tag_name
       {
           const Type *type = m->symbolTable->LookupType($2);
           if (type == nullptr) {
@@ -1880,7 +1896,7 @@ enum_specifier
               else
                   $$ = enumType;
           }
-          // allocated by strdup in enum_identifier
+          // allocated by strdup in enum_tag_name
           free((char*)$2);
       }
     ;
@@ -3823,14 +3839,29 @@ lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *
 }
 
 
+/* Returns true if the name is the name of a template type parameter, not of
+   a typedef of one. */
+static bool lIsTemplateParameterName(const char *name) {
+    const TemplateTypeParmType *t = CastType<TemplateTypeParmType>(m->symbolTable->LookupType(name));
+    return t != nullptr && t->GetName() == name;
+}
+
 static EnumType *
-lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
+lDeclareEnumType(const char *name, SourcePos pos) {
+    EnumType *enumType = name ? new EnumType(name, pos) : new EnumType(pos);
+    if (name != nullptr && lIsTemplateParameterName(name)) {
+        // As in C++, an enum can't hide a template parameter.
+        Error(pos, "Enum \"%s\" can't have the name of a template parameter.", name);
+    } else if (name != nullptr) {
+        m->symbolTable->AddType(name, enumType, pos);
+    }
+    return enumType;
+}
+
+static const EnumType *
+lDefineEnumType(EnumType *enumType, std::vector<Symbol *> *enums) {
     if (enums == nullptr)
         return nullptr;
-
-    EnumType *enumType = name ? new EnumType(name, pos) : new EnumType(pos);
-    if (name != nullptr)
-        m->symbolTable->AddType(name, enumType, pos);
 
     enumType->SetEnumerators(*enums);
     lFinalizeEnumeratorSymbols(*enums, enumType);
@@ -3947,11 +3978,6 @@ static StructType *lCreateStructType(const std::string &name, const Type *declTy
    typedef, and a definition defines that struct if it is declared in the
    current scope.  Returns nullptr after an error. */
 static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos, bool isDefinition) {
-    const Type *type = m->symbolTable->LookupType(name);
-    if (type != nullptr && GetStructIdentity(type) == nullptr) {
-        Error(pos, "Type \"%s\" is not a struct type! (%s)", name, type->GetString().c_str());
-        return nullptr;
-    }
     // Looks up a type in the scope of the new struct.  Structs declared in
     // the template parameter scope are global (see
     // SymbolTable::IsTemplateParameterScope()), and that scope has only
@@ -3960,6 +3986,16 @@ static const Type *lDeclareStructInCurrentScope(const char *name, SourcePos pos,
         return m->symbolTable->IsTemplateParameterScope() ? m->symbolTable->LookupType(n.c_str())
                                                           : m->symbolTable->LookupLocalType(n.c_str());
     };
+    const Type *type = m->symbolTable->LookupType(name);
+    if (type != nullptr && GetStructIdentity(type) == nullptr) {
+        // A non-struct type in an outer scope is hidden by the new struct,
+        // except for a template parameter, as in C++.
+        if (lookupLocal(name) != nullptr || lIsTemplateParameterName(name)) {
+            Error(pos, "Type \"%s\" is not a struct type! (%s)", name, type->GetString().c_str());
+            return nullptr;
+        }
+        type = nullptr;
+    }
     if (type != nullptr) {
         const StructType *st = CastType<StructType>(type);
         const std::string structName = st ? st->GetStructName() : CastType<UndefinedStructType>(type)->GetStructName();
