@@ -1101,10 +1101,17 @@ declaration_statement
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == nullptr)
                     AssertPos(@1, m->errorCount > 0);
-                else
+                else {
+                    // Unlike at global scope (see lAddDeclaration()), an
+                    // anonymous struct keeps its anonymous name here, but the
+                    // typedef names it for function signatures.
+                    const StructType *st = CastType<StructType>($1->declarators[i]->type);
+                    if (st != nullptr && st->IsAnonymousType())
+                        m->typedefAnonymousStructs.insert(GetStructIdentity(st));
                     m->AddTypeDef($1->declarators[i]->name,
                                   $1->declarators[i]->type,
                                   $1->declarators[i]->pos);
+                }
             }
             $$ = nullptr;
         }
@@ -2232,6 +2239,12 @@ type_name
         else {
             $2->InitFromType($1, nullptr);
             $$ = $2->type;
+            for (const Declarator *d = $2; d != nullptr; d = d->child) {
+                if (d->kind == DK_FUNCTION && IsAnonymousStructDefinition($1)) {
+                    Error(@1, "Anonymous struct definition is illegal in function return type.");
+                    break;
+                }
+            }
         }
     }
     ;

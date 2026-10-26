@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -436,6 +437,10 @@ class Module {
     /** Number of enums with a given name declared outside of the global
         scope; see EnumIdentity::localIndex. */
     std::map<std::string, int> localEnumCount;
+
+    /** Anonymous structs named by a typedef in a function body, which keep
+        their anonymous names; see lDefinesAnonymousStruct() in decl.cpp. */
+    std::unordered_set<const StructIdentity *> typedefAnonymousStructs;
 
   private:
     const char *srcFile{nullptr};

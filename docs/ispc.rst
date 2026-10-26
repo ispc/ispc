@@ -298,6 +298,11 @@ Language Changes:
   any outer type, but not of a template parameter, and an enum can be referred
   to as ``enum Foo``.
 
+* Anonymous structs can no longer be defined in function parameter or return
+  types, for example ``void f(uniform struct { int x; } *uniform p)``, as in
+  C++: such a function can't be declared or called anywhere else with the
+  same type. Name the struct or use a typedef instead.
+
 * A typedef's ``uniform`` or ``varying`` qualifier is now kept when other
   declaration specifiers follow the typedef name: after ``typedef varying int
   VI;``, ``VI const *uniform p`` points to a varying ``int`` instead of a

@@ -715,6 +715,19 @@ void Declarator::Print(Indent &indent) const {
     indent.Done();
 }
 
+/** An anonymous struct defined in declaration specifiers can't be named
+    anywhere else, so a function with it in its signature can't be declared
+    or called elsewhere; as in C++, it is an error.  A typedef of the
+    struct, or of a pointer to it, names it, so it is fine. */
+bool ispc::IsAnonymousStructDefinition(const Type *specifierType) {
+    const StructType *st = CastType<StructType>(specifierType);
+    return st != nullptr && st->IsAnonymousType() && m->typedefAnonymousStructs.count(GetStructIdentity(st)) == 0;
+}
+
+static bool lDefinesAnonymousStruct(const DeclSpecs *ds) {
+    return ds != nullptr && IsAnonymousStructDefinition(ds->baseType);
+}
+
 unsigned int lCreateFunctionFlagsAndCostOverride(int &costOverride, DeclSpecs *ds, SourcePos pos) {
     int typeQualifiers = ds->typeQualifiers;
     StorageClass storageClass = ds->storageClass;
@@ -996,6 +1009,14 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                                  "parameter list.");
                 decl->type = nullptr;
             }
+            if (lDefinesAnonymousStruct(d->declSpecs)) {
+                if (decl->name.rfind("__anon_parameter_", 0) == 0) {
+                    Error(decl->pos, "Anonymous struct definition is illegal in function parameter.");
+                } else {
+                    Error(decl->pos, "Anonymous struct definition is illegal in function parameter \"%s\".",
+                          decl->name.c_str());
+                }
+            }
 
             const ArrayType *at = CastType<ArrayType>(decl->type);
             if (at != nullptr) {
@@ -1066,6 +1087,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         if (CastType<FunctionType>(returnType) != nullptr) {
             Error(pos, "Illegal to return function type from function.");
             return;
+        }
+        if (lDefinesAnonymousStruct(ds)) {
+            Error(pos, "Anonymous struct definition is illegal in function return type.");
         }
 
         if (!returnType->IsTypeDependent()) {
