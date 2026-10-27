@@ -91,10 +91,11 @@ export uniform int entry(uniform float f, void *uniform p) {
 // The inlined function has no definition, but its variable is described in
 // its caller with its struct in its own scope (at -O2, the variable is
 // optimized away).  Before LLVM 21, the declaration is a call to
-// llvm.dbg.declare, with the location attached by !dbg.
+// llvm.dbg.declare, with the location attached by !dbg.  On newer LLVM, the
+// inliner makes the inlined locations distinct.
 // O0-DAG: {{#dbg_declare\(|@llvm.dbg.declare\(metadata }}ptr %gi{{[^,]*}}, {{(metadata )?}}![[GI_VAR:[0-9]+]], {{(metadata )?}}!DIExpression(){{(, |\), !dbg )}}![[GI_LOC:[0-9]+]]
 // O0-DAG: ![[GI_VAR]] = !DILocalVariable(name: "gi", {{.*}}type: ![[GI:[0-9]+]]
-// O0-DAG: ![[GI_LOC]] = !DILocation({{.*}}scope: ![[GI_SCOPE:[0-9]+]], inlinedAt: !{{[0-9]+}})
+// O0-DAG: ![[GI_LOC]] = {{(distinct )?}}!DILocation({{.*}}scope: ![[GI_SCOPE:[0-9]+]], inlinedAt: !{{[0-9]+}})
 // O0-DAG: ![[GI_SCOPE]] = distinct !DILexicalBlock(scope: ![[GI_OUTER:[0-9]+]],
 // O0-DAG: ![[GI_OUTER]] = distinct !DILexicalBlock(scope: ![[INLINED_SP:[0-9]+]],
 // O0-DAG: ![[INLINED_SP]] = distinct !DISubprogram(name: "inlined",
