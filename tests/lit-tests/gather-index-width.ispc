@@ -142,6 +142,58 @@ void g_and255(uniform float *uniform base, uniform int *uniform idx, uniform flo
     out[programIndex] = base[i];
 }
 
+// A varying 3x3 table read with two varying int indices taken from a constant
+// cyclic table (the matrix-to-quaternion idiom). The offset of g.c[j][k] is a
+// sum of separately sign-extended terms; with --addressing=32 ImproveMemoryOps
+// accepts such a sum of 32-bit terms as a 32-bit offset (the addressing mode
+// promises that offsets fit), so the gathers are dword.
+// Ideal: = today with --addressing=32; dword with --addressing=64 as well.
+// A32-LABEL: @cyclic_pick___
+// A32-NOT: call {{.*}}@[[GQ]](
+// A32: call {{.*}}@[[GD]](
+// A32-NOT: call {{.*}}@[[GQ]](
+// A64-LABEL: @cyclic_pick___
+// A64-NOT: call {{.*}}@[[GD]](
+// A64: call {{.*}}@[[GQ]](
+// A64-NOT: call {{.*}}@[[GD]](
+struct Grid3 {
+    float c[3][3];
+};
+void cyclic_pick(uniform float src[], uniform float r[]) {
+    Grid3 g;
+    for (uniform int a = 0; a < 3; a++)
+        for (uniform int b = 0; b < 3; b++)
+            g.c[a][b] = src[(a * 3 + b) * programCount + programIndex];
+    float tr = g.c[0][0] + g.c[1][1] + g.c[2][2];
+    float res = 0;
+    if (tr > 0)
+        res = 1 / tr;
+    int i = 0;
+    static const int next[3] = {1, 2, 0};
+    int j = next[i];
+    int k = next[j];
+    float s = g.c[i][i] - g.c[j][j] - g.c[k][k] + 1;
+    float qt[4] = {0, 0, 0, 0};
+    qt[k] = (g.c[i][k] + g.c[k][i]) * s;
+    r[programIndex] = res + qt[0] + qt[1] + qt[2] + qt[3];
+}
+
+// An int64 index with a constant outside the 32-bit range. With
+// --addressing=32 the offset arithmetic is 32-bit, so the 2^32 is dropped and
+// the offsets are 8 * lane; with --addressing=64 they are 2^34 + 8 * lane. The
+// rewrite must keep both results (the 32-bit narrowing of constant offsets in
+// ImproveMemoryOps never sees such a constant today).
+// Ideal: the same offsets, as two vector loads and a shuffle instead of a
+// gather (the stride is a constant 2).
+// A32-LABEL: @big_const___
+// A32: call {{.*}}@[[GD]]({{.*}}<{{8|16}} x i32> <i32 0, i32 8, i32 16,
+// A64-LABEL: @big_const___
+// A64: call {{.*}}@[[GQ]]({{.*}}<{{4|8}} x i64> <i64 17179869184, i64 17179869192,
+void big_const(uniform float p[], uniform float r[]) {
+    int64 i = programIndex * 2;
+    r[programIndex] = p[i + 0x100000000];
+}
+
 // Scatters follow the gathers: dword where the gather is dword, qword
 // otherwise. Ideal: as for the gathers.
 // A32-LABEL: @s_s8___
