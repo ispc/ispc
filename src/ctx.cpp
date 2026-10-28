@@ -1802,9 +1802,12 @@ llvm::Value *FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps in
         llvm::Instruction *bop = llvm::BinaryOperator::Create(inst, v0, v1, name, bblock);
         // We need to enable the nsw bit for signed integer arithmetic to
         // enable some optimizations (including induction variable promotion).
-        // Disabled on Xe targets, or via `--wrap-signed-int`.
+        // The nuw bit is used for unsigned address arithmetic.
+        // Both are disabled on Xe targets, or via `--wrap-signed-int`.
         if (!g->wrapSignedInt && wrapSemantics == WrapSemantics::NSW) {
             bop->setHasNoSignedWrap();
+        } else if (!g->wrapSignedInt && wrapSemantics == WrapSemantics::NUW) {
+            bop->setHasNoUnsignedWrap();
         }
         AddDebugPos(bop);
         return bop;
@@ -2149,6 +2152,10 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
     Assert(llvmScaleType != nullptr);
     llvm::Value *scale = g->target->SizeOf(llvmScaleType, bblock);
 
+    // An unsigned index is zero-extended to 64 bits, so its offset must not
+    // wrap as an unsigned value; nsw would make offsets above INT32_MAX poison.
+    WrapSemantics offsetWrap = (indexType && indexType->IsUnsignedType()) ? WrapSemantics::NUW : WrapSemantics::NSW;
+
     bool indexIsVarying = llvm::isa<llvm::VectorType>(index->getType());
     llvm::Value *offset = nullptr;
     if (indexIsVarying == false) {
@@ -2165,7 +2172,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
         // smear the result out to be a vector; this is more efficient than
         // first promoting both the scale and the index to vectors and then
         // multiplying.
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, WrapSemantics::NSW);
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, offsetWrap);
         offset = SmearUniform(offset);
     } else {
         // Similarly, truncate or sign extend the index to be a 32 or 64
@@ -2180,7 +2187,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
         scale = SmearUniform(scale);
         Assert(index != nullptr);
         // offset = index * scale
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, WrapSemantics::NSW,
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, offsetWrap,
                                 ((llvm::Twine("mul_") + scale->getName()) + "_") + index->getName());
     }
 
