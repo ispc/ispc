@@ -52,7 +52,7 @@ jobs:
           - runner: macos-15-intel
             target: avx2-i32x8
             arch: x86-64
-          - runner: macos-14
+          - runner: macos-15
             target: neon-i32x8
             arch: aarch64
 

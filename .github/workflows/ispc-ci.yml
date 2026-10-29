@@ -458,7 +458,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15-intel, macos-14]
+        runner: [macos-15-intel, macos-15]
         llvm:
           - version: "22.1"
             full_version: "22.1.6"
@@ -516,7 +516,7 @@ jobs:
     with:
       platform: macos
       architecture: aarch64
-      artifact_name: ispc_llvm23_macos-14
+      artifact_name: ispc_llvm23_macos-15
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
@@ -535,7 +535,7 @@ jobs:
     with:
       platform: macos
       architecture: aarch64
-      artifact_name: ispc_llvm${{ matrix.llvm }}_macos-14
+      artifact_name: ispc_llvm${{ matrix.llvm }}_macos-15
       targets: '["neon-i32x4"]'
       optsets: -O0 -O2
       ispc_extra_flags: ${{ matrix.extra_flags }}
@@ -947,7 +947,7 @@ jobs:
 
   macos-examples:
     needs: [linux-package-examples, macos-build-ispc]
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
@@ -955,7 +955,7 @@ jobs:
     - name: Download ispc package
       uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
       with:
-        name: ispc_llvm23_macos-14
+        name: ispc_llvm23_macos-15
 
     - name: Download examples package
       uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0

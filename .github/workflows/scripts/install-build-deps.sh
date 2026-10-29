@@ -13,7 +13,7 @@ case "$OS" in
     tar xf "$LLVM_TAR"
     echo "${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
     brew install bison flex
-    if [ "$RUNNER" == "macos-14" ]; then
+    if [[ "$RUNNER" == "macos-15" ]]; then
       echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
       echo "/opt/homebrew/opt/flex/bin" >> "$GITHUB_PATH"
     else

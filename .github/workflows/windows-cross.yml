@@ -52,7 +52,7 @@ jobs:
 
   build-ispc-macos-wincross:
     name: Build ISPC macOS wincross
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -60,7 +60,7 @@ jobs:
         submodules: true
 
     - name: Install ISPC build dependencies
-      run: .github/workflows/scripts/install-build-deps.sh macos-14
+      run: .github/workflows/scripts/install-build-deps.sh macos-15
 
     - name: Install xwin for windows sdk and vctools
       run: .github/workflows/scripts/install-xwin-winsdk-vctools.sh
