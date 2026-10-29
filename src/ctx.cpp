@@ -1802,9 +1802,12 @@ llvm::Value *FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps in
         llvm::Instruction *bop = llvm::BinaryOperator::Create(inst, v0, v1, name, bblock);
         // We need to enable the nsw bit for signed integer arithmetic to
         // enable some optimizations (including induction variable promotion).
-        // Disabled on Xe targets, or via `--wrap-signed-int`.
+        // The nuw bit is used for unsigned address arithmetic.
+        // Both are disabled on Xe targets, or via `--wrap-signed-int`.
         if (!g->wrapSignedInt && wrapSemantics == WrapSemantics::NSW) {
             bop->setHasNoSignedWrap();
+        } else if (!g->wrapSignedInt && wrapSemantics == WrapSemantics::NUW) {
+            bop->setHasNoUnsignedWrap();
         }
         AddDebugPos(bop);
         return bop;
@@ -2134,6 +2137,19 @@ llvm::Value *lExtendIntTo64(FunctionEmitContext *ctx, llvm::Value *value, const 
     }
 }
 
+/** Returns how the offset index * scale of an index of the given type may
+    wrap. The offset of an unsigned index is computed with nuw if it is then
+    zero-extended (32-bit addressing on a 64-bit target; nsw would make
+    offsets above INT32_MAX poison) or if the index was zero-extended to 64
+    bits; otherwise it may wrap, like the pointer it is added to.
+ */
+static WrapSemantics lOffsetWrapSemantics(const Type *indexType, bool zeroExtended) {
+    if (indexType == nullptr || !indexType->IsUnsignedType()) {
+        return WrapSemantics::NSW;
+    }
+    return zeroExtended ? WrapSemantics::NUW : WrapSemantics::None;
+}
+
 /** Utility routine used by the GetElementPtrInst() methods; given a
     pointer to some type (either uniform or varying) and an index (also
     either uniform or varying), this returns the new pointer (varying if
@@ -2149,6 +2165,10 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
     Assert(llvmScaleType != nullptr);
     llvm::Value *scale = g->target->SizeOf(llvmScaleType, bblock);
 
+    // Whether the offset or the index is extended to 64 bits, zero-extended if
+    // it is unsigned, see lOffsetWrapSemantics().
+    bool zeroExtended = g->target->is32Bit() == false && g->opt.force32BitAddressing == true;
+
     bool indexIsVarying = llvm::isa<llvm::VectorType>(index->getType());
     llvm::Value *offset = nullptr;
     if (indexIsVarying == false) {
@@ -2159,13 +2179,15 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
         } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                    index->getType() == LLVMTypes::Int32Type) {
             index = lExtendIntTo64(this, index, indexType);
+            zeroExtended = true;
         }
 
         // do a scalar multiply to get the offset as index * scale and then
         // smear the result out to be a vector; this is more efficient than
         // first promoting both the scale and the index to vectors and then
         // multiplying.
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, WrapSemantics::NSW);
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType,
+                                lOffsetWrapSemantics(indexType, zeroExtended));
         offset = SmearUniform(offset);
     } else {
         // Similarly, truncate or sign extend the index to be a 32 or 64
@@ -2175,12 +2197,14 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
         } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                    index->getType() == LLVMTypes::Int32VectorType) {
             index = lExtendIntTo64(this, index, indexType);
+            zeroExtended = true;
         }
 
         scale = SmearUniform(scale);
         Assert(index != nullptr);
         // offset = index * scale
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, WrapSemantics::NSW,
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType,
+                                lOffsetWrapSemantics(indexType, zeroExtended),
                                 ((llvm::Twine("mul_") + scale->getName()) + "_") + index->getName());
     }
 
@@ -2235,9 +2259,12 @@ void FunctionEmitContext::MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1) 
 
     subIndices[0] = (indexValue >> log(soaWidth))
     subIndices[1] = (indexValue & (soaWidth-1))
+
+    The shift is logical for an unsigned index.
  */
 static llvm::Value *lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth, llvm::Value *indexValue,
-                                       llvm::Value *ptrSliceOffset, llvm::Value **newSliceOffset) {
+                                       const Type *indexValueType, llvm::Value *ptrSliceOffset,
+                                       llvm::Value **newSliceOffset) {
     // Compute the log2 of the soaWidth.
     Assert(soaWidth > 0);
     int logWidth = 0, sw = soaWidth;
@@ -2266,8 +2293,9 @@ static llvm::Value *lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth, l
     }
 
     // major index = (index >> logWidth)
-    return ctx->BinaryOperator(llvm::Instruction::AShr, indexSum, shift, nullptr, WrapSemantics::None,
-                               "slice_index_major");
+    bool isUnsigned = indexValueType != nullptr && indexValueType->IsUnsignedType();
+    return ctx->BinaryOperator(isUnsigned ? llvm::Instruction::LShr : llvm::Instruction::AShr, indexSum, shift, nullptr,
+                               WrapSemantics::None, "slice_index_major");
 }
 
 llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
@@ -2318,7 +2346,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
             // the soa<> structs with.
             llvm::Value *newSliceOffset = nullptr;
             int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
-            index = lComputeSliceIndex(this, soaWidth, index, ptrSliceOffset, &newSliceOffset);
+            index = lComputeSliceIndex(this, soaWidth, index, indexType, ptrSliceOffset, &newSliceOffset);
             ptrSliceOffset = newSliceOffset;
         }
 
@@ -2378,7 +2406,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         if (ptrType->IsFrozenSlice() == false) {
             llvm::Value *newSliceOffset = nullptr;
             int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
-            index1 = lComputeSliceIndex(this, soaWidth, index1, ptrSliceOffset, &newSliceOffset);
+            index1 = lComputeSliceIndex(this, soaWidth, index1, index1Type, ptrSliceOffset, &newSliceOffset);
             ptrSliceOffset = newSliceOffset;
         }
 

@@ -7,6 +7,9 @@
 #include "ImproveMemoryOps.h"
 #include "builtins-decl.h"
 
+#include <llvm/Analysis/ConstantFolding.h>
+#include <llvm/Analysis/VectorUtils.h>
+
 #include <unordered_map>
 
 namespace ispc {
@@ -303,6 +306,34 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
     return nullptr;
 }
 
+/** Returns true if the parts that lExtractConstantOffset() splits the vector
+    expression in vec into can't wrap as unsigned values, i.e. each part and
+    each partial sum is at most vec. This holds if every add, shl and mul it
+    looks through is nuw. Only then can a zext be applied to the parts instead
+    of to their sum.
+ */
+static bool lSplitIsNUW(llvm::Value *vec) {
+    if (llvm::isa<llvm::Constant>(vec)) {
+        return true;
+    }
+    if (llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(vec)) {
+        return cast->getOpcode() == llvm::Instruction::ZExt && lSplitIsNUW(cast->getOperand(0));
+    }
+    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(vec);
+    if (bop == nullptr) {
+        return true;
+    }
+    switch (bop->getOpcode()) {
+    case llvm::Instruction::Add:
+    case llvm::Instruction::Shl:
+    case llvm::Instruction::Mul:
+        return bop->hasNoUnsignedWrap() && lSplitIsNUW(bop->getOperand(0)) && lSplitIsNUW(bop->getOperand(1));
+    default:
+        // A disjoint or never wraps; anything else is not split.
+        return !IsOrEquivalentToAdd(bop) || (lSplitIsNUW(bop->getOperand(0)) && lSplitIsNUW(bop->getOperand(1)));
+    }
+}
+
 /** Given a vector expression in vec, separate it into a compile-time
     constant component and a variable component, returning the two parts in
     *constOffset and *variableOffset.  (It should be the case that the sum
@@ -326,6 +357,23 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
 
     llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(vec);
     if (cast != nullptr) {
+        llvm::Instruction::CastOps opcode = cast->getOpcode();
+        if (opcode == llvm::Instruction::ZExt) {
+            if (cast->hasNonNeg()) {
+                // InstCombine turns a sext of a value that is known to be
+                // non-negative into a zext nneg. One of the parts may still be
+                // negative, so the parts are sign extended, assuming like for
+                // a sext that the add doesn't wrap as a signed value.
+                opcode = llvm::Instruction::SExt;
+            } else if (!lSplitIsNUW(cast->getOperand(0))) {
+                // zext(c + v) is zext(c) + zext(v) only if c + v doesn't wrap.
+                // For example, p[i - 1] with an unsigned i is zext(i + 0xFFFFFFFF).
+                *constOffset = nullptr;
+                *variableOffset = vec;
+                return;
+            }
+        }
+
         // Check the cast target.
         llvm::Value *co = nullptr, *vo = nullptr;
         lExtractConstantOffset(cast->getOperand(0), &co, &vo, insertBefore);
@@ -334,16 +382,14 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
         if (co == nullptr) {
             *constOffset = nullptr;
         } else {
-            *constOffset =
-                llvm::CastInst::Create(cast->getOpcode(), co, cast->getType(), llvm::Twine(co->getName()) + "_cast",
-                                       ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+            *constOffset = llvm::CastInst::Create(opcode, co, cast->getType(), llvm::Twine(co->getName()) + "_cast",
+                                                  ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
         }
         if (vo == nullptr) {
             *variableOffset = nullptr;
         } else {
-            *variableOffset =
-                llvm::CastInst::Create(cast->getOpcode(), vo, cast->getType(), llvm::Twine(vo->getName()) + "_cast",
-                                       ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+            *variableOffset = llvm::CastInst::Create(opcode, vo, cast->getType(), llvm::Twine(vo->getName()) + "_cast",
+                                                     ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
         }
         return;
     }
@@ -399,10 +445,16 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
                 // --wrap-signed-int is disabled (this is the source of the nsw
                 // flags we want to transfer to the new instruction)
                 if (!g->wrapSignedInt) {
-                    *variableOffset = llvm::BinaryOperator::CreateWithCopiedFlags(
+                    llvm::BinaryOperator *shl = llvm::BinaryOperator::CreateWithCopiedFlags(
                         llvm::Instruction::Shl, v0, c1, bop,
                         ((llvm::Twine("shl_") + v0->getName()) + "_") + c1->getName(),
                         ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+                    // v0 may be larger than c0 + v0 if that sum wraps, and
+                    // then v0 << c1 may wrap where (c0 + v0) << c1 doesn't.
+                    if (!lSplitIsNUW(op0)) {
+                        shl->setHasNoUnsignedWrap(false);
+                    }
+                    *variableOffset = shl;
                 } else {
                     *variableOffset = llvm::BinaryOperator::Create(
                         llvm::Instruction::Shl, v0, c1, ((llvm::Twine("shl_") + v0->getName()) + "_") + c1->getName(),
@@ -525,6 +577,34 @@ static llvm::Value *lExtract248Scale(llvm::Value *splatOperand, int splatValue, 
     return LLVMInt32(1);
 }
 
+/** The scale extraction of lExtractOffsetVector248Scale() for the operand of
+    a zext: zext(x * s) is zext(x) * s only if x * s doesn't wrap, so only a
+    nuw shl by 1, 2 or 3 or a nuw multiply by 2, 4 or 8 is looked through,
+    without recursion or a partial scale. InstCombine turns the multiply of an
+    unsigned index by the element size into a shl.
+ */
+static llvm::Value *lExtractNUWScale(llvm::Value **vec) {
+    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(*vec);
+    if (bop == nullptr) {
+        return LLVMInt32(1);
+    }
+    int splat = 0;
+    if (bop->getOpcode() == llvm::Instruction::Shl) {
+        if (bop->hasNoUnsignedWrap() && lIsIntegerSplat(bop->getOperand(1), &splat) && splat >= 1 && splat <= 3) {
+            *vec = bop->getOperand(0);
+            return LLVMInt32(1 << splat);
+        }
+    } else if (bop->getOpcode() == llvm::Instruction::Mul && bop->hasNoUnsignedWrap()) {
+        for (int i = 0; i < 2; ++i) {
+            if (lIsIntegerSplat(bop->getOperand(i), &splat) && (splat == 2 || splat == 4 || splat == 8)) {
+                *vec = bop->getOperand(1 - i);
+                return LLVMInt32(splat);
+            }
+        }
+    }
+    return LLVMInt32(1);
+}
+
 /** Given a vector of integer offsets to a base pointer being used for a
     gather or a scatter, see if its root operation is a multiply by a
     vector of some value by all 2s/4s/8s.  If not, return nullptr.
@@ -544,16 +624,28 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
     llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(*vec);
     if (cast != nullptr) {
         llvm::Value *castOp = cast->getOperand(0);
-        // Check the cast target.
-        llvm::Value *scale = lExtractOffsetVector248Scale(&castOp);
+        llvm::Value *scale = nullptr;
+        if (cast->getOpcode() == llvm::Instruction::ZExt && !cast->hasNonNeg()) {
+            // zext(x * s) is zext(x) * s only if x * s doesn't wrap.
+            scale = lExtractNUWScale(&castOp);
+        } else {
+            // Check the cast target. A zext nneg is handled like a sext.
+            scale = lExtractOffsetVector248Scale(&castOp);
+        }
         if (scale == nullptr) {
             return nullptr;
         }
 
         // make a new cast instruction so that we end up with the right
         // type
-        *vec = llvm::CastInst::Create(cast->getOpcode(), castOp, cast->getType(), "offset_cast",
-                                      ISPC_INSERTION_POINT_INSTRUCTION(cast));
+        llvm::CastInst *newCast = llvm::CastInst::Create(cast->getOpcode(), castOp, cast->getType(), "offset_cast",
+                                                         ISPC_INSERTION_POINT_INSTRUCTION(cast));
+        if (cast->getOpcode() == llvm::Instruction::ZExt) {
+            // Like for a sext, x * s is assumed not to overflow as a signed
+            // value, so x is non-negative, too.
+            newCast->setNonNeg(cast->hasNonNeg());
+        }
+        *vec = newCast;
         return scale;
     }
 
@@ -624,10 +716,12 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
     if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
         if (auto *castInst = llvm::dyn_cast<llvm::CastInst>(variableOffset)) {
             auto opcode = castInst->getOpcode();
-            if ((opcode == llvm::Instruction::ZExt || opcode == llvm::Instruction::SExt) &&
+            // The 32-bit variants sign extend the offsets, so a zext is only
+            // good if the sign bit is known to be clear.
+            if ((opcode == llvm::Instruction::SExt || (opcode == llvm::Instruction::ZExt && castInst->hasNonNeg())) &&
                 castInst->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
 
-                // zext or sext of a 32-bit vector -> the 32-bit vector is good
+                // sext or zext nneg of a 32-bit vector -> the 32-bit vector is good
                 variableOffset = castInst->getOperand(0);
             } else {
                 return false;
@@ -651,6 +745,19 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
                                               llvm::Twine(constOffset->getName()) + "_trunc",
                                               ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
         } else {
+            // A zext of a 32-bit constant with the sign bit set, as split off
+            // from an unsigned offset, doesn't fit.
+            llvm::ZExtInst *zext = llvm::dyn_cast<llvm::ZExtInst>(constOffset);
+            if (zext != nullptr && !zext->hasNonNeg() && !lVectorIs32BitInts(zext->getOperand(0))) {
+                return false;
+            }
+            // Neither does a folded constant that lVectorIs32BitInts() rejected,
+            // like the 2^31 of p[0x20000000 + programIndex] for a float p.
+            int nElts = 0;
+            int64_t elts[ISPC_MAX_NVEC];
+            if (LLVMExtractVectorInts(constOffset, elts, &nElts)) {
+                return false;
+            }
             // FIXME: otherwise we just assume that all constant offsets
             // can actually always fit into 32-bits...  (This could be
             // wrong, but it should be only in pretty esoteric cases).  We
@@ -1142,6 +1249,181 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Type *baseTyp
     return LLVMGEPInst(base, baseType, firstOffset, "ptr", insertBefore);
 }
 
+/** Returns true if x, a vector, has the same value in all lanes, like a splat,
+    a broadcast or the phi of a uniform loop counter.
+ */
+static bool lIsUniformVector(llvm::Value *x) {
+    if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(x)) {
+        return c->getSplatValue() != nullptr;
+    }
+    return llvm::isa<llvm::Instruction>(x) && LLVMVectorValuesAllEqual(x);
+}
+
+/** Returns true if x is a uniform value u plus lane constants c that can't
+    wrap relative to lane 0: an add nuw with c smallest in lane 0 or an or
+    disjoint with c zero in lane 0, possibly shifted or multiplied by a
+    constant with nuw, like zext(shl nuw (or disjoint %i, <0, 1, ...>), 1)
+    that InstCombine makes of the offset of a signed loop counter. Lane 0 is
+    then never poison, and it is the smallest lane. So if a lane that is on
+    doesn't wrap, lane 0 doesn't either.
+ */
+static bool lIsNoWrapUniformPlusLanes(llvm::Value *x) {
+    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(x);
+    if (bop == nullptr) {
+        return false;
+    }
+    llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
+    switch (bop->getOpcode()) {
+    case llvm::Instruction::Shl:
+    case llvm::Instruction::Mul:
+        return bop->hasNoUnsignedWrap() && llvm::isa<llvm::Constant>(op1) && lIsUniformVector(op1) &&
+               lIsNoWrapUniformPlusLanes(op0);
+    case llvm::Instruction::Add:
+    case llvm::Instruction::Or: {
+        bool isAdd = bop->getOpcode() == llvm::Instruction::Add;
+        if ((isAdd && !bop->hasNoUnsignedWrap()) || (!isAdd && !IsOrEquivalentToAdd(bop))) {
+            return false;
+        }
+        if (lIsUniformVector(op1)) {
+            std::swap(op0, op1);
+        }
+        int nElts = 0;
+        int64_t elts[ISPC_MAX_NVEC];
+        // Only a broadcast or a phi, like that of a uniform loop counter, for u:
+        // LLVMVectorValuesAllEqual() also accepts vectors with some lanes poison.
+        bool isBroadcastOrPhi = llvm::getSplatValue(op0) != nullptr || llvm::isa<llvm::PHINode>(op0);
+        if (!isBroadcastOrPhi || !lIsUniformVector(op0) || !llvm::isa<llvm::Constant>(op1) ||
+            !LLVMExtractVectorInts(op1, elts, &nElts)) {
+            return false;
+        }
+        // The elements are zero extended, so this compares them as unsigned.
+        for (int i = 0; i < nElts; ++i) {
+            if (isAdd ? elts[i] < elts[0] : elts[0] != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+/** Returns true if the lanes of x, the operand of a zext, may wrap relative to
+    each other, like x = j - 1 for an unsigned j = b + programIndex, whose lane
+    0 is 0xFFFFFFFF for b = 0: zext(x) is then linear only modulo 2^32, and the
+    offset of lane 0 is 2^32 times the element size away from those of the
+    other lanes, or poison if it was multiplied with nuw. A uniform
+    contribution like b - d may be close to 2^32 even for small b and d, so
+    only a uniform or constant x, or one that lIsNoWrapUniformPlusLanes()
+    accepts, is known not to.
+ */
+static bool lZExtOperandMayWrap(llvm::Value *x) {
+    if (lIsUniformVector(x)) {
+        return false;
+    }
+    // Constant parts split off by lExtractConstantOffset() may not be folded.
+    // Folding ignores nuw and nsw, so only instructions without them.
+    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(x);
+    if (inst != nullptr && !inst->hasPoisonGeneratingFlags()) {
+        if (llvm::Constant *folded = llvm::ConstantFoldInstruction(inst, inst->getModule()->getDataLayout())) {
+            x = folded;
+        }
+    }
+    if (!llvm::isa<llvm::Constant>(x)) {
+        return !lIsNoWrapUniformPlusLanes(x);
+    }
+    int nElts = 0;
+    int64_t elts[ISPC_MAX_NVEC];
+    if (!LLVMExtractVectorInts(x, elts, &nElts)) {
+        return !llvm::isa<llvm::ConstantAggregateZero>(x);
+    }
+    for (int i = 0; i < nElts; ++i) {
+        if (elts[i] < 0 || elts[i] > INT32_MAX) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Returns true if the offsets in vec are computed from a zext whose operand
+    may wrap (see lZExtOperandMayWrap()). Then the offsets may be linear only
+    modulo 2^32, and the offset of a lane that is off may be 4 GB away. For
+    example, p[j - 1] in "if (j > 0)" with an unsigned j = programIndex has
+    the index 0xFFFFFFFF in lane 0, whose offset is poison or 16 GB away for
+    a float. That the lanes that are on don't straddle the wrap themselves
+    isn't checked: LLVMVectorIsLinear() looks through the zext. Phis are
+    followed, as LLVMVectorIsLinear() does. Past a depth of 8, a zext is
+    assumed.
+ */
+static bool lHasWrappingZExt(llvm::Value *vec, llvm::SmallPtrSetImpl<llvm::Value *> &visited, int depth = 0) {
+    if (depth > 8) {
+        return true;
+    }
+    if (llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(vec)) {
+        if (cast->getOpcode() == llvm::Instruction::ZExt && !cast->hasNonNeg()) {
+            return lZExtOperandMayWrap(cast->getOperand(0));
+        }
+        return lHasWrappingZExt(cast->getOperand(0), visited, depth + 1);
+    }
+    if (llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(vec)) {
+        return lHasWrappingZExt(bop->getOperand(0), visited, depth + 1) ||
+               lHasWrappingZExt(bop->getOperand(1), visited, depth + 1);
+    }
+    if (llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(vec)) {
+        if (!visited.insert(phi).second) {
+            return false;
+        }
+        for (llvm::Value *incoming : phi->incoming_values()) {
+            if (lHasWrappingZExt(incoming, visited, depth + 1)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/** Like lComputeCommonPointer(), but computes the pointer from the offset of
+    the first lane that is on (or of lane 0 if none is): offsets that are
+    linear with the given stride for the lanes that are on give the same
+    pointer for each of them.
+ */
+static llvm::Value *lComputeCommonPointerFromFirstOnLane(llvm::Value *base, llvm::Type *baseType, llvm::Value *offsets,
+                                                         llvm::Value *mask, int stride,
+                                                         llvm::Instruction *insertBefore) {
+    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(offsets->getType());
+    Assert(vt != nullptr);
+    int nElts = vt->getNumElements();
+
+    llvm::Value *on = mask;
+    if (!mask->getType()->getScalarType()->isIntegerTy(1)) {
+        on = new llvm::ICmpInst(ISPC_INSERTION_POINT_INSTRUCTION(insertBefore), llvm::CmpInst::ICMP_NE, mask,
+                                llvm::Constant::getNullValue(mask->getType()), "on");
+    }
+    llvm::IntegerType *bitsType = llvm::IntegerType::get(*g->ctx, nElts);
+    llvm::Value *bits = new llvm::BitCastInst(on, bitsType, "on_bits", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+    llvm::Function *cttz =
+        llvm::Intrinsic::getOrInsertDeclaration(insertBefore->getModule(), llvm::Intrinsic::cttz, {bitsType});
+    llvm::Value *lane =
+        llvm::CallInst::Create(cttz, {bits, LLVMFalse}, "first_on", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+    // cttz gives nElts if no lane is on.
+    lane = llvm::BinaryOperator::Create(llvm::Instruction::And, lane, llvm::ConstantInt::get(bitsType, nElts - 1),
+                                        "first_on_lane", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+    llvm::Type *offsetType = vt->getElementType();
+    lane = llvm::CastInst::CreateIntegerCast(lane, offsetType, false, "first_on_lane_cast",
+                                             ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+
+    llvm::Value *laneOffset =
+        llvm::ExtractElementInst::Create(offsets, lane, "lane_offset", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+    llvm::Value *laneDelta =
+        llvm::BinaryOperator::Create(llvm::Instruction::Mul, lane, llvm::ConstantInt::get(offsetType, stride),
+                                     "lane_delta", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+    llvm::Value *firstOffset = llvm::BinaryOperator::Create(
+        llvm::Instruction::Sub, laneOffset, laneDelta, "first_offset", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+
+    return LLVMGEPInst(base, baseType, firstOffset, "ptr", insertBefore);
+}
+
 /** For negative stride access patterns (e.g., dst[size-1-i]), we need to compute
     the pointer from the last element of the offset vector (which has the lowest address).
  */
@@ -1477,9 +1759,17 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // and 64 bit gather/scatters, respectively.
             llvm::Instruction *newCall = nullptr;
             llvm::Module *M = callInst->getModule();
+            // Lanes that are off may have offsets that wrapped. Then the
+            // pointer is computed from a lane that is on.
+            llvm::SmallPtrSet<llvm::Value *, 4> visited;
+            bool fromOnLane =
+                GetMaskStatusFromValue(mask) != MaskStatus::all_on && lHasWrappingZExt(fullOffsets, visited);
 
             if (gatherInfo != nullptr) {
-                llvm::Value *ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
+                llvm::Value *ptr = fromOnLane
+                                       ? lComputeCommonPointerFromFirstOnLane(base, gatherInfo->baseType(), fullOffsets,
+                                                                              mask, step, callInst)
+                                       : lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
                 LLVMCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
@@ -1490,7 +1780,10 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
                                        ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
-                llvm::Value *ptr = lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
+                llvm::Value *ptr = fromOnLane
+                                       ? lComputeCommonPointerFromFirstOnLane(base, scatterInfo->baseType(),
+                                                                              fullOffsets, mask, step, callInst)
+                                       : lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
                 newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(M), ptr, storeValue, mask, "");
             }
             LLVMCopyMetadata(newCall, callInst);
