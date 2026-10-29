@@ -1082,9 +1082,10 @@ class Traceable {
 };
 
 // An enum class enumerating wrap semantic settings for use with BinaryOperator and other
-// signed arithmetic IR emitters in cases of signed overflow
+// arithmetic IR emitters in cases of signed or unsigned overflow
 enum class WrapSemantics {
-    NSW = 0, // Do not preserve wraparound behavior
-    None = 1 // Preserve wraparound behavior
+    NSW = 0,  // Do not preserve signed wraparound behavior (sets nsw)
+    None = 1, // Preserve wraparound behavior
+    NUW = 2   // Do not preserve unsigned wraparound behavior (sets nuw)
 };
 } // namespace ispc
