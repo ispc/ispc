@@ -88,12 +88,14 @@ RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
 USER ispc_user
 
 # Build ISPC
+# Rocky Linux 8 has no ARM C library headers, so build without ARM.
 WORKDIR /usr/local/src/ispc
 RUN cmake . \
         -B build \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DISPC_PREPARE_PACKAGE=ON \
-        -DISPC_CROSS=ON && \
+        -DISPC_CROSS=ON \
+        -DARM_ENABLED=OFF && \
     cmake --build build --target package -j"$(nproc)" && \
     cmake --build build --target check-all && \
     cmake --install build && \

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -54,6 +54,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __FreeBSD__
+// FreeBSD builtins are also built on other hosts, with the host C library headers (e.g. glibc on
+// Linux). So use the FreeBSD names for what differs between C libraries: the stdout symbol and the
+// sysconf constant.
+#undef stdout
+#define stdout __stdoutp
+extern "C" FILE *__stdoutp;
+#undef _SC_NPROCESSORS_ONLN
+#define _SC_NPROCESSORS_ONLN 58
+#endif // __FreeBSD__
 
 using SizeT = int;
 using MaskT = uint64_t;

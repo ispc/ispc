@@ -139,6 +139,29 @@ platforms, please refer to our
 [ISPC Development Guide](https://github.com/ispc/ispc/wiki/ISPC-Development-Guide)
 for build and test instructions.
 
+On Linux, Linux and FreeBSD targets need these C library packages:
+
+- 32-bit x86, required on x86 hosts: `libc6-dev-i386` on Debian/Ubuntu,
+  `glibc-devel.i686` on Fedora, `lib32-glibc` (multilib) on Arch Linux.
+- AArch64, on other hosts: `libc6-dev-arm64-cross` on Debian/Ubuntu,
+  `aarch64-linux-gnu-glibc` on Arch Linux. `-DARM_ENABLED=OFF` disables ARM.
+- 32-bit ARM: `libc6-dev-armhf-cross` on Debian/Ubuntu. `-DARM32_ENABLED=OFF`
+  disables only 32-bit ARM.
+
+`-DISPC_CROSS=ON` enables cross targets. They use the C headers from an SDK.
+If no SDK is given, its targets are disabled. A given SDK path must exist.
+
+- Android, and Linux on macOS: the Android NDK, from
+  `-DISPC_ANDROID_NDK_PATH=<NDK root>` or `ANDROID_NDK_HOME`.
+- Windows on Linux and macOS: `-DISPC_WINDOWS_SDK_PATH` and
+  `-DISPC_WINDOWS_VCTOOLS_PATH`.
+- macOS on Linux and Windows, with `-DISPC_MACOS_TARGET=ON`:
+  `-DISPC_MACOS_SDK_PATH`.
+- iOS on macOS: `-DISPC_IOS_SDK_PATH`, or the iOS SDK found by `xcrun`.
+- Linux, Android, FreeBSD, PS and macOS on Windows: `-DISPC_GNUWIN32_PATH`.
+
+Native Termux builds use the installed bionic headers.
+
 ## Additional Resources
 
 Latest `ispc` binaries corresponding to `main` branch can be downloaded from

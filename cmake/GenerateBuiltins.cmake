@@ -250,7 +250,19 @@ function (get_target_flags os arch out)
     endif()
 
     # Determine include path
-    if (WIN32)
+    if (${os} STREQUAL "windows" AND NOT WIN32)
+        set(include -isystem${ISPC_WINDOWS_VCTOOLS_PATH}/include -isystem${ISPC_WINDOWS_SDK_PATH}/include/ucrt)
+    elseif (NOT WIN32 AND NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Android"
+            AND (${os} STREQUAL "android" OR (APPLE AND ${os} STREQUAL "linux")))
+        # macOS has no Linux C library headers, so Linux targets use the NDK headers there too.
+        if (${arch} STREQUAL "armv8a")
+            set(ndk_arch arm-linux-androideabi)
+        else()
+            set(ndk_arch ${arch}-linux-android)
+        endif()
+        set(include --sysroot=${ISPC_ANDROID_NDK_SYSROOT} -isystem${ISPC_ANDROID_NDK_SYSROOT}/usr/include
+                    -isystem${ISPC_ANDROID_NDK_SYSROOT}/usr/include/${ndk_arch})
+    elseif (WIN32)
         if (${os} STREQUAL "windows")
             set(include "")
         elseif(${os} STREQUAL "macos")
@@ -264,20 +276,6 @@ function (get_target_flags os arch out)
         if (${os} STREQUAL "ios")
             # -isystem/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/
             set(include -isystem${ISPC_IOS_SDK_PATH}/usr/include)
-        elseif (${os} STREQUAL "linux" OR ${os} STREQUAL "android" OR ${os} STREQUAL "freebsd")
-            if (${arch} STREQUAL "armv8a")
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/arm-linux-androideabi
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/arm-linux-androideabi)
-            elseif (${arch} STREQUAL "aarch64")
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/aarch64-linux-android
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/aarch64-linux-android)
-            elseif(${arch} STREQUAL "i686")
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/i686-linux-android
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/i686-linux-android)
-            else()
-                # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/x86_64-linux-android
-                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/x86_64-linux-android)
-            endif()
         elseif (${os} STREQUAL "macos")
             set(include -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         endif()
@@ -302,8 +300,6 @@ function (get_target_flags os arch out)
             else()
                 set(include -isystem/usr/${debian_triple}/include)
             endif()
-        elseif(${os} STREQUAL "windows")
-            set(include -isystem${ISPC_WINDOWS_VCTOOLS_PATH}/include -isystem${ISPC_WINDOWS_SDK_PATH}/include/ucrt)
         endif()
     endif()
 
@@ -338,7 +334,7 @@ function(builtin_to_cpp bit os generic_arch)
     # builtins-c-cpu.cpp doesn't depend on the C++ library (see builtins/array.hpp), so
     # -nostdinc++ keeps the build independent of the target's C++ library headers.
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -nostdinc++ -S -emit-llvm --std=gnu++17
+        -I${CMAKE_SOURCE_DIR} -m${bit} -nostdinc++ --std=gnu++17
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
@@ -350,8 +346,8 @@ function(builtin_to_cpp bit os generic_arch)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
-            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
+        # Emit bitcode directly: piping into llvm-as would hide clang errors (#3887).
+        COMMAND ${CLANGPP_EXECUTABLE} ${flags} -c -emit-llvm ${input} -o ${bc}
         DEPENDS ${input} ${BUILTINS_C_CPU_HEADER_DEPS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
