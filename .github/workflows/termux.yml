@@ -14,9 +14,11 @@ on:
       - 'cmake/**'
       - 'CMakeLists.txt'
       - 'tests/lit-tests/**'
+      - 'tests/c-builtins/**'
       - '.github/workflows/termux.yml'
       - '.github/workflows/scripts/build-ispc-termux.sh'
       - '.github/workflows/scripts/check-ispc.sh'
+      - '.github/workflows/scripts/compile-c-builtins.sh'
   workflow_dispatch:
 
 concurrency:
