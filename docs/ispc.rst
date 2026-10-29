@@ -3230,6 +3230,14 @@ overflow / underflow and it is the default. If the old behavior (before
 signed integers to have defined wraparound behavior (keep in mind that it will
 prevent some compiler optimizations).
 
+``--no-wrap-signed-int`` also lets ``ispc`` assume that the byte offset of an
+array element or of pointer arithmetic with a signed index doesn't overflow,
+and, with the default 32-bit addressing on a 64-bit target, that the 32-bit
+byte offset of an unsigned index doesn't wrap if the index or the pointer is
+varying: such an unsigned index whose byte offset doesn't fit in 32 bits gives
+undefined behavior, even if it would wrap around to a valid address. ``--wrap-signed-int`` turns these assumptions off,
+too.
+
 "uniform" and "varying" Qualifiers
 ----------------------------------
 
