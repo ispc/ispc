@@ -40,7 +40,7 @@ jobs:
         PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --jit --target=avx2-i32x8 --arch=x86-64
 
   macos:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -49,7 +49,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-build-deps.sh macos-14
+        .github/workflows/scripts/install-build-deps.sh macos-15
 
     - name: Check environment
       run: |
