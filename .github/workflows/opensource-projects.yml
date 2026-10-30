@@ -243,7 +243,6 @@ jobs:
 
     - name: Build and benchmark ispc-downsampler
       run: |
-        source "$HOME/.cargo/env"
         cd ispc-downsampler
         cargo clean
         cargo build --features ispc
