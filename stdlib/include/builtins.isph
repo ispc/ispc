@@ -363,33 +363,33 @@ EXT varying float __undef_varying();
 
 // fast math function
 EXT inline void __fastmath();
-EXT void __scatter_elt32_double(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying double,
-                                uniform int32);
-EXT void __scatter_elt32_float(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying float,
-                               uniform int32);
-EXT void __scatter_elt32_half(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying float16,
-                              uniform int32);
-EXT void __scatter_elt32_i16(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int16,
+EXT void __scatter_elt32_double(NOESCAPE uniform int8 *uniform, varying int32, uniform int32, varying int32,
+                                varying double, uniform int32);
+EXT void __scatter_elt32_float(NOESCAPE uniform int8 *uniform, varying int32, uniform int32, varying int32,
+                               varying float, uniform int32);
+EXT void __scatter_elt32_half(NOESCAPE uniform int8 *uniform, varying int32, uniform int32, varying int32,
+                              varying float16, uniform int32);
+EXT void __scatter_elt32_i16(NOESCAPE uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int16,
                              uniform int32);
-EXT void __scatter_elt32_i32(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int32,
+EXT void __scatter_elt32_i32(NOESCAPE uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int32,
                              uniform int32);
-EXT void __scatter_elt32_i64(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int64,
+EXT void __scatter_elt32_i64(NOESCAPE uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int64,
                              uniform int32);
-EXT void __scatter_elt32_i8(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int8,
+EXT void __scatter_elt32_i8(NOESCAPE uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int8,
                             uniform int32);
-EXT void __scatter_elt64_double(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying double,
-                                uniform int32);
-EXT void __scatter_elt64_float(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying float,
-                               uniform int32);
-EXT void __scatter_elt64_half(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying float16,
-                              uniform int32);
-EXT void __scatter_elt64_i16(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int16,
+EXT void __scatter_elt64_double(NOESCAPE uniform int8 *uniform, varying int64, uniform int32, varying int64,
+                                varying double, uniform int32);
+EXT void __scatter_elt64_float(NOESCAPE uniform int8 *uniform, varying int64, uniform int32, varying int64,
+                               varying float, uniform int32);
+EXT void __scatter_elt64_half(NOESCAPE uniform int8 *uniform, varying int64, uniform int32, varying int64,
+                              varying float16, uniform int32);
+EXT void __scatter_elt64_i16(NOESCAPE uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int16,
                              uniform int32);
-EXT void __scatter_elt64_i32(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int32,
+EXT void __scatter_elt64_i32(NOESCAPE uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int32,
                              uniform int32);
-EXT void __scatter_elt64_i64(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int64,
+EXT void __scatter_elt64_i64(NOESCAPE uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int64,
                              uniform int32);
-EXT void __scatter_elt64_i8(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int8,
+EXT void __scatter_elt64_i8(NOESCAPE uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int8,
                             uniform int32);
 
 // TODO: are these used at all?
@@ -399,19 +399,19 @@ EXT READNONE varying int8 __idiv_int8(varying int8, varying int8);
 EXT READNONE varying int16 __idiv_uint16(varying int16, varying int16);
 EXT READNONE varying int32 __idiv_uint32(varying int32, varying int32);
 EXT READNONE varying int8 __idiv_uint8(varying int8, varying int8);
-EXT varying double __masked_load_blend_double(uniform int8 *uniform, UIntMaskType);
-EXT varying float __masked_load_blend_float(uniform int8 *uniform, UIntMaskType);
-EXT varying float16 __masked_load_blend_half(uniform int8 *uniform, UIntMaskType);
-EXT varying int16 __masked_load_blend_i16(uniform int8 *uniform, UIntMaskType);
-EXT varying int32 __masked_load_blend_i32(uniform int8 *uniform, UIntMaskType);
-EXT varying int64 __masked_load_blend_i64(uniform int8 *uniform, UIntMaskType);
-EXT varying int8 __masked_load_blend_i8(uniform int8 *uniform, UIntMaskType);
-EXT varying double __masked_load_private_double(uniform int8 *uniform, UIntMaskType);
-EXT varying float __masked_load_private_float(uniform int8 *uniform, UIntMaskType);
-EXT varying int16 __masked_load_private_i16(uniform int8 *uniform, UIntMaskType);
-EXT varying int32 __masked_load_private_i32(uniform int8 *uniform, UIntMaskType);
-EXT varying int64 __masked_load_private_i64(uniform int8 *uniform, UIntMaskType);
-EXT varying int8 __masked_load_private_i8(uniform int8 *uniform, UIntMaskType);
+EXT varying double __masked_load_blend_double(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying float __masked_load_blend_float(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying float16 __masked_load_blend_half(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int16 __masked_load_blend_i16(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int32 __masked_load_blend_i32(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int64 __masked_load_blend_i64(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int8 __masked_load_blend_i8(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying double __masked_load_private_double(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying float __masked_load_private_float(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int16 __masked_load_private_i16(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int32 __masked_load_private_i32(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int64 __masked_load_private_i64(NOESCAPE uniform int8 *uniform, UIntMaskType);
+EXT varying int8 __masked_load_private_i8(NOESCAPE uniform int8 *uniform, UIntMaskType);
 
 // TODO: fix signdness
 // 64-bit integer min and max functions
@@ -523,46 +523,56 @@ EXT uniform bool __rdrand_i64(uniform int8 *uniform);
 #else
 #define PackedStoreResultType UniformMaskType
 #endif
-EXT inline uniform int32 __packed_load_activei8(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
-EXT inline uniform int32 __packed_load_activei16(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
-EXT inline uniform int32 __packed_load_activei32(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
-EXT inline uniform int32 __packed_load_activei64(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
-EXT inline uniform int32 __packed_load_activef16(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
-EXT inline uniform int32 __packed_load_activef32(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
-EXT inline uniform int32 __packed_load_activef64(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activei8(NOESCAPE uniform int8 *uniform, NOESCAPE uniform int8 *uniform,
+                                                UIntMaskType);
+EXT inline uniform int32 __packed_load_activei16(NOESCAPE uniform int8 *uniform, NOESCAPE uniform int8 *uniform,
+                                                 UIntMaskType);
+EXT inline uniform int32 __packed_load_activei32(NOESCAPE uniform int8 *uniform, NOESCAPE uniform int8 *uniform,
+                                                 UIntMaskType);
+EXT inline uniform int32 __packed_load_activei64(NOESCAPE uniform int8 *uniform, NOESCAPE uniform int8 *uniform,
+                                                 UIntMaskType);
+EXT inline uniform int32 __packed_load_activef16(NOESCAPE uniform int8 *uniform, NOESCAPE uniform int8 *uniform,
+                                                 UIntMaskType);
+EXT inline uniform int32 __packed_load_activef32(NOESCAPE uniform int8 *uniform, NOESCAPE uniform int8 *uniform,
+                                                 UIntMaskType);
+EXT inline uniform int32 __packed_load_activef64(NOESCAPE uniform int8 *uniform, NOESCAPE uniform int8 *uniform,
+                                                 UIntMaskType);
 
-EXT inline PackedStoreResultType __packed_store_active2i8(uniform int8 *uniform, varying int8, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_active2i16(uniform int8 *uniform, varying int16, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_active2i32(uniform int8 *uniform, varying int32, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_active2i64(uniform int8 *uniform, varying int64, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_active2f16(uniform int8 *uniform, varying float16, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_active2f32(uniform int8 *uniform, varying float, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_active2f64(uniform int8 *uniform, varying double, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2i8(NOESCAPE uniform int8 *uniform, varying int8, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2i16(NOESCAPE uniform int8 *uniform, varying int16, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2i32(NOESCAPE uniform int8 *uniform, varying int32, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2i64(NOESCAPE uniform int8 *uniform, varying int64, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f16(NOESCAPE uniform int8 *uniform, varying float16,
+                                                           UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f32(NOESCAPE uniform int8 *uniform, varying float, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f64(NOESCAPE uniform int8 *uniform, varying double,
+                                                           UIntMaskType);
 
-EXT inline PackedStoreResultType __packed_store_activei8(uniform int8 *uniform, varying int8, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_activei16(uniform int8 *uniform, varying int16, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_activei32(uniform int8 *uniform, varying int32, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_activei64(uniform int8 *uniform, varying int64, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_activef16(uniform int8 *uniform, varying float16, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_activef32(uniform int8 *uniform, varying float, UIntMaskType);
-EXT inline PackedStoreResultType __packed_store_activef64(uniform int8 *uniform, varying double, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activei8(NOESCAPE uniform int8 *uniform, varying int8, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activei16(NOESCAPE uniform int8 *uniform, varying int16, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activei32(NOESCAPE uniform int8 *uniform, varying int32, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activei64(NOESCAPE uniform int8 *uniform, varying int64, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef16(NOESCAPE uniform int8 *uniform, varying float16,
+                                                          UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef32(NOESCAPE uniform int8 *uniform, varying float, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef64(NOESCAPE uniform int8 *uniform, varying double, UIntMaskType);
 
 // TODO: rewrite in stdlib.ispc
-EXT void __prefetch_read_sized_uniform_1(uniform int8 *uniform, uniform int8);
-EXT void __prefetch_read_sized_uniform_2(uniform int8 *uniform, uniform int8);
-EXT void __prefetch_read_sized_uniform_3(uniform int8 *uniform, uniform int8);
-EXT void __prefetch_read_sized_uniform_nt(uniform int8 *uniform, uniform int8);
+EXT void __prefetch_read_sized_uniform_1(NOESCAPE uniform int8 *uniform, uniform int8);
+EXT void __prefetch_read_sized_uniform_2(NOESCAPE uniform int8 *uniform, uniform int8);
+EXT void __prefetch_read_sized_uniform_3(NOESCAPE uniform int8 *uniform, uniform int8);
+EXT void __prefetch_read_sized_uniform_nt(NOESCAPE uniform int8 *uniform, uniform int8);
 EXT void __prefetch_read_sized_varying_1(varying int64, uniform int8, UIntMaskType);
 EXT void __prefetch_read_sized_varying_2(varying int64, uniform int8, UIntMaskType);
 EXT void __prefetch_read_sized_varying_3(varying int64, uniform int8, UIntMaskType);
 EXT void __prefetch_read_sized_varying_nt(varying int64, uniform int8, UIntMaskType);
-EXT void __prefetch_read_uniform_1(uniform int8 *uniform);
-EXT void __prefetch_read_uniform_2(uniform int8 *uniform);
-EXT void __prefetch_read_uniform_3(uniform int8 *uniform);
-EXT void __prefetch_read_uniform_nt(uniform int8 *uniform);
-EXT void __prefetch_write_uniform_1(uniform int8 *uniform);
-EXT void __prefetch_write_uniform_2(uniform int8 *uniform);
-EXT void __prefetch_write_uniform_3(uniform int8 *uniform);
+EXT void __prefetch_read_uniform_1(NOESCAPE uniform int8 *uniform);
+EXT void __prefetch_read_uniform_2(NOESCAPE uniform int8 *uniform);
+EXT void __prefetch_read_uniform_3(NOESCAPE uniform int8 *uniform);
+EXT void __prefetch_read_uniform_nt(NOESCAPE uniform int8 *uniform);
+EXT void __prefetch_write_uniform_1(NOESCAPE uniform int8 *uniform);
+EXT void __prefetch_write_uniform_2(NOESCAPE uniform int8 *uniform);
+EXT void __prefetch_write_uniform_3(NOESCAPE uniform int8 *uniform);
 
 // sign extension
 EXT inline READNONE uniform int32 __sext_uniform_bool(uniform bool);
