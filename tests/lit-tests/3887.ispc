@@ -1,9 +1,9 @@
 // Verifies that building with ARM32_ENABLED=OFF removes 32-bit ARM support only:
 // --arch=arm is rejected for both neon and generic targets, while aarch64 still
 // compiles with its stdlib, so --nostdlib is not used.
-// Also verifies that the aarch64 C builtins are not empty: if clang fails on the
-// C library headers, __do_print and __num_cores are only declared, and programs
-// using print() and num_cores() fail to link.
+// Also verifies that the aarch64 C builtins are not empty: if clang fails on them,
+// __do_print and __num_cores are only declared, and programs using print() and
+// num_cores() fail to link.
 // See https://github.com/ispc/ispc/issues/3887
 
 // RUN: not %{ispc} %s --arch=arm --target=neon-i32x4 --target-os=linux --nowrap -o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK_ARM_NEON

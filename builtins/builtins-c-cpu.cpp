@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -36,14 +36,33 @@
 #endif
 
 #ifndef _MSC_VER
-// In unistd.h we need the definition of sysconf and _SC_NPROCESSORS_ONLN used as its arguments.
-// We should include unistd.h, but it doesn't really work well for cross compilation, as
-// requires us to carry around unistd.h, which is not available on Windows out of the box.
-#include <unistd.h>
+// The builtins are built for each target OS on any host, so they don't include the C library headers
+// of the target. Instead, declare the few C library functions used here, and use the stdout symbol and
+// the sysconf constant of the target C library. Only these two differ between C libraries.
+#include <stddef.h>
 
-// Just for the reference: these lines are eventually included from unistd.h
-// #define _SC_NPROCESSORS_ONLN 58
-// long sysconf(int);
+struct _ispc_FILE;
+extern "C" {
+int snprintf(char *, size_t, const char *, ...);
+int fputs(const char *, _ispc_FILE *);
+int fflush(_ispc_FILE *);
+long sysconf(int);
+}
+
+#if defined(__FreeBSD__) || defined(__APPLE__)
+// FreeBSD and Apple C libraries.
+extern "C" _ispc_FILE *__stdoutp;
+#define stdout __stdoutp
+#define _SC_NPROCESSORS_ONLN 58
+#elif defined(__ANDROID__)
+// bionic, API level 23 and later.
+extern "C" _ispc_FILE *stdout;
+#define _SC_NPROCESSORS_ONLN 0x61
+#else
+// glibc.
+extern "C" _ispc_FILE *stdout;
+#define _SC_NPROCESSORS_ONLN 84
+#endif
 #endif // !_MSC_VER
 
 #endif // !WASM
@@ -51,9 +70,11 @@
 #include "array.hpp"
 #include <stdarg.h>
 #include <stdint.h>
+#if defined(_MSC_VER) || defined(WASM)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 using SizeT = int;
 using MaskT = uint64_t;

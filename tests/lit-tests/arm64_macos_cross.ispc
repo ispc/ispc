@@ -4,7 +4,7 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --target-os=linux --print-target  | FileCheck %s -check-prefixes=CHECK_AARCH64_LINUX
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --target-os=custom_linux --print-target  | FileCheck %s -check-prefixes=CHECK_AARCH64_CUSTOM_LINUX
 
-// REQUIRES: ARM_ENABLED && MACOS_ARM_ENABLED && LINUX_ENABLED
+// REQUIRES: MACOS_HOST && ARM_ENABLED && MACOS_ARM_ENABLED && LINUX_ENABLED && MACOS_IOS_ENABLED
 
 // CHECK_ARM64_IOS: Triple: arm64-apple-ios
 // CHECK_ARM64_IOS-NEXT: CPU: apple-a7

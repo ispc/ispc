@@ -48,7 +48,6 @@ env:
                             "avx10.2nvl-x4", "avx10.2nvl-x8", "avx10.2nvl-x16", "avx10.2nvl-x32", "avx10.2nvl-x64"]'
   TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8", "neon-i8x16", "neon-i16x8", "neon-i8x32", "neon-i16x16"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
-  ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
 
 jobs:
   define-flow:
@@ -985,3 +984,109 @@ jobs:
     - name: Run examples
       run: |
         ctest --test-dir examples-build -C Release --output-on-failure
+
+  # The C builtins (print() and num_cores()) are built for each target OS without its
+  # C library headers (#3887). The functional tests run them on Linux, macOS and Windows.
+  # These jobs run them on Android and FreeBSD, and link them for iOS: the ISPC built on
+  # Linux with cross compilation support compiles tests/c-builtins for them.
+  c-builtins-compile:
+    needs: [linux-build-ispc-llvm23-release]
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - name: Download package
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      with:
+        name: ispc_llvm23rel_linux
+
+    - name: Compile C builtins tests
+      run: |
+        ISPC_TAR=$(ls ispc-*-linux.tar.gz)
+        tar xf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        .github/workflows/scripts/compile-c-builtins.sh "$ISPC_DIR/bin/ispc" c-builtins \
+          android/x86-64 android/arm freebsd/x86-64 freebsd/x86
+
+    - name: Upload objects
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      with:
+        name: c_builtins_objects
+        path: c-builtins/*.o
+
+  # Links with the Android NDK of the runner image and runs on bionic with qemu-user.
+  # 32-bit ARM also checks the softfp C builtins with hard-float ISPC code. Termux
+  # (termux.yml) runs them on AArch64.
+  c-builtins-android:
+    needs: [c-builtins-compile]
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - name: Download objects
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      with:
+        name: c_builtins_objects
+        path: c-builtins
+
+    - name: Install qemu
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-user
+
+    - name: Run C builtins tests
+      run: .github/workflows/scripts/run-c-builtins-android.sh c-builtins x86-64 arm
+
+  c-builtins-freebsd:
+    needs: [c-builtins-compile]
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - name: Download objects
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      with:
+        name: c_builtins_objects
+        path: c-builtins
+
+    - name: Run C builtins tests in FreeBSD
+      uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1.5.9
+      with:
+        release: '15.1'
+        copyback: false
+        run: |
+          set -e
+          freebsd-version
+          sh tests/c-builtins/run.sh c-builtins/freebsd-x86-64.o cc
+          sh tests/c-builtins/run.sh c-builtins/freebsd-x86.o cc -m32
+
+  # The iOS target is enabled only on macOS. There is no iOS device to run on, so
+  # linking checks the C library symbols against the iOS SDK.
+  c-builtins-ios:
+    needs: [macos-build-ispc-llvm23-lto]
+    runs-on: macos-15
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - name: Download package
+      uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+      with:
+        name: ispc_llvm23_lto_macos
+
+    - name: Link C builtins tests for iOS
+      run: |
+        ISPC_TAR=$(ls ispc-*-macOS.universal.tar.gz)
+        tar xf "$ISPC_TAR"
+        ISPC_DIR=$(basename "$ISPC_TAR" .tar.gz)
+        .github/workflows/scripts/compile-c-builtins.sh "$ISPC_DIR/bin/ispc" c-builtins ios/aarch64
+        xcrun --sdk iphoneos clang -target arm64-apple-ios12.0 tests/c-builtins/main.c c-builtins/ios-aarch64.o -o c-builtins/ios-aarch64.run
+        # iOS 12 and later executables have an LC_BUILD_VERSION with platform 2 (IOS).
+        otool -l c-builtins/ios-aarch64.run | grep -A3 LC_BUILD_VERSION | grep -E '^ *platform (2|IOS)$'

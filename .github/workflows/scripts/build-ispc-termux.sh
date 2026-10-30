@@ -25,3 +25,7 @@ cmake -B build -G Ninja -DARM32_ENABLED=OFF
 cmake --build build -j"$(nproc)"
 
 bash -e .github/workflows/scripts/check-ispc.sh
+
+# Run print() and num_cores() of the C builtins on bionic.
+bash -e .github/workflows/scripts/compile-c-builtins.sh build/bin/ispc c-builtins linux/aarch64
+sh tests/c-builtins/run.sh c-builtins/linux-aarch64.o clang
