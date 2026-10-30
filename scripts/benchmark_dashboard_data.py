@@ -28,8 +28,17 @@ DASHBOARD_SIZE = 4096
 # Benchmarks that mostly measure memory traffic: their largest size is shown as well.
 MEMORY_BENCHMARKS = {"01_aossoa", "02_soaaos", "test02_array"}
 
-# Benchmarks that are too noisy to fail the weekly job.
-NOT_GATED = {"05_packed_load_store", "17_pdep_pext"}
+# Benchmarks that are too noisy to fail the weekly job, and new benchmarks that have no stable history yet.
+NOT_GATED = {
+    "05_packed_load_store",
+    "17_pdep_pext",
+    "18_gather_scatter",
+    "01_gather_aos",
+    "02_inline_vector_gather",
+    "03_rgba8_diff",
+    "04_bilinear_remap",
+    "05_struct_copy",
+}
 
 
 def parse_case(run_name):
