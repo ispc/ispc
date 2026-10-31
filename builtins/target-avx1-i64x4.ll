@@ -361,7 +361,7 @@ declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8 *, <4 x MdORi64> %mask)
 define <4 x i32> @__masked_load_i32(i8 *, <4 x i64> %mask64) nounwind alwaysinline {
   %mask      = trunc <4 x i64> %mask64 to <4 x i32>
   %floatmask = bitcast <4 x i32> %mask to <4 x MfORi32>
-  %floatval = call <4 x float> @llvm.x86.avx.maskload.ps(i8 * %0, <4 x MfORi32> %floatmask)
+  %floatval = call <4 x float> @llvm.x86.avx.maskload.ps(i8 * nocapture %0, <4 x MfORi32> %floatmask)
   %retval = bitcast <4 x float> %floatval to <4 x i32>
   ret <4 x i32> %retval
 }
@@ -369,7 +369,7 @@ define <4 x i32> @__masked_load_i32(i8 *, <4 x i64> %mask64) nounwind alwaysinli
 
 define <4 x i64> @__masked_load_i64(i8 *, <4 x i64> %mask) nounwind alwaysinline {
   %doublemask = bitcast <4 x i64> %mask to <4 x MdORi64>
-  %doubleval  = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %0, <4 x MdORi64> %doublemask)
+  %doubleval  = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * nocapture %0, <4 x MdORi64> %doublemask)
   %retval = bitcast <4 x double> %doubleval to <4 x i64>
   ret <4 x i64> %retval
 }
@@ -394,7 +394,7 @@ define void @__masked_store_i32(<4 x i32>* nocapture, <4 x i32>,
   %ptr    = bitcast <4 x i32> * %0 to i8 *
   %val    = bitcast <4 x i32> %1 to <4 x float>
   %mask   = bitcast <4 x i32> %mask32 to <4 x MfORi32>
-  call void @llvm.x86.avx.maskstore.ps(i8 * %ptr, <4 x MfORi32> %mask, <4 x float> %val)
+  call void @llvm.x86.avx.maskstore.ps(i8 * nocapture %ptr, <4 x MfORi32> %mask, <4 x float> %val) memory(argmem: write)
   ret void
 }
 
@@ -403,7 +403,7 @@ define void @__masked_store_i64(<4 x i64>* nocapture, <4 x i64>,
   %ptr  = bitcast <4 x i64> * %0 to i8 *
   %val  = bitcast <4 x i64> %1 to <4 x double>
   %mask = bitcast <4 x i64> %2 to <4 x MdORi64>
-  call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr, <4 x MdORi64> %mask, <4 x double> %val)
+  call void @llvm.x86.avx.maskstore.pd.256(i8 * nocapture %ptr, <4 x MdORi64> %mask, <4 x double> %val) memory(argmem: write)
   ret void
 }
 

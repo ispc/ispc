@@ -690,7 +690,7 @@ entry:
   %shuffle.i40 = shufflevector <16 x i8> %16, <16 x i8> %18, <8 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19>
   %conv.i41 = zext <8 x i8> %shuffle.i40 to <8 x i32>
   %19 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %vals, <8 x i32> %conv.i41)
-  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %conv.i, <8 x i32> %19)
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr nocapture %startptr, <8 x i32> %conv.i, <8 x i32> %19) memory(argmem: write)
   ret i32 %2
 }
 
@@ -918,7 +918,7 @@ entry:
   %10 = bitcast <4 x i64> %vals_low to <8 x i32>
   %11 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %10, <8 x i32> %conv.i75)
   %12 = bitcast <4 x i64> %conv.i to <8 x i32>
-  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %12, <8 x i32> %11)
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr nocapture %startptr, <8 x i32> %12, <8 x i32> %11) memory(argmem: write)
   %mul15 = shl nuw nsw i32 %2, 1
   %idx.ext = zext i32 %mul15 to i64
   %add.ptr = getelementptr inbounds i32, ptr %startptr, i64 %idx.ext
@@ -944,7 +944,7 @@ entry:
   %22 = bitcast <4 x i64> %vals_high to <8 x i32>
   %23 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %22, <8 x i32> %conv.i85)
   %24 = bitcast <4 x i64> %conv.i50 to <8 x i32>
-  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %add.ptr, <8 x i32> %24, <8 x i32> %23)
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr nocapture %add.ptr, <8 x i32> %24, <8 x i32> %23) memory(argmem: write)
   %add = add nuw nsw i32 %14, %2
   ret i32 %add
 }

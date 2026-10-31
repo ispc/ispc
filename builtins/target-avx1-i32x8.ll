@@ -304,7 +304,7 @@ declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8 *, <4 x MdORi64> %mask)
  
 define <8 x i32> @__masked_load_i32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
   %floatmask = bitcast <8 x i32> %mask to <8 x MfORi32>
-  %floatval = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8 * %0, <8 x MfORi32> %floatmask)
+  %floatval = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8 * nocapture %0, <8 x MfORi32> %floatmask)
   %retval = bitcast <8 x float> %floatval to <8 x i32>
   ret <8 x i32> %retval
 }
@@ -319,9 +319,9 @@ define <8 x i64> @__masked_load_i64(i8 *, <8 x i32> %mask) nounwind alwaysinline
   %mask0d = bitcast <8 x i32> %mask0 to <4 x MdORi64>
   %mask1d = bitcast <8 x i32> %mask1 to <4 x MdORi64>
 
-  %val0d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %0, <4 x MdORi64> %mask0d)
+  %val0d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * nocapture %0, <4 x MdORi64> %mask0d)
   %ptr1 = getelementptr PTR_OP_ARGS(`i8') %0, i32 32
-  %val1d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %ptr1, <4 x MdORi64> %mask1d)
+  %val1d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * nocapture %ptr1, <4 x MdORi64> %mask1d)
 
   %vald = shufflevector <4 x double> %val0d, <4 x double> %val1d,
       <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -346,7 +346,7 @@ define void @__masked_store_i32(<8 x i32>* nocapture, <8 x i32>,
   %ptr = bitcast <8 x i32> * %0 to i8 *
   %val = bitcast <8 x i32> %1 to <8 x float>
   %mask = bitcast <8 x i32> %2 to <8 x MfORi32>
-  call void @llvm.x86.avx.maskstore.ps.256(i8 * %ptr, <8 x MfORi32> %mask, <8 x float> %val)
+  call void @llvm.x86.avx.maskstore.ps.256(i8 * nocapture %ptr, <8 x MfORi32> %mask, <8 x float> %val) memory(argmem: write)
   ret void
 }
 
@@ -368,9 +368,9 @@ define void @__masked_store_i64(<8 x i64>* nocapture, <8 x i64>,
   %val1 = shufflevector <8 x double> %val, <8 x double> poison,
      <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 
-  call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr, <4 x MdORi64> %mask0d, <4 x double> %val0)
+  call void @llvm.x86.avx.maskstore.pd.256(i8 * nocapture %ptr, <4 x MdORi64> %mask0d, <4 x double> %val0) memory(argmem: write)
   %ptr1 = getelementptr PTR_OP_ARGS(`i8') %ptr, i32 32
-  call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr1, <4 x MdORi64> %mask1d, <4 x double> %val1)
+  call void @llvm.x86.avx.maskstore.pd.256(i8 * nocapture %ptr1, <4 x MdORi64> %mask1d, <4 x double> %val1) memory(argmem: write)
   ret void
 }
 
