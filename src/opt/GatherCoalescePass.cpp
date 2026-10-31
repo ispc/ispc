@@ -7,6 +7,8 @@
 #include "GatherCoalescePass.h"
 #include "builtins-decl.h"
 
+#include <llvm/Support/MathExtras.h>
+
 namespace ispc {
 
 /** Representation of a memory load that the gather coalescing code has
@@ -752,6 +754,12 @@ static void lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGr
         int nElts = 0;
         bool ok = LLVMExtractVectorInts(offsets, endPtr, &nElts);
         Assert(ok && nElts == width);
+        // LLVMExtractVectorInts() zero extends the elements, but the offsets
+        // are signed: with 32-bit addressing, -4 would become 2^32 - 4.
+        unsigned int bitWidth = offsets->getType()->getScalarSizeInBits();
+        for (int j = 0; j < nElts; ++j) {
+            endPtr[j] = llvm::SignExtend64(endPtr[j], bitWidth);
+        }
     }
 
     for (int i = 0; i < (int)constOffsets->size(); ++i) {

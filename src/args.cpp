@@ -207,8 +207,8 @@ static ArgsParseResult usage() {
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
-    printf("    [--[no-]wrap-signed-int]\t\t[Do not] preserve wraparound on signed integer overflow (default: do not "
-           "preserve)\n");
+    printf("    [--[no-]wrap-signed-int]\t\t[Do not] preserve wraparound on signed integer overflow and in "
+           "array and pointer offsets (default: do not preserve)\n");
     printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
     printf("        intel\t\t\t\tEmit Intel-style assembly\n");
     printf("        att\t\t\t\tEmit AT&T-style assembly\n");
