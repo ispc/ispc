@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792894433805,
+  "lastUpdate": 1793498291449,
   "repoUrl": "https://github.com/ispc/ispc",
   "entries": {
     "dispatch (sse4-i32x4,avx2-i32x8,avx512gnr-x8)": [
@@ -102,6 +102,40 @@ window.BENCHMARK_DATA = {
             "value": 1422835856.96714,
             "unit": "ns/iter",
             "extra": "iterations: 5\ncpu: 210017656.0000002 ns\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Arina Neshlyaeva",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "committer": {
+            "name": "aneshlya",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "id": "aa0734e76853fba56e037b77032e653cc5074a49",
+          "message": "ci: don't source ~/.cargo/env for ispc-downsampler\n\nOn macos-15 rustup is preinstalled by the system package manager, so\ndtolnay/rust-toolchain doesn't run rustup-init and ~/.cargo/env doesn't\nexist; sourcing it failed the job. cargo is already on PATH.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-30T19:30:39Z",
+          "url": "https://github.com/ispc/ispc/commit/aa0734e76853fba56e037b77032e653cc5074a49"
+        },
+        "date": 1793498290447,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test/4096",
+            "value": 225359939.0387535,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 223114770 ns\nthreads: 1"
+          },
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test_multithread/10000",
+            "value": 1429526071.9954967,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 209496833.0000002 ns\nthreads: 1"
           }
         ]
       }
