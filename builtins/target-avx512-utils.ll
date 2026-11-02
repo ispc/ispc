@@ -230,19 +230,19 @@ define(`convert_scale_to_const_gather', `
                                                 i32 8, label %on_eight_$1]
 
 on_one_$1:
-  %$1_1 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 1)
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, $9 %$8, i32 1)
   br label %end_bb_$1
 
 on_two_$1:
-  %$1_2 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 2)
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, $9 %$8, i32 2)
   br label %end_bb_$1
 
 on_four_$1:
-  %$1_4 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 4)
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, $9 %$8, i32 4)
   br label %end_bb_$1
 
 on_eight_$1:
-  %$1_8 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 8)
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, $9 %$8, i32 8)
   br label %end_bb_$1
 
 default_$1:
@@ -276,19 +276,19 @@ define(`convert_scale_to_const_scatter', `
                                                 i32 8, label %on_eight_$3]
 
 on_one_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 1)
+  call void @$1(i8* nocapture %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 1) memory(write)
   br label %end_bb_$3
 
 on_two_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 2)
+  call void @$1(i8* nocapture %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 2) memory(write)
   br label %end_bb_$3
 
 on_four_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 4)
+  call void @$1(i8* nocapture %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 4) memory(write)
   br label %end_bb_$3
 
 on_eight_$3:
-  call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 8)
+  call void @$1(i8* nocapture %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 8) memory(write)
   br label %end_bb_$3
 
 default_$3:
