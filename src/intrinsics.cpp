@@ -686,6 +686,16 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
         return nullptr;
     }
 
+    if (args != nullptr) {
+        for (const Expr *arg : args->exprs) {
+            // An error has already been reported for the argument, and the
+            // intrinsic can't be declared without its type.
+            if (arg == nullptr || arg->GetType() == nullptr) {
+                return nullptr;
+            }
+        }
+    }
+
     llvm::Function *funcDecl = lGetIntrinsicDeclaration(module, name, args, pos);
     if (funcDecl == nullptr) {
         return nullptr;
