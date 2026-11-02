@@ -4400,6 +4400,6 @@ Stmt *DeleteStmt::TypeCheck() {
 int DeleteStmt::EstimateCost() const { return COST_DELETE; }
 
 DeleteStmt *DeleteStmt::Instantiate(TemplateInstantiation &templInst) const {
-    Expr *instExpr = expr->Instantiate(templInst);
+    Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
     return new DeleteStmt(instExpr, pos);
 }
