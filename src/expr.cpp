@@ -4689,10 +4689,14 @@ FunctionCallExpr *ispc::CreateLLVMIntrinsicCall(const std::string &name, ExprLis
     bool hasDependentArgs = false;
     if (args != nullptr) {
         for (const Expr *arg : args->exprs) {
-            const Type *argType = arg ? arg->GetType() : nullptr;
+            if (arg == nullptr) {
+                // An error has already been reported for the argument, and the
+                // intrinsic can't be declared without its type.
+                return new FunctionCallExpr(nullptr, args, pos);
+            }
+            const Type *argType = arg->GetType();
             if (argType && argType->IsDependent()) {
                 hasDependentArgs = true;
-                break;
             }
         }
     }

@@ -2,6 +2,12 @@
 // is reported as an error and does not crash the compiler on instantiation.
 
 // RUN: not %{ispc} --target=host --nowrap --nostdlib -o %t.o %s 2>&1 | FileCheck %s
+// RUN: not %{ispc} --target=host --nowrap --nostdlib --enable-llvm-intrinsics -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTRINSICS
+
+// CHECK-INTRINSICS-NOT: FATAL ERROR
+// CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol6".
+// CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol7".
+// CHECK-INTRINSICS-NOT: FATAL ERROR
 
 // CHECK-NOT: FATAL ERROR
 // CHECK: Error: Undeclared symbol "undeclared_symbol".
@@ -31,3 +37,11 @@ float use4(float v) { return outer4<float>(v); }
 
 template <typename T> void outer5(T y) { delete undeclared_symbol5; }
 void use5(float v) { outer5<float>(v); }
+
+#ifdef INTRINSICS
+// The intrinsic declaration is deferred until instantiation.
+template <typename T> T outer6(T y) { return @llvm.fshl(undeclared_symbol6, y, y); }
+uniform int32 use6(uniform int32 v) { return outer6<uniform int32>(v); }
+
+uniform int32 use7(uniform int32 v) { return @llvm.fshl(undeclared_symbol7, v, v); }
+#endif
