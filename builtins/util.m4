@@ -867,19 +867,19 @@ define(`convert_scale_to_const', `
                                                 i32 8, label %on_eight_$1]
 
 on_one_$1:
-  %$1_1 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
   br label %end_bb_$1
 
 on_two_$1:
-  %$1_2 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
   br label %end_bb_$1
 
 on_four_$1:
-  %$1_4 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
   br label %end_bb_$1
 
 on_eight_$1:
-  %$1_8 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> poison, i8 * nocapture %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
   br label %end_bb_$1
 
 default_$1:
