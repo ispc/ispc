@@ -1,21 +1,26 @@
-// Check that an undeclared symbol passed to a call inside a function template
-// is reported as an error and does not crash the compiler on instantiation.
+// Regression test for https://github.com/ispc/ispc/issues/3986
+// Check that an invalid argument (an undeclared symbol or an expression with an
+// error type) is reported as an error and does not crash the compiler, in
+// particular when a function template that contains it is instantiated.
 
-// RUN: not %{ispc} --target=host --nowrap --nostdlib -o %t.o %s 2>&1 | FileCheck %s
-// RUN: not %{ispc} --target=host --nowrap --nostdlib --enable-llvm-intrinsics -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTRINSICS
+// RUN: not %{ispc} --target=host --nowrap --nostdlib -o %t.o %s 2>&1 | FileCheck %s --implicit-check-not=FATAL
+// RUN: not %{ispc} --target=host --nowrap --nostdlib --enable-llvm-intrinsics -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTRINSICS --implicit-check-not=FATAL
+// RUN: not %{ispc} --target=host --nowrap --nostdlib -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FLAG --implicit-check-not=FATAL
 
-// CHECK-INTRINSICS-NOT: FATAL ERROR
-// CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol6".
-// CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol7".
-// CHECK-INTRINSICS-NOT: FATAL ERROR
-
-// CHECK-NOT: FATAL ERROR
 // CHECK: Error: Undeclared symbol "undeclared_symbol".
 // CHECK: Error: Undeclared symbol "undeclared_symbol2".
 // CHECK: Error: Undeclared symbol "undeclared_symbol3".
 // CHECK: Error: Undeclared symbol "undeclared_symbol4".
 // CHECK: Error: Undeclared symbol "undeclared_symbol5".
-// CHECK-NOT: FATAL ERROR
+
+// CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol6".
+// CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol7".
+// CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol8".
+// CHECK-INTRINSICS: Error: Trying to index into non-array, vector, or pointer type "uniform int32".
+// CHECK-INTRINSICS: Error: Trying to index into non-array, vector, or pointer type "uniform int32".
+
+// CHECK-NO-FLAG: Error: Undeclared symbol "undeclared_symbol6".
+// CHECK-NO-FLAG: Error: Calling LLVM intrinsics from ISPC source code is an experimental feature
 
 float twice(float x) { return x + x; }
 template <typename T> T callee(T x) { return x; }
@@ -43,5 +48,14 @@ void use5(float v) { outer5<float>(v); }
 template <typename T> T outer6(T y) { return @llvm.fshl(undeclared_symbol6, y, y); }
 uniform int32 use6(uniform int32 v) { return outer6<uniform int32>(v); }
 
-uniform int32 use7(uniform int32 v) { return @llvm.fshl(undeclared_symbol7, v, v); }
+template <typename T> T outer7(T y) { return @llvm.fshl(y, undeclared_symbol7, y); }
+uniform int32 use7(uniform int32 v) { return outer7<uniform int32>(v); }
+
+uniform int32 use8(uniform int32 v) { return @llvm.fshl(undeclared_symbol8, v, v); }
+
+// The argument is not null, but its type is.
+template <typename T> T outer9(T y) { return @llvm.fshl(y[0], y, y); }
+uniform int32 use9(uniform int32 v) { return outer9<uniform int32>(v); }
+
+uniform int32 use10(uniform int32 v) { return @llvm.fshl(v[0], v, v); }
 #endif
