@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -28,22 +28,36 @@
 // We do want old school sprintf and don't want secure Microsoft extensions.
 // And we also don't want warnings about it, so the define.
 #define _CRT_SECURE_NO_WARNINGS
-#else
-// Some versions of glibc has "fortification" feature, which expands sprintf
-// to __builtin___sprintf_chk(..., __builtin_object_size(...), ...).
-// We don't want this kind of expansion, as we don't support these intrinsics.
-#define _FORTIFY_SOURCE 0
 #endif
 
 #ifndef _MSC_VER
-// In unistd.h we need the definition of sysconf and _SC_NPROCESSORS_ONLN used as its arguments.
-// We should include unistd.h, but it doesn't really work well for cross compilation, as
-// requires us to carry around unistd.h, which is not available on Windows out of the box.
-#include <unistd.h>
+// The builtins are built for each target OS on any host, so they don't include the C library headers
+// of the target. Instead, declare the few C library functions used here and select
+// the stdout symbol and sysconf constant of the target C library.
+#include <stddef.h>
 
-// Just for the reference: these lines are eventually included from unistd.h
-// #define _SC_NPROCESSORS_ONLN 58
-// long sysconf(int);
+struct ISPCFile;
+extern "C" {
+int snprintf(char *, size_t, const char *, ...);
+int fputs(const char *, ISPCFile *);
+int fflush(ISPCFile *);
+long sysconf(int);
+}
+
+#if defined(__FreeBSD__) || defined(__APPLE__)
+// FreeBSD and Apple C libraries.
+extern "C" ISPCFile *__stdoutp;
+#define stdout __stdoutp
+#define _SC_NPROCESSORS_ONLN 58
+#elif defined(__ANDROID__)
+// bionic, API level 23 and later.
+extern "C" ISPCFile *stdout;
+#define _SC_NPROCESSORS_ONLN 97
+#else
+// glibc.
+extern "C" ISPCFile *stdout;
+#define _SC_NPROCESSORS_ONLN 84
+#endif
 #endif // !_MSC_VER
 
 #endif // !WASM
@@ -51,9 +65,9 @@
 #include "array.hpp"
 #include <stdarg.h>
 #include <stdint.h>
+#if defined(_MSC_VER) || defined(WASM)
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#endif
 
 using SizeT = int;
 using MaskT = uint64_t;
