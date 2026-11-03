@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793498291449,
+  "lastUpdate": 1793729768947,
   "repoUrl": "https://github.com/ispc/ispc",
   "entries": {
     "dispatch (sse4-i32x4,avx2-i32x8,avx512gnr-x8)": [
@@ -136,6 +136,40 @@ window.BENCHMARK_DATA = {
             "value": 1429526071.9954967,
             "unit": "ns/iter",
             "extra": "iterations: 5\ncpu: 209496833.0000002 ns\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Arina Neshlyaeva",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "committer": {
+            "name": "aneshlya",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "id": "ded7463f4926d2fdca9562f712e68292349f5ed2",
+          "message": "Fix #3983 (3/3): mark x86 gather and scatter calls nocapture\n\nLLVM's AVX2 and AVX-512 gather intrinsics don't mark their base pointer\ncaptures(none), and the AVX-512 scatters have no memory attributes at all.\nAdd nocapture to the base pointer at the calls and memory(write) to the\nscatters. They aren't marked argmem-only: ISPC can pick a base from\ninteger arithmetic whose offsets reach another object.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-02T22:11:26Z",
+          "url": "https://github.com/ispc/ispc/commit/ded7463f4926d2fdca9562f712e68292349f5ed2"
+        },
+        "date": 1793729739102,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test/4096",
+            "value": 224344895.00301424,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 221992164.99999985 ns\nthreads: 1"
+          },
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test_multithread/10000",
+            "value": 1426737628.0040479,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 213357236.99999985 ns\nthreads: 1"
           }
         ]
       }
