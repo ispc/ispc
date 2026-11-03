@@ -10,7 +10,7 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a16 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A16
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a17 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A17
 
-// REQUIRES: ARM_ENABLED && MACOS_ARM_ENABLED
+// REQUIRES: MACOS_HOST && ARM_ENABLED && MACOS_ARM_ENABLED
 
 // CHECK_ALL: Triple: arm64-apple-macosx
 
