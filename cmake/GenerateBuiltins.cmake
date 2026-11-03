@@ -174,9 +174,15 @@ function(builtin_wasm_to_cpp bit os arch)
         list(APPEND flags "-sMEMORY64")
     endif()
 
+    set(emcc_command ${EMCC_EXECUTABLE})
+    if(WIN32)
+        # emcc may resolve to emcc.bat; return to the build script after it runs.
+        set(emcc_command call ${EMCC_EXECUTABLE})
+    endif()
+
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${EMCC_EXECUTABLE} ${flags} ${input} -o ${bc}
+        COMMAND ${emcc_command} ${flags} ${input} -o ${bc}
         DEPENDS ${input} ${BUILTINS_C_CPU_HEADER_DEPS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
