@@ -7,7 +7,6 @@
 // RUN:   -I"%S/../.." -fsyntax-only "%S/../../builtins/builtins-c-cpu.cpp" 2>&1 | FileCheck %s
 // RUN: not %{cxx} --target=x86_64-unknown-haiku -nostdlibinc -nostdinc++ -std=gnu++17 \
 // RUN:   -I"%S/../.." -fsyntax-only "%S/../../builtins/builtins-c-cpu.cpp" 2>&1 | FileCheck %s
-// REQUIRES: X86_ENABLED
 
 // CHECK: error: "Unsupported target C library for CPU builtins"
 // clang-format on

@@ -11,7 +11,7 @@
 // CHECK-DAG: define {{.*}} @__do_print(
 // CHECK-DAG: define {{.*}} @__num_cores(
 // CHECK-DAG: @stdout = external
-// CHECK-DAG: call {{.*}} @sysconf(i32 {{.*}}97)
+// CHECK-DAG: call {{.*}} @sysconf(i32 {{[^0-9-]*}}97)
 
 void foo(uniform int out[]) {
     print("programIndex=%\n", programIndex);
