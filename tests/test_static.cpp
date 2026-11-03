@@ -42,6 +42,8 @@
 #endif
 #endif
 
+#include "test_static_guard.h"
+
 #if (TEST_SIG == 7)
 #define varying_f_sz f_sz
 #define v1_varying_f_sz f_sz
@@ -137,8 +139,10 @@ int main(int argc, char *argv[]) {
     // Request permission to use AMX tile data
     long result = syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA);
     if (result != 0) {
-        fprintf(stderr, "Error: Failed to enable AMX support (syscall returned %ld). "
-                "AMX instructions require kernel permission on Linux 5.16+.\n", result);
+        fprintf(stderr,
+                "Error: Failed to enable AMX support (syscall returned %ld). "
+                "AMX instructions require kernel permission on Linux 5.16+.\n",
+                result);
         return 1;
     }
 #endif
@@ -146,10 +150,13 @@ int main(int argc, char *argv[]) {
     assert(w <= 64);
 
     ALIGN float returned_result[ARRAY_SIZE];
-    ALIGN float vfloat[ARRAY_SIZE];
-    ALIGN double vdouble[ARRAY_SIZE];
-    ALIGN int vint[ARRAY_SIZE];
-    ALIGN int vint2[ARRAY_SIZE];
+    // The inputs sit next to guard pages (see test_static_guard.h): an access
+    // past the end of vfloat or vdouble, or before the start of vint or vint2,
+    // faults.
+    float *vfloat = (float *)AllocGuarded(ARRAY_SIZE * sizeof(float), GuardTrailing);
+    double *vdouble = (double *)AllocGuarded(ARRAY_SIZE * sizeof(double), GuardTrailing);
+    int *vint = (int *)AllocGuarded(ARRAY_SIZE * sizeof(int), GuardLeading);
+    int *vint2 = (int *)AllocGuarded(ARRAY_SIZE * sizeof(int), GuardLeading);
 
     for (int i = 0; i < ARRAY_SIZE; ++i) {
         returned_result[i] = -1e20;
