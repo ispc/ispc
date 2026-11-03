@@ -45,18 +45,22 @@ long sysconf(int);
 }
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-// FreeBSD and Apple C libraries.
+// FreeBSD: stdio.h and unistd.h; Apple Libc: _stdio.h and unistd.h.
+// PS targets also define __FreeBSD__; public PS4 sysconf constants:
+// https://github.com/shadps4-emu/shadPS4/blob/8729018155e54f305b6bc7576f850e756ffdd13c/src/core/libraries/kernel/kernel.h
 extern "C" ISPCFile *__stdoutp;
 #define stdout __stdoutp
 #define _SC_NPROCESSORS_ONLN 58
 #elif defined(__ANDROID__)
-// bionic, API level 23 and later.
+// bionic: stdio.h (stdout requires API level 23) and bits/sysconf.h.
 extern "C" ISPCFile *stdout;
 #define _SC_NPROCESSORS_ONLN 97
-#else
-// glibc.
+#elif defined(__linux__)
+// glibc: stdio.h and bits/confname.h.
 extern "C" ISPCFile *stdout;
 #define _SC_NPROCESSORS_ONLN 84
+#else
+#error "Unsupported target C library for CPU builtins"
 #endif
 #endif // !_MSC_VER
 
