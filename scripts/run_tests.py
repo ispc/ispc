@@ -426,6 +426,37 @@ def add_prefix(path, host, target):
     path = os.path.abspath(path)
     return path
 
+# Split ispc arguments the same way as run_command() does, and expand
+# @<file> arguments the way ispc does.
+def split_ispc_args(text):
+    lexer = shlex.shlex(text, posix=True)
+    lexer.whitespace_split = True
+    lexer.escape = ''
+    for arg in lexer:
+        if arg.startswith("@") and os.path.isfile(arg[1:]):
+            with open(arg[1:]) as f:
+                yield from split_ispc_args(f.read())
+        else:
+            yield arg
+
+# Return the addressing mode ispc uses for the tests: "32" or "64". On 64-bit
+# architectures it is the last --addressing flag of the ispc flags or of the
+# ISPC_ARGS environment variable, which ispc reads after its command line.
+# 32-bit architectures always use 32-bit addressing, and xe64 always uses
+# 64-bit addressing. In JIT mode the test executable builds its own ispc
+# engine, and neither the ispc flags nor ISPC_ARGS reach it.
+def get_addressing(target):
+    if target.arch == "xe64":
+        return "64"
+    if options.jit_mode or target.arch in ("x86", "arm", "wasm32"):
+        return "32"
+    addressing = "32"
+    args = list(split_ispc_args(options.ispc_flags)) + list(split_ispc_args(os.environ.get("ISPC_ARGS", "")))
+    for arg in args:
+        if arg.startswith("--addressing="):
+            addressing = arg[len("--addressing="):]
+    return addressing
+
 # Return True if test should be skipped,
 # return False otherwise.
 #
@@ -438,7 +469,10 @@ def add_prefix(path, host, target):
 # //rule: skip on <key>=<value>
 #
 # Currently supported keys are:
-# [arch, OS, cpu, target, jit].
+# [arch, OS, cpu, target, jit, addressing].
+#
+# addressing is the addressing mode ispc uses: 32 or 64 (see
+# get_addressing()).
 #
 # * (asterisk) represent any value.
 # Proper regexps can also be used.
@@ -460,6 +494,10 @@ def add_prefix(path, host, target):
 # // rule: skip on target=generic.*
 # // rule: run on OS=!windows
 #
+# 4. Run only with 64-bit addressing:
+# // rule: skip on addressing=*
+# // rule: run on addressing=64
+#
 def check_if_skip_test(filename, host, target):
     # by default we're not skipping test
     skip = False
@@ -480,7 +518,10 @@ def check_if_skip_test(filename, host, target):
     # Determine JIT mode status
     jit_mode = "true" if options.jit_mode else "false"
 
-    rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu, "target": target.target, "jit": jit_mode}
+    addressing = get_addressing(target)
+
+    rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu, "target": target.target, "jit": jit_mode,
+                   "addressing": addressing}
 
     test_file_path = add_prefix(filename, host, target)
     with open(test_file_path) as test_file:
@@ -490,7 +531,7 @@ def check_if_skip_test(filename, host, target):
             # EOF
             if not test_line:
                 break;
-            rule = re.search('// *rule: (run|skip) on (arch|OS|cpu|target|jit)=(.*)', test_line)
+            rule = re.search('// *rule: (run|skip) on (arch|OS|cpu|target|jit|addressing)=(.*)', test_line)
             # no match for this line -> look at next line
             if rule == None:
                 if "rule:" in test_line:
