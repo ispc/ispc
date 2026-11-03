@@ -27,7 +27,7 @@ taskset --cpu-list 0 bin/01_aossoa.avx2-i32x8
 
 ## Performance dashboard
 
-The [weekly workflow](../.github/workflows/benchmarks-weekly.yml) runs the benchmarks of ``01_trivial`` and ``02_medium`` on a dedicated machine every Saturday to Sunday night, and can also be started manually. It stores them with [github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark) in the ``gh-pages`` branch and deploys it to GitHub Pages, one page per target: ``https://ispc.github.io/ispc/benchmarks/<target>/``. ``16_dispatcher_overhead.dispatch`` is shown on the ``dispatch`` page, under the name of its target list. Every case is run in 3 separate processes, and the minimum of the per-process medians is shown. Only the cases shown on the dashboard are run: one size of every benchmark function, the closest one to 4096 elements, and the largest size of benchmarks that measure memory traffic (see ``scripts/benchmark_dashboard_data.py``). If a case gets more than 10% slower than the last result of an earlier commit, the job fails (when the ``BENCHMARKS_FAIL_ON_REGRESSION`` repository variable is ``true``). Cases known to be noisy are shown in a separate "not gated" section and don't fail it. The results of every run are kept as workflow artifacts.
+The [weekly workflow](../.github/workflows/benchmarks-weekly.yml) runs the benchmarks of ``01_trivial``, ``02_medium`` and ``03_complex`` on a dedicated machine every Saturday to Sunday night, and can also be started manually. It stores them with [github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark) in the ``gh-pages`` branch and deploys it to GitHub Pages, one page per target: ``https://ispc.github.io/ispc/benchmarks/<target>/``. ``16_dispatcher_overhead.dispatch`` is shown on the ``dispatch`` page, under the name of its target list. Every case is run in 3 separate processes, and the minimum of the per-process medians is shown. Only the cases shown on the dashboard are run: one size of every benchmark function, the closest one to 4096 elements, and the largest size of benchmarks that measure memory traffic (see ``scripts/benchmark_dashboard_data.py``). If a case gets more than 10% slower than the last result of an earlier commit, the job fails (when the ``BENCHMARKS_FAIL_ON_REGRESSION`` repository variable is ``true``). Cases known to be noisy, and new benchmarks without a stable history yet, are shown in a separate "not gated" section and don't fail it. The results of every run are kept as workflow artifacts.
 
 ## TODO
 
@@ -37,7 +37,7 @@ The [weekly workflow](../.github/workflows/benchmarks-weekly.yml) runs the bench
 - Nested loops: multi-dimensional ``foreach`` loops vs separate ``foreach`` loops vs ``for`` loops. Different axis for vectorization need to be tested.
 - ``foreach_unique`` performance.
 - ``foreach_active`` performance.
-- memory operations: gather/scatter, vector load/store.
+- memory operations: vector load/store.
 - ``aos_to_soa()``, ``soa_to_aos()`` functions.
 - other ``stdlib`` function.
 - ``select()`` vs ``cond ? t : f``.
