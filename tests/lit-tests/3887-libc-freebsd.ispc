@@ -8,7 +8,7 @@
 // CHECK-DAG: @__stdoutp = external
 // CHECK-DAG: call {{.*}} @fputs(
 // CHECK-DAG: call {{.*}} @fflush(
-// CHECK-DAG: call {{.*}} @sysconf(i32 {{.*}}58)
+// CHECK-DAG: call {{.*}} @sysconf(i32 {{[^0-9-]*}}58)
 
 void foo(uniform int out[]) {
     print("programIndex=%\n", programIndex);
