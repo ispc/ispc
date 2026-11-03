@@ -4913,7 +4913,7 @@ int ExprList::EstimateCost() const { return 0; }
 ExprList *ExprList::Instantiate(TemplateInstantiation &templInst) const {
     ExprList *inst = new ExprList(pos);
     for (auto e : exprs) {
-        inst->exprs.push_back(e->Instantiate(templInst));
+        inst->exprs.push_back(e ? e->Instantiate(templInst) : nullptr);
     }
     return inst;
 }
@@ -4924,7 +4924,7 @@ std::string ExprList::GetString() const {
         if (i > 0) {
             ret += ", ";
         }
-        ret += exprs[i]->GetString();
+        ret += exprs[i] ? exprs[i]->GetString() : "<NULL>";
     }
     return ret;
 }
