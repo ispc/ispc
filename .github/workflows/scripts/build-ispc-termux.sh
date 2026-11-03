@@ -20,7 +20,6 @@ llvm-config --version
 cp -R "$1" "$HOME/ispc"
 cd "$HOME/ispc"
 
-# Termux provides C library headers for the native architecture only (#3887).
 cmake -B build -G Ninja -DARM32_ENABLED=OFF
 cmake --build build -j"$(nproc)"
 
