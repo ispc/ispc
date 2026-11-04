@@ -14,6 +14,7 @@
 #include "expr.h"
 #include "llvmutil.h"
 #include "module.h"
+#include "opt/MemoryOpRegistry.h"
 #include "sym.h"
 #include "target_capabilities.h"
 #include "type.h"
@@ -761,4 +762,5 @@ void ispc::LinkStandardLibraries(llvm::Module *module, int &debug_num) {
 
     lSetInternalLinkageGlobals(module);
     lCheckModuleIntrinsics(module);
+    VerifyMemoryOpDeclarations(module);
 }
