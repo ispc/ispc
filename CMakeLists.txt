@@ -932,13 +932,13 @@ else()
         # looks like we do not use LLVM code that depend on pthreads, don't we?
         find_library(PTHREAD_LIB REQUIRED NAMES pthread)
         message(STATUS "Link with pthread library ${PTHREAD_LIB}")
-        list(APPEND LINK_LIBRARIES ${PTHREAD_LIB})
     endif()
     if (LLVM_SYSTEM_LIBS MATCHES "tinfo" OR LLVM_SYSTEM_LIBS MATCHES "curses")
         find_library(TINFO_LIB REQUIRED NAMES terminfo tinfo curses ncurses ncursesw)
         message(STATUS "Link with tinfo library ${TINFO_LIB}")
-        list(APPEND LINK_LIBRARIES ${TINFO_LIB})
     endif()
+    str_to_list("${LLVM_SYSTEM_LIBS}" LLVM_DEPS)
+    list(APPEND LINK_LIBRARIES ${LLVM_DEPS})
 endif()
 
 # This function configures compile definitions, options and include dirs.
@@ -947,6 +947,9 @@ function(configure_ispc_obj TARGET)
     target_compile_definitions(${TARGET} PRIVATE ${COMPILE_DEFINITIONS})
     target_include_directories(${TARGET} PRIVATE ${INCLUDE_DIRECTORIES})
     target_compile_options(${TARGET} PRIVATE ${COMPILE_OPTIONS})
+    if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+	target_link_directories(${TARGET} PUBLIC "/usr/local/lib")
+    endif()
 
     # Set hidden visibility for inline functions. This is needed to be in sync
     # with LLVM libraries, we do include some template code from LLVM that requires
