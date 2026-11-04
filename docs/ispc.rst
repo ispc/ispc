@@ -322,6 +322,29 @@ Linkage Changes:
   translation units no longer causes duplicate symbol errors when linking on
   Windows.
 
+Standard Library Changes:
+
+* ``rcp()`` and ``rsqrt()`` no longer return NaN for special inputs on x86
+  targets that refine a hardware estimate with a Newton-Raphson step:
+  ``rcp(+-0)`` is ``+-inf``, ``rcp(+-inf)`` is ``+-0``, ``rsqrt(+0)`` is
+  ``+inf`` and ``rsqrt(+inf)`` is ``0``, for ``float``, ``double`` and
+  ``float16``. ``rcp()`` of a ``float`` denormal now keeps the sign of its
+  argument, and ``rsqrt()`` of a positive ``float`` denormal is positive.
+  ``rcp()`` of a ``double`` whose magnitude is at most ``2^-1024`` now returns
+  an infinity with the correct sign.
+
+* The fix for ``float`` is a clamp on the Newton-Raphson correction factor in
+  the x86 builtins. It is not applied with ``--math-lib=fast``, which keeps the
+  unclamped refinement, and it is not guaranteed with
+  ``--opt=fast-math:aggressive``. ``rcp_fast()`` and ``rsqrt_fast()`` for
+  ``float`` still return the raw hardware estimate.
+
+* Known limitation: ``rsqrt()`` of a negative ``float`` denormal returns
+  ``-inf`` instead of NaN on SSE and AVX2 targets. On targets without a native
+  ``double`` ``rcp()``, ``rcp()`` of a ``double`` whose reciprocal is a
+  ``double`` denormal (magnitude above about ``4.5e307``) returns ``+-0``
+  instead of NaN.
+
 Updating ISPC Programs For Changes In ISPC 1.32.0
 -------------------------------------------------
 

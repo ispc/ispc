@@ -2378,9 +2378,24 @@ __declspec(safe, cost2) static inline double trunc(double x) { return __trunc_va
 
 __declspec(safe, cost2) static inline uniform double trunc(uniform double x) { return __trunc_uniform_double(x); }
 
-__declspec(safe) static inline float rcp(float v) { return __rcp_varying_float(v); }
+// The default rcp() and rsqrt() builtins on x86 clamp the Newton-Raphson factor so that 0 and Inf give the
+// exact result instead of NaN. --math-lib=fast uses the unclamped variants, which are faster by one
+// instruction and return NaN for those inputs, as before. Targets without a clamp alias both.
+__declspec(safe) static inline float rcp(float v) {
+    if (__math_lib == __math_lib_ispc_fast) {
+        return __rcp_nr_varying_float(v);
+    } else {
+        return __rcp_varying_float(v);
+    }
+}
 
-__declspec(safe) static inline uniform float rcp(uniform float v) { return __rcp_uniform_float(v); }
+__declspec(safe) static inline uniform float rcp(uniform float v) {
+    if (__math_lib == __math_lib_ispc_fast) {
+        return __rcp_nr_uniform_float(v);
+    } else {
+        return __rcp_uniform_float(v);
+    }
+}
 
 __declspec(safe) static inline float rcp_fast(float v) { return __rcp_fast_varying_float(v); }
 
@@ -2394,10 +2409,18 @@ __declspec(safe) static inline uniform float rcp_fast(uniform float v) { return 
     }                                                                                                                  \
     __declspec(safe) static inline QUAL double __rcp_safe_##QUAL##_double(QUAL double x) {                             \
         if (x <= 1.0e+33d && x >= 1.0e-33d)                                                                            \
-            return __rcp_iterate_##QUAL##_double(x, rcp((QUAL float)x));                                               \
+            return __rcp_iterate_##QUAL##_double(x, __rcp_##QUAL##_float((QUAL float)x));                              \
+        /* The refinement below returns NaN for +/-0 and +/-Inf. It also returns -Inf instead of +Inf when */          \
+        /* the result overflows, which is the case for 0 < |x| <= 2^-1024 (denormals). */                              \
+        QUAL unsigned int64 bits = intbits(x);                                                                         \
+        QUAL unsigned int64 abs_bits = bits & 0x7fffffffffffffff;                                                      \
+        if (abs_bits <= 0x0004000000000000)                                                                            \
+            return doublebits((bits & 0x8000000000000000) | 0x7ff0000000000000);                                       \
+        if (abs_bits == 0x7ff0000000000000)                                                                            \
+            return doublebits(bits & 0x8000000000000000);                                                              \
         QUAL int64 ex = intbits(x) & 0x7fe0000000000000;                                                               \
         QUAL double exp = doublebits(0x7fd0000000000000 + ~ex);                                                        \
-        QUAL double y = rcp((QUAL float)(x * exp));                                                                    \
+        QUAL double y = __rcp_##QUAL##_float((QUAL float)(x * exp));                                                   \
         return __rcp_iterate_##QUAL##_double(x, y * exp);                                                              \
     }
 
@@ -3345,15 +3368,24 @@ __declspec(safe) static inline float sqrt(float v) {
 
 __declspec(safe) static inline uniform float sqrt(uniform float v) { return __sqrt_uniform_float(v); }
 
+// See rcp() for the difference between the default and the --math-lib=fast builtins.
 __declspec(safe) static inline float rsqrt(float v) {
     if (__math_lib == __math_lib_svml) {
         return __svml_invsqrtf(v);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+        return __rsqrt_nr_varying_float(v);
     } else {
         return __rsqrt_varying_float(v);
     }
 }
 
-__declspec(safe) static inline uniform float rsqrt(uniform float v) { return __rsqrt_uniform_float(v); }
+__declspec(safe) static inline uniform float rsqrt(uniform float v) {
+    if (__math_lib == __math_lib_ispc_fast) {
+        return __rsqrt_nr_uniform_float(v);
+    } else {
+        return __rsqrt_uniform_float(v);
+    }
+}
 
 __declspec(safe) static inline float rsqrt_fast(float v) { return __rsqrt_fast_varying_float(v); }
 
@@ -6204,11 +6236,20 @@ __declspec(safe) static inline uniform double sqrt(uniform double v) { return __
     }                                                                                                                  \
     __declspec(safe) static inline QUAL double __rsqrt_safe_##QUAL##_double(QUAL double x) {                           \
         if (x <= 1.0e+33d && x >= 1.0e-33d)                                                                            \
-            return __rsqrt_iterate_##QUAL##_double(x, rsqrt((QUAL float)x));                                           \
+            return __rsqrt_iterate_##QUAL##_double(x, __rsqrt_##QUAL##_float((QUAL float)x));                          \
+        /* The refinement below returns NaN for +0 and +Inf. */                                                        \
+        if (x == 0.0d) {                                                                                               \
+            QUAL unsigned int64 bits = intbits(x);                                                                     \
+            return doublebits((bits & 0x8000000000000000) | 0x7ff0000000000000);                                       \
+        }                                                                                                              \
+        if (x == doublebits(0x7ff0000000000000))                                                                       \
+            return 0.0d;                                                                                               \
         QUAL int64 ex = intbits(x) & 0x7fe0000000000000;                                                               \
+        /* Keep the scale positive for the largest finite exponent. */                                                 \
+        ex = min(ex, (QUAL int64)0x7fc0000000000000);                                                                  \
         QUAL double exp = doublebits(0x7fd0000000000000 - ex);         /* 1.0d/exponent  */                            \
         QUAL double exph = doublebits(0x5fe0000000000000 - (ex >> 1)); /* 1.0d/sqrt(exponent) */                       \
-        QUAL double y = rsqrt((QUAL float)(x * exp));                                                                  \
+        QUAL double y = __rsqrt_##QUAL##_float((QUAL float)(x * exp));                                                 \
         return __rsqrt_iterate_##QUAL##_double(x, y * exph);                                                           \
     }
 

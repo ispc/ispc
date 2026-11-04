@@ -96,7 +96,29 @@ define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
 
 declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 
+; The Newton-Raphson step multiplies the estimate by a factor that is about 1 (rcp) or 2 (rsqrt). For 0 and
+; Inf inputs the factor is NaN (0 * Inf), which turns an exact estimate into NaN. The factor is clamped from
+; below, so a NaN factor takes the constant instead and the result is the estimate (scaled by the constant,
+; which is harmless for 0 and Inf). For normal inputs the factor stays well above the limit and is unchanged.
 define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
+  ; do the rcpss call
+  ;    uniform float iv = extract(__rcp_u(v), 0);
+  ;    return iv * (2. - v * iv);
+  %vecval = insertelement <4 x float> poison, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
+  %scall = extractelement <4 x float> %call, i32 0
+
+  ; do one N-R iteration to improve precision, as above
+  %v_iv = fmul float %0, %scall
+  %two_minus = fsub float 2., %v_iv
+  %keep = fcmp ogt float %two_minus, 0.5
+  %factor = select i1 %keep, float %two_minus, float 0.5
+  %iv_mul = fmul float %scall, %factor
+  ret float %iv_mul
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define float @__rcp_nr_uniform_float(float) nounwind readonly alwaysinline {
   ; do the rcpss call
   ;    uniform float iv = extract(__rcp_u(v), 0);
   ;    return iv * (2. - v * iv);
@@ -126,6 +148,25 @@ define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
 declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
 define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
+  ;  uniform float is = extract(__rsqrt_u(v), 0);
+  %v = insertelement <4 x float> poison, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
+  %is = extractelement <4 x float> %vis, i32 0
+
+  ; Newton-Raphson iteration to improve precision, with the factor clamped as in __rcp_uniform_float
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul float %0, %is
+  %v_is_is = fmul float %v_is, %is
+  %three_sub = fsub float 3., %v_is_is
+  %keep = fcmp ogt float %three_sub, 1.
+  %factor = select i1 %keep, float %three_sub, float 1.
+  %is_mul = fmul float %is, %factor
+  %half_scale = fmul float 0.5, %is_mul
+  ret float %half_scale
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define float @__rsqrt_nr_uniform_float(float) nounwind readonly alwaysinline {
   ;  uniform float is = extract(__rsqrt_u(v), 0);
   %v = insertelement <4 x float> poison, float %0, i32 0
   %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)

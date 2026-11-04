@@ -21,7 +21,32 @@ include(`target-avx-utils.ll')
 
 declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
 
+; See target-avx-utils.ll for why the Newton-Raphson factor is clamped.
 define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
+  ;  float iv = __rcp_v(v);
+  ;  return iv * (2. - v * iv);
+
+  unary8to16(call, float, @llvm.x86.avx.rcp.ps.256, %0)
+  ; do one N-R iteration
+  %v_iv = fmul <16 x float> %0, %call
+  %two_minus = fsub <16 x float> <float 2., float 2., float 2., float 2.,
+                                  float 2., float 2., float 2., float 2.,
+                                  float 2., float 2., float 2., float 2.,
+                                  float 2., float 2., float 2., float 2.>, %v_iv
+  %keep = fcmp ogt <16 x float> %two_minus, <float 0.5, float 0.5, float 0.5, float 0.5,
+                                             float 0.5, float 0.5, float 0.5, float 0.5,
+                                             float 0.5, float 0.5, float 0.5, float 0.5,
+                                             float 0.5, float 0.5, float 0.5, float 0.5>
+  %factor = select <16 x i1> %keep, <16 x float> %two_minus, <16 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                                                           float 0.5, float 0.5, float 0.5, float 0.5,
+                                                                           float 0.5, float 0.5, float 0.5, float 0.5,
+                                                                           float 0.5, float 0.5, float 0.5, float 0.5>
+  %iv_mul = fmul <16 x float> %call, %factor
+  ret <16 x float> %iv_mul
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define <16 x float> @__rcp_nr_varying_float(<16 x float>) nounwind readonly alwaysinline {
   ;  float iv = __rcp_v(v);
   ;  return iv * (2. - v * iv);
 
@@ -89,6 +114,33 @@ truncate()
 declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
 
 define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+  ;  float is = __rsqrt_v(v);
+  unary8to16(is, float, @llvm.x86.avx.rsqrt.ps.256, %v)
+  ;  return 0.5 * is * (3. - (v * is) * is), with the factor clamped
+  %v_is = fmul <16 x float> %v, %is
+  %v_is_is = fmul <16 x float> %v_is, %is
+  %three_sub = fsub <16 x float> <float 3., float 3., float 3., float 3.,
+                                  float 3., float 3., float 3., float 3.,
+                                  float 3., float 3., float 3., float 3.,
+                                  float 3., float 3., float 3., float 3.>, %v_is_is
+  %keep = fcmp ogt <16 x float> %three_sub, <float 1., float 1., float 1., float 1.,
+                                             float 1., float 1., float 1., float 1.,
+                                             float 1., float 1., float 1., float 1.,
+                                             float 1., float 1., float 1., float 1.>
+  %factor = select <16 x i1> %keep, <16 x float> %three_sub, <16 x float> <float 1., float 1., float 1., float 1.,
+                                                                           float 1., float 1., float 1., float 1.,
+                                                                           float 1., float 1., float 1., float 1.,
+                                                                           float 1., float 1., float 1., float 1.>
+  %is_mul = fmul <16 x float> %is, %factor
+  %half_scale = fmul <16 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                   float 0.5, float 0.5, float 0.5, float 0.5,
+                                   float 0.5, float 0.5, float 0.5, float 0.5,
+                                   float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
+  ret <16 x float> %half_scale
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define <16 x float> @__rsqrt_nr_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
   ;  float is = __rsqrt_v(v);
   unary8to16(is, float, @llvm.x86.avx.rsqrt.ps.256, %v)
   ;  return 0.5 * is * (3. - (v * is) * is);
