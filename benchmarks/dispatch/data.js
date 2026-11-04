@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793729768947,
+  "lastUpdate": 1793754772190,
   "repoUrl": "https://github.com/ispc/ispc",
   "entries": {
     "dispatch (sse4-i32x4,avx2-i32x8,avx512gnr-x8)": [
@@ -170,6 +170,40 @@ window.BENCHMARK_DATA = {
             "value": 1426737628.0040479,
             "unit": "ns/iter",
             "extra": "iterations: 5\ncpu: 213357236.99999985 ns\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Arina Neshlyaeva",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "committer": {
+            "name": "aneshlya",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "id": "e1d896f50606570ab5b75114136f471f8ebd3b36",
+          "message": "Add XFAIL reproducers for the known address gaps\n\nGuard-page runtime tests and IR tests for the gather, scatter and vector\nload/store address gaps that remain after #3985: lane 0 off with a signed\noffset that overflows, offsets that wrap at 2^32 between lanes, a signed\nconstant split without nsw, a struct member at 2 GB through a varying\npointer, new[] sign extending an unsigned count, an unfolded +2^31\ndisplacement, nneg copied to split or rescaled operands, a nested-index\nsum of two signed-i32 byte offsets that reaches 2^31, an explicit int64\nsum converted to a varying pointer, and the integer-to-pointer provenance\nloss of #3983. Each XFAIL test runs only the configurations that fail\ntoday; address-gaps-ok.ispc, address-nested-sum.ispc and\naddress-provenance.ispc run the passing ones as regression gates, with\nthe kernels and drivers shared in address-gaps.inc and\naddress-provenance.inc.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>",
+          "timestamp": "2026-11-03T21:55:02Z",
+          "url": "https://github.com/ispc/ispc/commit/e1d896f50606570ab5b75114136f471f8ebd3b36"
+        },
+        "date": 1793754771174,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test/4096",
+            "value": 224530723.99366647,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 222499169 ns\nthreads: 1"
+          },
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test_multithread/10000",
+            "value": 1428095562.994713,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 207280917.0000003 ns\nthreads: 1"
           }
         ]
       }
