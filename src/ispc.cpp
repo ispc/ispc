@@ -994,8 +994,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
       m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_capabilities(),
-      m_hasGather(false), m_hasScatter(false), m_hasVecPrefetch(false), m_disabledAPX(g->opt.disableAPX),
-      m_warnings(0) {
+      m_hasGather(false), m_hasScatter(false), m_disabledAPX(g->opt.disableAPX), m_warnings(0) {
     // Set Fp64Support to true by default
     setCapability(TargetCapability::Fp64Support, true);
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
@@ -1557,7 +1556,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::Rsqrtd,
                          TargetCapability::Rcpd, TargetCapability::ConflictDetection});
         setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x4));
@@ -1575,7 +1573,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::Rsqrtd,
                          TargetCapability::Rcpd, TargetCapability::ConflictDetection});
         setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x8));
@@ -1597,7 +1594,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::Rsqrtd,
                          TargetCapability::Rcpd, TargetCapability::ConflictDetection});
         setCapability(TargetCapability::IntelVNNI,
@@ -1628,7 +1624,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::ConflictDetection});
         setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x64));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x64) ? CPU_ICL : CPU_SKX;
@@ -1647,7 +1642,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::ConflictDetection});
         setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x32));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x32) ? CPU_ICL : CPU_SKX;
@@ -1662,7 +1656,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
                          TargetCapability::IntelVNNI, TargetCapability::ConflictDetection, TargetCapability::AmxTile,
@@ -1682,7 +1675,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
                          TargetCapability::IntelVNNI, TargetCapability::ConflictDetection, TargetCapability::AmxTile,
@@ -1702,7 +1694,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
                          TargetCapability::IntelVNNI, TargetCapability::ConflictDetection, TargetCapability::AmxTile,
@@ -1722,7 +1713,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
                          TargetCapability::ConflictDetection, TargetCapability::AmxTile, TargetCapability::AmxInt8,
@@ -1740,7 +1730,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
                          TargetCapability::ConflictDetection, TargetCapability::AmxTile, TargetCapability::AmxInt8,
@@ -1990,7 +1979,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_hasScatter = false;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
         CPUfromISA = CPU_PPC64LE_Pwr8;
@@ -2003,7 +1991,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_hasScatter = false;
         this->m_hasGather = true;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
         CPUfromISA = CPU_PPC64LE_Pwr8;
@@ -2015,7 +2002,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
         this->m_hasScatter = false;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
         CPUfromISA = CPU_PPC64LE_Pwr8;
@@ -2027,7 +2013,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 16;
         this->m_hasScatter = false;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
         CPUfromISA = CPU_PPC64LE_Pwr8;
@@ -2039,7 +2024,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_hasScatter = false;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_PPC64LE_Pwr8;
@@ -2051,7 +2035,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_hasScatter = false;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_PPC64LE_Pwr8;
@@ -2075,7 +2058,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_hasScatter = false;
         this->m_hasGather = false;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 1;
         CPUfromISA = CPU_Generic_RV64GCV;
@@ -2094,7 +2076,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_hasScatter = false;
         this->m_hasGather = false;
-        this->m_hasVecPrefetch = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         break;

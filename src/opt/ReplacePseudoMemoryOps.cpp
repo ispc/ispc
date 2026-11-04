@@ -314,25 +314,12 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
         {__pseudo_scatter_base_offsets64_double, LowerGSInfo::Scatter(__scatter_base_offsets64_double)},
 
         {__pseudo_prefetch_read_varying_1, LowerGSInfo::Prefetch(__prefetch_read_varying_1)},
-        {__pseudo_prefetch_read_varying_1_native, LowerGSInfo::Prefetch(__prefetch_read_varying_1_native)},
-
         {__pseudo_prefetch_read_varying_2, LowerGSInfo::Prefetch(__prefetch_read_varying_2)},
-        {__pseudo_prefetch_read_varying_2_native, LowerGSInfo::Prefetch(__prefetch_read_varying_2_native)},
-
         {__pseudo_prefetch_read_varying_3, LowerGSInfo::Prefetch(__prefetch_read_varying_3)},
-        {__pseudo_prefetch_read_varying_3_native, LowerGSInfo::Prefetch(__prefetch_read_varying_3_native)},
-
         {__pseudo_prefetch_read_varying_nt, LowerGSInfo::Prefetch(__prefetch_read_varying_nt)},
-        {__pseudo_prefetch_read_varying_nt_native, LowerGSInfo::Prefetch(__prefetch_read_varying_nt_native)},
-
         {__pseudo_prefetch_write_varying_1, LowerGSInfo::Prefetch(__prefetch_write_varying_1)},
-        {__pseudo_prefetch_write_varying_1_native, LowerGSInfo::Prefetch(__prefetch_write_varying_1_native)},
-
         {__pseudo_prefetch_write_varying_2, LowerGSInfo::Prefetch(__prefetch_write_varying_2)},
-        {__pseudo_prefetch_write_varying_2_native, LowerGSInfo::Prefetch(__prefetch_write_varying_2_native)},
-
         {__pseudo_prefetch_write_varying_3, LowerGSInfo::Prefetch(__prefetch_write_varying_3)},
-        {__pseudo_prefetch_write_varying_3_native, LowerGSInfo::Prefetch(__prefetch_write_varying_3_native)},
     };
 
     llvm::Function *calledFunc = callInst->getCalledFunction();

@@ -827,7 +827,7 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
     }
 }
 
-// Contains a function call substitution info for gather/scatter/prefetch calls.
+// Contains a function call substitution info for gather/scatter calls.
 // We construct this class objects in program constructors phase, i.e., before initialization of g->target
 // and any of LLVMTypes values. Moreover, g->target values are not same during multi-target compilation. Because of
 // that, we postpone evaluation of types, choosing the proper function before actual call replacement here and in
@@ -836,7 +836,6 @@ struct GSInfo {
     enum class Type {
         Gather,
         Scatter,
-        Prefetch,
     };
     GSInfo(const char *pgbo64, const char *pgfbo64, const char *pgbo32, const char *pgfbo32, GSInfo::Type type)
         : pgbo64(pgbo64), pgfbo64(pgfbo64), pgbo32(pgbo32), pgfbo32(pgfbo32), type(type) {}
@@ -850,10 +849,8 @@ struct GSInfo {
         return GSInfo(pgbo64, pgfbo64, pgbo32, pgfbo32, Type::Scatter);
     }
     static GSInfo Scatter(const char *pgbo64, const char *pgfbo64) { return GSInfo(pgbo64, pgfbo64, Type::Scatter); }
-    static GSInfo Prefetch(const char *pgbo64, const char *pgfbo64) { return GSInfo(pgbo64, pgfbo64, Type::Prefetch); }
     bool isGather() const { return type == GSInfo::Type::Gather; }
     bool isScatter() const { return type == GSInfo::Type::Scatter; }
-    bool isPrefetch() const { return type == GSInfo::Type::Prefetch; }
     llvm::Function *baseOffsets64Func(llvm::Module *M) const {
         const char *name = chooseBaseOrFactoredFunc() ? pgbo64 : pgfbo64;
         return M->getFunction(name);
@@ -870,8 +867,6 @@ struct GSInfo {
             return g->target->useGather();
         case GSInfo::Type::Scatter:
             return g->target->useScatter();
-        case GSInfo::Type::Prefetch:
-            return g->target->hasVecPrefetch();
         }
         return false;
     }
@@ -955,20 +950,6 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         {__pseudo_scatter64_double,
          GSInfo::Scatter(__pseudo_scatter_base_offsets64_double, __pseudo_scatter_factored_base_offsets64_double,
                          __pseudo_scatter_base_offsets32_double, __pseudo_scatter_factored_base_offsets32_double)},
-        {__pseudo_prefetch_read_varying_1,
-         GSInfo::Prefetch(__pseudo_prefetch_read_varying_1_native, __prefetch_read_varying_1)},
-        {__pseudo_prefetch_read_varying_2,
-         GSInfo::Prefetch(__pseudo_prefetch_read_varying_2_native, __prefetch_read_varying_2)},
-        {__pseudo_prefetch_read_varying_3,
-         GSInfo::Prefetch(__pseudo_prefetch_read_varying_3_native, __prefetch_read_varying_3)},
-        {__pseudo_prefetch_read_varying_nt,
-         GSInfo::Prefetch(__pseudo_prefetch_read_varying_nt_native, __prefetch_read_varying_nt)},
-        {__pseudo_prefetch_write_varying_1,
-         GSInfo::Prefetch(__pseudo_prefetch_write_varying_1_native, __prefetch_write_varying_1)},
-        {__pseudo_prefetch_write_varying_2,
-         GSInfo::Prefetch(__pseudo_prefetch_write_varying_2_native, __prefetch_write_varying_2)},
-        {__pseudo_prefetch_write_varying_3,
-         GSInfo::Prefetch(__pseudo_prefetch_write_varying_3_native, __prefetch_write_varying_3)},
     };
 
     auto name = callInst->getCalledFunction()->getName().str();
@@ -986,7 +967,7 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     llvm::Value *offsetVector = nullptr;
     llvm::Value *basePtr = lGetBasePtrAndOffsets(ptrs, &offsetVector, callInst);
 
-    if (basePtr == nullptr || offsetVector == nullptr || (info->isPrefetch() && !g->target->hasVecPrefetch())) {
+    if (basePtr == nullptr || offsetVector == nullptr) {
         // It's actually a fully general gather/scatter with a varying
         // set of base pointers, so leave it as is and continune onward
         // to the next instruction...
@@ -1001,8 +982,7 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     llvm::Function *gatherScatterFunc = info->baseOffsets64Func(M);
     llvm::CallInst *newCall = nullptr;
 
-    if ((info->isGather() && g->target->useGather()) || (info->isScatter() && g->target->useScatter()) ||
-        (info->isPrefetch() && g->target->hasVecPrefetch())) {
+    if ((info->isGather() && g->target->useGather()) || (info->isScatter() && g->target->useScatter())) {
 
         // See if the offsets are scaled by 2, 4, or 8.  If so,
         // extract that scale factor and rewrite the offsets to remove
@@ -1016,7 +996,7 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             gatherScatterFunc = info->baseOffsets32Func(M);
         }
 
-        if (info->isGather() || info->isPrefetch()) {
+        if (info->isGather()) {
             llvm::Value *mask = callInst->getArgOperand(1);
 
             // Generate a new function call to the next pseudo gather
@@ -1069,7 +1049,7 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             gatherScatterFunc = info->baseOffsets32Func(M);
         }
 
-        if (info->isGather() || info->isPrefetch()) {
+        if (info->isGather()) {
             llvm::Value *mask = callInst->getArgOperand(1);
 
             // Generate a new function call to the next pseudo gather
@@ -1161,20 +1141,6 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
         {__pseudo_scatter_factored_base_offsets32_float, 1},
         {__pseudo_scatter_factored_base_offsets32_i64, 1},
         {__pseudo_scatter_factored_base_offsets32_double, 1},
-        {__pseudo_prefetch_read_varying_1_native, 1},
-        {__pseudo_prefetch_read_varying_2_native, 1},
-        {__pseudo_prefetch_read_varying_3_native, 1},
-        {__pseudo_prefetch_read_varying_nt_native, 1},
-        {__prefetch_read_varying_1, 1},
-        {__prefetch_read_varying_2, 1},
-        {__prefetch_read_varying_3, 1},
-        {__prefetch_read_varying_nt, 1},
-        {__pseudo_prefetch_write_varying_1_native, 1},
-        {__pseudo_prefetch_write_varying_2_native, 1},
-        {__pseudo_prefetch_write_varying_3_native, 1},
-        {__prefetch_write_varying_1, 1},
-        {__prefetch_write_varying_2, 1},
-        {__prefetch_write_varying_3, 1},
     };
 
     llvm::Function *calledFunc = callInst->getCalledFunction();

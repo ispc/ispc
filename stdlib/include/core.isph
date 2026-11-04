@@ -663,26 +663,12 @@ ISPC_BUILTINS_ATTRS void __pseudo_scatter_base_offsets64_double(ISPC_NOESCAPE un
                                                                 varying int64, varying double, UIntMaskType);
 
 ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_1(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_1_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                                 varying int32, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_2(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_2_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                                 varying int32, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_3(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_3_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                                 varying int32, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_nt(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __pseudo_prefetch_read_varying_nt_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                                  varying int32, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __pseudo_prefetch_write_varying_1(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __pseudo_prefetch_write_varying_1_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                                  varying int32, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __pseudo_prefetch_write_varying_2(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __pseudo_prefetch_write_varying_2_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                                  varying int32, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __pseudo_prefetch_write_varying_3(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __pseudo_prefetch_write_varying_3_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                                  varying int32, UIntMaskType);
 
 ISPC_BUILTINS_ATTRS inline varying int8 __masked_load_i8(ISPC_NOESCAPE varying int8 *uniform, UIntMaskType);
 ISPC_BUILTINS_ATTRS inline varying int16 __masked_load_i16(ISPC_NOESCAPE varying int16 *uniform, UIntMaskType);
@@ -919,21 +905,6 @@ ISPC_BUILTINS_ATTRS void __prefetch_read_varying_nt(varying int64, UIntMaskType)
 ISPC_BUILTINS_ATTRS void __prefetch_write_varying_1(varying int64, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __prefetch_write_varying_2(varying int64, UIntMaskType);
 ISPC_BUILTINS_ATTRS void __prefetch_write_varying_3(varying int64, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __prefetch_write_varying_3_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                           varying int32, UIntMaskType);
-
-ISPC_BUILTINS_ATTRS void __prefetch_read_varying_nt_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                           varying int32, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __prefetch_write_varying_1_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                           varying int32, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __prefetch_write_varying_2_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                           varying int32, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __prefetch_read_varying_1_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                          varying int32, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __prefetch_read_varying_2_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                          varying int32, UIntMaskType);
-ISPC_BUILTINS_ATTRS void __prefetch_read_varying_3_native(ISPC_NOESCAPE uniform int8 *uniform, uniform int32,
-                                                          varying int32, UIntMaskType);
 
 // int8/int16 avg builtins
 ISPC_BUILTINS_ATTRS varying int8 __avg_up_uint8(varying int8, varying int8);
