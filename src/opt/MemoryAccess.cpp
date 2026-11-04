@@ -6,6 +6,8 @@
 
 #include "MemoryAccess.h"
 
+#include <llvm/Analysis/ValueTracking.h>
+
 namespace ispc {
 
 namespace {
@@ -478,6 +480,199 @@ BaseOffsetsValues MaterializeBaseOffsets(const BaseOffsetsRecipe &recipe, llvm::
     return values;
 }
 
+namespace {
+
+/** The lanes of a constant integer vector without undef or poison lanes. */
+bool lConstantLanes(llvm::Value *v, llvm::SmallVectorImpl<llvm::APInt> &lanes) {
+    llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(v);
+    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v->getType());
+    if (c == nullptr || vt == nullptr || !vt->getElementType()->isIntegerTy() || c->containsUndefOrPoisonElement()) {
+        return false;
+    }
+    for (unsigned i = 0; i < vt->getNumElements(); ++i) {
+        llvm::ConstantInt *ci = llvm::dyn_cast_or_null<llvm::ConstantInt>(c->getAggregateElement(i));
+        if (ci == nullptr) {
+            return false;
+        }
+        lanes.push_back(ci->getValue());
+    }
+    return true;
+}
+
+/** Narrows constant lanes to 32 bits when each is in [INT32_MIN, INT32_MAX]. */
+bool lNarrowLanes(const llvm::SmallVectorImpl<llvm::APInt> &lanes, llvm::SmallVectorImpl<llvm::APInt> &narrow) {
+    for (const llvm::APInt &lane : lanes) {
+        if (!lane.isSignedIntN(32)) {
+            return false;
+        }
+        narrow.push_back(lane.sextOrTrunc(32));
+    }
+    return true;
+}
+
+void lPrintLanes(llvm::raw_ostream &os, const llvm::SmallVectorImpl<llvm::APInt> &lanes) {
+    os << "lanes";
+    for (const llvm::APInt &lane : lanes) {
+        os << " " << lane;
+    }
+}
+
+/** How the lowering of a base-offset or factored access combines its
+    operands, or no value when no lowering is written for its index width
+    and the pointer width of its base. */
+std::optional<OffsetArithmetic> lOffsetArithmetic(const MemoryAccess &access) {
+    unsigned pointerBits = access.call->getModule()->getDataLayout().getPointerSizeInBits(
+        access.base()->getType()->getPointerAddressSpace());
+    if (access.offsetBits() == pointerBits) {
+        return OffsetArithmetic::AddressWidth;
+    }
+    if (access.offsetBits() == 32 && pointerBits == 64) {
+        return OffsetArithmetic::LoweringExtends;
+    }
+    return std::nullopt;
+}
+
+/** True when v is neither undef nor poison as a whole and is provably not
+    undef: an SSA value computed from undef may be undef, and each use of
+    undef may observe a different value. */
+bool lIsNotUndef(llvm::Value *v) { return !llvm::isa<llvm::UndefValue>(v) && llvm::isGuaranteedNotToBeUndef(v); }
+
+} // namespace
+
+std::optional<AddressCandidate> QueryAddressCandidate(const MemoryAccess &access) {
+    if (access.form() != MemoryOpForm::BaseOffsets && access.form() != MemoryOpForm::Factored) {
+        return std::nullopt;
+    }
+    llvm::ConstantInt *scale = llvm::dyn_cast<llvm::ConstantInt>(access.scale());
+    if (scale == nullptr) {
+        return std::nullopt;
+    }
+    std::optional<OffsetArithmetic> arithmetic = lOffsetArithmetic(access);
+    if (!arithmetic) {
+        return std::nullopt;
+    }
+    AddressCandidate candidate;
+    candidate.base = access.base();
+    candidate.index = access.offsets();
+    candidate.indexBits = access.offsetBits();
+    candidate.scale = scale->getValue();
+    candidate.displacement = access.delta();
+    candidate.arithmetic = *arithmetic;
+    return candidate;
+}
+
+std::optional<NarrowIndex> QueryNarrowIndex(const MemoryAccess &access) {
+    if (access.form() != MemoryOpForm::BaseOffsets && access.form() != MemoryOpForm::Factored) {
+        return std::nullopt;
+    }
+    NarrowIndex narrow;
+    llvm::Value *index = access.offsets();
+    if (access.offsetBits() == 32) {
+        narrow.index = index;
+    } else if (llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(index)) {
+        // sext(x) and zext nneg (x) both equal sext(x); the operand must be
+        // i32 (a cast keeps the lane count).
+        bool signExtends = cast->getOpcode() == llvm::Instruction::SExt ||
+                           (cast->getOpcode() == llvm::Instruction::ZExt && cast->hasNonNeg());
+        if (!signExtends || !cast->getOperand(0)->getType()->getScalarType()->isIntegerTy(32)) {
+            return std::nullopt;
+        }
+        narrow.index = cast->getOperand(0);
+    } else {
+        llvm::SmallVector<llvm::APInt, ISPC_MAX_NVEC> lanes;
+        if (!lConstantLanes(index, lanes) || !lNarrowLanes(lanes, narrow.indexLanes)) {
+            return std::nullopt;
+        }
+    }
+    if (access.delta() != nullptr) {
+        llvm::SmallVector<llvm::APInt, ISPC_MAX_NVEC> lanes;
+        if (!lConstantLanes(access.delta(), lanes) || !lNarrowLanes(lanes, narrow.displacementLanes)) {
+            return std::nullopt;
+        }
+    }
+    return narrow;
+}
+
+LanePattern QueryLanePattern(const MemoryAccess &access) {
+    LanePattern pattern;
+    pattern.mask = access.maskStatus();
+    llvm::Value *v = nullptr;
+    if (access.form() == MemoryOpForm::General) {
+        v = access.addresses();
+        pattern.operand = "addresses";
+    } else if (access.form() == MemoryOpForm::BaseOffsets || access.form() == MemoryOpForm::Factored) {
+        v = access.offsets();
+        pattern.operand = "offsets";
+    } else {
+        return pattern;
+    }
+    llvm::SmallVector<llvm::APInt, ISPC_MAX_NVEC> lanes;
+    if (lConstantLanes(v, lanes)) {
+        pattern.coversAllLanes = true;
+        pattern.lane0Defined = true;
+        pattern.shape = LanePattern::Shape::AllEqual;
+        if (lanes.size() > 1) {
+            llvm::APInt stride = lanes[1] - lanes[0];
+            for (unsigned i = 1; i < lanes.size(); ++i) {
+                if (lanes[i] - lanes[i - 1] != stride) {
+                    pattern.shape = LanePattern::Shape::Unknown;
+                    return pattern;
+                }
+            }
+            if (!stride.isZero()) {
+                pattern.shape = LanePattern::Shape::Linear;
+                pattern.stride = stride;
+            }
+        }
+        return pattern;
+    }
+    // A shuffle that broadcasts one lane of its first operand to every lane:
+    // all lanes are the same value, which may be poison, so lane 0 is not
+    // known to be defined. A poison mask lane would make that lane poison on
+    // its own, so every mask lane must select the same lane.
+    // An undef source lane would let every lane differ.
+    if (llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(v)) {
+        llvm::ArrayRef<int> mask = shuffle->getShuffleMask();
+        if (mask.empty() || mask[0] < 0 || !llvm::all_of(mask, [&](int m) { return m == mask[0]; })) {
+            return pattern;
+        }
+        llvm::Value *source = shuffle->getOperand(0);
+        unsigned lane = mask[0];
+        unsigned sourceLanes = llvm::cast<llvm::FixedVectorType>(source->getType())->getNumElements();
+        if (lane >= sourceLanes) {
+            source = shuffle->getOperand(1);
+            lane -= sourceLanes;
+        }
+        // The source lane must be a value that is provably not undef, inserted
+        // there or a constant lane: LLVM folds a broadcast of an undef lane,
+        // or of a value computed from undef, to an undef vector, whose lanes
+        // need not agree. Poison is rejected as well.
+        while (llvm::InsertElementInst *insert = llvm::dyn_cast<llvm::InsertElementInst>(source)) {
+            llvm::ConstantInt *index = llvm::dyn_cast<llvm::ConstantInt>(insert->getOperand(2));
+            if (index == nullptr) {
+                return pattern;
+            }
+            if (index->getValue() == lane) {
+                if (!lIsNotUndef(insert->getOperand(1))) {
+                    return pattern;
+                }
+                pattern.shape = LanePattern::Shape::AllEqual;
+                pattern.coversAllLanes = true;
+                return pattern;
+            }
+            source = insert->getOperand(0);
+        }
+        llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(source);
+        llvm::Constant *element = c == nullptr ? nullptr : c->getAggregateElement(lane);
+        if (element == nullptr || !lIsNotUndef(element)) {
+            return pattern;
+        }
+        pattern.shape = LanePattern::Shape::AllEqual;
+        pattern.coversAllLanes = true;
+    }
+    return pattern;
+}
+
 void MemoryAccess::print(llvm::raw_ostream &os) const {
     os << lKindName(kind()) << " " << op->name << ": " << lFormName(form()) << ", " << lFlavorName(flavor());
     if (element() != MemoryElement::None) {
@@ -512,6 +707,56 @@ void MemoryAccess::print(llvm::raw_ostream &os) const {
         } else {
             os << "  common base: unknown\n";
         }
+    }
+    if (std::optional<AddressCandidate> candidate = QueryAddressCandidate(*this)) {
+        os << "  candidate: base ";
+        candidate->base->printAsOperand(os, /*PrintType=*/true);
+        os << " + index ";
+        candidate->index->printAsOperand(os, /*PrintType=*/true);
+        os << " * " << candidate->scale;
+        if (candidate->displacement != nullptr) {
+            os << " + displacement ";
+            candidate->displacement->printAsOperand(os, /*PrintType=*/true);
+        }
+        if (candidate->arithmetic == OffsetArithmetic::AddressWidth) {
+            os << " (address width)\n";
+        } else {
+            os << " (lowering extends i" << candidate->indexBits << ")\n";
+        }
+        os << "  narrow index: ";
+        if (std::optional<NarrowIndex> narrow = QueryNarrowIndex(*this)) {
+            if (narrow->index != nullptr) {
+                narrow->index->printAsOperand(os, /*PrintType=*/true);
+            } else {
+                lPrintLanes(os, narrow->indexLanes);
+            }
+            if (!narrow->displacementLanes.empty()) {
+                os << ", displacement ";
+                lPrintLanes(os, narrow->displacementLanes);
+            }
+            os << "\n";
+        } else {
+            os << "unknown\n";
+        }
+    }
+    LanePattern pattern = QueryLanePattern(*this);
+    if (pattern.operand[0] != '\0') {
+        os << "  lane pattern of " << pattern.operand << ": ";
+        switch (pattern.shape) {
+        case LanePattern::Shape::Unknown:
+            os << "unknown";
+            break;
+        case LanePattern::Shape::AllEqual:
+            os << "all equal";
+            break;
+        case LanePattern::Shape::Linear:
+            os << "linear, stride " << pattern.stride;
+            break;
+        }
+        if (pattern.shape != LanePattern::Shape::Unknown) {
+            os << (pattern.coversAllLanes ? ", all lanes" : ", active lanes");
+        }
+        os << "; lane 0 " << (pattern.lane0Defined ? "defined" : "not known defined") << "\n";
     }
 }
 
