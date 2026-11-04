@@ -434,12 +434,16 @@ EXT READNONE varying float __round_varying_float(varying float x) { return @llvm
 // rcp
 EXT READNONE uniform float __rcp_fast_uniform_float(uniform float x) { return 1 / x; }
 EXT READNONE varying float __rcp_fast_varying_float(varying float x) { return 1 / x; }
+EXT READNONE uniform float __rcp_unclamped_uniform_float(uniform float x) { return 1 / x; }
+EXT READNONE varying float __rcp_unclamped_varying_float(varying float x) { return 1 / x; }
 EXT READNONE uniform float __rcp_uniform_float(uniform float x) { return 1 / x; }
 EXT READNONE varying float __rcp_varying_float(varying float x) { return 1 / x; }
 
 // rsqrt
 EXT READNONE varying float __rsqrt_fast_varying_float(varying float x) { return 1 / @llvm.sqrt(x); }
 EXT READNONE uniform float __rsqrt_fast_uniform_float(uniform float x) { return 1 / @llvm.sqrt(x); }
+EXT READNONE varying float __rsqrt_unclamped_varying_float(varying float x) { return 1 / @llvm.sqrt(x); }
+EXT READNONE uniform float __rsqrt_unclamped_uniform_float(uniform float x) { return 1 / @llvm.sqrt(x); }
 EXT READNONE varying float __rsqrt_varying_float(varying float x) { return 1 / @llvm.sqrt(x); }
 EXT READNONE uniform float __rsqrt_uniform_float(uniform float x) { return 1 / @llvm.sqrt(x); }
 

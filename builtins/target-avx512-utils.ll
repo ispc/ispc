@@ -114,6 +114,23 @@ define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
 define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   %is = call float @__rsqrt_fast_uniform_float(float %0)
 
+  ; Newton-Raphson iteration to improve precision, with the factor clamped from below so that a NaN factor
+  ; (0 * Inf, for 0 and Inf inputs) takes the constant and the result is the estimate
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul float %0, %is
+  %v_is_is = fmul float %v_is, %is
+  %three_sub = fsub float 3., %v_is_is
+  %keep = fcmp ogt float %three_sub, 1.
+  %factor = select i1 %keep, float %three_sub, float 1.
+  %is_mul = fmul float %is, %factor
+  %half_scale = fmul float 0.5, %is_mul
+  ret float %half_scale
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define float @__rsqrt_unclamped_uniform_float(float) nounwind readonly alwaysinline {
+  %is = call float @__rsqrt_fast_uniform_float(float %0)
+
   ; Newton-Raphson iteration to improve precision
   ;  return 0.5 * is * (3. - (v * is) * is);
   %v_is = fmul float %0, %is
@@ -177,6 +194,22 @@ define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
 define float @__rcp_uniform_float(float %v) nounwind readonly alwaysinline {
   %iv = call float @__rcp_fast_uniform_float(float %v)
 
+  ; do one N-R iteration to improve precision, with the factor clamped from below so that a NaN factor
+  ; (0 * Inf, for 0 and Inf inputs) takes the constant and the result is the estimate
+  ; iv = rcp(v)
+  ; iv * (2. - v * iv)
+  %v_iv = fmul float %v, %iv
+  %two_minus = fsub float 2., %v_iv
+  %keep = fcmp ogt float %two_minus, 0.5
+  %factor = select i1 %keep, float %two_minus, float 0.5
+  %iv_mul = fmul float %iv, %factor
+  ret float %iv_mul
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define float @__rcp_unclamped_uniform_float(float %v) nounwind readonly alwaysinline {
+  %iv = call float @__rcp_fast_uniform_float(float %v)
+
   ; do one N-R iteration to improve precision
   ; iv = rcp(v)
   ; iv * (2. - v * iv)
@@ -197,12 +230,15 @@ define double @__rcp_fast_uniform_double(double) nounwind readonly alwaysinline 
 define double @__rcp_uniform_double(double %v) nounwind readonly alwaysinline {
   %iv = call double @__rcp_fast_uniform_double(double %v)
 
-  ; do one N-R iteration to improve precision
+  ; do one N-R iteration to improve precision, with the factor clamped from below so that a NaN factor
+  ; (0 * Inf, for 0 and Inf inputs) takes the constant and the result is the estimate
   ; iv = rcp(v)
   ; iv * (2. - v * iv)
   %v_iv = fmul double %v, %iv
   %two_minus = fsub double 2., %v_iv
-  %iv_mul = fmul double %iv, %two_minus
+  %keep = fcmp ogt double %two_minus, 0.5
+  %factor = select i1 %keep, double %two_minus, double 0.5
+  %iv_mul = fmul double %iv, %factor
   ret double %iv_mul
 }
 ')
