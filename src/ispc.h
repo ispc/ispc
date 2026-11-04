@@ -430,8 +430,6 @@ class Target {
 
     bool useScatter() const;
 
-    bool hasVecPrefetch() const { return m_hasVecPrefetch; }
-
     /** Mask of x86 APX sub-features (Opt::APXFeature bits) enabled by the
         effective LLVM backend configuration for this target. */
     unsigned int getEnabledAPXFeatures() const;
@@ -542,9 +540,6 @@ class Target {
 
     /** Indicates whether the target has a native scatter instruction */
     bool m_hasScatter;
-
-    /** Indicates whether the target has hardware instruction for vector prefetch. */
-    bool m_hasVecPrefetch;
 
     /** Mask of disabled APX sub-features (--opt=disable-apx, or all of them
         for a host target without OS APX support). */

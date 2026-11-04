@@ -123,10 +123,7 @@ class Constants:
         '__pseudo_prefetch_read_varying_1', '__pseudo_prefetch_read_varying_2',
         '__pseudo_prefetch_read_varying_3', '__pseudo_prefetch_read_varying_nt',
         '__pseudo_prefetch_write_varying_1', '__pseudo_prefetch_write_varying_2',
-        '__pseudo_prefetch_write_varying_3', '__pseudo_prefetch_read_varying_1_native',
-        '__pseudo_prefetch_read_varying_2_native', '__pseudo_prefetch_read_varying_3_native',
-        '__pseudo_prefetch_read_varying_nt_native', '__pseudo_prefetch_write_varying_1_native',
-        '__pseudo_prefetch_write_varying_2_native', '__pseudo_prefetch_write_varying_3_native'
+        '__pseudo_prefetch_write_varying_3'
     }
 
 

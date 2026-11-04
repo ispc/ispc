@@ -1955,7 +1955,6 @@ define void @__prefetch_write_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
 define void @__prefetch_write_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   ret void
 }
-declare void @__prefetch_write_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
 define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
   ret void
