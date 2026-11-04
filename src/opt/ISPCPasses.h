@@ -20,6 +20,7 @@
 #include "LowerAMXBuiltinsPass.h"
 #include "LowerISPCIntrinsics.h"
 #include "MangleOpenCLBuiltins.h"
+#include "MemoryAccess.h"
 #include "PeepholePass.h"
 #include "RemovePersistentFuncs.h"
 #include "ReplaceMaskedMemOps.h"
