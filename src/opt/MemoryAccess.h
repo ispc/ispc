@@ -191,6 +191,97 @@ struct BaseOffsetsValues {
     matcher produced. */
 BaseOffsetsValues MaterializeBaseOffsets(const BaseOffsetsRecipe &recipe, llvm::Instruction *insertBefore);
 
+/** How a base-offset or factored form combines its integer operands with
+    the base. These are different contracts; the view never declares them
+    equivalent. */
+enum class OffsetArithmetic : uint8_t {
+    /** The offsets (and delta) have the address width: the lowering computes
+        base + offsets * scale (+ delta) in that width. */
+    AddressWidth,
+    /** The offsets (and delta) are i32 on a 64-bit target: the lowering
+        extends them. The x86 builtins (__gather_elt32_* in builtins/util.m4)
+        sign extend offsets and delta separately before scaling and adding in
+        64 bits; the generic ISPC builtins compute offsets * scale + delta at
+        32 bits first. These differ at overflow boundaries. */
+    LoweringExtends,
+};
+
+/** The base/index/scale/displacement decomposition of a base-offset or
+    factored access, as its operands spell it. For a General form the
+    equivalent decomposition is the BaseOffsetsRecipe of RecoverBaseOffsets().
+    Each component is an existing operand; the equivalence to the addresses
+    is the lowering contract named by arithmetic, nothing stronger. */
+struct AddressCandidate {
+    llvm::Value *base = nullptr;         ///< uniform pointer
+    llvm::Value *index = nullptr;        ///< varying offsets, indexBits wide
+    unsigned indexBits = 0;              ///< lane width of index (and displacement)
+    llvm::APInt scale;                   ///< the constant scale; width 32
+    llvm::Value *displacement = nullptr; ///< Factored: the delta operand, usually a constant vector; nullptr otherwise
+    OffsetArithmetic arithmetic = OffsetArithmetic::AddressWidth;
+};
+
+/** The decomposition the call already carries, for BaseOffsets and Factored
+    forms whose scale is a constant and whose index width is one the
+    lowerings are written for: the width of the base's address space, or i32
+    with 64-bit pointers. No value otherwise. */
+std::optional<AddressCandidate> QueryAddressCandidate(const MemoryAccess &access);
+
+/** A 32-bit index whose sign extension equals the access's index (and
+    displacement) at the original width wherever the original is not poison,
+    when that is directly provable. */
+struct NarrowIndex {
+    /** Existing i32 vector equal to the index after sign extension: the
+        index itself when it is i32 (constant or not), or the operand of its
+        sext or zext nneg. nullptr for a constant index wider than 32 bits,
+        then indexLanes holds its narrowed lanes. */
+    llvm::Value *index = nullptr;
+    llvm::SmallVector<llvm::APInt, ISPC_MAX_NVEC> indexLanes; ///< 32-bit lanes of a wider constant index
+    /** The displacement's 32-bit lanes, for a Factored form (empty otherwise). */
+    llvm::SmallVector<llvm::APInt, ISPC_MAX_NVEC> displacementLanes;
+};
+
+/** Reports a NarrowIndex for a BaseOffsets or Factored access whose index is
+    i32, a sext or zext nneg of an i32 vector, or a constant with every lane
+    in [INT32_MIN, INT32_MAX], and whose displacement (if any) is such a
+    constant. A zext nneg of a negative lane is poison, where the narrowed
+    index is defined: the two agree where the original is not poison, and
+    nothing is claimed about the operand's sign. Sums, shifts and other
+    arithmetic are unknown: narrowing them needs a range proof of the
+    complete expression. */
+std::optional<NarrowIndex> QueryNarrowIndex(const MemoryAccess &access);
+
+/** Facts about the per-lane values of the access's address operand (the
+    addresses of a General form, the offsets of the others) that are
+    directly provable from a constant or a splat. */
+struct LanePattern {
+    enum class Shape : uint8_t { Unknown, AllEqual, Linear } shape = Shape::Unknown;
+    /** Linear: the difference between consecutive lanes, modulo 2^width. A
+        sequence that wraps at the lane width is linear here, and is not a
+        sequence of effective addresses after extension. */
+    llvm::APInt stride;
+    /** True when the shape was established for every lane (a constant or a
+        broadcast shuffle without poison mask lanes), not only for the active
+        lanes. */
+    bool coversAllLanes = false;
+    /** True when lane 0 is known to be a defined (non-poison) value: a
+        constant lane. A splat of an SSA value may be poison. */
+    bool lane0Defined = false;
+    /** Proven status of the mask (MemoryAccess::maskStatus()). */
+    MaskStatus mask = MaskStatus::unknown;
+    /** Which operand the shape describes. */
+    const char *operand = "";
+};
+
+/** The lane pattern of the access's address operand. For a Factored form
+    the offsets alone are described; the constant displacement is not folded
+    in. Anything but a constant vector without undef lanes or a shuffle that
+    broadcasts one inserted value or constant lane that is provably not undef
+    (isGuaranteedNotToBeUndef()) to every lane is Unknown, in particular an
+    expression that LLVMVectorIsLinear() would accept: that helper looks
+    through casts without proving wrap behavior and is not an
+    effective-address proof. */
+LanePattern QueryLanePattern(const MemoryAccess &access);
+
 /** Prints the decoded memory accesses of a function to stderr without
     rewriting anything. Registered with ispc-opt for tests
     ("print-memory-access"); not a user-facing compiler option. */
