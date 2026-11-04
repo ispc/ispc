@@ -3,6 +3,8 @@
 ; preference. SSE4 has neither a gather nor a scatter instruction, yet the
 ; non-factored base-offset forms decode with their own operand roles. Masks
 ; of any integer width are accepted. Printing the accesses rewrites nothing.
+; No general form here has a recoverable common base (see
+; memory-access-recovery.ll for those).
 ;
 ; RUN: %{ispc-opt} --target=sse4-i32x4 --passes=print-memory-access %s -o /dev/null 2>&1 | FileCheck %s
 ; RUN: %{ispc-opt} --target=sse4-i32x4 --passes=print-memory-access %s -o - 2>/dev/null | FileCheck --check-prefix=IR %s
@@ -46,24 +48,29 @@ declare <4 x float> @__masked_load_float(ptr, <4 x i32>)
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> %mask (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: gather __pseudo_gather32_i16: general, pseudo, i16 (2 bytes), 4 lanes, 32-bit addresses
 ; CHECK-NEXT:   result: <4 x i16> %g32
 ; CHECK-NEXT:   addresses: <4 x i32> %addresses32
 ; CHECK-NEXT:   mask: <4 x i32> splat (i32 -1) (all on)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: scatter __pseudo_scatter64_double: general, pseudo, double (8 bytes), 4 lanes, 64-bit addresses
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   value: <4 x double> %values
 ; CHECK-NEXT:   mask: <4 x i32> <i32 -1, i32 0, i32 -1, i32 0> (mixed)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: prefetch __pseudo_prefetch_read_varying_1: general, pseudo, 4 lanes, 64-bit addresses
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> zeroinitializer (all off)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: prefetch __prefetch_write_varying_3: general, lowered, 4 lanes, 64-bit addresses
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> %mask (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 define <4 x float> @general(<4 x i64> %addresses, <4 x i32> %addresses32, <4 x double> %values, <4 x i32> %mask) {
   %g = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> %mask)
   %g32 = call <4 x i16> @__pseudo_gather32_i16(<4 x i32> %addresses32, <4 x i32> splat (i32 -1))
@@ -156,6 +163,7 @@ define <4 x i16> @pointer_forms(ptr %p, <4 x float> %floats, <4 x i8> %bytes, <4
 ; CHECK-NEXT:   addresses: <4 x i32> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> %mask (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: scatter __scatter_base_offsets64_float: base-offsets, lowered, float (4 bytes), 4 lanes, 64-bit offsets
 ; CHECK-NEXT:   base: ptr %p
 ; CHECK-NEXT:   scale: i32 4
@@ -176,6 +184,7 @@ define <4 x i32> @lowered_forms(ptr %p, <4 x i32> %addresses, <4 x i64> %offsets
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> %mask (unknown)
 ; CHECK-NEXT:   source: kernel.ispc:12:7
+; CHECK-NEXT:   common base: unknown
 define <4 x float> @with_position(<4 x i64> %addresses, <4 x i32> %mask) {
   %g = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> %mask), !filename !0, !first_line !1, !first_column !2, !last_line !1, !last_column !3
   ret <4 x float> %g
@@ -189,6 +198,7 @@ define <4 x float> @with_position(<4 x i64> %addresses, <4 x i32> %mask) {
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> %mask (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 define <4 x float> @with_bad_position(<4 x i64> %addresses, <4 x i32> %mask) {
   %g = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> %mask), !filename !4, !first_line !0, !first_column !2, !last_line !1, !last_column !3
   ret <4 x float> %g
@@ -252,21 +262,25 @@ define void @malformed(<4 x i64> %addresses, <4 x i32> %offsets32, <4 x i64> %of
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> <i32 -1, i32 undef, i32 undef, i32 undef> (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: gather __pseudo_gather64_float:
 ; CHECK-NEXT:   result: <4 x float> %off
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison> (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: gather __pseudo_gather64_float:
 ; CHECK-NEXT:   result: <4 x float> %undef
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> undef (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 ; CHECK-NEXT: gather __pseudo_gather64_float:
 ; CHECK-NEXT:   result: <4 x float> %poison
 ; CHECK-NEXT:   addresses: <4 x i64> %addresses
 ; CHECK-NEXT:   mask: <4 x i32> poison (unknown)
 ; CHECK-NEXT:   source: unknown
+; CHECK-NEXT:   common base: unknown
 define <4 x float> @undef_mask_lanes(<4 x i64> %addresses) {
   %on = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> <i32 -1, i32 undef, i32 undef, i32 undef>)
   %off = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>)

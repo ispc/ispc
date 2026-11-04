@@ -108,6 +108,89 @@ struct MemoryAccess {
     operands under an assumed layout. */
 std::optional<MemoryAccess> DecodeMemoryAccess(llvm::CallInst *call);
 
+/** How the common base of a General-form access was recognized. None of
+    these establishes pointer provenance for LLVM alias analysis (#3983): a
+    base recovered from the integer arithmetic is a candidate decomposition,
+    not a proof that every lane's access is based on that pointer. */
+enum class BaseOrigin : uint8_t {
+    Pointer,       ///< a pointer-typed value
+    PtrToInt,      ///< a ptrtoint instruction or constant expression
+    LoadedInteger, ///< an integer load: the legacy heuristic for a pointer
+                   ///< that LLVM loaded as an integer, kept for compatibility
+};
+
+/** Provenance of a varying address. RecoverBaseOffsets() always reports
+    Unknown: marking an address as integer-built needs a frontend
+    representation, and PointerDerived needs a proof of the pointer
+    derivation; neither is available here. */
+enum class AddressProvenance : uint8_t { Unknown, IntegerBuilt, PointerDerived };
+
+/** A common scalar base plus per-lane offsets equal to the addresses of a
+    General-form access: addresses == splat(casts(base)) + offsets at the
+    address width, exactly as the existing matcher decomposed them. The
+    recipe refers only to existing values and lane constants; nothing is
+    created until MaterializeBaseOffsets(). */
+struct BaseOffsetsRecipe {
+    /** The common scalar base, before baseCasts. */
+    llvm::Value *base = nullptr;
+    BaseOrigin baseOrigin = BaseOrigin::Pointer;
+
+    /** Scalar casts to replay on base, innermost first: the vector casts the
+        addresses went through. */
+    struct Cast {
+        llvm::Instruction::CastOps opcode;
+        llvm::Type *type;
+    };
+    llvm::SmallVector<Cast, 2> baseCasts;
+
+    /** Vector type of the offsets: the type of the addresses. */
+    llvm::FixedVectorType *offsetsType = nullptr;
+
+    /** Per-lane constant offsets at the lane width when the innermost
+        addresses are a constant vector of a global's address plus
+        displacements; otherwise empty and the sum of terms starts at zero.
+        The offsets have the addresses' type; the legacy matcher used the
+        target's pointer width, which is the same for every call the frontend
+        emits. */
+    llvm::SmallVector<llvm::APInt, ISPC_MAX_NVEC> laneOffsets;
+
+    /** Addends of the offsets, innermost first:
+        offsets = (laneOffsets or 0) + terms[0] + terms[1] + ... */
+    struct Term {
+        /** An existing vector value, or the vector whose lane 0 is broadcast
+            when splatAnchor is set. */
+        llvm::Value *value = nullptr;
+        /** When set, the term is a shuffle broadcasting lane 0 of value,
+            inserted before (or after, if insertAfterAnchor) this instruction. */
+        llvm::Instruction *splatAnchor = nullptr;
+        bool insertAfterAnchor = false;
+    };
+    llvm::SmallVector<Term, 4> terms;
+
+    AddressProvenance provenance = AddressProvenance::Unknown;
+};
+
+/** Read-only query: recovers a common base and per-lane offsets from the
+    addresses of a General-form gather, scatter or prefetch. Recognizes the
+    forms the existing matcher handled: a uniform value broadcast through an
+    insert chain, a shuffle or a constant splat, possibly behind vector casts;
+    adds (or disjoint ors) of such a base and other terms; a constant vector of
+    one global's address plus displacements; and the aggregate insert/extract
+    form. Returns no value for anything else, for unequal bases and when the
+    budget of visited values is exhausted. Never inserts instructions, changes
+    operands or use lists, or creates LLVM constant expressions. */
+std::optional<BaseOffsetsRecipe> RecoverBaseOffsets(const MemoryAccess &access);
+
+struct BaseOffsetsValues {
+    llvm::Value *base = nullptr;    ///< scalar, after the recipe's casts
+    llvm::Value *offsets = nullptr; ///< vector of the recipe's offsetsType
+};
+
+/** Creates the recipe's values, inserting new instructions before
+    insertBefore (shuffles at their anchors), in the shape the existing
+    matcher produced. */
+BaseOffsetsValues MaterializeBaseOffsets(const BaseOffsetsRecipe &recipe, llvm::Instruction *insertBefore);
+
 /** Prints the decoded memory accesses of a function to stderr without
     rewriting anything. Registered with ispc-opt for tests
     ("print-memory-access"); not a user-facing compiler option. */
