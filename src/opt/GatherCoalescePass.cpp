@@ -5,7 +5,7 @@
 */
 
 #include "GatherCoalescePass.h"
-#include "builtins-decl.h"
+#include "MemoryOpRegistry.h"
 
 namespace ispc {
 
@@ -876,11 +876,21 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
     DEBUG_START_BB("GatherCoalescePass");
 
     llvm::Module *M = bb.getModule();
+    // The pseudo factored gathers of 32-bit elements, with either offset width.
+    auto factoredGather = [M](MemoryElement element, uint8_t offsetBits) {
+        MemoryOpKey key;
+        key.kind = MemoryOpKind::Gather;
+        key.form = MemoryOpForm::Factored;
+        key.element = element;
+        key.flavor = MemoryOpFlavor::Pseudo;
+        key.offsetBits = offsetBits;
+        return GetMemoryOpFunction(M, key);
+    };
     llvm::Function *gatherFuncs[] = {
-        M->getFunction(builtin::__pseudo_gather_factored_base_offsets32_i32),
-        M->getFunction(builtin::__pseudo_gather_factored_base_offsets32_float),
-        M->getFunction(builtin::__pseudo_gather_factored_base_offsets64_i32),
-        M->getFunction(builtin::__pseudo_gather_factored_base_offsets64_float),
+        factoredGather(MemoryElement::I32, 32),
+        factoredGather(MemoryElement::Float, 32),
+        factoredGather(MemoryElement::I32, 64),
+        factoredGather(MemoryElement::Float, 64),
     };
     int nGatherFuncs = sizeof(gatherFuncs) / sizeof(gatherFuncs[0]);
 

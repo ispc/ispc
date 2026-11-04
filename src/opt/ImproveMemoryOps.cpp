@@ -5,16 +5,12 @@
 */
 
 #include "ImproveMemoryOps.h"
-#include "builtins-decl.h"
+#include "MemoryOpRegistry.h"
 
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Analysis/VectorUtils.h>
 
-#include <unordered_map>
-
 namespace ispc {
-
-using namespace builtin;
 
 /** Check to make sure that this value is actually a pointer in the end.
     We need to make sure that given an expression like vec(offset) +
@@ -827,138 +823,20 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
     }
 }
 
-// Contains a function call substitution info for gather/scatter calls.
-// We construct this class objects in program constructors phase, i.e., before initialization of g->target
-// and any of LLVMTypes values. Moreover, g->target values are not same during multi-target compilation. Because of
-// that, we postpone evaluation of types, choosing the proper function before actual call replacement here and in
-// similar types across this file.
-struct GSInfo {
-    enum class Type {
-        Gather,
-        Scatter,
-    };
-    GSInfo(const char *pgbo64, const char *pgfbo64, const char *pgbo32, const char *pgfbo32, GSInfo::Type type)
-        : pgbo64(pgbo64), pgfbo64(pgfbo64), pgbo32(pgbo32), pgfbo32(pgfbo32), type(type) {}
-    GSInfo(const char *pgbo64, const char *pgfbo64, GSInfo::Type type)
-        : pgbo64(pgbo64), pgfbo64(pgfbo64), pgbo32(pgbo64), pgfbo32(pgfbo64), type(type) {}
-    static GSInfo Gather(const char *pgbo64, const char *pgfbo64, const char *pgbo32, const char *pgfbo32) {
-        return GSInfo(pgbo64, pgfbo64, pgbo32, pgfbo32, Type::Gather);
-    }
-    static GSInfo Gather(const char *pgbo64, const char *pgfbo64) { return GSInfo(pgbo64, pgfbo64, Type::Gather); }
-    static GSInfo Scatter(const char *pgbo64, const char *pgfbo64, const char *pgbo32, const char *pgfbo32) {
-        return GSInfo(pgbo64, pgfbo64, pgbo32, pgfbo32, Type::Scatter);
-    }
-    static GSInfo Scatter(const char *pgbo64, const char *pgfbo64) { return GSInfo(pgbo64, pgfbo64, Type::Scatter); }
-    bool isGather() const { return type == GSInfo::Type::Gather; }
-    bool isScatter() const { return type == GSInfo::Type::Scatter; }
-    llvm::Function *baseOffsets64Func(llvm::Module *M) const {
-        const char *name = chooseBaseOrFactoredFunc() ? pgbo64 : pgfbo64;
-        return M->getFunction(name);
-    }
-    llvm::Function *baseOffsets32Func(llvm::Module *M) const {
-        const char *name = chooseBaseOrFactoredFunc() ? pgbo32 : pgfbo32;
-        return M->getFunction(name);
-    }
-
-  private:
-    bool chooseBaseOrFactoredFunc() const {
-        switch (type) {
-        case GSInfo::Type::Gather:
-            return g->target->useGather();
-        case GSInfo::Type::Scatter:
-            return g->target->useScatter();
-        }
-        return false;
-    }
-    const char *pgbo64;
-    const char *pgfbo64;
-    const char *pgbo32;
-    const char *pgfbo32;
-    GSInfo::Type type;
-};
-
 static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
-    // A map for call replacement used in lGSToGSBaseOffsets.
-    static std::unordered_map<std::string, GSInfo> replacementRules = {
-        {__pseudo_gather32_i8,
-         GSInfo::Gather(__pseudo_gather_base_offsets32_i8, __pseudo_gather_factored_base_offsets32_i8)},
-        {__pseudo_gather32_i16,
-         GSInfo::Gather(__pseudo_gather_base_offsets32_i16, __pseudo_gather_factored_base_offsets32_i16)},
-        {__pseudo_gather32_half,
-         GSInfo::Gather(__pseudo_gather_base_offsets32_half, __pseudo_gather_factored_base_offsets32_half)},
-        {__pseudo_gather32_i32,
-         GSInfo::Gather(__pseudo_gather_base_offsets32_i32, __pseudo_gather_factored_base_offsets32_i32)},
-        {__pseudo_gather32_float,
-         GSInfo::Gather(__pseudo_gather_base_offsets32_float, __pseudo_gather_factored_base_offsets32_float)},
-        {__pseudo_gather32_i64,
-         GSInfo::Gather(__pseudo_gather_base_offsets32_i64, __pseudo_gather_factored_base_offsets32_i64)},
-        {__pseudo_gather32_double,
-         GSInfo::Gather(__pseudo_gather_base_offsets32_double, __pseudo_gather_factored_base_offsets32_double)},
-        {__pseudo_scatter32_i8,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets32_i8, __pseudo_scatter_factored_base_offsets32_i8)},
-        {__pseudo_scatter32_i16,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets32_i16, __pseudo_scatter_factored_base_offsets32_i16)},
-        {__pseudo_scatter32_half,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets32_half, __pseudo_scatter_factored_base_offsets32_half)},
-        {__pseudo_scatter32_i32,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets32_i32, __pseudo_scatter_factored_base_offsets32_i32)},
-        {__pseudo_scatter32_float,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets32_float, __pseudo_scatter_factored_base_offsets32_float)},
-        {__pseudo_scatter32_i64,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets32_i64, __pseudo_scatter_factored_base_offsets32_i64)},
-        {__pseudo_scatter32_double,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets32_double, __pseudo_scatter_factored_base_offsets32_double)},
-        {__pseudo_gather64_i8,
-         GSInfo::Gather(__pseudo_gather_base_offsets64_i8, __pseudo_gather_factored_base_offsets64_i8,
-                        __pseudo_gather_base_offsets32_i8, __pseudo_gather_factored_base_offsets32_i8)},
-        {__pseudo_gather64_i16,
-         GSInfo::Gather(__pseudo_gather_base_offsets64_i16, __pseudo_gather_factored_base_offsets64_i16,
-                        __pseudo_gather_base_offsets32_i16, __pseudo_gather_factored_base_offsets32_i16)},
-        {__pseudo_gather64_half,
-         GSInfo::Gather(__pseudo_gather_base_offsets64_half, __pseudo_gather_factored_base_offsets64_half,
-                        __pseudo_gather_base_offsets32_half, __pseudo_gather_factored_base_offsets32_half)},
-        {__pseudo_gather64_i32,
-         GSInfo::Gather(__pseudo_gather_base_offsets64_i32, __pseudo_gather_factored_base_offsets64_i32,
-                        __pseudo_gather_base_offsets32_i32, __pseudo_gather_factored_base_offsets32_i32)},
-        {__pseudo_gather64_float,
-         GSInfo::Gather(__pseudo_gather_base_offsets64_float, __pseudo_gather_factored_base_offsets64_float,
-                        __pseudo_gather_base_offsets32_float, __pseudo_gather_factored_base_offsets32_float)},
-        {__pseudo_gather64_i64,
-         GSInfo::Gather(__pseudo_gather_base_offsets64_i64, __pseudo_gather_factored_base_offsets64_i64,
-                        __pseudo_gather_base_offsets32_i64, __pseudo_gather_factored_base_offsets32_i64)},
-        {__pseudo_gather64_double,
-         GSInfo::Gather(__pseudo_gather_base_offsets64_double, __pseudo_gather_factored_base_offsets64_double,
-                        __pseudo_gather_base_offsets32_double, __pseudo_gather_factored_base_offsets32_double)},
-        {__pseudo_scatter64_i8,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets64_i8, __pseudo_scatter_factored_base_offsets64_i8,
-                         __pseudo_scatter_base_offsets32_i8, __pseudo_scatter_factored_base_offsets32_i8)},
-        {__pseudo_scatter64_i16,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets64_i16, __pseudo_scatter_factored_base_offsets64_i16,
-                         __pseudo_scatter_base_offsets32_i16, __pseudo_scatter_factored_base_offsets32_i16)},
-        {__pseudo_scatter64_half,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets64_half, __pseudo_scatter_factored_base_offsets64_half,
-                         __pseudo_scatter_base_offsets32_half, __pseudo_scatter_factored_base_offsets32_half)},
-        {__pseudo_scatter64_i32,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets64_i32, __pseudo_scatter_factored_base_offsets64_i32,
-                         __pseudo_scatter_base_offsets32_i32, __pseudo_scatter_factored_base_offsets32_i32)},
-        {__pseudo_scatter64_float,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets64_float, __pseudo_scatter_factored_base_offsets64_float,
-                         __pseudo_scatter_base_offsets32_float, __pseudo_scatter_factored_base_offsets32_float)},
-        {__pseudo_scatter64_i64,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets64_i64, __pseudo_scatter_factored_base_offsets64_i64,
-                         __pseudo_scatter_base_offsets32_i64, __pseudo_scatter_factored_base_offsets32_i64)},
-        {__pseudo_scatter64_double,
-         GSInfo::Scatter(__pseudo_scatter_base_offsets64_double, __pseudo_scatter_factored_base_offsets64_double,
-                         __pseudo_scatter_base_offsets32_double, __pseudo_scatter_factored_base_offsets32_double)},
-    };
-
-    auto name = callInst->getCalledFunction()->getName().str();
-    auto it = replacementRules.find(name);
-    if (it == replacementRules.end()) {
-        // it is not a call of __pseudo function stored in replacementRules
+    // Only the general pseudo gathers and scatters are converted.
+    const MemoryOp *op = LookupMemoryOp(callInst->getCalledFunction()->getName());
+    if (op == nullptr || op->flavor() != MemoryOpFlavor::Pseudo || op->form() != MemoryOpForm::General ||
+        (op->kind() != MemoryOpKind::Gather && op->kind() != MemoryOpKind::Scatter)) {
         return nullptr;
     }
-    GSInfo *info = &it->second;
+    const bool isGather = op->kind() == MemoryOpKind::Gather;
+    // The target's preference selects the base-offsets form, or the factored
+    // form that the emulated implementations take; the offset width stays
+    // that of the addresses unless the offsets are narrowed below.
+    const bool native = isGather ? g->target->useGather() : g->target->useScatter();
+    MemoryOpKey replacement = op->key;
+    replacement.form = native ? MemoryOpForm::BaseOffsets : MemoryOpForm::Factored;
 
     // Try to transform the array of pointers to a single base pointer
     // and an array of int32 offsets.  (All the hard work is done by
@@ -979,10 +857,10 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                                      ISPC_INSERTION_POINT_INSTRUCTION(callInst));
     LLVMCopyMetadata(basePtr, callInst);
     llvm::Module *M = callInst->getModule();
-    llvm::Function *gatherScatterFunc = info->baseOffsets64Func(M);
+    llvm::Function *gatherScatterFunc = GetMemoryOpFunction(M, replacement);
     llvm::CallInst *newCall = nullptr;
 
-    if ((info->isGather() && g->target->useGather()) || (info->isScatter() && g->target->useScatter())) {
+    if (native) {
 
         // See if the offsets are scaled by 2, 4, or 8.  If so,
         // extract that scale factor and rewrite the offsets to remove
@@ -993,10 +871,11 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // will see if we can call one of the 32-bit variants of the pseudo
         // gather/scatter functions.
         if (g->opt.force32BitAddressing && lOffsets32BitSafe(&offsetVector, callInst)) {
-            gatherScatterFunc = info->baseOffsets32Func(M);
+            replacement.offsetBits = 32;
+            gatherScatterFunc = GetMemoryOpFunction(M, replacement);
         }
 
-        if (info->isGather()) {
+        if (isGather) {
             llvm::Value *mask = callInst->getArgOperand(1);
 
             // Generate a new function call to the next pseudo gather
@@ -1046,10 +925,11 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // will see if we can call one of the 32-bit variants of the pseudo
         // gather/scatter functions.
         if (g->opt.force32BitAddressing && lOffsets32BitSafe(&variableOffset, &constOffset, callInst)) {
-            gatherScatterFunc = info->baseOffsets32Func(M);
+            replacement.offsetBits = 32;
+            gatherScatterFunc = GetMemoryOpFunction(M, replacement);
         }
 
-        if (info->isGather()) {
+        if (isGather) {
             llvm::Value *mask = callInst->getArgOperand(1);
 
             // Generate a new function call to the next pseudo gather
@@ -1084,74 +964,13 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     compile-time-known part.
  */
 static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
-    static std::unordered_map<std::string, int> checksDecompositionOfArgs = {
-        {__pseudo_gather_base_offsets64_i8, 1},
-        {__pseudo_gather_base_offsets64_i16, 1},
-        {__pseudo_gather_base_offsets64_half, 1},
-        {__pseudo_gather_base_offsets64_i32, 1},
-        {__pseudo_gather_base_offsets64_float, 1},
-        {__pseudo_gather_base_offsets64_i64, 1},
-        {__pseudo_gather_base_offsets64_double, 1},
-        {__pseudo_gather_base_offsets32_i8, 1},
-        {__pseudo_gather_base_offsets32_i16, 1},
-        {__pseudo_gather_base_offsets32_half, 1},
-        {__pseudo_gather_base_offsets32_i32, 1},
-        {__pseudo_gather_base_offsets32_float, 1},
-        {__pseudo_gather_base_offsets32_i64, 1},
-        {__pseudo_gather_base_offsets32_double, 1},
-        {__pseudo_gather_factored_base_offsets64_i8, 1},
-        {__pseudo_gather_factored_base_offsets64_i16, 1},
-        {__pseudo_gather_factored_base_offsets64_half, 1},
-        {__pseudo_gather_factored_base_offsets64_i32, 1},
-        {__pseudo_gather_factored_base_offsets64_float, 1},
-        {__pseudo_gather_factored_base_offsets64_i64, 1},
-        {__pseudo_gather_factored_base_offsets64_double, 1},
-        {__pseudo_gather_factored_base_offsets32_i8, 1},
-        {__pseudo_gather_factored_base_offsets32_i16, 1},
-        {__pseudo_gather_factored_base_offsets32_half, 1},
-        {__pseudo_gather_factored_base_offsets32_i32, 1},
-        {__pseudo_gather_factored_base_offsets32_float, 1},
-        {__pseudo_gather_factored_base_offsets32_i64, 1},
-        {__pseudo_gather_factored_base_offsets32_double, 1},
-        {__pseudo_scatter_base_offsets64_i8, 1},
-        {__pseudo_scatter_base_offsets64_i16, 1},
-        {__pseudo_scatter_base_offsets64_half, 1},
-        {__pseudo_scatter_base_offsets64_i32, 1},
-        {__pseudo_scatter_base_offsets64_float, 1},
-        {__pseudo_scatter_base_offsets64_i64, 1},
-        {__pseudo_scatter_base_offsets64_double, 1},
-        {__pseudo_scatter_base_offsets32_i8, 1},
-        {__pseudo_scatter_base_offsets32_i16, 1},
-        {__pseudo_scatter_base_offsets32_half, 1},
-        {__pseudo_scatter_base_offsets32_i32, 1},
-        {__pseudo_scatter_base_offsets32_float, 1},
-        {__pseudo_scatter_base_offsets32_i64, 1},
-        {__pseudo_scatter_base_offsets32_double, 1},
-        {__pseudo_scatter_factored_base_offsets64_i8, 1},
-        {__pseudo_scatter_factored_base_offsets64_i16, 1},
-        {__pseudo_scatter_factored_base_offsets64_half, 1},
-        {__pseudo_scatter_factored_base_offsets64_i32, 1},
-        {__pseudo_scatter_factored_base_offsets64_float, 1},
-        {__pseudo_scatter_factored_base_offsets64_i64, 1},
-        {__pseudo_scatter_factored_base_offsets64_double, 1},
-        {__pseudo_scatter_factored_base_offsets32_i8, 1},
-        {__pseudo_scatter_factored_base_offsets32_i16, 1},
-        {__pseudo_scatter_factored_base_offsets32_half, 1},
-        {__pseudo_scatter_factored_base_offsets32_i32, 1},
-        {__pseudo_scatter_factored_base_offsets32_float, 1},
-        {__pseudo_scatter_factored_base_offsets32_i64, 1},
-        {__pseudo_scatter_factored_base_offsets32_double, 1},
-    };
-
+    // The pseudo base-offsets and factored gathers and scatters.
     llvm::Function *calledFunc = callInst->getCalledFunction();
     Assert(calledFunc != nullptr);
-
-    // Is one of the gather/scatter functins that decompose into
-    // base+offsets being called?
-    auto name = calledFunc->getName().str();
-    auto it = checksDecompositionOfArgs.find(name);
-    if (it == checksDecompositionOfArgs.end()) {
-        // it is not a call of function stored in checksDecompositionOfArgs
+    const MemoryOp *op = LookupMemoryOp(calledFunc->getName());
+    if (op == nullptr || op->flavor() != MemoryOpFlavor::Pseudo ||
+        (op->kind() != MemoryOpKind::Gather && op->kind() != MemoryOpKind::Scatter) ||
+        (op->form() != MemoryOpForm::BaseOffsets && op->form() != MemoryOpForm::Factored)) {
         return nullptr;
     }
 
@@ -1441,55 +1260,6 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
     return llvm::ConstantVector::get(scales);
 }
 
-// alignment in bytes
-enum class Alignment : int {
-    A1 = 1,
-    A2 = 2,
-    A4 = 4,
-    A8 = 8,
-    A16 = 16,
-};
-
-struct GatherImpInfo {
-    GatherImpInfo(const char *lmName, const char *bmName, llvm::Type **st, Alignment a)
-        : load(lmName), blend(bmName), sType(st), alignment(a) {}
-    bool isFactored() const { return !g->target->useGather(); }
-    llvm::Function *loadMaskedFunc(llvm::Module *M) const { return M->getFunction(load); }
-    llvm::Function *blendMaskedFunc(llvm::Module *M) const { return M->getFunction(blend); }
-    llvm::Type *scalarType() const { return *sType; }
-    llvm::Type *baseType() const {
-        // Pseudo gather base pointer element type (the 1st argument of the intrinsic) is int8
-        // e.g. @__pseudo_gather_base_offsets32_i8(i8 *, i32, <WIDTH x i32>, <WIDTH x MASK>)
-        return LLVMTypes::Int8Type;
-    }
-    int align() const { return static_cast<int>(alignment); }
-
-  private:
-    const char *load;
-    const char *blend;
-    llvm::Type **sType;
-    Alignment alignment;
-};
-
-struct ScatterImpInfo {
-    ScatterImpInfo(const char *msName, llvm::Type **st, Alignment a) : store(msName), sType(st), alignment(a) {}
-    bool isFactored() const { return !g->target->useScatter(); }
-    llvm::Function *maskedStoreFunc(llvm::Module *M) const { return M->getFunction(store); }
-    llvm::Type *scalarType() const { return *sType; }
-    llvm::Type *baseType() const {
-        // Pseudo scatter base pointer element type (the 1st argument of the intrinsic) is int8
-        // e.g. @__pseudo_scatter_base_offsets32_i8(i8 * nocapture, i32, <WIDTH x i32>, <WIDTH x i8>, <WIDTH x
-        // MASK>)
-        return LLVMTypes::Int8Type;
-    }
-    int align() const { return static_cast<int>(alignment); }
-
-  private:
-    const char *store;
-    llvm::Type **sType;
-    Alignment alignment;
-};
-
 /** After earlier optimization passes have run, we are sometimes able to
     determine that gathers/scatters are actually accessing memory in a more
     regular fashion and then change the operation to something simpler and
@@ -1506,111 +1276,28 @@ struct ScatterImpInfo {
     vector loads with AVX, etc.
 */
 static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
-
-    static GatherImpInfo GII_i8 =
-        GatherImpInfo(__masked_load_i8, __masked_load_blend_i8, &LLVMTypes::Int8Type, Alignment::A1);
-    static GatherImpInfo GII_i16 =
-        GatherImpInfo(__masked_load_i16, __masked_load_blend_i16, &LLVMTypes::Int16Type, Alignment::A2);
-    static GatherImpInfo GII_half =
-        GatherImpInfo(__masked_load_half, __masked_load_blend_half, &LLVMTypes::Float16Type, Alignment::A2);
-    static GatherImpInfo GII_i32 =
-        GatherImpInfo(__masked_load_i32, __masked_load_blend_i32, &LLVMTypes::Int32Type, Alignment::A4);
-    static GatherImpInfo GII_float =
-        GatherImpInfo(__masked_load_float, __masked_load_blend_float, &LLVMTypes::FloatType, Alignment::A4);
-    static GatherImpInfo GII_i64 =
-        GatherImpInfo(__masked_load_i64, __masked_load_blend_i64, &LLVMTypes::Int64Type, Alignment::A8);
-    static GatherImpInfo GII_double =
-        GatherImpInfo(__masked_load_double, __masked_load_blend_double, &LLVMTypes::DoubleType, Alignment::A8);
-
-    static std::unordered_map<std::string, GatherImpInfo *> replGatherToLoad = {
-        {__pseudo_gather_base_offsets32_i8, &GII_i8},
-        {__pseudo_gather_factored_base_offsets32_i8, &GII_i8},
-        {__pseudo_gather_base_offsets32_i16, &GII_i16},
-        {__pseudo_gather_factored_base_offsets32_i16, &GII_i16},
-        {__pseudo_gather_base_offsets32_half, &GII_half},
-        {__pseudo_gather_factored_base_offsets32_half, &GII_half},
-        {__pseudo_gather_base_offsets32_i32, &GII_i32},
-        {__pseudo_gather_factored_base_offsets32_i32, &GII_i32},
-        {__pseudo_gather_base_offsets32_float, &GII_float},
-        {__pseudo_gather_factored_base_offsets32_float, &GII_float},
-        {__pseudo_gather_base_offsets32_i64, &GII_i64},
-        {__pseudo_gather_factored_base_offsets32_i64, &GII_i64},
-        {__pseudo_gather_base_offsets32_double, &GII_double},
-        {__pseudo_gather_factored_base_offsets32_double, &GII_double},
-        {__pseudo_gather_base_offsets64_i8, &GII_i8},
-        {__pseudo_gather_factored_base_offsets64_i8, &GII_i8},
-        {__pseudo_gather_base_offsets64_i16, &GII_i16},
-        {__pseudo_gather_factored_base_offsets64_i16, &GII_i16},
-        {__pseudo_gather_base_offsets64_half, &GII_half},
-        {__pseudo_gather_factored_base_offsets64_half, &GII_half},
-        {__pseudo_gather_base_offsets64_i32, &GII_i32},
-        {__pseudo_gather_factored_base_offsets64_i32, &GII_i32},
-        {__pseudo_gather_base_offsets64_float, &GII_float},
-        {__pseudo_gather_factored_base_offsets64_float, &GII_float},
-        {__pseudo_gather_base_offsets64_i64, &GII_i64},
-        {__pseudo_gather_factored_base_offsets64_i64, &GII_i64},
-        {__pseudo_gather_base_offsets64_double, &GII_double},
-        {__pseudo_gather_factored_base_offsets64_double, &GII_double},
-    };
-
-    static ScatterImpInfo SII_i8 = ScatterImpInfo(__pseudo_masked_store_i8, &LLVMTypes::Int8Type, Alignment::A1);
-    static ScatterImpInfo SII_i16 = ScatterImpInfo(__pseudo_masked_store_i16, &LLVMTypes::Int16Type, Alignment::A2);
-    static ScatterImpInfo SII_half = ScatterImpInfo(__pseudo_masked_store_half, &LLVMTypes::Float16Type, Alignment::A2);
-    static ScatterImpInfo SII_i32 = ScatterImpInfo(__pseudo_masked_store_i32, &LLVMTypes::Int32Type, Alignment::A4);
-    static ScatterImpInfo SII_float = ScatterImpInfo(__pseudo_masked_store_float, &LLVMTypes::FloatType, Alignment::A4);
-    static ScatterImpInfo SII_i64 = ScatterImpInfo(__pseudo_masked_store_i64, &LLVMTypes::Int64Type, Alignment::A8);
-    static ScatterImpInfo SII_double =
-        ScatterImpInfo(__pseudo_masked_store_double, &LLVMTypes::DoubleType, Alignment::A8);
-
-    static std::unordered_map<std::string, ScatterImpInfo *> replScatterToStore = {
-        {__pseudo_scatter_base_offsets32_i8, &SII_i8},
-        {__pseudo_scatter_factored_base_offsets32_i8, &SII_i8},
-        {__pseudo_scatter_base_offsets32_i16, &SII_i16},
-        {__pseudo_scatter_factored_base_offsets32_i16, &SII_i16},
-        {__pseudo_scatter_base_offsets32_half, &SII_half},
-        {__pseudo_scatter_factored_base_offsets32_half, &SII_half},
-        {__pseudo_scatter_base_offsets32_i32, &SII_i32},
-        {__pseudo_scatter_factored_base_offsets32_i32, &SII_i32},
-        {__pseudo_scatter_base_offsets32_float, &SII_float},
-        {__pseudo_scatter_factored_base_offsets32_float, &SII_float},
-        {__pseudo_scatter_base_offsets32_i64, &SII_i64},
-        {__pseudo_scatter_factored_base_offsets32_i64, &SII_i64},
-        {__pseudo_scatter_base_offsets32_double, &SII_double},
-        {__pseudo_scatter_factored_base_offsets32_double, &SII_double},
-        {__pseudo_scatter_base_offsets64_i8, &SII_i8},
-        {__pseudo_scatter_factored_base_offsets64_i8, &SII_i8},
-        {__pseudo_scatter_base_offsets64_i16, &SII_i16},
-        {__pseudo_scatter_factored_base_offsets64_i16, &SII_i16},
-        {__pseudo_scatter_base_offsets64_half, &SII_half},
-        {__pseudo_scatter_factored_base_offsets64_half, &SII_half},
-        {__pseudo_scatter_base_offsets64_i32, &SII_i32},
-        {__pseudo_scatter_factored_base_offsets64_i32, &SII_i32},
-        {__pseudo_scatter_base_offsets64_float, &SII_float},
-        {__pseudo_scatter_factored_base_offsets64_float, &SII_float},
-        {__pseudo_scatter_base_offsets64_i64, &SII_i64},
-        {__pseudo_scatter_factored_base_offsets64_i64, &SII_i64},
-        {__pseudo_scatter_base_offsets64_double, &SII_double},
-        {__pseudo_scatter_factored_base_offsets64_double, &SII_double},
-    };
-
-    GatherImpInfo *gatherInfo = nullptr;
-    ScatterImpInfo *scatterInfo = nullptr;
-    llvm::Function *calledFunc = callInst->getCalledFunction();
-    auto name = calledFunc->getName().str();
-
-    auto itG = replGatherToLoad.find(name);
-    if (itG != replGatherToLoad.end()) {
-        gatherInfo = itG->second;
-    }
-
-    auto itS = replScatterToStore.find(name);
-    if (itS != replScatterToStore.end()) {
-        scatterInfo = itS->second;
-    }
-
-    if (gatherInfo == nullptr && scatterInfo == nullptr) {
+    // The pseudo base-offsets and factored gathers and scatters.
+    const MemoryOp *op = LookupMemoryOp(callInst->getCalledFunction()->getName());
+    if (op == nullptr || op->flavor() != MemoryOpFlavor::Pseudo ||
+        (op->kind() != MemoryOpKind::Gather && op->kind() != MemoryOpKind::Scatter) ||
+        (op->form() != MemoryOpForm::BaseOffsets && op->form() != MemoryOpForm::Factored)) {
         return nullptr;
     }
+    const bool isGather = op->kind() == MemoryOpKind::Gather;
+    const bool isFactored = isGather ? !g->target->useGather() : !g->target->useScatter();
+    // Pseudo gather/scatter base pointers are i8 pointers, e.g.
+    // @__pseudo_gather_base_offsets32_i8(ptr, i32, <WIDTH x i32>, <WIDTH x MASK>)
+    llvm::Type *baseType = LLVMTypes::Int8Type;
+    llvm::Type *scalarType = GetMemoryElementType(op->element());
+    // The masked load/store of the same element type that replaces the call.
+    auto maskedFunc = [&](MemoryOpKind kind, MemoryOpFlavor flavor) {
+        MemoryOpKey key;
+        key.kind = kind;
+        key.form = MemoryOpForm::Pointer;
+        key.element = op->element();
+        key.flavor = flavor;
+        return GetMemoryOpFunction(callInst->getModule(), key);
+    };
 
     SourcePos pos;
     LLVMGetSourcePosFromMetadata(callInst, &pos);
@@ -1619,14 +1306,14 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     llvm::Value *fullOffsets = nullptr;
     llvm::Value *storeValue = nullptr;
     llvm::Value *mask = nullptr;
-    if ((gatherInfo != nullptr && gatherInfo->isFactored()) || (scatterInfo != nullptr && scatterInfo->isFactored())) {
+    if (isFactored) {
         llvm::Value *varyingOffsets = callInst->getArgOperand(1);
         llvm::Value *offsetScale = callInst->getArgOperand(2);
         llvm::Value *constOffsets = callInst->getArgOperand(3);
-        if (scatterInfo) {
+        if (!isGather) {
             storeValue = callInst->getArgOperand(4);
         }
-        mask = callInst->getArgOperand((gatherInfo != nullptr) ? 4 : 5);
+        mask = callInst->getArgOperand(isGather ? 4 : 5);
 
         // Compute the full offset vector: offsetScale * varyingOffsets + constOffsets
         llvm::Constant *offsetScaleVec = lGetOffsetScaleVec(offsetScale, varyingOffsets->getType());
@@ -1637,10 +1324,10 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
         fullOffsets = llvm::BinaryOperator::Create(llvm::Instruction::Add, scaledVarying, constOffsets,
                                                    "varying+const_offsets", ISPC_INSERTION_POINT_INSTRUCTION(callInst));
     } else {
-        if (scatterInfo) {
+        if (!isGather) {
             storeValue = callInst->getArgOperand(3);
         }
-        mask = callInst->getArgOperand((gatherInfo != nullptr) ? 3 : 4);
+        mask = callInst->getArgOperand(isGather ? 3 : 4);
 
         llvm::Value *offsetScale = callInst->getArgOperand(1);
         llvm::Value *offsets = callInst->getArgOperand(2);
@@ -1657,18 +1344,17 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     }
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
-    llvm::Type *scalarType = (gatherInfo != nullptr) ? gatherInfo->scalarType() : scatterInfo->scalarType();
 
     auto callName = callInst->getName();
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
         // If all the offsets are equal, then compute the single
         // pointer they all represent based on the first one of them
         // (arbitrarily).
-        if (gatherInfo != nullptr) {
+        if (isGather) {
             // A gather with everyone going to the same location is
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
-            llvm::Value *ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
+            llvm::Value *ptr = lComputeCommonPointer(base, baseType, fullOffsets, callInst);
 
             LLVMCopyMetadata(ptr, callInst);
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
@@ -1715,7 +1401,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             return nullptr;
         }
     } else {
-        int step = gatherInfo ? gatherInfo->align() : scatterInfo->align();
+        int step = GetMemoryElementBytes(op->element());
 
         // Check for positive stride (forward access pattern)
         if (step > 0 && LLVMVectorIsLinear(fullOffsets, step)) {
@@ -1724,33 +1410,32 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
             // and 64 bit gather/scatters, respectively.
             llvm::Instruction *newCall = nullptr;
-            llvm::Module *M = callInst->getModule();
             // Lanes that are off may have offsets that wrapped. Then the
             // pointer is computed from a lane that is on.
             llvm::SmallPtrSet<llvm::Value *, 4> visited;
             bool fromOnLane =
                 GetMaskStatusFromValue(mask) != MaskStatus::all_on && lHasWrappingZExt(fullOffsets, visited);
 
-            if (gatherInfo != nullptr) {
-                llvm::Value *ptr = fromOnLane
-                                       ? lComputeCommonPointerFromFirstOnLane(base, gatherInfo->baseType(), fullOffsets,
-                                                                              mask, step, callInst)
-                                       : lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
+            if (isGather) {
+                llvm::Value *ptr =
+                    fromOnLane ? lComputeCommonPointerFromFirstOnLane(base, baseType, fullOffsets, mask, step, callInst)
+                               : lComputeCommonPointer(base, baseType, fullOffsets, callInst);
                 LLVMCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
 #ifdef ISPC_XE_ENABLED
                 doBlendLoad = g->target->isXeTarget() && g->opt.enableXeUnsafeMaskedLoad;
 #endif
-                newCall = LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc(M) : gatherInfo->loadMaskedFunc(M),
-                                       ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
+                newCall = LLVMCallInst(
+                    maskedFunc(MemoryOpKind::MaskedLoad, doBlendLoad ? MemoryOpFlavor::Blend : MemoryOpFlavor::Lowered),
+                    ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
-                llvm::Value *ptr = fromOnLane
-                                       ? lComputeCommonPointerFromFirstOnLane(base, scatterInfo->baseType(),
-                                                                              fullOffsets, mask, step, callInst)
-                                       : lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
-                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(M), ptr, storeValue, mask, "");
+                llvm::Value *ptr =
+                    fromOnLane ? lComputeCommonPointerFromFirstOnLane(base, baseType, fullOffsets, mask, step, callInst)
+                               : lComputeCommonPointer(base, baseType, fullOffsets, callInst);
+                newCall = LLVMCallInst(maskedFunc(MemoryOpKind::MaskedStore, MemoryOpFlavor::Pseudo), ptr, storeValue,
+                                       mask, "");
             }
             LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
@@ -1778,16 +1463,14 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
 #endif
 
             llvm::Instruction *newCall = nullptr;
-            llvm::Module *M = callInst->getModule();
 
-            if (gatherInfo != nullptr) {
+            if (isGather) {
                 // For backward gather: load from lowest address, then reverse
-                llvm::Value *ptr =
-                    lComputeCommonPointerForNegativeStride(base, gatherInfo->baseType(), fullOffsets, callInst);
+                llvm::Value *ptr = lComputeCommonPointerForNegativeStride(base, baseType, fullOffsets, callInst);
                 LLVMCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed backward gather to load + reverse!");
 
-                newCall = LLVMCallInst(gatherInfo->loadMaskedFunc(M), ptr, mask,
+                newCall = LLVMCallInst(maskedFunc(MemoryOpKind::MaskedLoad, MemoryOpFlavor::Lowered), ptr, mask,
                                        llvm::Twine(ptr->getName()) + "_masked_load");
                 newCall->insertBefore(ISPC_INSERTION_POINT_INSTRUCTION(callInst));
                 LLVMCopyMetadata(newCall, callInst);
@@ -1803,15 +1486,15 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
                 // For backward scatter: reverse data, then store to lowest address
                 Debug(pos, "Transformed backward scatter to reverse + store!");
 
-                llvm::Value *ptr =
-                    lComputeCommonPointerForNegativeStride(base, scatterInfo->baseType(), fullOffsets, callInst);
+                llvm::Value *ptr = lComputeCommonPointerForNegativeStride(base, baseType, fullOffsets, callInst);
                 LLVMCopyMetadata(ptr, callInst);
 
                 // Reverse the data vector before storing
                 llvm::Value *reversedData = lReverseVector(storeValue, callInst);
                 LLVMCopyMetadata(reversedData, callInst);
 
-                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(M), ptr, reversedData, mask, "");
+                newCall = LLVMCallInst(maskedFunc(MemoryOpKind::MaskedStore, MemoryOpFlavor::Pseudo), ptr, reversedData,
+                                       mask, "");
                 LLVMCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
                 return newCall;
@@ -1832,35 +1515,9 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     mask and an 'all off' mask, respectively.
 */
 static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
-    static std::unordered_map<std::string, Alignment> maskedStoreAlign = {
-        {__pseudo_masked_store_i8, Alignment::A1},
-        {__pseudo_masked_store_i16, Alignment::A2},
-        {__pseudo_masked_store_half, Alignment::A2},
-        {__pseudo_masked_store_i32, Alignment::A4},
-        {__pseudo_masked_store_float, Alignment::A4},
-        {__pseudo_masked_store_i64, Alignment::A8},
-        {__pseudo_masked_store_double, Alignment::A8},
-        {__masked_store_blend_i8, Alignment::A1},
-        {__masked_store_blend_i16, Alignment::A2},
-        {__masked_store_blend_half, Alignment::A2},
-        {__masked_store_blend_i32, Alignment::A4},
-        {__masked_store_blend_float, Alignment::A4},
-        {__masked_store_blend_i64, Alignment::A8},
-        {__masked_store_blend_double, Alignment::A8},
-        {__masked_store_i8, Alignment::A1},
-        {__masked_store_i16, Alignment::A2},
-        {__masked_store_half, Alignment::A2},
-        {__masked_store_i32, Alignment::A4},
-        {__masked_store_float, Alignment::A4},
-        {__masked_store_i64, Alignment::A8},
-        {__masked_store_double, Alignment::A8},
-    };
-
-    llvm::Function *called = callInst->getCalledFunction();
-    auto name = called->getName().str();
-    auto it = maskedStoreAlign.find(name);
-    if (it == maskedStoreAlign.end()) {
-        // it is not a call of function stored in maskedStoreAlign
+    // A masked store of any flavor; it is assumed aligned to its element.
+    const MemoryOp *op = LookupMemoryOp(callInst->getCalledFunction()->getName());
+    if (op == nullptr || op->kind() != MemoryOpKind::MaskedStore) {
         return nullptr;
     }
 
@@ -1868,7 +1525,7 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
     llvm::Value *lvalue = callInst->getArgOperand(0);
     llvm::Value *rvalue = callInst->getArgOperand(1);
     llvm::Value *mask = callInst->getArgOperand(2);
-    int align = static_cast<int>(it->second);
+    int align = GetMemoryElementBytes(op->element());
 
     MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
@@ -1913,24 +1570,12 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
 }
 
 static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
-    static std::unordered_map<std::string, Alignment> maskedLoadAlign = {
-        {__masked_load_i8, Alignment::A1},        {__masked_load_i16, Alignment::A2},
-        {__masked_load_half, Alignment::A2},      {__masked_load_i32, Alignment::A4},
-        {__masked_load_float, Alignment::A4},     {__masked_load_i64, Alignment::A8},
-        {__masked_load_double, Alignment::A8},    {__masked_load_blend_i8, Alignment::A1},
-        {__masked_load_blend_i16, Alignment::A2}, {__masked_load_blend_half, Alignment::A2},
-        {__masked_load_blend_i32, Alignment::A4}, {__masked_load_blend_float, Alignment::A4},
-        {__masked_load_blend_i64, Alignment::A8}, {__masked_load_blend_double, Alignment::A8},
-    };
-
-    llvm::Function *called = callInst->getCalledFunction();
-    auto name = called->getName().str();
-    auto it = maskedLoadAlign.find(name);
-    if (it == maskedLoadAlign.end()) {
-        // it is not a call of function stored in maskedLoadAlign
+    // A masked load of any flavor; it is assumed aligned to its element.
+    const MemoryOp *op = LookupMemoryOp(callInst->getCalledFunction()->getName());
+    if (op == nullptr || op->kind() != MemoryOpKind::MaskedLoad) {
         return nullptr;
     }
-    int align = static_cast<int>(it->second);
+    int align = GetMemoryElementBytes(op->element());
 
     // Got one; grab the operands
     llvm::Value *ptr = callInst->getArgOperand(0);
