@@ -1770,27 +1770,19 @@ bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos)
         return false;
     }
 
-    // All of these asserts are things that FunctionEmitContext::addGSMetadata() is
-    // expected to have done in its operation
-    llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
-    Assert(str);
-    llvm::ConstantInt *first_lnum =
-
-        llvm::mdconst::extract<llvm::ConstantInt>(first_line->getOperand(0));
-    Assert(first_lnum);
-
-    llvm::ConstantInt *first_colnum =
-
-        llvm::mdconst::extract<llvm::ConstantInt>(first_column->getOperand(0));
-    Assert(first_column);
-
-    llvm::ConstantInt *last_lnum =
-
-        llvm::mdconst::extract<llvm::ConstantInt>(last_line->getOperand(0));
-    Assert(last_lnum);
-
-    llvm::ConstantInt *last_colnum = llvm::mdconst::extract<llvm::ConstantInt>(last_column->getOperand(0));
-    Assert(last_column);
+    // FunctionEmitContext::addGSMetadata() emits one operand of these kinds;
+    // hand-written IR may not, so malformed metadata reports no position.
+    auto node = [](llvm::MDNode *md) -> llvm::Metadata * {
+        return md->getNumOperands() == 1 ? md->getOperand(0).get() : nullptr;
+    };
+    llvm::MDString *str = llvm::dyn_cast_or_null<llvm::MDString>(node(filename));
+    llvm::ConstantInt *first_lnum = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(node(first_line));
+    llvm::ConstantInt *first_colnum = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(node(first_column));
+    llvm::ConstantInt *last_lnum = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(node(last_line));
+    llvm::ConstantInt *last_colnum = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(node(last_column));
+    if (!str || !first_lnum || !first_colnum || !last_lnum || !last_colnum) {
+        return false;
+    }
 
     *pos = SourcePos(str->getString().data(), (int)first_lnum->getZExtValue(), (int)first_colnum->getZExtValue(),
                      (int)last_lnum->getZExtValue(), (int)last_colnum->getZExtValue());

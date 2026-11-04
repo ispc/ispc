@@ -9,6 +9,7 @@ MODULE_PASS("remove-persistent-funcs", RemovePersistentFuncsPass())
 #endif
 FUNCTION_PASS("gather-coalesce", GatherCoalescePass())
 FUNCTION_PASS("improve-memory-ops", ImproveMemoryOpsPass())
+FUNCTION_PASS("print-memory-access", MemoryAccessPrinterPass())
 FUNCTION_PASS("instruction-simplify", InstructionSimplifyPass())
 FUNCTION_PASS("intrinsics-opt", IntrinsicsOpt())
 FUNCTION_PASS("is-compile-time-constant", IsCompileTimeConstantPass())

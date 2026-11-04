@@ -591,6 +591,8 @@ list(APPEND OPT_SOURCES
     src/opt/LowerAMXBuiltinsPass.h
     src/opt/MangleOpenCLBuiltins.cpp
     src/opt/MangleOpenCLBuiltins.h
+    src/opt/MemoryAccess.cpp
+    src/opt/MemoryAccess.h
     src/opt/MemoryOpRegistry.cpp
     src/opt/MemoryOpRegistry.h
     src/opt/PeepholePass.cpp
