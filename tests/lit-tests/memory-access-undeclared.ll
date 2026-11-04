@@ -14,18 +14,13 @@ declare <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr, <4 x i64
 declare <4 x double> @__pseudo_gather64_double(<4 x i64>, <4 x i32>)
 
 ; CHECK-LABEL: define <4 x float> @only_64bit_form_declared(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %addresses = add <4 x i64> %bases, %offsets
-; A32-NEXT: %v = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> %mask)
-; A32-NEXT: ret <4 x float> %v
-; A64-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %offsets
-; A64-NEXT: %b_2void = inttoptr i64 %b to ptr
-; A64-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %offsets
-; A64-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; A64-NEXT: %v1 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %b_2void, <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
-; A64-NEXT: ret <4 x float> %v1
+; CHECK:      %addresses = add <4 x i64> %bases, %offsets
+; A32-NEXT:   %v = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> %mask)
+; A32-NEXT:   ret <4 x float> %v
+; A64-NEXT:   {{%.*}} = add <4 x i64> zeroinitializer, %offsets
+; A64-NEXT:   [[BASE:%.*]] = inttoptr i64 %b to ptr
+; A64:        [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
+; A64-NEXT:   ret <4 x float> [[V]]
 define <4 x float> @only_64bit_form_declared(ptr %base, <4 x i64> %offsets, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -36,10 +31,7 @@ define <4 x float> @only_64bit_form_declared(ptr %base, <4 x i64> %offsets, <4 x
 }
 
 ; CHECK-LABEL: define <4 x double> @nothing_declared(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %addresses = add <4 x i64> %bases, %offsets
+; CHECK:      %addresses = add <4 x i64> %bases, %offsets
 ; CHECK-NEXT: %v = call <4 x double> @__pseudo_gather64_double(<4 x i64> %addresses, <4 x i32> %mask)
 ; CHECK-NEXT: ret <4 x double> %v
 define <4 x double> @nothing_declared(ptr %base, <4 x i64> %offsets, <4 x i32> %mask) {

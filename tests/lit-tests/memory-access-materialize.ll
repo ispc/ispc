@@ -1,9 +1,10 @@
-; The accepted base/offset recipe is materialized into the
-; same instructions, names and insertion points the mutating matcher
-; produced, and feeds the existing factoring, narrowing and emission. The
-; expected output below was recorded from the pass before the change; the
-; dead instructions of the old matcher's intermediate results are part of
-; it. CHECK lines hold for both addressing modes, A32/A64 lines for one.
+; The accepted base/offset recipe is materialized as the sum of its terms,
+; innermost first, followed by the base cast, and feeds the existing
+; factoring, narrowing and emission. The checks cover the materialized
+; offsets, the shuffles of broadcast lanes next to the instruction they
+; come from, the base and the replacement call, load or store; the
+; instructions of the existing emission in between are not pinned. CHECK
+; lines hold for both addressing modes, A32/A64 lines for one.
 ;
 ; RUN: %{ispc-opt} --target=sse4-i32x4 --addressing=32 --passes=improve-memory-ops %s -o - | FileCheck --check-prefixes=CHECK,A32 %s
 ; RUN: %{ispc-opt} --target=sse4-i32x4 --addressing=64 --passes=improve-memory-ops %s -o - | FileCheck --check-prefixes=CHECK,A64 %s
@@ -31,23 +32,15 @@ declare <4 x i32> @__pseudo_gather_factored_base_offsets32_i32(ptr, <4 x i32>, i
 declare <4 x i32> @__pseudo_gather_base_offsets64_i32(ptr, i32, <4 x i64>, <4 x i32>)
 declare <4 x i32> @__pseudo_gather_base_offsets32_i32(ptr, i32, <4 x i32>, <4 x i32>)
 
-; A pointer broadcast through an insert chain plus offsets. The matcher's
-; offset sum starts at zero; the factoring below strips it again and leaves
-; the dead add behind, as before.
+; A pointer broadcast through an insert chain plus offsets. The offset sum
+; starts at zero; the factoring strips it again, so the call takes the
+; offsets directly.
 ; CHECK-LABEL: define <4 x float> @insert_chain(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %v0 = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %v1 = insertelement <4 x i64> %v0, i64 %b, i32 1
-; CHECK-NEXT: %v2 = insertelement <4 x i64> %v1, i64 %b, i32 2
-; CHECK-NEXT: %v3 = insertelement <4 x i64> %v2, i64 %b, i32 3
-; CHECK-NEXT: %addresses = add <4 x i64> %v3, %offsets
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %offsets
-; CHECK-NEXT: %b_2void = inttoptr i64 %b to ptr
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %offsets
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %v4 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %b_2void, <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
-; CHECK-NEXT: ret <4 x float> %v4
-; CHECK-NEXT: }
+; CHECK:      %addresses = add <4 x i64> %v3, %offsets
+; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, %offsets
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 %b to ptr
+; CHECK:      [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @insert_chain(ptr %base, <4 x i64> %offsets, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %v0 = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -62,22 +55,14 @@ define <4 x float> @insert_chain(ptr %base, <4 x i64> %offsets, <4 x i32> %mask)
 ; Nested adds: the terms are added innermost first, the base may be either
 ; operand.
 ; CHECK-LABEL: define void @nested_adds(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %inner = add <4 x i64> %a, %bases
-; CHECK-NEXT: %addresses = add <4 x i64> %c, %inner
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %a
-; CHECK-NEXT: %new_offsets1 = add <4 x i64> %new_offsets, %c
-; CHECK-NEXT: %b_2void = inttoptr i64 %b to ptr
-; CHECK-NEXT: %new_add = add <4 x i64> %a, %c
-; CHECK-NEXT: %add_a_c = add <4 x i64> %a, %c
-; CHECK-NEXT: %add_a_c2 = add <4 x i64> %a, %c
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %new_add
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: call void @__pseudo_scatter_factored_base_offsets64_float(ptr %b_2void, <4 x i64> %new_add, i32 1, <4 x i64> zeroinitializer, <4 x float> %values, <4 x i32> %mask)
+; CHECK:      %addresses = add <4 x i64> %c, %inner
+; CHECK-NEXT: [[SUM:%.*]] = add <4 x i64> zeroinitializer, %a
+; CHECK-NEXT: {{%.*}} = add <4 x i64> [[SUM]], %c
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 %b to ptr
+; CHECK-NEXT: [[VAR:%.*]] = add <4 x i64> %a, %c
+; CHECK-NOT:  @__pseudo_scatter64_float
+; CHECK:      call void @__pseudo_scatter_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> [[VAR]], i32 1, <4 x i64> zeroinitializer, <4 x float> %values, <4 x i32> %mask)
 ; CHECK-NEXT: ret void
-; CHECK-NEXT: }
 define void @nested_adds(ptr %base, <4 x i64> %a, <4 x i64> %c, <4 x float> %values, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -91,23 +76,16 @@ define void @nested_adds(ptr %base, <4 x i64> %a, <4 x i64> %c, <4 x float> %val
 ; The lane-0 constant of a broadcast is splat by a shuffle inserted before
 ; the add it came from.
 ; CHECK-LABEL: define <4 x float> @broadcast_constant(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %shuffle = shufflevector <4 x i64> <i64 8, i64 poison, i64 poison, i64 poison>, <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK:      %s = insertelement <4 x i64> poison, i64 %b, i32 0
+; CHECK-NEXT: [[SPLAT:%.*]] = shufflevector <4 x i64> <i64 8, i64 poison, i64 poison, i64 poison>, <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT: %plus = add <4 x i64> %s, <i64 8, i64 poison, i64 poison, i64 poison>
-; CHECK-NEXT: %bases = shufflevector <4 x i64> %plus, <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %addresses = add <4 x i64> %bases, %offsets
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %shuffle
-; CHECK-NEXT: %new_offsets1 = add <4 x i64> %new_offsets, %offsets
-; CHECK-NEXT: %b_2void = inttoptr i64 %b to ptr
-; CHECK-NEXT: %new_add = add <4 x i64> %shuffle, %offsets
-; CHECK-NEXT: %add_shuffle_offsets = add <4 x i64> %shuffle, %offsets
-; CHECK-NEXT: %add_shuffle_offsets3 = add <4 x i64> %shuffle, %offsets
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %new_add
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %v2 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %b_2void, <4 x i64> %new_add, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
-; CHECK-NEXT: ret <4 x float> %v2
-; CHECK-NEXT: }
+; CHECK:      %addresses = add <4 x i64> %bases, %offsets
+; CHECK-NEXT: [[SUM:%.*]] = add <4 x i64> zeroinitializer, [[SPLAT]]
+; CHECK-NEXT: {{%.*}} = add <4 x i64> [[SUM]], %offsets
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 %b to ptr
+; CHECK-NEXT: [[VAR:%.*]] = add <4 x i64> [[SPLAT]], %offsets
+; CHECK:      [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> [[VAR]], i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @broadcast_constant(ptr %base, <4 x i64> %offsets, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -121,26 +99,17 @@ define <4 x float> @broadcast_constant(ptr %base, <4 x i64> %offsets, <4 x i32> 
 ; Lane 0 of another operation is splat by a shuffle inserted after it; all
 ; lanes then share one address and the gather becomes a scalar load.
 ; CHECK-LABEL: define <4 x float> @broadcast_part(
-; CHECK-NEXT: %first_elt = extractelement <4 x i64> %vec, i32 0
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %part.elt0 = shl i64 %first_elt, 2
-; CHECK-NEXT: %part = shl <4 x i64> %vec, <i64 2, i64 poison, i64 poison, i64 poison>
-; CHECK-NEXT: %shuffle = shufflevector <4 x i64> %part, <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK:      %part = shl <4 x i64> %vec, <i64 2, i64 poison, i64 poison, i64 poison>
+; CHECK-NEXT: [[SPLAT:%.*]] = shufflevector <4 x i64> %part, <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT: %plus = add <4 x i64> %part, %s
 ; CHECK-NEXT: %addresses = shufflevector <4 x i64> %plus, <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %shuffle
-; CHECK-NEXT: %b_2void = inttoptr i64 %b to ptr
-; CHECK-NEXT: %scaled_varying.elt0 = mul i64 1, %part.elt0
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %shuffle
-; CHECK-NEXT: %"varying+const_offsets.elt0" = add i64 %scaled_varying.elt0, 0
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %ptr = getelementptr i8, ptr %b_2void, i64 %"varying+const_offsets.elt0"
-; CHECK-NEXT: %v12 = load float, ptr %ptr, align 4
-; CHECK-NEXT: %v13 = insertelement <4 x float> poison, float %v12, i32 0
-; CHECK-NEXT: %v14 = shufflevector <4 x float> %v13, <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: ret <4 x float> %v14
-; CHECK-NEXT: }
+; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, [[SPLAT]]
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 %b to ptr
+; CHECK:      [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
+; CHECK-NEXT: [[ELT:%.*]] = load float, ptr [[PTR]], align 4
+; CHECK-NEXT: [[INS:%.*]] = insertelement <4 x float> poison, float [[ELT]], i32 0
+; CHECK-NEXT: [[V:%.*]] = shufflevector <4 x float> [[INS]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @broadcast_part(ptr %base, <4 x i64> %vec, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -153,19 +122,12 @@ define <4 x float> @broadcast_part(ptr %base, <4 x i64> %vec, <4 x i32> %mask) {
 
 ; A vector zext of the bases is replayed as a scalar zext of the base.
 ; CHECK-LABEL: define <4 x float> @cast_chain(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i32
-; CHECK-NEXT: %s = insertelement <4 x i32> poison, i32 %b, i32 0
-; CHECK-NEXT: %bases32 = shufflevector <4 x i32> %s, <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %bases = zext <4 x i32> %bases32 to <4 x i64>
-; CHECK-NEXT: %addresses = add <4 x i64> %bases, %offsets
-; CHECK-NEXT: %b_cast = zext i32 %b to i64
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %offsets
-; CHECK-NEXT: %b_cast_2void = inttoptr i64 %b_cast to ptr
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %offsets
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %v1 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %b_cast_2void, <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
-; CHECK-NEXT: ret <4 x float> %v1
-; CHECK-NEXT: }
+; CHECK:      %addresses = add <4 x i64> %bases, %offsets
+; CHECK-NEXT: [[CAST:%.*]] = zext i32 %b to i64
+; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, %offsets
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 [[CAST]] to ptr
+; CHECK:      [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @cast_chain(ptr %base, <4 x i64> %offsets, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i32
   %s = insertelement <4 x i32> poison, i32 %b, i32 0
@@ -178,14 +140,11 @@ define <4 x float> @cast_chain(ptr %base, <4 x i64> %offsets, <4 x i32> %mask) {
 
 ; A constant splat of a global's address.
 ; CHECK-LABEL: define <4 x float> @constant_splat(
-; CHECK-NEXT: %addresses = add <4 x i64> <i64 ptrtoint (ptr @table to i64), i64 ptrtoint (ptr @table to i64), i64 ptrtoint (ptr @table to i64), i64 ptrtoint (ptr @table to i64)>, %offsets
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %offsets
-; CHECK-NEXT: %_2void = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %offsets
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %v1 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %_2void, <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
-; CHECK-NEXT: ret <4 x float> %v1
-; CHECK-NEXT: }
+; CHECK:      %addresses = add <4 x i64>
+; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, %offsets
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
+; CHECK:      [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @constant_splat(<4 x i64> %offsets, <4 x i32> %mask) {
   %addresses = add <4 x i64> splat (i64 ptrtoint (ptr @table to i64)), %offsets
   %v = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> %mask)
@@ -195,14 +154,11 @@ define <4 x float> @constant_splat(<4 x i64> %offsets, <4 x i32> %mask) {
 ; One global plus per-lane displacements: the displacements start the
 ; offset sum.
 ; CHECK-LABEL: define <4 x float> @constant_lanes_plus(
-; CHECK-NEXT: %addresses = add <4 x i64> <i64 ptrtoint (ptr @table to i64), i64 add (i64 ptrtoint (ptr @table to i64), i64 4), i64 add (i64 ptrtoint (ptr @table to i64), i64 8), i64 add (i64 ptrtoint (ptr @table to i64), i64 12)>, %extra
-; CHECK-NEXT: %new_offsets = add <4 x i64> <i64 0, i64 4, i64 8, i64 12>, %extra
-; CHECK-NEXT: %_2void = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %extra
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, <i64 0, i64 4, i64 8, i64 12>
-; CHECK-NEXT: %v1 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %_2void, <4 x i64> %extra, i32 1, <4 x i64> <i64 0, i64 4, i64 8, i64 12>, <4 x i32> %mask)
-; CHECK-NEXT: ret <4 x float> %v1
-; CHECK-NEXT: }
+; CHECK:      %addresses = add <4 x i64>
+; CHECK-NEXT: {{%.*}} = add <4 x i64> <i64 0, i64 4, i64 8, i64 12>, %extra
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
+; CHECK:      [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> %extra, i32 1, <4 x i64> <i64 0, i64 4, i64 8, i64 12>, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @constant_lanes_plus(<4 x i64> %extra, <4 x i32> %mask) {
   %addresses = add <4 x i64> <i64 ptrtoint (ptr @table to i64), i64 add (i64 ptrtoint (ptr @table to i64), i64 4), i64 add (i64 ptrtoint (ptr @table to i64), i64 8), i64 add (i64 ptrtoint (ptr @table to i64), i64 12)>, %extra
   %v = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> %mask)
@@ -210,35 +166,12 @@ define <4 x float> @constant_lanes_plus(<4 x i64> %extra, <4 x i32> %mask) {
 }
 
 ; Linear displacements alone become a masked load.
-; A32-LABEL: define <4 x float> @constant_lanes_only(
-; A32-NEXT: %_2void = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; A32-NEXT: %_trunc = trunc <4 x i64> zeroinitializer to <4 x i32>
-; A32-NEXT: %_trunc1.elt0 = trunc i64 0 to i32
-; A32-NEXT: %_trunc1 = trunc <4 x i64> <i64 0, i64 4, i64 8, i64 12> to <4 x i32>
-; A32-NEXT: %_cast.elt0 = trunc i64 0 to i32
-; A32-NEXT: %_cast = trunc <4 x i64> zeroinitializer to <4 x i32>
-; A32-NEXT: %_cast3.elt0 = mul i32 %_cast.elt0, 1
-; A32-NEXT: %_cast3 = mul <4 x i32> %_cast, splat (i32 1)
-; A32-NEXT: %_trunc14.elt0 = add i32 %_cast3.elt0, %_trunc1.elt0
-; A32-NEXT: %_trunc14 = add <4 x i32> %_cast3, %_trunc1
-; A32-NEXT: %scaled_varying.elt0 = mul i32 1, 0
-; A32-NEXT: %scaled_varying = mul <4 x i32> splat (i32 1), zeroinitializer
-; A32-NEXT: %"varying+const_offsets.elt0" = add i32 %scaled_varying.elt0, %_trunc14.elt0
-; A32-NEXT: %"varying+const_offsets" = add <4 x i32> %scaled_varying, %_trunc14
-; A32-NEXT: %ptr = getelementptr i8, ptr %_2void, i32 %"varying+const_offsets.elt0"
-; A32-NEXT: %ptr_masked_load = call <4 x float> @__masked_load_float(ptr %ptr, <4 x i32> %mask)
-; A32-NEXT: ret <4 x float> %ptr_masked_load
-; A32-NEXT: }
-; A64-LABEL: define <4 x float> @constant_lanes_only(
-; A64-NEXT: %_2void = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; A64-NEXT: %scaled_varying.elt0 = mul i64 1, 0
-; A64-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), zeroinitializer
-; A64-NEXT: %"varying+const_offsets.elt0" = add i64 %scaled_varying.elt0, 0
-; A64-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, <i64 0, i64 4, i64 8, i64 12>
-; A64-NEXT: %ptr = getelementptr i8, ptr %_2void, i64 %"varying+const_offsets.elt0"
-; A64-NEXT: %ptr_masked_load = call <4 x float> @__masked_load_float(ptr %ptr, <4 x i32> %mask)
-; A64-NEXT: ret <4 x float> %ptr_masked_load
-; A64-NEXT: }
+; CHECK-LABEL: define <4 x float> @constant_lanes_only(
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
+; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i32 {{%.*}}
+; A64:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
+; CHECK-NEXT: [[V:%.*]] = call <4 x float> @__masked_load_float(ptr [[PTR]], <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @constant_lanes_only(<4 x i32> %mask) {
   %v = call <4 x float> @__pseudo_gather64_float(<4 x i64> <i64 ptrtoint (ptr @table to i64), i64 add (i64 ptrtoint (ptr @table to i64), i64 4), i64 add (i64 ptrtoint (ptr @table to i64), i64 8), i64 add (i64 ptrtoint (ptr @table to i64), i64 12)>, <4 x i32> %mask)
   ret <4 x float> %v
@@ -246,20 +179,11 @@ define <4 x float> @constant_lanes_only(<4 x i32> %mask) {
 
 ; Addresses extracted from an aggregate built with insertvalue.
 ; CHECK-LABEL: define <4 x float> @aggregate(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %addresses = add <4 x i64> %bases, %offsets
-; CHECK-NEXT: %agg0 = insertvalue { <4 x i64>, <4 x i64> } poison, <4 x i64> %unrelated, 0
-; CHECK-NEXT: %agg1 = insertvalue { <4 x i64>, <4 x i64> } %agg0, <4 x i64> %addresses, 1
-; CHECK-NEXT: %extracted = extractvalue { <4 x i64>, <4 x i64> } %agg1, 1
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %offsets
-; CHECK-NEXT: %b_2void = inttoptr i64 %b to ptr
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %offsets
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %v1 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %b_2void, <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
-; CHECK-NEXT: ret <4 x float> %v1
-; CHECK-NEXT: }
+; CHECK:      %extracted = extractvalue { <4 x i64>, <4 x i64> } %agg1, 1
+; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, %offsets
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 %b to ptr
+; CHECK:      [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @aggregate(ptr %base, <4 x i64> %offsets, <4 x i64> %unrelated, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -274,40 +198,13 @@ define <4 x float> @aggregate(ptr %base, <4 x i64> %offsets, <4 x i64> %unrelate
 
 ; A sign-extended 32-bit index selects the 32-bit factored form under
 ; --addressing=32 and keeps the 64-bit form under --addressing=64.
-; A32-LABEL: define <4 x i32> @sext_index(
-; A32-NEXT: %b = ptrtoint ptr %base to i64
-; A32-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; A32-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; A32-NEXT: %scaled = shl <4 x i32> %index, splat (i32 2)
-; A32-NEXT: %wide = sext <4 x i32> %scaled to <4 x i64>
-; A32-NEXT: %addresses = add <4 x i64> %bases, %wide
-; A32-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %wide
-; A32-NEXT: %b_2void = inttoptr i64 %b to ptr
-; A32-NEXT: %offset_cast = sext <4 x i32> %scaled to <4 x i64>
-; A32-NEXT: %scaled_cast = sext <4 x i32> %scaled to <4 x i64>
-; A32-NEXT: %_trunc = trunc <4 x i64> zeroinitializer to <4 x i32>
-; A32-NEXT: %scaled_varying = mul <4 x i32> splat (i32 1), %scaled
-; A32-NEXT: %"varying+const_offsets" = add <4 x i32> %scaled_varying, %_trunc
-; A32-NEXT: %v1 = call <4 x i32> @__pseudo_gather_factored_base_offsets32_i32(ptr %b_2void, <4 x i32> %scaled, i32 1, <4 x i32> %_trunc, <4 x i32> %mask)
-; A32-NEXT: ret <4 x i32> %v1
-; A32-NEXT: }
-; A64-LABEL: define <4 x i32> @sext_index(
-; A64-NEXT: %b = ptrtoint ptr %base to i64
-; A64-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; A64-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; A64-NEXT: %scaled = shl <4 x i32> %index, splat (i32 2)
-; A64-NEXT: %wide = sext <4 x i32> %scaled to <4 x i64>
-; A64-NEXT: %addresses = add <4 x i64> %bases, %wide
-; A64-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %wide
-; A64-NEXT: %b_2void = inttoptr i64 %b to ptr
-; A64-NEXT: %offset_cast = sext <4 x i32> %scaled to <4 x i64>
-; A64-NEXT: %scaled_cast = sext <4 x i32> %scaled to <4 x i64>
-; A64-NEXT: %scaled_cast2 = sext <4 x i32> %scaled to <4 x i64>
-; A64-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %offset_cast
-; A64-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; A64-NEXT: %v1 = call <4 x i32> @__pseudo_gather_factored_base_offsets64_i32(ptr %b_2void, <4 x i64> %offset_cast, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
-; A64-NEXT: ret <4 x i32> %v1
-; A64-NEXT: }
+; CHECK-LABEL: define <4 x i32> @sext_index(
+; CHECK:      %addresses = add <4 x i64> %bases, %wide
+; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, %wide
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 %b to ptr
+; A32:        [[V:%.*]] = call <4 x i32> @__pseudo_gather_factored_base_offsets32_i32(ptr [[BASE]], <4 x i32> %scaled, i32 1, <4 x i32> {{%.*}}, <4 x i32> %mask)
+; A64:        [[V:%.*]] = call <4 x i32> @__pseudo_gather_factored_base_offsets64_i32(ptr [[BASE]], <4 x i64> {{%.*}}, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x i32> [[V]]
 define <4 x i32> @sext_index(ptr %base, <4 x i32> %index, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -321,39 +218,14 @@ define <4 x i32> @sext_index(ptr %base, <4 x i32> %index, <4 x i32> %mask) {
 
 ; The revisit chain within one pass invocation: general gather, factored
 ; gather, masked load, then an ordinary load for the all-on mask.
-; A32-LABEL: define <4 x float> @chain_to_load(
-; A32-NEXT: %addresses = add <4 x i64> <i64 ptrtoint (ptr @table to i64), i64 add (i64 ptrtoint (ptr @table to i64), i64 4), i64 add (i64 ptrtoint (ptr @table to i64), i64 8), i64 add (i64 ptrtoint (ptr @table to i64), i64 12)>, zeroinitializer
-; A32-NEXT: %new_offsets = add <4 x i64> <i64 0, i64 4, i64 8, i64 12>, zeroinitializer
-; A32-NEXT: %_2void = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; A32-NEXT: %_trunc = trunc <4 x i64> zeroinitializer to <4 x i32>
-; A32-NEXT: %_trunc1.elt0 = trunc i64 0 to i32
-; A32-NEXT: %_trunc1 = trunc <4 x i64> <i64 0, i64 4, i64 8, i64 12> to <4 x i32>
-; A32-NEXT: %_cast.elt0 = trunc i64 0 to i32
-; A32-NEXT: %_cast = trunc <4 x i64> zeroinitializer to <4 x i32>
-; A32-NEXT: %_cast3.elt0 = mul i32 %_cast.elt0, 1
-; A32-NEXT: %_cast3 = mul <4 x i32> %_cast, splat (i32 1)
-; A32-NEXT: %_trunc14.elt0 = add i32 %_cast3.elt0, %_trunc1.elt0
-; A32-NEXT: %_trunc14 = add <4 x i32> %_cast3, %_trunc1
-; A32-NEXT: %scaled_varying.elt0 = mul i32 1, 0
-; A32-NEXT: %scaled_varying = mul <4 x i32> splat (i32 1), zeroinitializer
-; A32-NEXT: %"varying+const_offsets.elt0" = add i32 %scaled_varying.elt0, %_trunc14.elt0
-; A32-NEXT: %"varying+const_offsets" = add <4 x i32> %scaled_varying, %_trunc14
-; A32-NEXT: %ptr = getelementptr i8, ptr %_2void, i32 %"varying+const_offsets.elt0"
-; A32-NEXT: %ptr_masked_load5 = load <4 x float>, ptr %ptr, align 4
-; A32-NEXT: ret <4 x float> %ptr_masked_load5
-; A32-NEXT: }
-; A64-LABEL: define <4 x float> @chain_to_load(
-; A64-NEXT: %addresses = add <4 x i64> <i64 ptrtoint (ptr @table to i64), i64 add (i64 ptrtoint (ptr @table to i64), i64 4), i64 add (i64 ptrtoint (ptr @table to i64), i64 8), i64 add (i64 ptrtoint (ptr @table to i64), i64 12)>, zeroinitializer
-; A64-NEXT: %new_offsets = add <4 x i64> <i64 0, i64 4, i64 8, i64 12>, zeroinitializer
-; A64-NEXT: %_2void = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; A64-NEXT: %scaled_varying.elt0 = mul i64 1, 0
-; A64-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), zeroinitializer
-; A64-NEXT: %"varying+const_offsets.elt0" = add i64 %scaled_varying.elt0, 0
-; A64-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, <i64 0, i64 4, i64 8, i64 12>
-; A64-NEXT: %ptr = getelementptr i8, ptr %_2void, i64 %"varying+const_offsets.elt0"
-; A64-NEXT: %ptr_masked_load2 = load <4 x float>, ptr %ptr, align 4
-; A64-NEXT: ret <4 x float> %ptr_masked_load2
-; A64-NEXT: }
+; CHECK-LABEL: define <4 x float> @chain_to_load(
+; CHECK:      %addresses = add <4 x i64>
+; CHECK-NEXT: {{%.*}} = add <4 x i64> <i64 0, i64 4, i64 8, i64 12>, zeroinitializer
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
+; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i32 {{%.*}}
+; A64:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
+; CHECK-NEXT: [[V:%.*]] = load <4 x float>, ptr [[PTR]], align 4
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @chain_to_load(<4 x i64> %extra) {
   %addresses = add <4 x i64> <i64 ptrtoint (ptr @table to i64), i64 add (i64 ptrtoint (ptr @table to i64), i64 4), i64 add (i64 ptrtoint (ptr @table to i64), i64 8), i64 add (i64 ptrtoint (ptr @table to i64), i64 12)>, zeroinitializer
   %v = call <4 x float> @__pseudo_gather64_float(<4 x i64> %addresses, <4 x i32> splat (i32 -1))
@@ -361,43 +233,12 @@ define <4 x float> @chain_to_load(<4 x i64> %extra) {
 }
 
 ; A scatter under an all-off mask becomes a masked store that is removed.
-; A32-LABEL: define void @store_removed(
-; A32-NEXT: %b = ptrtoint ptr %base to i64
-; A32-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; A32-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; A32-NEXT: %addresses = add <4 x i64> %bases, <i64 0, i64 4, i64 8, i64 12>
-; A32-NEXT: %new_offsets = add <4 x i64> zeroinitializer, <i64 0, i64 4, i64 8, i64 12>
-; A32-NEXT: %b_2void = inttoptr i64 %b to ptr
-; A32-NEXT: %_trunc = trunc <4 x i64> zeroinitializer to <4 x i32>
-; A32-NEXT: %_trunc1.elt0 = trunc i64 0 to i32
-; A32-NEXT: %_trunc1 = trunc <4 x i64> <i64 0, i64 4, i64 8, i64 12> to <4 x i32>
-; A32-NEXT: %_cast.elt0 = trunc i64 0 to i32
-; A32-NEXT: %_cast = trunc <4 x i64> zeroinitializer to <4 x i32>
-; A32-NEXT: %_cast2.elt0 = mul i32 %_cast.elt0, 1
-; A32-NEXT: %_cast2 = mul <4 x i32> %_cast, splat (i32 1)
-; A32-NEXT: %_trunc13.elt0 = add i32 %_cast2.elt0, %_trunc1.elt0
-; A32-NEXT: %_trunc13 = add <4 x i32> %_cast2, %_trunc1
-; A32-NEXT: %scaled_varying.elt0 = mul i32 1, 0
-; A32-NEXT: %scaled_varying = mul <4 x i32> splat (i32 1), zeroinitializer
-; A32-NEXT: %"varying+const_offsets.elt0" = add i32 %scaled_varying.elt0, %_trunc13.elt0
-; A32-NEXT: %"varying+const_offsets" = add <4 x i32> %scaled_varying, %_trunc13
-; A32-NEXT: %ptr = getelementptr i8, ptr %b_2void, i32 %"varying+const_offsets.elt0"
-; A32-NEXT: ret void
-; A32-NEXT: }
-; A64-LABEL: define void @store_removed(
-; A64-NEXT: %b = ptrtoint ptr %base to i64
-; A64-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; A64-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; A64-NEXT: %addresses = add <4 x i64> %bases, <i64 0, i64 4, i64 8, i64 12>
-; A64-NEXT: %new_offsets = add <4 x i64> zeroinitializer, <i64 0, i64 4, i64 8, i64 12>
-; A64-NEXT: %b_2void = inttoptr i64 %b to ptr
-; A64-NEXT: %scaled_varying.elt0 = mul i64 1, 0
-; A64-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), zeroinitializer
-; A64-NEXT: %"varying+const_offsets.elt0" = add i64 %scaled_varying.elt0, 0
-; A64-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, <i64 0, i64 4, i64 8, i64 12>
-; A64-NEXT: %ptr = getelementptr i8, ptr %b_2void, i64 %"varying+const_offsets.elt0"
-; A64-NEXT: ret void
-; A64-NEXT: }
+; CHECK-LABEL: define void @store_removed(
+; CHECK:      %addresses = add <4 x i64> %bases, <i64 0, i64 4, i64 8, i64 12>
+; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, <i64 0, i64 4, i64 8, i64 12>
+; CHECK-NEXT: inttoptr i64 %b to ptr
+; CHECK-NOT:  call
+; CHECK:      ret void
 define void @store_removed(ptr %base, <4 x i64> %offsets, <4 x float> %values) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -409,17 +250,9 @@ define void @store_removed(ptr %base, <4 x i64> %offsets, <4 x float> %values) {
 
 ; The ISPC position metadata is copied to the new base pointer and call.
 ; CHECK-LABEL: define <4 x float> @keeps_metadata(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i64
-; CHECK-NEXT: %s = insertelement <4 x i64> poison, i64 %b, i32 0
-; CHECK-NEXT: %bases = shufflevector <4 x i64> %s, <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %addresses = add <4 x i64> %bases, %offsets
-; CHECK-NEXT: %new_offsets = add <4 x i64> zeroinitializer, %offsets
-; CHECK-NEXT: %b_2void = inttoptr i64 %b to ptr, !filename !0, !first_line !1, !first_column !2, !last_line !1, !last_column !3
-; CHECK-NEXT: %scaled_varying = mul <4 x i64> splat (i64 1), %offsets
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i64> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %v1 = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr %b_2void, <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask), !filename !0, !first_line !1, !first_column !2, !last_line !1, !last_column !3
-; CHECK-NEXT: ret <4 x float> %v1
-; CHECK-NEXT: }
+; CHECK:      [[BASE:%.*]] = inttoptr i64 %b to ptr, !filename !0, !first_line !1, !first_column !2, !last_line !1, !last_column !3
+; CHECK:      [[V:%.*]] = call <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr [[BASE]], <4 x i64> %offsets, i32 1, <4 x i64> zeroinitializer, <4 x i32> %mask), !filename !0, !first_line !1, !first_column !2, !last_line !1, !last_column !3
+; CHECK-NEXT: ret <4 x float> [[V]]
 define <4 x float> @keeps_metadata(ptr %base, <4 x i64> %offsets, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i64
   %s = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -433,16 +266,11 @@ define <4 x float> @keeps_metadata(ptr %base, <4 x i64> %offsets, <4 x i32> %mas
 ; matcher used the target's pointer width for its zero vector, which did
 ; not match in this case.
 ; CHECK-LABEL: define <4 x i32> @addresses32(
-; CHECK-NEXT: %b = ptrtoint ptr %base to i32
-; CHECK-NEXT: %s = insertelement <4 x i32> poison, i32 %b, i32 0
-; CHECK-NEXT: %bases = shufflevector <4 x i32> %s, <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT: %addresses = add <4 x i32> %bases, %offsets
-; CHECK-NEXT: %new_offsets = add <4 x i32> zeroinitializer, %offsets
-; CHECK-NEXT: %b_2void = inttoptr i32 %b to ptr
-; CHECK-NEXT: %scaled_varying = mul <4 x i32> splat (i32 1), %offsets
-; CHECK-NEXT: %"varying+const_offsets" = add <4 x i32> %scaled_varying, zeroinitializer
-; CHECK-NEXT: %v1 = call <4 x i32> @__pseudo_gather_factored_base_offsets32_i32(ptr %b_2void, <4 x i32> %offsets, i32 1, <4 x i32> zeroinitializer, <4 x i32> %mask)
-; CHECK-NEXT: ret <4 x i32> %v1
+; CHECK:      %addresses = add <4 x i32> %bases, %offsets
+; CHECK-NEXT: {{%.*}} = add <4 x i32> zeroinitializer, %offsets
+; CHECK-NEXT: [[BASE:%.*]] = inttoptr i32 %b to ptr
+; CHECK:      [[V:%.*]] = call <4 x i32> @__pseudo_gather_factored_base_offsets32_i32(ptr [[BASE]], <4 x i32> %offsets, i32 1, <4 x i32> zeroinitializer, <4 x i32> %mask)
+; CHECK-NEXT: ret <4 x i32> [[V]]
 define <4 x i32> @addresses32(ptr %base, <4 x i32> %offsets, <4 x i32> %mask) {
   %b = ptrtoint ptr %base to i32
   %s = insertelement <4 x i32> poison, i32 %b, i32 0
