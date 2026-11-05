@@ -64,6 +64,14 @@ unmangled void scatter(varying uint64 addr, varying int8 val) {
 #endif
 }
 
+// The vector of pointers of other intrinsics is converted the same way.
+// CHECK-LABEL: @vp_scatter
+// CHECK-DAG:  [[VPPTR:%.*]] = inttoptr <[[WIDTH]] x [[ADDR_SIZE]]> {{%.*}} to <[[WIDTH]] x ptr>
+// CHECK-DAG:  tail call void @llvm.vp.scatter.v[[WIDTH]]i32.v[[WIDTH]][[P0]](<[[WIDTH]] x i32> %val, <[[WIDTH]] x ptr> [[VPPTR]], <[[WIDTH]] x i1> {{%.*}}, i32 [[WIDTH]])
+unmangled void vp_scatter(varying uint64 addr, varying int32 val) {
+    @llvm.vp.scatter(val, addr, __mask, (uniform int32)programCount);
+}
+
 // CHECK-LABEL: @reduce_add_float
 // CHECK-DAG:   %calltmp = tail call float @llvm.vector.reduce.fadd.v[[WIDTH]]f32(float -0.000000e+00, <[[WIDTH]] x float> %x)
 ATTRS uniform float reduce_add_float(float x) { return @llvm.vector.reduce.fadd(-0.0f, x); }

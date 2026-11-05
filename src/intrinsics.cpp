@@ -898,10 +898,10 @@ static llvm::Function *lGetLLVMIntrinsicDeclaration(llvm::Module *module, llvm::
             continue;
         }
         const Type *argType = args->exprs[i]->GetType();
-        if ((ID == llvm::Intrinsic::masked_gather || ID == llvm::Intrinsic::masked_scatter) &&
-            D.Kind == IITDesc::VecOfAnyPtrsToElt) {
-            // The addresses are passed as varying integers and converted to
-            // <TARGET_WIDTH x ptr> in FunctionCallExpr::GetValue().
+        if (D.Kind == IITDesc::VecOfAnyPtrsToElt) {
+            // The addresses (e.g. of llvm.masked.gather or llvm.vp.scatter) are
+            // passed as varying integers and converted to <TARGET_WIDTH x ptr>
+            // in FunctionCallExpr::GetValue().
             overloadTys[index] = LLVMTypes::PtrVectorType;
         } else {
             overloadTys[index] = lGetIntrinsicArgType(argType);
