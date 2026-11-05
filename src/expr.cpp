@@ -4226,6 +4226,43 @@ static bool lIsImmArgParam(const llvm::Value *callee, unsigned int i) {
            func->hasParamAttribute(i, llvm::Attribute::ImmArg);
 }
 
+// Converts a value passed to or returned from an LLVM intrinsic to the given
+// type. ISPC pads uniform short vectors (see VectorType::getVectorMemoryCount()),
+// so they are shortened to the width of the intrinsic and padded back, and
+// vectors of pointers are passed as varying uint64 values. The types are
+// checked when the intrinsic is declared (see lIsConvertibleIntrinsicType()).
+static llvm::Value *lConvertIntrinsicValue(FunctionEmitContext *ctx, llvm::Value *value, llvm::Type *type) {
+    llvm::Type *valueType = value->getType();
+    if (valueType == type) {
+        return value;
+    }
+    llvm::FixedVectorType *from = llvm::dyn_cast<llvm::FixedVectorType>(valueType);
+    llvm::FixedVectorType *to = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    if (from == nullptr || to == nullptr) {
+        // Only vectors are converted. Other types already match the types of
+        // the intrinsic, except for pointer address spaces on Xe, which
+        // CallInst() handles.
+        return value;
+    }
+    if (from->getElementType() == to->getElementType()) {
+        // Padded lanes are poison, as in the other uniform short vectors.
+        llvm::SmallVector<llvm::Constant *, 16> mask;
+        for (unsigned int i = 0; i < to->getNumElements(); ++i) {
+            mask.push_back(i < from->getNumElements() ? static_cast<llvm::Constant *>(LLVMInt32(i))
+                                                      : llvm::PoisonValue::get(LLVMTypes::Int32Type));
+        }
+        return ctx->ShuffleInst(value, llvm::PoisonValue::get(from), llvm::ConstantVector::get(mask),
+                                "intrinsic_vector");
+    } else if (from->getNumElements() == to->getNumElements() && from->getElementType()->isIntegerTy() &&
+               to->getElementType()->isPointerTy()) {
+        return ctx->IntToPtrInst(value, type, "intrinsic_ptr");
+    } else if (from->getNumElements() == to->getNumElements() && from->getElementType()->isPointerTy() &&
+               to->getElementType()->isIntegerTy()) {
+        return ctx->CastInst(llvm::Instruction::PtrToInt, value, type, "intrinsic_int");
+    }
+    return value;
+}
+
 llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     if (func == nullptr || args == nullptr) {
         return nullptr;
@@ -4352,14 +4389,20 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         if (isInvoke) {
             return ctx->InvokeSyclInst(callee, ft, argVals);
         } else {
-            // if callee is llvm.masked.gather then cast with inttoptr the first arg to PtrVectorType
-            if (callee->getName().starts_with("llvm.masked.gather")) {
-                argVals[0] = ctx->IntToPtrInst(argVals[0], LLVMTypes::PtrVectorType);
+            const llvm::Function *intrinsic = llvm::dyn_cast<llvm::Function>(callee);
+            if (intrinsic != nullptr && !intrinsic->isIntrinsic()) {
+                intrinsic = nullptr;
             }
-            if (callee->getName().starts_with("llvm.masked.scatter")) {
-                argVals[1] = ctx->IntToPtrInst(argVals[1], LLVMTypes::PtrVectorType);
+            if (intrinsic != nullptr) {
+                llvm::FunctionType *intrinsicType = intrinsic->getFunctionType();
+                for (unsigned int i = 0; i < argVals.size() && i < intrinsicType->getNumParams(); ++i) {
+                    argVals[i] = lConvertIntrinsicValue(ctx, argVals[i], intrinsicType->getParamType(i));
+                }
             }
             retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
+            if (intrinsic != nullptr && retVal != nullptr && !isVoidFunc) {
+                retVal = lConvertIntrinsicValue(ctx, retVal, ft->GetReturnType()->LLVMType(g->ctx));
+            }
         }
     }
 
@@ -7340,8 +7383,8 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
-            // bool is already represented as i1 (or <N x i1>) in this case.
-            cast = (exprVal->getType() == targetType) ? exprVal : ctx->ZExtInst(exprVal, targetType, cOpName);
+            // uniform bool is i1 and varying bool is converted to <N x i1> above.
+            cast = exprVal;
             break;
         case AtomicType::TYPE_INT1:
             cast = exprVal;

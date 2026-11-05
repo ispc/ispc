@@ -1,6 +1,6 @@
-// Check calls of LLVM intrinsics without --enable-llvm-intrinsics: the
-// overloaded types are deduced from the arguments, the type suffix in the name
-// is ignored, and ImmArg parameters accept compile-time constant expressions
+// Check calls of LLVM intrinsics: the overloaded types are deduced from the
+// arguments, the type suffix in the name is ignored, and ImmArg parameters
+// accept compile-time constant expressions
 // (https://github.com/ispc/ispc/issues/4004).
 
 // RUN: %{ispc} --target=avx2-i32x8 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
@@ -14,10 +14,6 @@
 
 // CHECK-NO-MATRIX: LLVM IR after phase : {{.*}}VerifierPass
 // CHECK-MATRIX: LLVM IR after phase : {{.*}}LowerMatrixIntrinsicsPass
-
-#ifndef ISPC_LLVM_INTRINSICS_ENABLED
-#error "ISPC_LLVM_INTRINSICS_ENABLED is expected to be defined"
-#endif
 
 // The suffix doesn't have to match the deduced declaration.
 // CHECK-LABEL: @ctpop_i64___
@@ -81,6 +77,13 @@ int8 masked_load(uniform int8 *uniform p, int8 pt, bool m) {
 // CHECK: call {{.*}}i64 @llvm.ctlz.i64(i64 %a, i1 true)
 template <typename T, bool B> T tctlz(T x) { return @llvm.ctlz(x, B); }
 uniform int64 ctlz_template(uniform int64 a) { return tctlz<uniform int64, true>(a); }
+
+// The orderings of llvm.ispc.cmpxchg are <success ordering>.<failure ordering>.
+// CHECK-LABEL: @cmpxchg_orderings___
+// CHECK: cmpxchg ptr %p, i32 %c, i32 %v acq_rel acquire
+uniform int cmpxchg_orderings(uniform int8 *uniform p, uniform int c, uniform int v) {
+    return @llvm.ispc.cmpxchg.acq_rel.acquire(p, c, v);
+}
 
 #ifdef MATRIX
 float transpose(float m) { return @llvm.matrix.transpose(m, 2, 4); }

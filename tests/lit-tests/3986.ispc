@@ -4,8 +4,6 @@
 // particular when a function template that contains it is instantiated.
 
 // RUN: not %{ispc} --target=host --nowrap --nostdlib -o %t.o %s 2>&1 | FileCheck %s --implicit-check-not=FATAL
-// RUN: not %{ispc} --target=host --nowrap --nostdlib --enable-llvm-intrinsics -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTRINSICS --implicit-check-not=FATAL
-// LLVM intrinsics are enabled by default, --enable-llvm-intrinsics is a no-op.
 // RUN: not %{ispc} --target=host --nowrap --nostdlib -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTRINSICS --implicit-check-not=FATAL
 
 // CHECK: Error: Undeclared symbol "undeclared_symbol".

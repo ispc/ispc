@@ -3257,14 +3257,16 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
 
-    if (hasExpr && expr == nullptr) {
-        // An error has already been reported for the expression.
-        AssertPos(pos, m->errorCount > 0);
+    if (ctx->InForeachLoop()) {
+        Error(pos, "\"return\" statement is illegal inside a \"foreach\" loop.");
         return;
     }
 
-    if (ctx->InForeachLoop()) {
-        Error(pos, "\"return\" statement is illegal inside a \"foreach\" loop.");
+    if (hasExpr && expr == nullptr && m->errorCount > 0) {
+        // Type checking sets the expression to nullptr after it reports an
+        // error, so don't report "Must provide return value" for it too. If no
+        // error was reported, fall through so that the missing value is still
+        // reported.
         return;
     }
 

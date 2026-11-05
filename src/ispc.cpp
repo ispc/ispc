@@ -2602,7 +2602,7 @@ std::unique_ptr<Target> Target::Create(Arch arch, const char *cpu, ISPCTarget ta
     return ptr;
 }
 
-bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
+bool Target::checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos) {
     // The name as written in the source, used in error messages.
     const std::string fullName = name.str();
     if (name.consume_front("llvm.") == false) {
@@ -2695,10 +2695,28 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
             return false;
         }
         // TODO: Check 'CPUFeatures'.
-    } else if (name.consume_front("wasm.") == true) {
-        // TODO: Add Condition in future if relevant.
-        // For now, returning 'true'.
-        return true;
+    } else if (isTargetIntrinsic) {
+        // Intrinsics of other targets can't be selected by the backend.
+        const char *prefix = nullptr;
+        switch (m_arch) {
+        case Arch::riscv64:
+            prefix = "riscv.";
+            break;
+        case Arch::ppc64le:
+            prefix = "ppc.";
+            break;
+        case Arch::wasm32:
+        case Arch::wasm64:
+            prefix = "wasm.";
+            break;
+        default:
+            break;
+        }
+        if (prefix == nullptr || !name.starts_with(prefix)) {
+            Error(pos, "LLVM intrinsic \"%s\" is not supported on \"%s\" target architecture.", fullName.c_str(),
+                  ArchToString(m_arch).c_str());
+            return false;
+        }
     }
     return true;
 }
