@@ -319,7 +319,7 @@ function(generate_generic ispc_name target arch bit os component)
     # Generate bitcode
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${ispc_name} -I ${include} --enable-llvm-intrinsics --nostdlib --gen-stdlib
+        COMMAND ${ispc_name} -I ${include} --nostdlib --gen-stdlib
                 --target=${target} --arch=${arch} --target-os=${fixed_os} --emit-llvm
                 -o ${bc} ${input_ispc} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit}
         DEPENDS ${ispc_name} ${input_ispc}

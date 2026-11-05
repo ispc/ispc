@@ -303,10 +303,6 @@ static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::Pr
         opts->addMacroDef("ISPC_FAST_MASKED_VLOAD");
     }
 
-    // Calling LLVM intrinsics is always enabled. The macro is kept for the
-    // code that checks it.
-    opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
-
     std::string math_lib = "ISPC_MATH_LIB_VAL=" + std::to_string((int)g->mathLib);
     opts->addMacroDef(math_lib);
 
@@ -354,6 +350,10 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
     snprintf(llvm_minor, buf_size, "LLVM_VERSION_MINOR=%d", LLVM_VERSION_MINOR);
     opts->addMacroDef(llvm_major);
     opts->addMacroDef(llvm_minor);
+
+    // Calling LLVM intrinsics is always enabled. The macro is kept for the
+    // code that checks it.
+    opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
 
     // Target specific macro definitions
     lSetTargetSpecificMacroDefinitions(opts);
