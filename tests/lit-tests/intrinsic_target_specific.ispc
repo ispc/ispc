@@ -9,7 +9,7 @@
 
 //; REQUIRES: X86_ENABLED && !MACOS_HOST
 
-//; CHECK_SSE2: Error: Target specific LLVM intrinsic "avx.addsub.ps.256" not supported
+//; CHECK_SSE2: Error: Target specific LLVM intrinsic "llvm.x86.avx.addsub.ps.256" not supported
 float foo(float a, float b) {
     float c = @llvm.x86.avx.addsub.ps.256(a, b);
     return c;
@@ -17,6 +17,6 @@ float foo(float a, float b) {
 
 #ifdef FP16
 //; CHECK_FP16: vmaxph
-//; CHECK_FP16_ICL: Error: Target specific LLVM intrinsic "avx512fp16.max.ph.128" not supported on "icelake-client" CPU.
+//; CHECK_FP16_ICL: Error: Target specific LLVM intrinsic "llvm.x86.avx512fp16.max.ph.128" not supported on "icelake-client" CPU.
 float16 bar(float16 a, float16 b) { return @llvm.x86.avx512fp16.max.ph.128(a, b); }
 #endif

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -351,6 +351,11 @@ class ReturnStmt : public Stmt {
     ReturnStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Expr *expr;
+
+  private:
+    /** True if the statement was written with an expression. The expression
+        is set to nullptr if type checking it failed. */
+    bool hasExpr;
 };
 
 /** Statement corresponding to a "case" label in the program.  In addition

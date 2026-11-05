@@ -5,7 +5,8 @@
 
 // RUN: not %{ispc} --target=host --nowrap --nostdlib -o %t.o %s 2>&1 | FileCheck %s --implicit-check-not=FATAL
 // RUN: not %{ispc} --target=host --nowrap --nostdlib --enable-llvm-intrinsics -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTRINSICS --implicit-check-not=FATAL
-// RUN: not %{ispc} --target=host --nowrap --nostdlib -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FLAG --implicit-check-not=FATAL
+// LLVM intrinsics are enabled by default, --enable-llvm-intrinsics is a no-op.
+// RUN: not %{ispc} --target=host --nowrap --nostdlib -DINTRINSICS -o %t.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTRINSICS --implicit-check-not=FATAL
 
 // CHECK: Error: Undeclared symbol "undeclared_symbol".
 // CHECK: Error: Undeclared symbol "undeclared_symbol2".
@@ -18,9 +19,6 @@
 // CHECK-INTRINSICS: Error: Undeclared symbol "undeclared_symbol8".
 // CHECK-INTRINSICS: Error: Trying to index into non-array, vector, or pointer type "uniform int32".
 // CHECK-INTRINSICS: Error: Trying to index into non-array, vector, or pointer type "uniform int32".
-
-// CHECK-NO-FLAG: Error: Undeclared symbol "undeclared_symbol6".
-// CHECK-NO-FLAG: Error: Calling LLVM intrinsics from ISPC source code is an experimental feature
 
 float twice(float x) { return x + x; }
 template <typename T> T callee(T x) { return x; }

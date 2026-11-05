@@ -6,7 +6,7 @@
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
-// CHECK_SPR_ERROR: Target specific LLVM intrinsic "tdpfp16ps" requires feature "amxfp16" not supported on "sapphirerapids" CPU
+// CHECK_SPR_ERROR: Target specific LLVM intrinsic "llvm.x86.tdpfp16ps" requires feature "amxfp16" not supported on "sapphirerapids" CPU
 // CHECK_GNR_SUCCESS: call void @llvm.x86.tdpfp16ps
 // CHECK_DMR_SUCCESS: call void @llvm.x86.tdpfp16ps
 

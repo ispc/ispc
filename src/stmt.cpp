@@ -3250,10 +3250,16 @@ UnmaskedStmt *UnmaskedStmt::Instantiate(TemplateInstantiation &templInst) const 
 ///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
-ReturnStmt::ReturnStmt(Expr *e, SourcePos p) : Stmt(p, ReturnStmtID), expr(e) {}
+ReturnStmt::ReturnStmt(Expr *e, SourcePos p) : Stmt(p, ReturnStmtID), expr(e), hasExpr(e != nullptr) {}
 
 void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) {
+        return;
+    }
+
+    if (hasExpr && expr == nullptr) {
+        // An error has already been reported for the expression.
+        AssertPos(pos, m->errorCount > 0);
         return;
     }
 
@@ -3293,7 +3299,9 @@ int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
 ReturnStmt *ReturnStmt::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
-    return new ReturnStmt(instExpr, pos);
+    ReturnStmt *inst = new ReturnStmt(instExpr, pos);
+    inst->hasExpr = hasExpr;
+    return inst;
 }
 
 std::string ReturnStmt::GetString() const {

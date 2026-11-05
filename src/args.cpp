@@ -103,8 +103,8 @@ static ArgsParseResult usage() {
     printf("    [--emit-zebin]\t\t\tGenerate L0 binary as output\n");
 #endif
 #endif
-    printf("    [--enable-llvm-intrinsics]\t\tEnable experimental feature to call LLVM intrinsics from ISPC "
-           "source code\n");
+    printf("    [--enable-llvm-intrinsics]\t\tAccepted for compatibility, calling LLVM intrinsics from ISPC source "
+           "code is always enabled\n");
     printf("    [--error-limit=<value>]\t\tLimit maximum number of errors emitting by ISPC to <value>\n");
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
@@ -831,7 +831,8 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
         }
 #endif
         else if (!strcmp(argv[i], "--enable-llvm-intrinsics")) {
-            g->enableLLVMIntrinsics = true;
+            // Calling LLVM intrinsics is always enabled, the switch is
+            // accepted for compatibility.
         } else if (!strcmp(argv[i], "-I")) {
             if (++i != argc) {
                 lParseInclude(argv[i]);
