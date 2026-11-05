@@ -1330,13 +1330,13 @@ __declspec(safe) inline varying int32 dot4add_i8i8packed(varying uint32 a, varyi
 __declspec(safe) inline varying int32 dot4add_i8i8packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
 
 // Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
-// with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
-// Sum these 2 results with the corresponding 32-bit integer in src, and return the result.
+// with corresponding signed 16-bit integers in b, producing 2 intermediate signed 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) inline varying int32 dot2add_i16i16packed(varying uint32 a, varying uint32 b, varying int32 acc);
 
 // Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
-// with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
-// Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
+// with corresponding signed 16-bit integers in b, producing 2 intermediate signed 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
 __declspec(safe) inline varying int32 dot2add_i16i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
 
 // Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in a
