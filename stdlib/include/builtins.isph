@@ -336,8 +336,8 @@ EXT READNONE varying int32 __dot2add_i16i16packed_sat(varying uint32, varying ui
 EXT READNONE varying int32 __dot2add_i16i16packed(varying uint32, varying uint32, varying int32);
 EXT READNONE varying int32 __dot2add_u16i16packed_sat(varying uint32, varying uint32, varying int32);
 EXT READNONE varying int32 __dot2add_u16i16packed(varying uint32, varying uint32, varying int32);
-EXT READNONE varying int32 __dot2add_u16u16packed_sat(varying uint32, varying uint32, varying int32);
-EXT READNONE varying int32 __dot2add_u16u16packed(varying uint32, varying uint32, varying int32);
+EXT READNONE varying uint32 __dot2add_u16u16packed_sat(varying uint32, varying uint32, varying uint32);
+EXT READNONE varying uint32 __dot2add_u16u16packed(varying uint32, varying uint32, varying uint32);
 EXT READNONE varying int32 __dot4add_u8i8packed_sat(varying uint32, varying uint32, varying int32);
 EXT READNONE varying int32 __dot4add_u8i8packed(varying uint32, varying uint32, varying int32);
 EXT READNONE varying uint32 __dot4add_u8u8packed_sat(varying uint32, varying uint32, varying uint32);
