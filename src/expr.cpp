@@ -9106,6 +9106,10 @@ std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) con
         return std::pair<llvm::Constant *, bool>(nullptr, false);
     }
 
+    if (CastType<ReferenceType>(t) != nullptr) {
+        t = t->GetReferenceTarget();
+    }
+
     bool isNotValidForMultiTargetGlobal = false;
     if (t->IsVaryingType()) {
         isNotValidForMultiTargetGlobal = true;
