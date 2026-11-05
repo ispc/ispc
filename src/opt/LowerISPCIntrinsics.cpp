@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025, Intel Corporation
+  Copyright (c) 2024-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -240,9 +240,9 @@ static llvm::Value *lLowerCmpXchgIntrinsic(llvm::CallInst *CI) {
 
     std::string prefix = CI->getCalledFunction()->getName().str();
     prefix = prefix.substr(0, prefix.find_last_of('.'));
-    std::string successOrdering = prefix.substr(prefix.find_last_of('.') + 1);
-    prefix = prefix.substr(0, prefix.find_last_of('.'));
     std::string failureOrdering = prefix.substr(prefix.find_last_of('.') + 1);
+    prefix = prefix.substr(0, prefix.find_last_of('.'));
+    std::string successOrdering = prefix.substr(prefix.find_last_of('.') + 1);
 
     llvm::AtomicOrdering SO = lSetMemoryOrdering(successOrdering);
     llvm::AtomicOrdering FO = lSetMemoryOrdering(failureOrdering);

@@ -242,15 +242,16 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
     }
 
     // vector with length different from TARGET_WIDTH can be repsented as uniform TYPE<N>
-    else if (const llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(t)) {
+    else if (const llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(t)) {
         // check if vector length is equal to TARGET_WIDTH
-        unsigned int vectorWidth = vt->getElementCount().getKnownMinValue();
+        unsigned int vectorWidth = vt->getNumElements();
         if (vectorWidth == static_cast<unsigned int>(g->target->getVectorWidth())) {
             // we should never hit this case, because it should be handled by the cases above
             return nullptr;
         } else {
+            // Short vectors of atomic types only, e.g. not of pointers.
             const Type *elementType = lLLVMTypeToISPCType(vt->getElementType(), intAsUnsigned);
-            if (elementType == nullptr) {
+            if (elementType == nullptr || CastType<AtomicType>(elementType) == nullptr) {
                 return nullptr;
             }
             return new VectorType(elementType, vectorWidth);
@@ -260,7 +261,44 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
     return nullptr;
 }
 
-std::string lGetTypeString(const llvm::Type *Ty) {
+// Returns true if FunctionCallExpr::GetValue() can convert between the LLVM
+// type of the ISPC type mapped from an intrinsic type and the intrinsic type:
+// uniform short vectors are padded (see VectorType::getVectorMemoryCount()),
+// and vectors of pointers are passed as varying uint64 values.
+// Returns the LLVM type of an argument as the intrinsic is declared for it:
+// uniform short vectors don't have the padding, which FunctionCallExpr::GetValue()
+// removes when it calls the intrinsic. The intrinsic then works on the declared
+// elements only, which matters for intrinsics such as llvm.vector.reduce.add.
+static llvm::Type *lGetIntrinsicArgType(const Type *type) {
+    const VectorType *vt = CastType<VectorType>(type);
+    if (vt != nullptr && vt->IsUniformType()) {
+        llvm::Type *elementType = vt->GetElementType()->LLVMType(g->ctx);
+        if (elementType == nullptr) {
+            return nullptr;
+        }
+        return llvm::FixedVectorType::get(elementType, vt->GetElementCount());
+    }
+    return type->LLVMType(g->ctx);
+}
+
+static bool lIsConvertibleIntrinsicType(const Type *ispcType, llvm::Type *intrinsicType) {
+    llvm::Type *type = ispcType->LLVMType(g->ctx);
+    if (type == intrinsicType) {
+        return true;
+    }
+    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    llvm::FixedVectorType *ivt = llvm::dyn_cast<llvm::FixedVectorType>(intrinsicType);
+    if (vt == nullptr || ivt == nullptr) {
+        return false;
+    }
+    if (vt->getElementType() == ivt->getElementType()) {
+        return vt->getNumElements() >= ivt->getNumElements();
+    }
+    return vt->getNumElements() == ivt->getNumElements() && vt->getElementType()->isIntegerTy() &&
+           ivt->getElementType()->isPointerTy();
+}
+
+static std::string lGetTypeString(const llvm::Type *Ty) {
     std::string TypeStr;
     llvm::raw_string_ostream RSO(TypeStr);
     Ty->print(RSO);
@@ -286,7 +324,7 @@ static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTab
     const llvm::FunctionType *ftype = func->getFunctionType();
     std::string funcName = std::string(func->getName());
     const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
-    if (returnType == nullptr) {
+    if (returnType == nullptr || !lIsConvertibleIntrinsicType(returnType, ftype->getReturnType())) {
         // return type not representable in ispc -> not callable from ispc
         Error(pos, "Return type \"%s\" of LLVM intrinsic \"%s\" is not representable as an ISPC type.",
               lGetTypeString(ftype->getReturnType()).c_str(), name.c_str());
@@ -294,9 +332,9 @@ static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTab
     }
     llvm::SmallVector<const Type *, 8> argTypes;
     for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
-        const llvm::Type *llvmArgType = ftype->getParamType(j);
+        llvm::Type *llvmArgType = ftype->getParamType(j);
         const Type *type = lLLVMTypeToISPCType(llvmArgType, false);
-        if (type == nullptr) {
+        if (type == nullptr || !lIsConvertibleIntrinsicType(type, llvmArgType)) {
             Error(pos, "Type \"%s\" of parameter %u of LLVM intrinsic \"%s\" is not representable as an ISPC type.",
                   lGetTypeString(llvmArgType).c_str(), j + 1, name.c_str());
             return nullptr;
@@ -311,9 +349,20 @@ static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTab
     return sym;
 }
 
-static bool lIsMemoryOrdering(llvm::StringRef str) {
-    return str == "unordered" || str == "monotonic" || str == "acquire" || str == "release" || str == "acq_rel" ||
-           str == "seq_cst";
+// The orderings that LLVM allows for atomicrmw and for the success ordering of
+// cmpxchg.
+static bool lIsAtomicOrdering(llvm::StringRef str) {
+    return str == "monotonic" || str == "acquire" || str == "release" || str == "acq_rel" || str == "seq_cst";
+}
+
+// The orderings that LLVM allows for the failure ordering of cmpxchg.
+static bool lIsCmpXchgFailureOrdering(llvm::StringRef str) {
+    return str == "monotonic" || str == "acquire" || str == "seq_cst";
+}
+
+// The orderings that LLVM allows for fence.
+static bool lIsFenceOrdering(llvm::StringRef str) {
+    return str == "acquire" || str == "release" || str == "acq_rel" || str == "seq_cst";
 }
 
 static bool lIsAtomicRMWOp(llvm::StringRef str) {
@@ -328,30 +377,36 @@ static bool lCheckISPCIntrinsicSuffix(const std::string &name, ISPCIntrinsics ID
     llvm::StringRef ref(name);
     llvm::SmallVector<llvm::StringRef, 2> parts;
     const char *expected = nullptr;
+    const char *details = nullptr;
     bool valid = false;
     switch (ID) {
     case ISPCIntrinsics::atomicrmw:
         ref.consume_front("llvm.ispc.atomicrmw.");
         ref.split(parts, '.');
-        valid = parts.size() == 2 && lIsAtomicRMWOp(parts[0]) && lIsMemoryOrdering(parts[1]);
+        valid = parts.size() == 2 && lIsAtomicRMWOp(parts[0]) && lIsAtomicOrdering(parts[1]);
         expected = "llvm.ispc.atomicrmw.<operation>.<ordering>";
+        details = "<operation> is xchg, add, sub, and, nand, or, xor, max, min, umax, umin, fadd, fsub, fmax or fmin, "
+                  "<ordering> is monotonic, acquire, release, acq_rel or seq_cst";
         break;
     case ISPCIntrinsics::cmpxchg:
         ref.consume_front("llvm.ispc.cmpxchg.");
         ref.split(parts, '.');
-        valid = parts.size() == 2 && lIsMemoryOrdering(parts[0]) && lIsMemoryOrdering(parts[1]);
-        expected = "llvm.ispc.cmpxchg.<ordering>.<ordering>";
+        valid = parts.size() == 2 && lIsAtomicOrdering(parts[0]) && lIsCmpXchgFailureOrdering(parts[1]);
+        expected = "llvm.ispc.cmpxchg.<success ordering>.<failure ordering>";
+        details = "<success ordering> is monotonic, acquire, release, acq_rel or seq_cst, <failure ordering> is "
+                  "monotonic, acquire or seq_cst";
         break;
     case ISPCIntrinsics::fence:
         ref.consume_front("llvm.ispc.fence.");
-        valid = lIsMemoryOrdering(ref);
+        valid = lIsFenceOrdering(ref);
         expected = "llvm.ispc.fence.<ordering>";
+        details = "<ordering> is acquire, release, acq_rel or seq_cst";
         break;
     default:
         return true;
     }
     if (!valid) {
-        Error(pos, "Invalid ISPC intrinsic name \"%s\", expected \"%s\".", name.c_str(), expected);
+        Error(pos, "Invalid ISPC intrinsic name \"%s\", expected \"%s\" where %s.", name.c_str(), expected, details);
     }
     return valid;
 }
@@ -385,7 +440,7 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
     llvm::Type *retType = nullptr;
     std::vector<llvm::Type *> TYs;
     for (const Type *type : argTypes) {
-        llvm::Type *llvmType = type->LLVMType(g->ctx);
+        llvm::Type *llvmType = lGetIntrinsicArgType(type);
         if (llvmType == nullptr || llvmType->isVoidTy()) {
             Error(pos, "Argument of type \"%s\" can't be passed to ISPC intrinsic \"%s\".", type->GetString().c_str(),
                   name.c_str());
@@ -408,16 +463,75 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         }
         return true;
     };
+    auto isInteger = [&TYs](size_t i) { return TYs[i]->isIntegerTy(); };
+    // A varying bool, which has the mask type of the target (UIntMaskType has
+    // the same LLVM type), or a vector of i1 (varying int1 or a uniform bool<N> short vector).
+    auto isVectorMask = [&TYs](size_t i) {
+        return TYs[i] == LLVMTypes::MaskType ||
+               (llvm::isa<llvm::FixedVectorType>(TYs[i]) && TYs[i]->getScalarType()->isIntegerTy(1));
+    };
+    // A uniform bool or a vector mask.
+    auto isMask = [&](size_t i) { return TYs[i]->isIntegerTy(1) || isVectorMask(i); };
+    // LLVM requires the values of atomic operations to have a power-of-two
+    // size of at least one byte.
+    auto hasAtomicSize = [&TYs](size_t i) {
+        if (TYs[i]->isPointerTy()) {
+            return true;
+        }
+        uint64_t size = TYs[i]->getPrimitiveSizeInBits().getFixedValue();
+        return size >= 8 && llvm::isPowerOf2_64(size);
+    };
+    // A varying mask selects the lanes of a varying value.
+    auto checkMaskWidth = [&](size_t mask, size_t value) {
+        llvm::VectorType *maskType = llvm::dyn_cast<llvm::VectorType>(TYs[mask]);
+        llvm::VectorType *valueType = llvm::dyn_cast<llvm::VectorType>(TYs[value]);
+        if (maskType != nullptr &&
+            (valueType == nullptr || maskType->getElementCount() != valueType->getElementCount())) {
+            Error(pos,
+                  "Arguments %zu and %zu of ISPC intrinsic \"%s\" must have the same number of elements, \"%s\" and "
+                  "\"%s\" provided.",
+                  mask + 1, value + 1, name.c_str(), argTypes[mask]->GetString().c_str(),
+                  argTypes[value]->GetString().c_str());
+            return false;
+        }
+        return true;
+    };
     const char *pointer = "a uniform pointer";
     const char *vector = "a varying or short vector value";
+    const char *integer = "a uniform integer value";
+    const char *mask = "a bool value or a vector of bool values";
 
     bool hasUnnamedType = false;
     switch (ID) {
     case ISPCIntrinsics::not_intrinsic:
-        Error(pos, "Not ISPC intrinsic.");
-        return nullptr;
+        UNREACHABLE();
     case ISPCIntrinsics::atomicrmw: {
         if (!lCheckISPCIntrinsicArgCount(name, argTypes, 2, pos) || !checkArg(0, isPointer(0), pointer)) {
+            return nullptr;
+        }
+        llvm::StringRef op = llvm::StringRef(name).drop_front(strlen("llvm.ispc.atomicrmw.")).split('.').first;
+        bool isValid = false;
+        const char *expected = nullptr;
+        // The operand types that the LLVM verifier accepts. Fixed vectors of
+        // integers are supported for integer operations since LLVM 23.
+        bool isVector = llvm::isa<llvm::FixedVectorType>(TYs[1]);
+        if (op == "xchg") {
+            isValid = (isInteger(1) || TYs[1]->isFloatingPointTy() || isPointer(1)) && hasAtomicSize(1);
+            expected = "a uniform integer, floating-point or pointer value";
+        } else if (op == "fadd" || op == "fsub" || op == "fmax" || op == "fmin") {
+            isValid = (TYs[1]->isFloatingPointTy() || (isVector && TYs[1]->getScalarType()->isFloatingPointTy())) &&
+                      hasAtomicSize(1);
+            expected = "a uniform floating-point value or a uniform short vector of floating-point values";
+        } else {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+            isValid = (isInteger(1) || (isVector && TYs[1]->getScalarType()->isIntegerTy())) && hasAtomicSize(1);
+            expected = "a uniform integer value or a uniform short vector of integer values";
+#else
+            isValid = isInteger(1) && hasAtomicSize(1);
+            expected = integer;
+#endif
+        }
+        if (!checkArg(1, isValid, expected)) {
             return nullptr;
         }
         retType = TYs[1];
@@ -442,7 +556,8 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         break;
     }
     case ISPCIntrinsics::blend_store: {
-        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 3, pos) || !checkArg(1, isPointer(1), pointer)) {
+        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 3, pos) || !checkArg(1, isPointer(1), pointer) ||
+            !checkArg(2, isMask(2), mask) || !checkMaskWidth(2, 0)) {
             return nullptr;
         }
         retType = llvm::Type::getVoidTy(*g->ctx);
@@ -461,6 +576,7 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
     }
     case ISPCIntrinsics::cmpxchg: {
         if (!lCheckISPCIntrinsicArgCount(name, argTypes, 3, pos) || !checkArg(0, isPointer(0), pointer) ||
+            !checkArg(1, (isInteger(1) || isPointer(1)) && hasAtomicSize(1), "a uniform integer or pointer value") ||
             !checkSameTypes(1, 2)) {
             return nullptr;
         }
@@ -473,7 +589,9 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
             Error(pos, "ISPC intrinsic \"%s\" expects 2 or 3 arguments, %zu provided.", name.c_str(), argTypes.size());
             return nullptr;
         }
-        if (!checkArg(0, isVector(0), vector) || (argTypes.size() == 3 && !checkSameTypes(0, 1))) {
+        size_t index = argTypes.size() - 1;
+        if (!checkArg(0, isVector(0), vector) || (argTypes.size() == 3 && !checkSameTypes(0, 1)) ||
+            !checkArg(index, isInteger(index), integer)) {
             return nullptr;
         }
         retType = llvm::cast<llvm::VectorType>(TYs[0])->getElementType();
@@ -491,7 +609,16 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         break;
     }
     case ISPCIntrinsics::insert: {
-        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 3, pos) || !checkArg(0, isVector(0), vector)) {
+        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 3, pos) || !checkArg(0, isVector(0), vector) ||
+            !checkArg(1, isInteger(1), integer)) {
+            return nullptr;
+        }
+        llvm::Type *elementType = llvm::cast<llvm::VectorType>(TYs[0])->getElementType();
+        if (TYs[2] != elementType) {
+            Error(pos,
+                  "Argument 3 of ISPC intrinsic \"%s\" must have the LLVM type of the elements of argument 1 "
+                  "(\"%s\"), \"%s\" provided.",
+                  name.c_str(), lGetTypeString(elementType).c_str(), argTypes[2]->GetString().c_str());
             return nullptr;
         }
         retType = TYs[0];
@@ -499,7 +626,8 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         break;
     }
     case ISPCIntrinsics::packmask: {
-        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 1, pos) || !checkArg(0, isVector(0), vector)) {
+        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 1, pos) ||
+            !checkArg(0, isVectorMask(0), "a varying bool value or a vector of bool values")) {
             return nullptr;
         }
         retType = llvm::Type::getInt64Ty(*g->ctx);
@@ -507,7 +635,8 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         break;
     }
     case ISPCIntrinsics::select: {
-        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 3, pos) || !checkSameTypes(1, 2)) {
+        if (!lCheckISPCIntrinsicArgCount(name, argTypes, 3, pos) || !checkArg(0, isMask(0), mask) ||
+            !checkSameTypes(1, 2) || !checkMaskWidth(0, 1)) {
             return nullptr;
         }
         retType = TYs[1];
@@ -530,10 +659,8 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         name += "." + lGetMangledTypeStr(TYs[1], hasUnnamedType);
         break;
     }
-    default: {
-        Error(pos, "Unknown ISPC intrinsic ID \"%u\".", (unsigned)ID);
-        return nullptr;
-    }
+    default:
+        UNREACHABLE();
     }
     llvm::FunctionType *funcType = llvm::FunctionType::get(retType, TYs, false);
     return llvm::cast<llvm::Function>(M->getOrInsertFunction(name, funcType).getCallee());
@@ -741,10 +868,12 @@ static llvm::Function *lGetLLVMIntrinsicDeclaration(llvm::Module *module, llvm::
         }
         typeStarts.push_back(i);
     }
-    if (isVarArg || typeStarts.empty()) {
+    if (isVarArg) {
         Error(pos, "LLVM intrinsic \"%s\" with a variable number of arguments is not supported.", name.c_str());
         return nullptr;
     }
+    // The table always starts with the return type.
+    AssertPos(pos, !typeStarts.empty());
     size_t numParams = typeStarts.size() - 1;
     if (numArgs != numParams) {
         Error(pos, "LLVM intrinsic \"%s\" expects %zu argument%s, %zu provided.", name.c_str(), numParams,
@@ -774,7 +903,7 @@ static llvm::Function *lGetLLVMIntrinsicDeclaration(llvm::Module *module, llvm::
             // <TARGET_WIDTH x ptr> in FunctionCallExpr::GetValue().
             overloadTys[index] = LLVMTypes::PtrVectorType;
         } else {
-            overloadTys[index] = argType->LLVMType(g->ctx);
+            overloadTys[index] = lGetIntrinsicArgType(argType);
         }
         overloadArgs[index] = i;
         if (overloadTys[index] == nullptr || overloadTys[index]->isVoidTy()) {
@@ -856,7 +985,7 @@ static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std:
 #endif // ISPC_XE_ENABLED
     llvm::Intrinsic::ID ID = llvm::Intrinsic::lookupIntrinsicID(name);
     if (ID != llvm::Intrinsic::not_intrinsic) {
-        if (!g->target->checkIntrinsticSupport(name, pos)) {
+        if (!g->target->checkIntrinsticSupport(name, llvm::Intrinsic::isTargetIntrinsic(ID), pos)) {
             return nullptr;
         }
         return lGetLLVMIntrinsicDeclaration(module, ID, name, args, pos);

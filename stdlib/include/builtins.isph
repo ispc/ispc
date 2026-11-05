@@ -460,7 +460,7 @@ EXT inline READNONE varying uint16 __min_varying_uint16(varying uint16, varying 
 EXT inline READNONE varying uint32 __min_varying_uint32(varying uint32, varying uint32);
 EXT inline READNONE varying uint64 __min_varying_uint64(varying uint64, varying uint64);
 
-// TODO: rewrite using --enable-llvm-intrinsics in stdlib.ispc
+// TODO: rewrite using LLVM intrinsics in stdlib.ispc
 // memcpy/memmove/memset
 EXT inline void __memcpy32(uniform int8 *uniform, uniform int8 *uniform, uniform int32);
 EXT inline void __memcpy64(uniform int8 *uniform, uniform int8 *uniform, uniform int64);

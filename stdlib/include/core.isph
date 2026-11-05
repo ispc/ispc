@@ -936,7 +936,7 @@ ISPC_BUILTINS_ATTRS varying int64 __new_varying64_64rt(varying int64, UIntMaskTy
 ISPC_BUILTINS_ATTRS void __delete_uniform_64rt(uniform int8 *uniform);
 ISPC_BUILTINS_ATTRS void __delete_varying_64rt(varying int64, UIntMaskType);
 
-// TODO: rewrite using --enable-llvm-intrinsics in stdlib.ispc
+// TODO: rewrite using LLVM intrinsics in stdlib.ispc
 // assume
 ISPC_BUILTINS_ATTRS inline void __do_assume_uniform(uniform bool);
 

@@ -318,8 +318,9 @@ class Target {
     Target(const Target &) = delete;
     Target &operator=(const Target &) = delete;
 
-    /** Check if LLVM intrinsic is supported for the current target. */
-    bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
+    /** Check if LLVM intrinsic is supported for the current target. isTargetIntrinsic is
+        true if the intrinsic is specific to a target (see llvm::Intrinsic::isTargetIntrinsic()). */
+    bool checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
@@ -696,10 +697,10 @@ struct Opt {
         APX_zu = 1 << 7,
         APX_jmpabs = 1 << 8,
         APX_all = APX_egpr | APX_ndd | APX_push2pop2 | APX_ppx | APX_ccmp | APX_cf | APX_nf |
-            APX_zu
+                  APX_zu
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
-            // jmpabs is only known to the LLVM X86 backend from 23.0 on.
-            | APX_jmpabs
+                  // jmpabs is only known to the LLVM X86 backend from 23.0 on.
+                  | APX_jmpabs
 #endif
     };
     unsigned int disableAPX;

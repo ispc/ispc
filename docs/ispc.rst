@@ -5290,19 +5290,33 @@ any other ``ispc`` function:
   the mask type of the target, which is ``<N x i1>`` on AVX-512 targets and a
   vector of integers of the target element width on other targets (for
   example ``<8 x i32>`` on ``avx2-i32x8``).
-* ``uniform`` short vectors are LLVM vectors with the declared width, for
-  example ``uniform float<4>`` is ``<4 x float>``.
+* ``uniform`` short vectors are passed as LLVM vectors with their number of
+  elements, for example ``uniform float<4>`` as ``<4 x float>`` and
+  ``uniform double<2>`` as ``<2 x double>``, also when the type of an
+  overloaded intrinsic is deduced from them (``@llvm.fabs`` of a
+  ``uniform float<4>`` calls ``llvm.fabs.v4f32``). In other code ``ispc``
+  pads ``uniform`` short vectors: the number of elements is rounded up to a
+  power of two and to at least 128 bits counted in ``TARGET_ELEMENT_WIDTH``
+  bytes per element. ``ispc`` removes the padding when it calls the intrinsic
+  and adds it back to the result, so the intrinsic works on the elements of the
+  vector only.
 * ``uniform`` pointers are LLVM pointers (``ptr``).
 
 The return type of the call is mapped back to an ``ispc`` type: LLVM scalars
 to ``uniform`` types (integers to signed types), vectors with the target width
-to ``varying`` types, other vectors to ``uniform`` short vectors and pointers
-to ``uniform int8 * uniform``. The result can then be converted to the needed
+to ``varying`` types, other fixed-width vectors of atomic types to
+``uniform`` short vectors, pointers to ``uniform int8 * uniform`` and
+target-width vectors of pointers to ``varying uint64``. A vector with the
+target width is always mapped to a ``varying`` type, so a ``uniform`` short
+vector with the target width (for example ``uniform float<8>`` on
+``avx2-i32x8``) can't be passed to an intrinsic, and such a result is returned
+as a ``varying`` value. The result can then be converted to the needed
 type, for example to an unsigned type.
 
-Intrinsics with struct, token or metadata parameters or results (for example
-``llvm.sadd.with.overflow`` or the constrained floating-point intrinsics) and
-intrinsics with a variable number of arguments can't be called from ``ispc``.
+Intrinsics with struct, token, metadata or scalable vector parameters or
+results (for example ``llvm.sadd.with.overflow``, the constrained
+floating-point intrinsics or the AArch64 SVE intrinsics) and intrinsics with a
+variable number of arguments can't be called from ``ispc``.
 
 Overloaded LLVM Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -5333,6 +5347,13 @@ Each overloaded type has to be the type of one of the arguments (including
 the arguments that LLVM declares to have the same type as the result, as in
 ``llvm.fshl``). Intrinsics whose overloaded types can't be deduced this way,
 such as ``llvm.vector.interleave2``, can't be called.
+
+An overloaded type is deduced from the first argument that has it. The other
+arguments of the same type are then converted to it like the arguments of any
+other function call, which can truncate them. For example, in
+``@llvm.umin(a, b)`` with ``uniform int8 a`` and ``uniform int32 b``, the
+intrinsic is ``llvm.umin.i8`` and ``b`` is converted to ``int8``. Convert the
+arguments explicitly if a different type is needed.
 
 For intrinsics that use a target-width vector of pointers, such as
 ``llvm.masked.gather`` and ``llvm.masked.scatter``, the addresses are passed as
@@ -5366,6 +5387,10 @@ Target-specific intrinsics are checked against the target:
 * ``llvm.arm.*`` intrinsics can be called only when compiling for 32-bit ARM
   and ``llvm.aarch64.*`` intrinsics only when compiling for AArch64. The CPU
   features are not checked for these intrinsics.
+* The intrinsics of other targets can be called only when compiling for that
+  target architecture, for example ``llvm.wasm.*`` for WebAssembly. Intrinsics
+  of targets that ``ispc`` doesn't compile for, such as ``llvm.nvvm.*`` or
+  ``llvm.amdgcn.*``, can't be called.
 
 
 Function Templates
