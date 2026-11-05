@@ -931,9 +931,6 @@ struct Globals {
         attribute. */
     bool generateInternalExportFunctions;
 
-    /* If enabled, allows the user to directly call LLVM intrinsics. */
-    bool enableLLVMIntrinsics;
-
     /** Global LLVMContext object */
     llvm::LLVMContext *ctx;
 

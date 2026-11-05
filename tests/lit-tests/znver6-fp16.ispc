@@ -29,6 +29,6 @@ void fma16(uniform float16 dst[], const uniform float16 a[], const uniform float
 #ifdef INTRINSIC
 // INTRINSIC-ZNVER6-LABEL: max16___
 // INTRINSIC-ZNVER6: vmaxph
-// INTRINSIC-ZNVER5: Error: Target specific LLVM intrinsic "avx512fp16.max.ph.256" not supported on "znver5" CPU.
+// INTRINSIC-ZNVER5: Error: Target specific LLVM intrinsic "llvm.x86.avx512fp16.max.ph.256" not supported on "znver5" CPU.
 float16 max16(float16 a, float16 b) { return @llvm.x86.avx512fp16.max.ph.256(a, b); }
 #endif

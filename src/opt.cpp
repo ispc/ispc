@@ -288,15 +288,25 @@ void DebugModulePassManager::commitLoopToFunctionPassManager() {
     m_isLPMOpen = false;
 }
 
+// Returns true if the module calls llvm.matrix.* intrinsics, which have to be
+// lowered by LowerMatrixIntrinsicsPass.
+static bool lUsesMatrixIntrinsics(const llvm::Module *module) {
+    for (const llvm::Function &F : *module) {
+        if (F.isIntrinsic() && F.getName().starts_with("llvm.matrix.") && !F.use_empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ispc::Optimize(llvm::Module *module, int optLevel) {
     if (g->debugPrint) {
         printf("*** Code going into optimization ***\n");
         module->print(llvm::errs(), nullptr);
     }
     DebugModulePassManager optPM(*module, optLevel);
-    if (g->enableLLVMIntrinsics) {
+    if (lUsesMatrixIntrinsics(module)) {
         // Required for matrix intrinsics. This needs to happen before VerifierPass.
-        // TODO : Limit pass to only when llvm.matrix.* intrinsics are used.
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::LowerMatrixIntrinsicsPass(), INIT_OPT_NUMBER); // llvm.matrix
         optPM.commitFunctionToModulePassManager();

@@ -4,7 +4,7 @@
 // This test uses empty input with -E -dM to list all predefined macros.
 // We use CHECK-DAG to allow macros to appear in any order.
 
-// RUN: %{ispc} --target=avx2 --enable-llvm-intrinsics -o - -E -dM - < /dev/null | FileCheck %s
+// RUN: %{ispc} --target=avx2 -o - -E -dM - < /dev/null | FileCheck %s
 // REQUIRES: X86_ENABLED
 
 // Basic ISPC macro
@@ -38,7 +38,7 @@
 // CHECK-DAG: #define ISPC_FP64_SUPPORTED 1
 
 // NOTE: ISPC_TARGET_HAS_FP16_SUPPORT and ISPC_FP16_SUPPORTED are only defined for targets with full FP16 support (e.g., avx512spr)
-// NOTE: ISPC_LLVM_INTRINSICS_ENABLED is only defined when --enable-llvm-intrinsics is used
+// NOTE: ISPC_LLVM_INTRINSICS_ENABLED is always defined, calling LLVM intrinsics is enabled by default
 // CHECK-DAG: #define ISPC_LLVM_INTRINSICS_ENABLED 1
 
 // Signed integer min/max macros

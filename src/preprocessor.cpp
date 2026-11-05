@@ -303,9 +303,9 @@ static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::Pr
         opts->addMacroDef("ISPC_FAST_MASKED_VLOAD");
     }
 
-    if (g->enableLLVMIntrinsics) {
-        opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
-    }
+    // Calling LLVM intrinsics is always enabled. The macro is kept for the
+    // code that checks it.
+    opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
 
     std::string math_lib = "ISPC_MATH_LIB_VAL=" + std::to_string((int)g->mathLib);
     opts->addMacroDef(math_lib);

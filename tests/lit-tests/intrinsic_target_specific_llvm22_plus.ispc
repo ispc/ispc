@@ -9,7 +9,7 @@
 
 //; REQUIRES: X86_ENABLED && LLVM_22_0+ && !MACOS_HOST
 
-//; CHECK_SSE2: Error: Target specific LLVM intrinsic "avx.addsub.ps.256" not supported
+//; CHECK_SSE2: Error: Target specific LLVM intrinsic "llvm.x86.avx.addsub.ps.256" not supported
 float foo(float a, float b) {
     float c = @llvm.x86.avx.addsub.ps.256(a, b);
     return c;

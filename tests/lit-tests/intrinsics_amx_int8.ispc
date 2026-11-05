@@ -7,10 +7,10 @@
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
-// CHECK_ICL_ERROR: Target specific LLVM intrinsic "tdpbssd" requires feature "amxint8" not supported on "icelake-client" CPU
-// CHECK_ICL_ERROR: Target specific LLVM intrinsic "tdpbsud" requires feature "amxint8" not supported on "icelake-client" CPU
-// CHECK_ICL_ERROR: Target specific LLVM intrinsic "tdpbusd" requires feature "amxint8" not supported on "icelake-client" CPU
-// CHECK_ICL_ERROR: Target specific LLVM intrinsic "tdpbuud" requires feature "amxint8" not supported on "icelake-client" CPU
+// CHECK_ICL_ERROR: Target specific LLVM intrinsic "llvm.x86.tdpbssd" requires feature "amxint8" not supported on "icelake-client" CPU
+// CHECK_ICL_ERROR: Target specific LLVM intrinsic "llvm.x86.tdpbsud" requires feature "amxint8" not supported on "icelake-client" CPU
+// CHECK_ICL_ERROR: Target specific LLVM intrinsic "llvm.x86.tdpbusd" requires feature "amxint8" not supported on "icelake-client" CPU
+// CHECK_ICL_ERROR: Target specific LLVM intrinsic "llvm.x86.tdpbuud" requires feature "amxint8" not supported on "icelake-client" CPU
 
 // CHECK_SPR_SUCCESS: call void @llvm.x86.tdpbssd
 // CHECK_SPR_SUCCESS: call void @llvm.x86.tdpbsud

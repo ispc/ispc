@@ -4218,6 +4218,14 @@ static const Type *lGetFunctionType(Expr *func) {
     return ftype;
 }
 
+// Returns true if parameter i of the called function is an ImmArg parameter of
+// an LLVM intrinsic, whose argument must be an immediate value.
+static bool lIsImmArgParam(const llvm::Value *callee, unsigned int i) {
+    const llvm::Function *func = llvm::dyn_cast<llvm::Function>(callee);
+    return func != nullptr && func->isIntrinsic() && i < func->arg_size() &&
+           func->hasParamAttribute(i, llvm::Attribute::ImmArg);
+}
+
 llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     if (func == nullptr || args == nullptr) {
         return nullptr;
@@ -4273,6 +4281,11 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Do whatever type conversion is needed
         argExpr = TypeConvertExpr(argExpr, paramType, "function call argument");
+        if (argExpr != nullptr && lIsImmArgParam(callee, i)) {
+            // Fold the conversion of a constant (e.g. int to bool), so that
+            // the intrinsic gets an immediate value.
+            argExpr = ::Optimize(argExpr);
+        }
         if (argExpr == nullptr) {
             return nullptr;
         }
@@ -4310,6 +4323,19 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         argVals.push_back(argValue);
+    }
+
+    // LLVM requires the arguments of the ImmArg parameters of an intrinsic to
+    // be immediate values.
+    for (unsigned int i = 0; i < argVals.size(); ++i) {
+        if (lIsImmArgParam(callee, i) && !llvm::isa<llvm::ConstantInt>(argVals[i]) &&
+            !llvm::isa<llvm::ConstantFP>(argVals[i])) {
+            const FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
+            std::string name = fse ? fse->GetName() : callee->getName().str();
+            Error(callargs[i]->pos, "Argument %u of LLVM intrinsic \"%s\" must be a compile-time constant.", i + 1,
+                  name.c_str());
+            return nullptr;
+        }
     }
 
     llvm::Value *retVal = nullptr;
@@ -4697,7 +4723,7 @@ FunctionCallExpr *ispc::CreateLLVMIntrinsicCall(const std::string &name, ExprLis
         }
     }
 
-    if (hasDependentArgs && g->enableLLVMIntrinsics) {
+    if (hasDependentArgs) {
         // The LLVM types of the arguments are needed to declare the intrinsic,
         // so wait for template instantiation. The name doesn't depend on them,
         // so check it now.
@@ -7314,7 +7340,8 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
-            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
+            // bool is already represented as i1 (or <N x i1>) in this case.
+            cast = (exprVal->getType() == targetType) ? exprVal : ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT1:
             cast = exprVal;
