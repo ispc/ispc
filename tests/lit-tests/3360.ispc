@@ -1,6 +1,6 @@
 // RUN: not %{ispc} %s --nowrap --target=neon-i32x4 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
 
-// CHECK: Error: LLVM intrinsic "ssse3.pmul.hr.sw.128" supported only on "x86" target architecture.
+// CHECK: Error: LLVM intrinsic "llvm.x86.ssse3.pmul.hr.sw.128" supported only on "x86" target architecture.
 // CHECK-NOT: Assertion failed
 
 // REQUIRES: ARM_ENABLED

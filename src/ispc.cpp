@@ -2603,6 +2603,8 @@ std::unique_ptr<Target> Target::Create(Arch arch, const char *cpu, ISPCTarget ta
 }
 
 bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
+    // The name as written in the source, used in error messages.
+    const std::string fullName = name.str();
     if (name.consume_front("llvm.") == false) {
         return false;
     }
@@ -2610,7 +2612,7 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
     // TODO: Add relevant information to 'CPUFeatures' for non x86 targets.
     if (name.consume_front("x86.") == true) {
         if (!ISPCTargetIsX86(m_ispc_target)) {
-            Error(pos, "LLVM intrinsic \"%s\" supported only on \"x86\" target architecture.", name.data());
+            Error(pos, "LLVM intrinsic \"%s\" supported only on \"x86\" target architecture.", fullName.c_str());
             return false;
         }
         AllCPUs a;
@@ -2652,7 +2654,7 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
                     Error(pos,
                           "Target specific LLVM intrinsic \"%s\" requires feature \"avx512_vnni\" or \"avx_vnni\" "
                           "not supported on \"%s\" CPU.",
-                          name.data(), this->getCPU().c_str());
+                          fullName.c_str(), this->getCPU().c_str());
                     return false;
                 }
 
@@ -2663,7 +2665,7 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
                         Error(pos,
                               "Target specific LLVM intrinsic \"%s\" requires 512-bit AVX-512 support not "
                               "available on \"%s\" CPU (only AVX2-VNNI available).",
-                              name.data(), this->getCPU().c_str());
+                              fullName.c_str(), this->getCPU().c_str());
                         return false;
                     }
                 }
@@ -2671,25 +2673,25 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
                 Error(pos,
                       "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
                       "CPU.",
-                      name.data(), requiredFeature.c_str(), this->getCPU().c_str());
+                      fullName.c_str(), requiredFeature.c_str(), this->getCPU().c_str());
                 return false;
             }
         }
         // Otherwise, validate that the CPU supports the base feature (prefix)
         else if (cpuFeatures.count(intrinsicPrefix) == 0) {
-            Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
+            Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", fullName.c_str(),
                   this->getCPU().c_str());
             return false;
         }
     } else if (name.consume_front("arm.") == true) {
         if (m_arch != Arch::arm) {
-            Error(pos, "LLVM intrinsic \"%s\" supported only on \"arm\" target architecture.", name.data());
+            Error(pos, "LLVM intrinsic \"%s\" supported only on \"arm\" target architecture.", fullName.c_str());
             return false;
         }
         // TODO: Check 'CPUFeatures'.
     } else if (name.consume_front("aarch64.") == true) {
         if (m_arch != Arch::aarch64) {
-            Error(pos, "LLVM intrinsic \"%s\" supported only on \"aarch64\" target architecture.", name.data());
+            Error(pos, "LLVM intrinsic \"%s\" supported only on \"aarch64\" target architecture.", fullName.c_str());
             return false;
         }
         // TODO: Check 'CPUFeatures'.
@@ -3487,7 +3489,6 @@ Globals::Globals() {
     generateDWARFVersion = 5;
     sampleProfilingDebugInfo = false;
     profileSampleUse = "";
-    enableLLVMIntrinsics = false;
     mangleFunctionsWithTarget = false;
     generateInternalExportFunctions = true;
     isMultiTargetCompilation = false;
