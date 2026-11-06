@@ -350,6 +350,12 @@ Standard Library Changes:
   relied on the old results get different values near the int32 limits, and
   for ``dot4add_i8i8packed_sat`` whenever a byte is negative.
 
+* Generic targets on ARM no longer define ``ISPC_TARGET_HAS_ARM_DOT_PRODUCT``
+  and ``ISPC_TARGET_HAS_ARM_I8MM``, even when ``--cpu`` selects a CPU with
+  these features, and they always use the emulated dot product operations.
+  Before, programs that called the dot product functions on these targets
+  failed to link.
+
 LLVM Intrinsics:
 
 * Calling LLVM intrinsics from ``ispc`` source code is now a supported feature
@@ -6498,6 +6504,10 @@ If the selected target or platform lacks native dot product support, these opera
 Emulated operations return the same results as the native instructions: the products are exact, the
 plain forms wrap around on overflow, and the ``_sat`` forms saturate the exact sum of ``acc`` and all
 products once.
+
+Generic targets always use the emulated operations. On ARM, they do not define
+``ISPC_TARGET_HAS_ARM_DOT_PRODUCT`` or ``ISPC_TARGET_HAS_ARM_I8MM``, even when ``--cpu`` selects a
+CPU with these features.
 
 These dot product operations are specifically designed to operate on *packed* input vectors,
 necessitating proper packing or casting of input vectors by the programmer before use. For example:
