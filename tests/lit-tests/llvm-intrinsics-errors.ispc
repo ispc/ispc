@@ -63,6 +63,14 @@ int insert_float(int v) { return @llvm.ispc.insert(v, 0, 1.0f); }
 int select_float(float c, int a, int b) { return @llvm.ispc.select(c, a, b); }
 // CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:50: Error: Argument 1 of ISPC intrinsic "llvm.ispc.select" must be a bool value or a vector of bool values, "varying int64" provided.
 int select_int64(int64 c, int a, int b) { return @llvm.ispc.select(c, a, b); }
+// Integer values are not masks even if they have the LLVM type of the mask of
+// the target, as varying int32 has on avx2-i32x8.
+// CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:46: Error: Argument 1 of ISPC intrinsic "llvm.ispc.select" must be a bool value or a vector of bool values, "varying int32" provided.
+int select_int(int c, int a, int b) { return @llvm.ispc.select(c, a, b); }
+// CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:44: Error: Argument 1 of ISPC intrinsic "llvm.ispc.packmask" must be a varying bool value or a vector of bool values, "varying int32" provided.
+uniform int64 packmask_int(int c) { return @llvm.ispc.packmask(c); }
+// CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:57: Error: Argument 3 of ISPC intrinsic "llvm.ispc.blend_store" must be a bool value or a vector of bool values, "varying int32" provided.
+void blend_int(int v, uniform int8 *uniform p, int m) { @llvm.ispc.blend_store(v, p, m); }
 // CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:73: Error: Arguments 1 and 2 of ISPC intrinsic "llvm.ispc.select" must have the same number of elements, "varying bool" and "uniform int32" provided.
 uniform int select_width(bool c, uniform int a, uniform int b) { return @llvm.ispc.select(c, a, b); }
 // CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:48: Error: Argument 1 of ISPC intrinsic "llvm.ispc.packmask" must be a varying bool value or a vector of bool values, "varying float" provided.

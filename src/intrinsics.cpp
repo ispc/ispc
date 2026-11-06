@@ -430,6 +430,35 @@ static bool lCheckISPCIntrinsicArg(const std::string &name, const std::vector<co
     return isValid;
 }
 
+// Returns true if a value of the given type can be passed as a mask to ISPC
+// intrinsics: a bool value, a short vector of bools or a value of the mask
+// type of the target, which is the type of __mask and UIntMaskType. Other
+// integer types aren't accepted even if they have the same LLVM type as the
+// mask, so that the same code is accepted for all targets.
+static bool lIsISPCIntrinsicMaskType(const Type *type) {
+    if (type->IsBoolType()) {
+        return true;
+    }
+    const Type *maskType = nullptr;
+    switch (g->target->getMaskBitCount()) {
+    case 8:
+        maskType = AtomicType::VaryingUInt8;
+        break;
+    case 16:
+        maskType = AtomicType::VaryingUInt16;
+        break;
+    case 32:
+        maskType = AtomicType::VaryingUInt32;
+        break;
+    case 64:
+        maskType = AtomicType::VaryingUInt64;
+        break;
+    default:
+        return false;
+    }
+    return Type::EqualIgnoringConst(type->GetReferenceTarget(), maskType);
+}
+
 static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::string &srcName, ISPCIntrinsics ID,
                                                   const std::vector<const Type *> &argTypes, SourcePos pos) {
     if (!lCheckISPCIntrinsicSuffix(srcName, ID, pos)) {
@@ -464,14 +493,18 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         return true;
     };
     auto isInteger = [&TYs](size_t i) { return TYs[i]->isIntegerTy(); };
-    // A varying bool, which has the mask type of the target (UIntMaskType has
-    // the same LLVM type), or a vector of i1 (varying int1 or a uniform bool<N> short vector).
-    auto isVectorMask = [&TYs](size_t i) {
-        return TYs[i] == LLVMTypes::MaskType ||
-               (llvm::isa<llvm::FixedVectorType>(TYs[i]) && TYs[i]->getScalarType()->isIntegerTy(1));
+    // A varying bool or a value of the mask type of the target, which have
+    // the LLVM mask type, or a vector of i1 (varying int1 or a uniform bool<N>
+    // short vector).
+    auto isVectorMask = [&](size_t i) {
+        return lIsISPCIntrinsicMaskType(argTypes[i]) &&
+               (TYs[i] == LLVMTypes::MaskType ||
+                (llvm::isa<llvm::FixedVectorType>(TYs[i]) && TYs[i]->getScalarType()->isIntegerTy(1)));
     };
     // A uniform bool or a vector mask.
-    auto isMask = [&](size_t i) { return TYs[i]->isIntegerTy(1) || isVectorMask(i); };
+    auto isMask = [&](size_t i) {
+        return (lIsISPCIntrinsicMaskType(argTypes[i]) && TYs[i]->isIntegerTy(1)) || isVectorMask(i);
+    };
     // LLVM requires the values of atomic operations to have a power-of-two
     // size of at least one byte.
     auto hasAtomicSize = [&TYs](size_t i) {
