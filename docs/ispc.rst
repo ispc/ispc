@@ -342,6 +342,12 @@ Standard Library Changes:
   ``double`` denormal (magnitude above about ``4.5e307``) returns ``+-0``
   instead of NaN.
 
+* Generic targets on ARM no longer define ``ISPC_TARGET_HAS_ARM_DOT_PRODUCT``
+  and ``ISPC_TARGET_HAS_ARM_I8MM``, even when ``--cpu`` selects a CPU with
+  these features, and they always use the emulated dot product operations.
+  Before, programs that called the dot product functions on these targets
+  failed to link.
+
 LLVM Intrinsics:
 
 * Calling LLVM intrinsics from ``ispc`` source code is now a supported feature

@@ -1,0 +1,13 @@
+// Shared by generic-arm-dotprod.ispc and generic-arm32-dotprod.ispc: calls every dot4add_*/dot2add_* function.
+
+void dots(uniform uint a[], uniform uint b[], uniform int si[], uniform uint ui[]) {
+    uint x = a[programIndex], y = b[programIndex];
+    int s = si[programIndex];
+    uint u = ui[programIndex];
+    si[programIndex] = dot4add_u8i8packed(x, y, s) + dot4add_u8i8packed_sat(x, y, s) + dot4add_i8i8packed(x, y, s) +
+                       dot4add_i8i8packed_sat(x, y, s) + dot2add_i16i16packed(x, y, s) +
+                       dot2add_i16i16packed_sat(x, y, s) + dot2add_u16i16packed(x, y, s) +
+                       dot2add_u16i16packed_sat(x, y, s);
+    ui[programIndex] = dot4add_u8u8packed(x, y, u) + dot4add_u8u8packed_sat(x, y, u) + dot2add_u16u16packed(x, y, u) +
+                       dot2add_u16u16packed_sat(x, y, u);
+}
