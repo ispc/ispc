@@ -127,6 +127,28 @@ define float @__rcp_uniform_float(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+;; The NEON refinement uses frsqrts and frecps, which are defined for 0 * Inf, so there is nothing to clamp. The
+;; unclamped builtins used by --math-lib=fast are the same functions.
+define <WIDTH x float> @__rsqrt_nr_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
+  %ret = call <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %d)
+  ret <WIDTH x float> %ret
+}
+
+define float @__rsqrt_nr_uniform_float(float) nounwind readnone alwaysinline {
+  %ret = call float @__rsqrt_uniform_float(float %0)
+  ret float %ret
+}
+
+define <WIDTH x float> @__rcp_nr_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
+  %ret = call <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %d)
+  ret <WIDTH x float> %ret
+}
+
+define float @__rcp_nr_uniform_float(float) nounwind readnone alwaysinline {
+  %ret = call float @__rcp_uniform_float(float %0)
+  ret float %ret
+}
+
 define float @__rcp_fast_uniform_float(float) nounwind readnone alwaysinline {
   %v1 = bitcast float %0 to <1 x float>
   %vs = shufflevector <1 x float> %v1, <1 x float> poison,

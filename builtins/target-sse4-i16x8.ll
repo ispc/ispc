@@ -26,7 +26,25 @@ include(`target-sse4-common.ll')
 
 declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>) nounwind readnone
 
+; See target-sse2-common.ll for why the Newton-Raphson factor is clamped.
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  unary4to8(call, float, @llvm.x86.sse.rcp.ps, %0)
+  ; do one N-R iteration to improve precision
+  ;  float iv = __rcp_v(v);
+  ;  return iv * (2. - v * iv);
+  %v_iv = fmul <8 x float> %0, %call
+  %two_minus = fsub <8 x float> <float 2., float 2., float 2., float 2.,
+                                 float 2., float 2., float 2., float 2.>, %v_iv
+  %keep = fcmp ogt <8 x float> %two_minus, <float 0.5, float 0.5, float 0.5, float 0.5,
+                                            float 0.5, float 0.5, float 0.5, float 0.5>
+  %factor = select <8 x i1> %keep, <8 x float> %two_minus, <8 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                                                        float 0.5, float 0.5, float 0.5, float 0.5>
+  %iv_mul = fmul <8 x float> %call, %factor
+  ret <8 x float> %iv_mul
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define <WIDTH x float> @__rcp_nr_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
   unary4to8(call, float, @llvm.x86.sse.rcp.ps, %0)
   ; do one N-R iteration to improve precision
   ;  float iv = __rcp_v(v);
@@ -49,6 +67,26 @@ define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind reado
 declare <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float>) nounwind readnone
 
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
+  ;  float is = __rsqrt_v(v);
+  unary4to8(is, float, @llvm.x86.sse.rsqrt.ps, %v)
+   ; Newton-Raphson iteration to improve precision, with the factor clamped
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul <8 x float> %v, %is
+  %v_is_is = fmul <8 x float> %v_is, %is
+  %three_sub = fsub <8 x float> <float 3., float 3., float 3., float 3.,
+                                  float 3., float 3., float 3., float 3.>, %v_is_is
+  %keep = fcmp ogt <8 x float> %three_sub, <float 1., float 1., float 1., float 1.,
+                                            float 1., float 1., float 1., float 1.>
+  %factor = select <8 x i1> %keep, <8 x float> %three_sub, <8 x float> <float 1., float 1., float 1., float 1.,
+                                                                        float 1., float 1., float 1., float 1.>
+  %is_mul = fmul <8 x float> %is, %factor
+  %half_scale = fmul <8 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                   float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
+  ret <8 x float> %half_scale
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define <WIDTH x float> @__rsqrt_nr_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
   ;  float is = __rsqrt_v(v);
   unary4to8(is, float, @llvm.x86.sse.rsqrt.ps, %v)
    ; Newton-Raphson iteration to improve precision

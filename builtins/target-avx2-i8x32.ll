@@ -525,6 +525,28 @@ define <32 x float> @__rcp_fast_varying_float(<32 x float> %v) nounwind readnone
   ret <32 x float> %ret
 }
 
+;; These builtins divide exactly, so there is no Newton-Raphson factor to clamp. The unclamped builtins used by
+;; --math-lib=fast are the same functions.
+define float @__rsqrt_nr_uniform_float(float) nounwind readonly alwaysinline {
+  %ret = call float @__rsqrt_uniform_float(float %0)
+  ret float %ret
+}
+
+define <32 x float> @__rsqrt_nr_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
+  %ret = call <32 x float> @__rsqrt_varying_float(<32 x float> %v)
+  ret <32 x float> %ret
+}
+
+define float @__rcp_nr_uniform_float(float) nounwind readonly alwaysinline {
+  %ret = call float @__rcp_uniform_float(float %0)
+  ret float %ret
+}
+
+define <32 x float> @__rcp_nr_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
+  %ret = call <32 x float> @__rcp_varying_float(<32 x float> %v)
+  ret <32 x float> %ret
+}
+
 ;; bit ops
 
 ctlztz()

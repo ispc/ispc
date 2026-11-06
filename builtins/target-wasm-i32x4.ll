@@ -791,6 +791,28 @@ define  float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
   ret float %r
 }
 
+;; WASM divides exactly, so there is no Newton-Raphson factor to clamp. The unclamped builtins used by
+;; --math-lib=fast are the same functions.
+define <4 x float> @__rsqrt_nr_varying_float(<4 x float> %v) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__rsqrt_varying_float(<4 x float> %v)
+  ret <4 x float> %ret
+}
+
+define float @__rsqrt_nr_uniform_float(float) nounwind readonly alwaysinline {
+  %ret = call float @__rsqrt_uniform_float(float %0)
+  ret float %ret
+}
+
+define <4 x float> @__rcp_nr_varying_float(<4 x float> %v) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__rcp_varying_float(<4 x float> %v)
+  ret <4 x float> %ret
+}
+
+define float @__rcp_nr_uniform_float(float) nounwind readonly alwaysinline {
+  %ret = call float @__rcp_uniform_float(float %0)
+  ret float %ret
+}
+
 define i64 @__reduce_min_int64(<4 x i64>) nounwind readnone alwaysinline {
   reduce4(i64, @__min_varying_int64, @__min_uniform_int64)
 }
