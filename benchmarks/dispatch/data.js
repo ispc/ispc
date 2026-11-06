@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793754772190,
+  "lastUpdate": 1793988265419,
   "repoUrl": "https://github.com/ispc/ispc",
   "entries": {
     "dispatch (sse4-i32x4,avx2-i32x8,avx512gnr-x8)": [
@@ -204,6 +204,40 @@ window.BENCHMARK_DATA = {
             "value": 1428095562.994713,
             "unit": "ns/iter",
             "extra": "iterations: 5\ncpu: 207280917.0000003 ns\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "claude[bot]",
+            "username": "claude[bot]",
+            "email": "209825114+claude[bot]@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "aneshlya",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "id": "ae2ae73ba80eccc3b5b989188a8d8124c51663ff",
+          "message": "Fix #4008: Renumber metadata before printing final IR on LLVM 24\n\nLLVM trunk now gives each metadata node a persistent print ID\n(\"[IR] Use persistent metadata IDs for printing\"), so printed IR only\ngets the canonical !0, !1, ... numbering when the caller asks for it.\nispc-opt did not ask, which broke the keeps_metadata check in\nmemory-access-materialize.ll, and --emit-llvm-text output had the same\nnon-canonical numbering.\n\nAsk ispc-opt's PrintModulePass to renumber, as upstream opt does, and\ncall Module::renumberMetadataForAssembly() before printing for\n--emit-llvm-text. Both are guarded by ISPC_LLVM_24_0. Intermediate\ndebug dumps (--debug-phase, debug module prints) are not renumbered,\nbecause LLVM says renumbering is only for final output.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-06T11:59:41Z",
+          "url": "https://github.com/ispc/ispc/commit/ae2ae73ba80eccc3b5b989188a8d8124c51663ff"
+        },
+        "date": 1793988264012,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test/4096",
+            "value": 224261433.99206918,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 222007134.00000006 ns\nthreads: 1"
+          },
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test_multithread/10000",
+            "value": 1425856543.9959056,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 211639769.99999967 ns\nthreads: 1"
           }
         ]
       }
