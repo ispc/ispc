@@ -1826,6 +1826,10 @@ bool Module::writeBitcode(llvm::Module *module, std::string outFileName, OutputT
     if (outputType == Bitcode) {
         llvm::WriteBitcodeToFile(*module, fos);
     } else if (outputType == BitcodeText) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+        // Metadata nodes keep persistent IDs, so renumber them for canonical output.
+        module->renumberMetadataForAssembly();
+#endif
         module->print(fos, nullptr);
     }
     return true;
