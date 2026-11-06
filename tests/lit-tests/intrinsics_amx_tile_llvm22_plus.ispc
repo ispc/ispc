@@ -31,13 +31,13 @@
 // CHECK_DMR_SUCCESS: call void @llvm.x86.tilestored64
 // CHECK_DMR_SUCCESS: call void @llvm.x86.tilerelease
 
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "ldtilecfg" requires feature "amxtile" not supported on "novalake" CPU
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "sttilecfg" requires feature "amxtile" not supported on "novalake" CPU
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "tilezero" requires feature "amxtile" not supported on "novalake" CPU
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "tileloadd64" requires feature "amxtile" not supported on "novalake" CPU
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "tileloaddt164" requires feature "amxtile" not supported on "novalake" CPU
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "tilestored64" requires feature "amxtile" not supported on "novalake" CPU
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "tilerelease" requires feature "amxtile" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.ldtilecfg" requires feature "amxtile" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.sttilecfg" requires feature "amxtile" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.tilezero" requires feature "amxtile" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.tileloadd64" requires feature "amxtile" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.tileloaddt164" requires feature "amxtile" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.tilestored64" requires feature "amxtile" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.tilerelease" requires feature "amxtile" not supported on "novalake" CPU
 
 __attribute__((external_only))
 export void test_amx_tile(uniform int8* uniform config, uniform int8* uniform data) {

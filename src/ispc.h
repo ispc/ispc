@@ -318,8 +318,9 @@ class Target {
     Target(const Target &) = delete;
     Target &operator=(const Target &) = delete;
 
-    /** Check if LLVM intrinsic is supported for the current target. */
-    bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
+    /** Check if LLVM intrinsic is supported for the current target. isTargetIntrinsic is
+        true if the intrinsic is specific to a target (see llvm::Intrinsic::isTargetIntrinsic()). */
+    bool checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
@@ -930,9 +931,6 @@ struct Globals {
         versions are generated, matching the behavior of the external_only
         attribute. */
     bool generateInternalExportFunctions;
-
-    /* If enabled, allows the user to directly call LLVM intrinsics. */
-    bool enableLLVMIntrinsics;
 
     /** Global LLVMContext object */
     llvm::LLVMContext *ctx;
