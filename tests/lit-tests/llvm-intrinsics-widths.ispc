@@ -82,6 +82,26 @@ void blend_store_short(uniform float<4> v, uniform int8 *uniform p, uniform bool
 // CHECK: zext i4 %{{.*}} to i64
 uniform int64 packmask_short(uniform bool<4> m) { return @llvm.ispc.packmask(m); }
 
+// The result has a bit per element, so a mask can have up to 64 elements.
+// CHECK-LABEL: @packmask_64___
+// CHECK: [[PACKED:%.*]] = bitcast <64 x i1> %{{.*}} to i64
+// CHECK: ret i64 [[PACKED]]
+uniform int64 packmask_64(uniform bool<64> m) { return @llvm.ispc.packmask(m); }
+
+// Values of the mask type of the target (UIntMaskType and __mask) are masks
+// of the ISPC intrinsics on all targets.
+// CHECK-LABEL: @select_mask_type___
+// CHECK: select <[[WIDTH]] x i1> %{{.*}}, <[[WIDTH]] x float> %{{.*}}, <[[WIDTH]] x float> %{{.*}}
+float select_mask_type(UIntMaskType m, float a, float b) { return @llvm.ispc.select(m, a, b); }
+
+// CHECK-LABEL: @blend_store_mask_type___
+// CHECK: select <[[WIDTH]] x i1> %{{.*}}, <[[WIDTH]] x float> %{{.*}}, <[[WIDTH]] x float> %{{.*}}
+void blend_store_mask_type(float v, uniform int8 *uniform p, UIntMaskType m) { @llvm.ispc.blend_store(v, p, m); }
+
+// CHECK-LABEL: @packmask_mask___
+// CHECK: bitcast <[[WIDTH]] x i1> %{{.*}} to i[[WIDTH]]
+uniform int64 packmask_mask() { return @llvm.ispc.packmask(__mask); }
+
 // Atomic floating-point operations on short vectors, which are expanded to
 // loops of cmpxchg. Integer operations on short vectors need LLVM 23, see
 // llvm-intrinsics-atomic-vectors.ispc.
