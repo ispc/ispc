@@ -103,6 +103,9 @@ __declspec(safe, cost1) inline uniform unsigned int32 extract(unsigned int32 x, 
 __declspec(safe, cost1) inline uniform double extract(double x, uniform int i);
 __declspec(safe, cost1) inline uniform int64 extract(int64 x, uniform int i);
 __declspec(safe, cost1) inline uniform unsigned int64 extract(unsigned int64 x, uniform int i);
+template <typename T> __declspec(safe, cost1) inline uniform T *uniform extract(uniform T *varying x, uniform int i) {
+    return (uniform T * uniform) extract((int64)x, i);
+}
 
 // x[i] = v
 __declspec(safe, cost1) inline float insert(float x, uniform int i, uniform float v);
@@ -117,6 +120,10 @@ __declspec(safe, cost1) inline unsigned int32 insert(unsigned int32 x, uniform i
 __declspec(safe, cost1) inline double insert(double x, uniform int i, uniform double v);
 __declspec(safe, cost1) inline int64 insert(int64 x, uniform int i, uniform int64 v);
 __declspec(safe, cost1) inline unsigned int64 insert(unsigned int64 x, uniform int i, uniform unsigned int64 v);
+template <typename T>
+__declspec(safe, cost1) inline uniform T *varying insert(uniform T *varying x, uniform int i, uniform T *uniform v) {
+    return (uniform T * varying) insert((int64)x, i, (uniform int64)v);
+}
 
 __declspec(safe, cost1) inline uniform int32 sign_extend(uniform bool v);
 __declspec(safe, cost1) inline int32 sign_extend(bool v);

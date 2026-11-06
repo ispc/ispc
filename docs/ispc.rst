@@ -6881,6 +6881,7 @@ element of it as a single ``uniform`` value.
     uniform float16 extract(float16 x, uniform int i)
     uniform float extract(float x, uniform int i)
     uniform double extract(double x, uniform int i)
+    template <typename T> uniform T * uniform extract(uniform T * varying x, uniform int i)
 
 Similarly, ``insert`` returns a new value
 where the ``i``th element of ``x`` has been replaced with the value ``v``.
@@ -6899,6 +6900,7 @@ where the ``i``th element of ``x`` has been replaced with the value ``v``.
     float16 insert(float16 x, uniform int i, uniform float16 v)
     float insert(float x, uniform int i, uniform float v)
     double insert(double x, uniform int i, uniform double v)
+    template <typename T> uniform T * varying insert(uniform T * varying x, uniform int i, uniform T * uniform v)
 
 
 Reductions
