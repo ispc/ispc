@@ -15,10 +15,6 @@ if (-not $env:LLVM_REPO) { $env:LLVM_REPO = "https://github.com/ispc/ispc.depend
 if (-not $env:LLVM_VERSION) { $env:LLVM_VERSION = "23.1" }
 if (-not $env:LLVM_TAR) { $env:LLVM_TAR = "llvm-23.1.2-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z" }
 if (-not $env:LLVM_HOME) { $env:LLVM_HOME = "C:\\projects\\llvm" }
-if (-not $env:CROSS_TOOLS_GNUWIN32) {
-  $env:CROSS_TOOLS_GNUWIN32 = "C:\\projects\\cross\\gnuwin32"
-  echo "CROSS_TOOLS_GNUWIN32=$env:CROSS_TOOLS_GNUWIN32" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-}
 if (-not $env:BUILD_TYPE) {
   $env:BUILD_TYPE = "Release"
   echo "BUILD_TYPE=$env:BUILD_TYPE" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

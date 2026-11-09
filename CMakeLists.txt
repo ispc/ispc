@@ -226,8 +226,6 @@ if (APPLE)
     endif()
 endif()
 
-set(ISPC_MACOS_ARM_TARGET ${ISPC_MACOS_TARGET})
-
 # If Xe target is enabled, generate build targets for Xe examples and ISPCRT on Linux
 if (XE_ENABLED)
     option(ISPC_INCLUDE_XE_EXAMPLES "Generate build targets for the ISPC Xe examples" ON)

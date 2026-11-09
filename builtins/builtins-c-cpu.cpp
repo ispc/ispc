@@ -175,7 +175,7 @@ extern "C" int __num_cores() { return 1; }
 #else // WASM
 
 extern "C" int __num_cores() {
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#ifdef _MSC_VER
     // This is quite a hack.  Including all of windows.h to get this definition
     // pulls in a bunch of stuff that leads to undefined symbols at link time.
     // So we don't #include <windows.h> but instead have the equivalent declarations

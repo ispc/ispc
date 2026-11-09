@@ -206,7 +206,6 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\ispc-xe ^
             -DISPC_INCLUDE_BENCHMARKS=ON ^
             -DEXPLICIT_ENV_PATH=OFF ^
-            -DGNUWIN32=%CROSS_TOOLS_GNUWIN32% ^
             -DISPC_CROSS=ON
           cmake --build build
         ) else if "${{ inputs.enable_lto }}" == "true" (
@@ -215,8 +214,7 @@ jobs:
             -DLTO=ON ^
             -DXE_DEPS=OFF ^
             -DPREBUILT_STAGE2_PATH=%LLVM_HOME%\bin-%LLVM_VERSION% ^
-            -DEXPLICIT_ENV_PATH=OFF ^
-            -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
+            -DEXPLICIT_ENV_PATH=OFF
           cmake --build build
         ) else (
           if "${{ inputs.enable_cross }}" == "true" (

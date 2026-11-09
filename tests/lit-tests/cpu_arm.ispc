@@ -20,8 +20,7 @@
 // There are a few exceptions though.
 // We do not support ARM targets on Windows.
 // REQUIRES: !WINDOWS_HOST
-// Not every ISPC build on macOS supports ARM targets.
-// They are supported only if macOS SDK supports them.
+// ARM builtins must be enabled for the macOS target on macOS hosts.
 // REQUIRES: !MACOS_HOST || MACOS_ARM_ENABLED
 
 uniform int i;

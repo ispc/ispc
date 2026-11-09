@@ -31,7 +31,7 @@ check_cache_var_declaration(L0_URL "Level Zero url")
 check_cache_var_declaration(L0_TAG "Level Zero url")
 check_cache_var_declaration(ISPC_CORPUS_URL "ispc-corpus url")
 
-set(GNUWIN32 "c:/gnuwin32" CACHE STRING "Set path to gnuwin32 root dir (Windows only)")
+set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Optional directory containing shell tools for LLVM tests on Windows")
 set(CCACHE_VERSION "4.8.2" CACHE STRING "ccache version ")
 set(CCACHE_DIR "default" CACHE STRING "ccache cache directory")
 set(PREBUILT_STAGE1 "NO" CACHE STRING "Provide pre-built stage1 archive to skip stage1 jobs")
@@ -202,8 +202,6 @@ if (APPLE)
 endif()
 
 
-string(APPEND LIT_TOOLS_DIR ${GNUWIN32} "/bin")
-
 unset(LLVM_TAG)
 unset(LLVM_VERSION_DOTTED)
 string(REPLACE "." "_" LLVM_VERSION "${LLVM_VERSION}")
@@ -309,8 +307,7 @@ message(STATUS "SPIRV_TRANSLATOR_URL is ${SPIRV_TRANSLATOR_URL}")
 message(STATUS "SPIRV_TRANSLATOR_SHA is ${SPIRV_TRANSLATOR_SHA}")
 message(STATUS "L0_URL is ${L0_URL}")
 message(STATUS "L0_TAG is ${L0_TAG}")
-message(STATUS "GNUWIN32 is ${GNUWIN32}")
-message(STATUS "LIT_TOOLS_DIR is ${LIT_TOOLS_DIR}")
+message(STATUS "LLVM_LIT_TOOLS_DIR is ${LLVM_LIT_TOOLS_DIR}")
 message(STATUS "ISPC_CORPUS_URL is ${ISPC_CORPUS_URL}")
 message(STATUS "CCACHE_VERSION is ${CCACHE_VERSION}")
 message(STATUS "CCACHE_DIR is ${CCACHE_DIR}")
@@ -599,9 +596,9 @@ list(APPEND LLVM_COMMON_CMAKE_ARGS
     -DLLVM_INSTALL_BINUTILS_SYMLINKS=ON
     )
 
-if (WIN32)
+if (WIN32 AND LLVM_LIT_TOOLS_DIR)
     list(APPEND LLVM_COMMON_CMAKE_ARGS
-        -DLLVM_LIT_TOOLS_DIR=${LIT_TOOLS_DIR}
+        -DLLVM_LIT_TOOLS_DIR=${LLVM_LIT_TOOLS_DIR}
         )
 endif()
 if (APPLE)

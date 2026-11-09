@@ -20,7 +20,8 @@ llvm-config --version
 cp -R "$1" "$HOME/ispc"
 cd "$HOME/ispc"
 
-cmake -B build -G Ninja -DARM32_ENABLED=OFF
+# Cover both ARM32 and AArch64 builtins without target C library headers.
+cmake -B build -G Ninja -DARM32_ENABLED=ON
 cmake --build build -j"$(nproc)"
 
 bash -e .github/workflows/scripts/check-ispc.sh

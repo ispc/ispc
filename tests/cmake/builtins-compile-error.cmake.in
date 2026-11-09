@@ -3,8 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Compile an intentionally invalid source using the production custom commands.
-# A compiler | llvm-as pipeline hides the compiler failure and creates empty bitcode.
+# Compile intentionally invalid C and m4 sources using the production custom commands.
+# Piping into llvm-as hides compiler and m4 failures and can create empty bitcode.
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -27,7 +27,19 @@ set(LLVM_AS_EXECUTABLE [==[@LLVM_AS_EXECUTABLE@]==])
 set(EMCC_EXECUTABLE [==[@EMCC_EXECUTABLE@]==])
 set(M4_EXECUTABLE [==[@M4_EXECUTABLE@]==])
 set(LLVM_VERSION_NUMBER "@LLVM_VERSION_NUMBER@")
+include([==[@CMAKE_SOURCE_DIR@/cmake/CommonStdlibBuiltins.cmake]==])
 include([==[@CMAKE_SOURCE_DIR@/cmake/GenerateBuiltins.cmake]==])
+# Emit valid LLVM IR before failing, so llvm-as would accept the partial output.
+file(WRITE "${CMAKE_SOURCE_DIR}/builtins/target-sse2-i32x4.ll" [==[
+; Valid empty LLVM module.
+errprint(`ISPC_BUILTINS_M4_ERROR_TEST
+')m4exit(1)
+]==])
+foreach(dependency IN LISTS M4_IMPLICIT_DEPENDENCIES)
+    file(WRITE "${CMAKE_SOURCE_DIR}/${dependency}" "")
+endforeach()
+target_ll_to_cpp(sse2-i32x4 64 unix M4_BUILTIN_CPP_FILES M4_BUILTIN_BC_FILES)
+add_custom_target(m4 DEPENDS ${M4_BUILTIN_BC_FILES})
 if(NOT "@BUILTINS_ERROR_TEST_ARCH@" STREQUAL "")
     builtin_to_cpp(64 linux @BUILTINS_ERROR_TEST_ARCH@)
     add_custom_target(cpu DEPENDS ${COMMON_BUILTIN_BC_FILES})
@@ -54,7 +66,7 @@ if(NOT result EQUAL 0)
     message(FATAL_ERROR "Failed to configure builtin error test:\n${output}\n${error}")
 endif()
 
-set(targets "")
+set(targets m4)
 if(NOT "@BUILTINS_ERROR_TEST_ARCH@" STREQUAL "")
     list(APPEND targets cpu)
 endif()
@@ -67,14 +79,19 @@ foreach(target IN LISTS targets)
             --config "${TEST_CONFIG}" --target ${target}
         RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE error)
     if(result EQUAL 0)
-        message(FATAL_ERROR "${target} builtin build hid the compiler error:\n${output}\n${error}")
+        message(FATAL_ERROR "${target} builtin build hid the intentional error:\n${output}\n${error}")
     endif()
-    if(NOT "${output}\n${error}" MATCHES "ISPC_BUILTINS_COMPILE_ERROR_TEST")
+    if(target STREQUAL "m4")
+        set(diagnostic ISPC_BUILTINS_M4_ERROR_TEST)
+    else()
+        set(diagnostic ISPC_BUILTINS_COMPILE_ERROR_TEST)
+    endif()
+    if(NOT "${output}\n${error}" MATCHES "${diagnostic}")
         message(FATAL_ERROR "${target} builtin build failed without the intentional diagnostic:\n${output}\n${error}")
     endif()
     file(GLOB bitcode "${test_root}/build/*.bc")
     if(bitcode)
-        message(FATAL_ERROR "${target} builtin build left bitcode after the compiler error: ${bitcode}")
+        message(FATAL_ERROR "${target} builtin build left bitcode after the intentional error: ${bitcode}")
     endif()
-    message(STATUS "${target} builtin compiler error propagated without creating bitcode")
+    message(STATUS "${target} builtin error propagated without creating bitcode")
 endforeach()
