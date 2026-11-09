@@ -8050,24 +8050,49 @@ static inline varying int32 __dot_i16(varying uint32 v, uniform int i) {
     return (int32)((int16)((v >> (16 * i)) & 0xFFFF));
 }
 
-// Sums of the four products of the bytes of a and b. Each sum is at most 4 * 255 * 255 in magnitude, so it is
-// exact in int32, and the unsigned sum can be converted to uint32. The helpers are separate instead of taking
-// signedness flags, because flags are not folded at -O0.
+// Exact sums of the four products of the bytes of a and b, without acc. Each sum is at most 4 * 255 * 255 in
+// magnitude, so it fits in int32, and the unsigned sum can be converted to uint32. The callers add acc last: the
+// _sat forms must saturate the exact sum once, and the plain forms keep the dot latency off the accumulator chain.
+// Each sum comes from the native instruction of the same signedness if the target has one, else from a native
+// instruction of another signedness, else from emulation. Flipping the sign bit of a byte turns the signed value v
+// into the unsigned value v + 128, and the unsigned value u into the signed value u - 128. The helpers are separate
+// instead of taking signedness flags, because flags are not folded at -O0.
 static inline varying int32 __dot4_u8i8(varying uint32 a, varying uint32 b) {
-    return __dot_u8(a, 0) * __dot_i8(b, 0) + __dot_u8(a, 1) * __dot_i8(b, 1) + __dot_u8(a, 2) * __dot_i8(b, 2) +
-           __dot_u8(a, 3) * __dot_i8(b, 3);
+    if (__have_intel_vnni || __have_arm_i8mm) {
+        return __dot4add_u8i8packed(a, b, 0);
+    } else if (__have_arm_dot_product) {
+        // From s8 x s8 (sdot): a * b = (a - 128) * b + 128 * b, where 0x80 read as signed is -128.
+        return __dot4add_i8i8packed(a ^ 0x80808080, b, 0) - __dot4add_i8i8packed(0x80808080, b, 0);
+    } else {
+        return __dot_u8(a, 0) * __dot_i8(b, 0) + __dot_u8(a, 1) * __dot_i8(b, 1) + __dot_u8(a, 2) * __dot_i8(b, 2) +
+               __dot_u8(a, 3) * __dot_i8(b, 3);
+    }
 }
 static inline varying int32 __dot4_u8u8(varying uint32 a, varying uint32 b) {
-    return __dot_u8(a, 0) * __dot_u8(b, 0) + __dot_u8(a, 1) * __dot_u8(b, 1) + __dot_u8(a, 2) * __dot_u8(b, 2) +
-           __dot_u8(a, 3) * __dot_u8(b, 3);
+    if (__have_arm_dot_product || __have_intel_vnni_int8) {
+        return (int32)__dot4add_u8u8packed(a, b, 0);
+    } else if (__have_intel_vnni) {
+        // From u8 x s8 (vpdpbusd): a * b = a * (b - 128) + 128 * a, where 0x80 read as signed is -128.
+        return __dot4add_u8i8packed(a, b ^ 0x80808080, 0) - __dot4add_u8i8packed(a, 0x80808080, 0);
+    } else {
+        return __dot_u8(a, 0) * __dot_u8(b, 0) + __dot_u8(a, 1) * __dot_u8(b, 1) + __dot_u8(a, 2) * __dot_u8(b, 2) +
+               __dot_u8(a, 3) * __dot_u8(b, 3);
+    }
 }
-// The products are int32 although s8 x s8 fits in int16: with LLVM 21 on Alder Lake, the int32 form (pmulld)
-// measured faster than int16 products (pmullw plus packing) on AVX2, though slower on SSE4.2. Building this sum
-// from the u8 x s8 sum, which maps to pmaddwd, measured only slightly faster on x86 and slower in throughput for
-// the _sat form, and it takes many more instructions on ARM, so it is not done.
+// The emulated products are int32 although s8 x s8 fits in int16: with LLVM 21 on Alder Lake, the int32 form
+// (pmulld) measured faster than int16 products (pmullw plus packing) on AVX2, though slower on SSE4.2. Building
+// the emulated sum from the emulated u8 x s8 sum, which maps to pmaddwd, measured only slightly faster on x86 and
+// slower in throughput for the _sat form, and it takes many more instructions on ARM, so it is not done.
 static inline varying int32 __dot4_i8i8(varying uint32 a, varying uint32 b) {
-    return __dot_i8(a, 0) * __dot_i8(b, 0) + __dot_i8(a, 1) * __dot_i8(b, 1) + __dot_i8(a, 2) * __dot_i8(b, 2) +
-           __dot_i8(a, 3) * __dot_i8(b, 3);
+    if (__have_arm_dot_product || __have_intel_vnni_int8) {
+        return __dot4add_i8i8packed(a, b, 0);
+    } else if (__have_intel_vnni) {
+        // From u8 x s8 (vpdpbusd): a * b = (a + 128) * b - 128 * b.
+        return __dot4add_u8i8packed(a ^ 0x80808080, b, 0) - __dot4add_u8i8packed(0x80808080, b, 0);
+    } else {
+        return __dot_i8(a, 0) * __dot_i8(b, 0) + __dot_i8(a, 1) * __dot_i8(b, 1) + __dot_i8(a, 2) * __dot_i8(b, 2) +
+               __dot_i8(a, 3) * __dot_i8(b, 3);
+    }
 }
 
 // Product of the 16-bit halves i of a and b, with the halves read as signed or unsigned. The signed products fit
@@ -8099,6 +8124,17 @@ static inline varying int32 __dot_add2_sat(varying int32 acc, varying int32 p1, 
     }
     return result;
 }
+
+// u16 x s16 from s16 x s16 (vpdpwssd), modulo 2^32: an unsigned 16-bit value is its signed reading plus 65536
+// times its top bit h, so a * b = signed(a) * b + 65536 * h * b. Only the plain form uses it: the exact u16 x s16
+// sum does not fit in int32, so the _sat form cannot be built this way and is emulated.
+static inline varying int32 __dot2_u16i16_from_i16i16(varying uint32 a, varying uint32 b) {
+    uint32 ha = (a >> 15) & 0x00010001;
+    return (int32)((uint32)__dot2add_i16i16packed(a, b, 0) + ((uint32)__dot2add_i16i16packed(ha, b, 0) << 16));
+}
+
+// dot2add_u16u16packed could also be built from three vpdpwssd, but that was not faster than its emulation, so it
+// is not.
 
 // Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
@@ -8226,6 +8262,8 @@ __declspec(safe) static inline varying int32 dot2add_u16i16packed(varying uint32
                                                                   varying int32 acc) {
     if (__have_intel_vnni_int16) {
         return __dot2add_u16i16packed(a, b, acc);
+    } else if (__have_intel_vnni) {
+        return __dot_wrap_add(acc, __dot2_u16i16_from_i16i16(a, b));
     } else {
         return __dot_wrap_add(__dot_wrap_add(acc, __dot_mul_u16i16(a, b, 1)), __dot_mul_u16i16(a, b, 0));
     }
