@@ -6490,20 +6490,23 @@ Dot product
 -----------
 
 ISPC supports dot product operations for both unsigned and signed int8 and int16 data types,
-utilizing the AVX-VNNI, AVX512-VNNI, and AARCH64 instruction sets. The ISPC targets that
-include native dot product instruction support are ``avx2vnni-i32x*``, ``avx512icl-x*``,
-``avx512spr-x*`` and newer targets on x86, as well as ``neon-i32x*`` on ARM hardware with
-native dot product capabilities.
+utilizing the AVX-VNNI, AVX512-VNNI, AVX10.2 and Arm dot product instruction sets. The ISPC targets
+that include native dot product instruction support are ``avx2vnni-i32x*``, ``avx512icl-x*``,
+``avx512spr-x*`` and newer targets on x86, as well as the ``neon-*`` targets on ARM when the CPU
+they are compiled for has the dot product extension. That is the CPU given with ``--cpu``, or the
+default CPU when ``--cpu`` is not given. The choice is made at compile time, so the native
+instructions are used only if the selected target or CPU has them.
 
-Please note that not all combinations of signed and unsigned data types are supported on these
-targets. For instance, some versions of ARMv8 natively supports only signed/signed and
-unsigned/unsigned int8 dot product operations, while AVX2-VNNI and AVX512-VNNI provide support
-solely for mixed-sign int8 operations.
+Not all combinations of signed and unsigned data types are supported natively on these targets.
+AVX-VNNI and AVX512-VNNI provide the mixed-sign int8 forms and the signed int16 forms, and the
+AVX10.2 targets provide all of them. On ARM, the dot product extension provides the plain
+signed/signed and unsigned/unsigned int8 forms, and the I8MM extension adds the plain mixed-sign
+int8 form.
 
-If the selected target or platform lacks native dot product support, these operations are emulated.
-Emulated operations return the same results as the native instructions: the products are exact, the
-plain forms wrap around on overflow, and the ``_sat`` forms saturate the exact sum of ``acc`` and all
-products once.
+ISPC builds some of the forms that are not native from the native forms the target has, and
+emulates the others with vector integer arithmetic. Either way, the result is the same as the
+native instruction would return: the products are exact, the plain forms wrap around on overflow,
+and the ``_sat`` forms saturate the exact sum of ``acc`` and all products once.
 
 Generic targets always use the emulated operations. On ARM, they do not define
 ``ISPC_TARGET_HAS_ARM_DOT_PRODUCT`` or ``ISPC_TARGET_HAS_ARM_I8MM``, even when ``--cpu`` selects a

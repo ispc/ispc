@@ -8100,12 +8100,44 @@ static inline varying int32 __dot2_sat_add(varying int32 acc, varying int32 p1, 
     return result;
 }
 
+// The helpers below build a dot product from a native one with other signedness and return the sum of products.
+// The 8-bit sums are exact. The callers add acc last, because passing it through the dot instructions would put
+// their latency on the accumulator chain. Flipping the sign bit of a byte turns the signed value v into the
+// unsigned value v + 128, and the unsigned value u into the signed value u - 128.
+
+// s8 x s8 from u8 x s8 (vpdpbusd): a * b = (a + 128) * b - 128 * b.
+static inline varying int32 __dot4_i8i8_from_u8i8(varying uint32 a, varying uint32 b) {
+    return __dot4add_u8i8packed(a ^ 0x80808080, b, 0) - __dot4add_u8i8packed(0x80808080, b, 0);
+}
+
+// u8 x s8 from s8 x s8 (sdot): a * b = (a - 128) * b + 128 * b, where 0x80 read as signed is -128.
+static inline varying int32 __dot4_u8i8_from_i8i8(varying uint32 a, varying uint32 b) {
+    return __dot4add_i8i8packed(a ^ 0x80808080, b, 0) - __dot4add_i8i8packed(0x80808080, b, 0);
+}
+
+// u8 x u8 from u8 x s8 (vpdpbusd): a * b = a * (b - 128) + 128 * a, where 0x80 read as signed is -128.
+static inline varying uint32 __dot4_u8u8_from_u8i8(varying uint32 a, varying uint32 b) {
+    return (uint32)(__dot4add_u8i8packed(a, b ^ 0x80808080, 0) - __dot4add_u8i8packed(a, 0x80808080, 0));
+}
+
+// dot2add_u16u16packed could be built from three vpdpwssd the same way, but that was not faster than its
+// emulation, so it is not.
+
+// u16 x s16 from s16 x s16 (vpdpwssd), modulo 2^32: an unsigned 16-bit value is its signed reading plus 65536
+// times its top bit h, so a * b = signed(a) * b + 65536 * h * b.
+static inline varying int32 __dot2_u16i16_from_i16i16(varying uint32 a, varying uint32 b) {
+    uint32 ha = (a >> 15) & 0x00010001;
+    return (int32)((uint32)__dot2add_i16i16packed(a, b, 0) + ((uint32)__dot2add_i16i16packed(ha, b, 0) << 16));
+}
+
 // Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
     if (__have_intel_vnni || __have_arm_i8mm) {
         return __dot4add_u8i8packed(a, b, acc);
+    } else if (__have_arm_dot_product) {
+        return __dot_wrap_add(acc, __dot4_u8i8_from_i8i8(a, b));
     } else {
         return __dot_wrap_add(acc, __dot4_u8i8(a, b));
     }
@@ -8118,6 +8150,10 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint
                                                                     varying int32 acc) {
     if (__have_intel_vnni) {
         return __dot4add_u8i8packed_sat(a, b, acc);
+    } else if (__have_arm_i8mm) {
+        return saturating_add(acc, __dot4add_u8i8packed(a, b, 0));
+    } else if (__have_arm_dot_product) {
+        return saturating_add(acc, __dot4_u8i8_from_i8i8(a, b));
     } else {
         return saturating_add(acc, __dot4_u8i8(a, b));
     }
@@ -8130,6 +8166,8 @@ __declspec(safe) static inline varying uint32 dot4add_u8u8packed(varying uint32 
                                                                  varying uint32 acc) {
     if (__have_arm_dot_product || __have_intel_vnni_int8) {
         return __dot4add_u8u8packed(a, b, acc);
+    } else if (__have_intel_vnni) {
+        return acc + __dot4_u8u8_from_u8i8(a, b);
     } else {
         return acc + (uint32)__dot4_u8u8(a, b);
     }
@@ -8142,6 +8180,10 @@ __declspec(safe) static inline varying uint32 dot4add_u8u8packed_sat(varying uin
                                                                      varying uint32 acc) {
     if (__have_intel_vnni_int8) {
         return __dot4add_u8u8packed_sat(a, b, acc);
+    } else if (__have_arm_dot_product) {
+        return saturating_add(acc, __dot4add_u8u8packed(a, b, 0));
+    } else if (__have_intel_vnni) {
+        return saturating_add(acc, __dot4_u8u8_from_u8i8(a, b));
     } else {
         return saturating_add(acc, (uint32)__dot4_u8u8(a, b));
     }
@@ -8153,6 +8195,8 @@ __declspec(safe) static inline varying uint32 dot4add_u8u8packed_sat(varying uin
 __declspec(safe) static inline varying int32 dot4add_i8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
     if (__have_arm_dot_product || __have_intel_vnni_int8) {
         return __dot4add_i8i8packed(a, b, acc);
+    } else if (__have_intel_vnni) {
+        return __dot_wrap_add(acc, __dot4_i8i8_from_u8i8(a, b));
     } else {
         return __dot_wrap_add(acc, __dot4_i8i8(a, b));
     }
@@ -8165,6 +8209,10 @@ __declspec(safe) static inline varying int32 dot4add_i8i8packed_sat(varying uint
                                                                     varying int32 acc) {
     if (__have_intel_vnni_int8) {
         return __dot4add_i8i8packed_sat(a, b, acc);
+    } else if (__have_arm_dot_product) {
+        return saturating_add(acc, __dot4add_i8i8packed(a, b, 0));
+    } else if (__have_intel_vnni) {
+        return saturating_add(acc, __dot4_i8i8_from_u8i8(a, b));
     } else {
         return saturating_add(acc, __dot4_i8i8(a, b));
     }
@@ -8226,6 +8274,8 @@ __declspec(safe) static inline varying int32 dot2add_u16i16packed(varying uint32
                                                                   varying int32 acc) {
     if (__have_intel_vnni_int16) {
         return __dot2add_u16i16packed(a, b, acc);
+    } else if (__have_intel_vnni) {
+        return __dot_wrap_add(acc, __dot2_u16i16_from_i16i16(a, b));
     } else {
         return __dot_wrap_add(__dot_wrap_add(acc, __dot2_u16s16(a, b, 1)), __dot2_u16s16(a, b, 0));
     }
