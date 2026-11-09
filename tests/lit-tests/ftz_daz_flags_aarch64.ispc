@@ -7,8 +7,7 @@
 
 // ARM must be enabled in order to test it.
 // REQUIRES: ARM_ENABLED
-// Not every ISPC build on macOS supports ARM targets.
-// They are supported only if macOS SDK supports them.
+// ARM builtins must be enabled for the macOS target on macOS hosts.
 // REQUIRES: !MACOS_HOST || MACOS_ARM_ENABLED
 
 export uniform float export_test_ftz_daz(){

@@ -86,15 +86,19 @@ function(target_ll_to_cpp target bit os CPP_LIST BC_LIST)
     string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
+    set(ll ${BITCODE_FOLDER}/${name}.ll)
 
     write_target_bitcode_lib(${name} ${target} ${os} ${bit})
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input}
-            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
+        BYPRODUCTS ${ll}
+        # Keep m4's exit status: llvm-as accepts empty input even when m4 fails.
+        COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input} > ${ll}
+        COMMAND ${LLVM_AS_EXECUTABLE} ${ll} -o ${bc}
         DEPENDS ${input} ${M4_IMPLICIT_DEPENDENCIES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        VERBATIM
     )
 
     add_custom_command(
@@ -339,9 +343,10 @@ function(builtin_xe_to_cpp os)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND cat ${input} | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
+        COMMAND ${LLVM_AS_EXECUTABLE} ${input} -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        VERBATIM
         )
 
     add_custom_command(
