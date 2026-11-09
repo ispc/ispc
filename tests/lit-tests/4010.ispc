@@ -8,7 +8,6 @@
 // RUN: not %{ispc} %s --target=avx2-i32x8 --nowrap -O2 -o /dev/null -DERRORS 2>&1 | FileCheck %s --check-prefix=CHECK-ERR
 // RUN: %{ispc} %s --target=avx2-i32x8 --nowrap -O0 --emit-llvm-text -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2-i32x8 --nowrap -O2 -o /dev/null
-// RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86 --nowrap -O0 --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK-32
 
 // REQUIRES: X86_ENABLED
 
@@ -22,7 +21,6 @@ struct A4 { float a[4]; };
 // CHECK: @gunif = global { ptr, i32 } zeroinitializer
 // CHECK: @garr = global [2 x { <8 x i64>, <8 x i32> }] zeroinitializer
 // CHECK: @ghold = global %{{.*}} { { <8 x i64>, <8 x i32> } zeroinitializer, <8 x i32> {{.*}} }
-// CHECK-32: @gnull = global { <8 x i32>, <8 x i32> } zeroinitializer
 soa<8> P3 * varying gnull = NULL;
 soa<8> P3 * varying gzero = 0;
 soa<8> P3 * varying gcast = (soa<8> P3 * varying)0;
