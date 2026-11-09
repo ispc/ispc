@@ -261,9 +261,14 @@ static void lExpandVectorAtomicRMW(llvm::AtomicRMWInst *AI) {
     llvm::PHINode *loaded = builder.CreatePHI(valueType, 2, "loaded");
     loaded->addIncoming(initialValue, BB);
     llvm::Value *newValue = llvm::buildAtomicRMWValue(AI->getOperation(), builder, loaded, AI->getValOperand());
-    llvm::Value *pair = builder.CreateAtomicCmpXchg(
-        P, builder.CreateBitCast(loaded, intType), builder.CreateBitCast(newValue, intType), AI->getAlign(), ordering,
-        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(ordering), AI->getSyncScopeID());
+    // The bitcasts are created in separate statements, as the evaluation order
+    // of function arguments is unspecified and the order of the instructions
+    // would depend on the host compiler.
+    llvm::Value *cmpInt = builder.CreateBitCast(loaded, intType);
+    llvm::Value *newInt = builder.CreateBitCast(newValue, intType);
+    llvm::Value *pair = builder.CreateAtomicCmpXchg(P, cmpInt, newInt, AI->getAlign(), ordering,
+                                                    llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(ordering),
+                                                    AI->getSyncScopeID());
     llvm::Value *success = builder.CreateExtractValue(pair, 1, "success");
     llvm::Value *newLoaded = builder.CreateBitCast(builder.CreateExtractValue(pair, 0), valueType, "newloaded");
     loaded->addIncoming(newLoaded, loopBB);
