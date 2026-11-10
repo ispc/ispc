@@ -244,7 +244,8 @@ static void lSetHeaderSeachOptions(const std::shared_ptr<clang::HeaderSearchOpti
 static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
     // Add #define for current compilation target
     char targetMacro[128];
-    snprintf(targetMacro, sizeof(targetMacro), "ISPC_TARGET_%s", g->target->GetISAString());
+    const char *targetName = ISPCTargetIsGeneric(g->target->getISPCTarget()) ? "generic" : g->target->GetISAString();
+    snprintf(targetMacro, sizeof(targetMacro), "ISPC_TARGET_%s", targetName);
     char *p = targetMacro;
     while (*p) {
         *p = toupper(*p);

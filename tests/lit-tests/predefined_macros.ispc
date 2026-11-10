@@ -4,8 +4,14 @@
 // This test uses empty input with -E -dM to list all predefined macros.
 // We use CHECK-DAG to allow macros to appear in any order.
 
-// RUN: %{ispc} --target=avx2 -o - -E -dM - < /dev/null | FileCheck %s
+// RUN: %{ispc} --target=avx2 -o - -E -dM - < /dev/null | FileCheck %s --implicit-check-not=ISPC_TARGET_GENERIC
+// RUN: %{ispc} %s --arch=x86-64 --target=generic-i32x8 --nostdlib --nowrap -E -dM -o - | FileCheck %s --check-prefix=GENERIC --implicit-check-not=ISPC_TARGET_SSE2
+// RUN: %{ispc} %s --arch=x86-64 --target=generic-i16x16 --nostdlib --nowrap -E -dM -o - | FileCheck %s --check-prefix=GENERIC --implicit-check-not=ISPC_TARGET_SSE2
+// RUN: %{ispc} %s --arch=x86-64 --target=sse2-i32x4 --nostdlib --nowrap -E -dM -o - | FileCheck %s --check-prefix=SSE2 --implicit-check-not=ISPC_TARGET_GENERIC
 // REQUIRES: X86_ENABLED
+
+// GENERIC: #define ISPC_TARGET_GENERIC 1
+// SSE2: #define ISPC_TARGET_SSE2 1
 
 // Basic ISPC macro
 // CHECK-DAG: #define ISPC 1
