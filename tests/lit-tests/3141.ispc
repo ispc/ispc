@@ -6,7 +6,7 @@
 
 // This error is expected because the logic of mapping LLVM function signatures
 // to ISPC ones does not support the struct return type.
-// CHECK: Return type "{ <4 x float>, <4 x float> }" not representable as ISPC type for Intrinsic
+// CHECK: Return type "{ <4 x float>, <4 x float> }" of LLVM intrinsic "llvm.vector.deinterleave2" is not representable as an ISPC type.
 void __deinterleave2(uniform float<8> val) {
     @llvm.vector.deinterleave2(val);
 }

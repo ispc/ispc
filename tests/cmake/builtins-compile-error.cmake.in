@@ -1,0 +1,97 @@
+#
+# Copyright (c) 2026, Intel Corporation
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Compile intentionally invalid C and m4 sources using the production custom commands.
+# Piping into llvm-as hides compiler and m4 failures and can create empty bitcode.
+
+cmake_minimum_required(VERSION 3.15)
+
+set(test_root "@CMAKE_CURRENT_BINARY_DIR@/builtins-compile-error")
+file(REMOVE_RECURSE "${test_root}")
+file(MAKE_DIRECTORY "${test_root}/src/builtins" "${test_root}/src/src")
+file(WRITE "${test_root}/src/builtins/builtins-c-cpu.cpp"
+    "#error ISPC_BUILTINS_COMPILE_ERROR_TEST\n")
+foreach(header array.hpp builtins-c-common.hpp)
+    file(WRITE "${test_root}/src/builtins/${header}" "")
+endforeach()
+file(WRITE "${test_root}/src/src/builtins-info.h" "")
+
+file(WRITE "${test_root}/src/CMakeLists.txt" [=[
+cmake_minimum_required(VERSION 3.15)
+project(builtins_compile_error NONE)
+set(BITCODE_FOLDER "${CMAKE_BINARY_DIR}")
+set(CLANGPP_EXECUTABLE [==[@CLANGPP_EXECUTABLE@]==])
+set(LLVM_AS_EXECUTABLE [==[@LLVM_AS_EXECUTABLE@]==])
+set(EMCC_EXECUTABLE [==[@EMCC_EXECUTABLE@]==])
+set(M4_EXECUTABLE [==[@M4_EXECUTABLE@]==])
+set(LLVM_VERSION_NUMBER "@LLVM_VERSION_NUMBER@")
+include([==[@CMAKE_SOURCE_DIR@/cmake/CommonStdlibBuiltins.cmake]==])
+include([==[@CMAKE_SOURCE_DIR@/cmake/GenerateBuiltins.cmake]==])
+# Emit valid LLVM IR before failing, so llvm-as would accept the partial output.
+file(WRITE "${CMAKE_SOURCE_DIR}/builtins/target-sse2-i32x4.ll" [==[
+; Valid empty LLVM module.
+errprint(`ISPC_BUILTINS_M4_ERROR_TEST
+')m4exit(1)
+]==])
+foreach(dependency IN LISTS M4_IMPLICIT_DEPENDENCIES)
+    file(WRITE "${CMAKE_SOURCE_DIR}/${dependency}" "")
+endforeach()
+target_ll_to_cpp(sse2-i32x4 64 unix M4_BUILTIN_CPP_FILES M4_BUILTIN_BC_FILES)
+add_custom_target(m4 DEPENDS ${M4_BUILTIN_BC_FILES})
+if(NOT "@BUILTINS_ERROR_TEST_ARCH@" STREQUAL "")
+    builtin_to_cpp(64 linux @BUILTINS_ERROR_TEST_ARCH@)
+    add_custom_target(cpu DEPENDS ${COMMON_BUILTIN_BC_FILES})
+endif()
+if("@WASM_ENABLED@")
+    set(COMMON_BUILTIN_BC_FILES "")
+    builtin_wasm_to_cpp(32 web wasm32)
+    add_custom_target(wasm DEPENDS ${COMMON_BUILTIN_BC_FILES})
+endif()
+]=])
+
+set(generator_args -G "@CMAKE_GENERATOR@")
+if(NOT "@CMAKE_GENERATOR_PLATFORM@" STREQUAL "")
+    list(APPEND generator_args -A "@CMAKE_GENERATOR_PLATFORM@")
+endif()
+if(NOT "@CMAKE_GENERATOR_TOOLSET@" STREQUAL "")
+    list(APPEND generator_args -T "@CMAKE_GENERATOR_TOOLSET@")
+endif()
+execute_process(
+    COMMAND "@CMAKE_COMMAND@" -S "${test_root}/src" -B "${test_root}/build"
+        ${generator_args} "-DCMAKE_MAKE_PROGRAM:FILEPATH=@CMAKE_MAKE_PROGRAM@"
+    RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE error)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "Failed to configure builtin error test:\n${output}\n${error}")
+endif()
+
+set(targets m4)
+if(NOT "@BUILTINS_ERROR_TEST_ARCH@" STREQUAL "")
+    list(APPEND targets cpu)
+endif()
+if("@WASM_ENABLED@")
+    list(APPEND targets wasm)
+endif()
+foreach(target IN LISTS targets)
+    execute_process(
+        COMMAND "@CMAKE_COMMAND@" --build "${test_root}/build"
+            --config "${TEST_CONFIG}" --target ${target}
+        RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE error)
+    if(result EQUAL 0)
+        message(FATAL_ERROR "${target} builtin build hid the intentional error:\n${output}\n${error}")
+    endif()
+    if(target STREQUAL "m4")
+        set(diagnostic ISPC_BUILTINS_M4_ERROR_TEST)
+    else()
+        set(diagnostic ISPC_BUILTINS_COMPILE_ERROR_TEST)
+    endif()
+    if(NOT "${output}\n${error}" MATCHES "${diagnostic}")
+        message(FATAL_ERROR "${target} builtin build failed without the intentional diagnostic:\n${output}\n${error}")
+    endif()
+    file(GLOB bitcode "${test_root}/build/*.bc")
+    if(bitcode)
+        message(FATAL_ERROR "${target} builtin build left bitcode after the intentional error: ${bitcode}")
+    endif()
+    message(STATUS "${target} builtin error propagated without creating bitcode")
+endforeach()

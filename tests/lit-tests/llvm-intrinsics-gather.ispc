@@ -34,7 +34,7 @@ unmangled int8 masked_load_i8(int8 *uniform ptr, int8 passthru) {
 
 // CHECK-LABEL: @gather
 // CHECK-DAG: [[PTR_VEC:%.*]] = inttoptr <[[WIDTH]] x [[ADDR_SIZE:(i64|i32)]]> {{%.*}} to <[[WIDTH]] x ptr>
-// CHECK-DAGL %calltmp = tail call <[[WIDTH]] x i32> @llvm.masked.gather.v[[WIDTH]]i32.v[[WIDTH]][[P0]](<[[WIDTH]] x ptr> [[PTR_VEC]], {{(i32 1, )?}}<[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i32> %passthru)
+// CHECK-DAG: %calltmp = tail call <[[WIDTH]] x i32> @llvm.masked.gather.v[[WIDTH]]i32.v[[WIDTH]][[P0]](<[[WIDTH]] x ptr> [[PTR_VEC]], {{(i32 1, )?}}<[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i32> %passthru)
 unmangled int32 gather(uint64 addrs, int32 passthru) {
 #if LLVM_VERSION_MAJOR >= 22
     return @llvm.masked.gather(addrs, __mask, passthru);
@@ -64,6 +64,14 @@ unmangled void scatter(varying uint64 addr, varying int8 val) {
 #endif
 }
 
+// The vector of pointers of other intrinsics is converted the same way.
+// CHECK-LABEL: @vp_scatter
+// CHECK-DAG:  [[VPPTR:%.*]] = inttoptr <[[WIDTH]] x [[ADDR_SIZE]]> {{%.*}} to <[[WIDTH]] x ptr>
+// CHECK-DAG:  tail call void @llvm.vp.scatter.v[[WIDTH]]i32.v[[WIDTH]][[P0]](<[[WIDTH]] x i32> %val, <[[WIDTH]] x ptr> [[VPPTR]], <[[WIDTH]] x i1> {{%.*}}, i32 [[WIDTH]])
+unmangled void vp_scatter(varying uint64 addr, varying int32 val) {
+    @llvm.vp.scatter(val, addr, __mask, (uniform int32)programCount);
+}
+
 // CHECK-LABEL: @reduce_add_float
 // CHECK-DAG:   %calltmp = tail call float @llvm.vector.reduce.fadd.v[[WIDTH]]f32(float -0.000000e+00, <[[WIDTH]] x float> %x)
 ATTRS uniform float reduce_add_float(float x) { return @llvm.vector.reduce.fadd(-0.0f, x); }
@@ -74,7 +82,7 @@ unmangled void masked_compressstore(uniform int8 *uniform ptr, int val, int mask
     @llvm.masked.compressstore(val, ptr, __mask);
 }
 
-// CHECK-LABEL!: @masked_expandload
+// CHECK-LABEL: @masked_expandload
 // CHECK-DAG: %calltmp = tail call <[[WIDTH]] x i64> @llvm.masked.expandload.v[[WIDTH]]i64{{(\.p0)?}}([[PTR]] %from, <[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i64> %passthru)
 unmangled int64 masked_expandload(uniform int8 *uniform from, int64 passthru, UIntMaskType mask) {
     return @llvm.masked.expandload(from, mask, passthru);

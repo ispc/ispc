@@ -5,6 +5,7 @@
 ; CHECK-PRINT-NEXT: Function passes:
 ; CHECK-PRINT-NEXT:   gather-coalesce
 ; CHECK-PRINT-NEXT:   improve-memory-ops
+; CHECK-PRINT-NEXT:   print-memory-access
 ; CHECK-PRINT-NEXT:   instruction-simplify
 ; CHECK-PRINT-NEXT:   intrinsics-opt
 ; CHECK-PRINT-NEXT:   is-compile-time-constant

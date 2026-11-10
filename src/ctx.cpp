@@ -2060,8 +2060,9 @@ llvm::Instruction *FunctionEmitContext::TruncInst(llvm::Value *value, llvm::Type
         return nullptr;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
+    // Arrays of vectors (varying short vectors) are not supported here;
+    // callers must cast them element by element.
+    AssertPos(currentPos, !llvm::isa<llvm::ArrayType>(value->getType()));
     llvm::Instruction *inst = new llvm::TruncInst(
         value, type, name.isTriviallyEmpty() ? llvm::Twine(value->getName()) + "_trunc" : name, bblock);
     AddDebugPos(inst);
@@ -2075,8 +2076,9 @@ llvm::Instruction *FunctionEmitContext::CastInst(llvm::Instruction::CastOps op, 
         return nullptr;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
+    // Arrays of vectors (varying short vectors) are not supported here;
+    // callers must cast them element by element.
+    AssertPos(currentPos, !llvm::isa<llvm::ArrayType>(value->getType()));
     llvm::Instruction *inst = llvm::CastInst::Create(
         op, value, type, name.isTriviallyEmpty() ? llvm::Twine(value->getName()) + "_cast" : name, bblock);
     AddDebugPos(inst);
@@ -2089,8 +2091,9 @@ llvm::Instruction *FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Typ
         return nullptr;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
+    // Arrays of vectors (varying short vectors) are not supported here;
+    // callers must cast them element by element.
+    AssertPos(currentPos, !llvm::isa<llvm::ArrayType>(value->getType()));
     llvm::Instruction *inst = llvm::CastInst::CreateFPCast(
         value, type, name.isTriviallyEmpty() ? llvm::Twine(value->getName()) + "_cast" : name, bblock);
     AddDebugPos(inst);
@@ -2103,8 +2106,9 @@ llvm::Instruction *FunctionEmitContext::SExtInst(llvm::Value *value, llvm::Type 
         return nullptr;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
+    // Arrays of vectors (varying short vectors) are not supported here;
+    // callers must cast them element by element.
+    AssertPos(currentPos, !llvm::isa<llvm::ArrayType>(value->getType()));
     llvm::Instruction *inst = new llvm::SExtInst(
         value, type, name.isTriviallyEmpty() ? llvm::Twine(value->getName()) + "_sext" : name, bblock);
     AddDebugPos(inst);
@@ -2117,8 +2121,9 @@ llvm::Instruction *FunctionEmitContext::ZExtInst(llvm::Value *value, llvm::Type 
         return nullptr;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
+    // Arrays of vectors (varying short vectors) are not supported here;
+    // callers must cast them element by element.
+    AssertPos(currentPos, !llvm::isa<llvm::ArrayType>(value->getType()));
     llvm::Instruction *inst = new llvm::ZExtInst(
         value, type, name.isTriviallyEmpty() ? llvm::Twine(value->getName()) + "_zext" : name, bblock);
     AddDebugPos(inst);

@@ -7,10 +7,10 @@
 
 // REQUIRES: X86_ENABLED && LLVM_22_0+ && !MACOS_HOST
 
-// CHECK_SPR_ERROR: Target specific LLVM intrinsic "tdpfp16ps" requires feature "amxfp16" not supported on "sapphirerapids" CPU
+// CHECK_SPR_ERROR: Target specific LLVM intrinsic "llvm.x86.tdpfp16ps" requires feature "amxfp16" not supported on "sapphirerapids" CPU
 // CHECK_GNR_SUCCESS: call void @llvm.x86.tdpfp16ps
 // CHECK_DMR_SUCCESS: call void @llvm.x86.tdpfp16ps
-// CHECK_NVL_ERROR: Target specific LLVM intrinsic "tdpfp16ps" requires feature "amxfp16" not supported on "novalake" CPU
+// CHECK_NVL_ERROR: Target specific LLVM intrinsic "llvm.x86.tdpfp16ps" requires feature "amxfp16" not supported on "novalake" CPU
 
 __attribute__((external_only))
 export void test_amx_fp16() {

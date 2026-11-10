@@ -4218,6 +4218,51 @@ static const Type *lGetFunctionType(Expr *func) {
     return ftype;
 }
 
+// Returns true if parameter i of the called function is an ImmArg parameter of
+// an LLVM intrinsic, whose argument must be an immediate value.
+static bool lIsImmArgParam(const llvm::Value *callee, unsigned int i) {
+    const llvm::Function *func = llvm::dyn_cast<llvm::Function>(callee);
+    return func != nullptr && func->isIntrinsic() && i < func->arg_size() &&
+           func->hasParamAttribute(i, llvm::Attribute::ImmArg);
+}
+
+// Converts a value passed to or returned from an LLVM intrinsic to the given
+// type. ISPC pads uniform short vectors (see VectorType::getVectorMemoryCount()),
+// so they are shortened to the width of the intrinsic and padded back, and
+// vectors of pointers are passed as varying uint64 values. The types are
+// checked when the intrinsic is declared (see lIsConvertibleIntrinsicType()).
+static llvm::Value *lConvertIntrinsicValue(FunctionEmitContext *ctx, llvm::Value *value, llvm::Type *type) {
+    llvm::Type *valueType = value->getType();
+    if (valueType == type) {
+        return value;
+    }
+    llvm::FixedVectorType *from = llvm::dyn_cast<llvm::FixedVectorType>(valueType);
+    llvm::FixedVectorType *to = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    if (from == nullptr || to == nullptr) {
+        // Only vectors are converted. Other types already match the types of
+        // the intrinsic, except for pointer address spaces on Xe, which
+        // CallInst() handles.
+        return value;
+    }
+    if (from->getElementType() == to->getElementType()) {
+        // Padded lanes are poison, as in the other uniform short vectors.
+        llvm::SmallVector<llvm::Constant *, 16> mask;
+        for (unsigned int i = 0; i < to->getNumElements(); ++i) {
+            mask.push_back(i < from->getNumElements() ? static_cast<llvm::Constant *>(LLVMInt32(i))
+                                                      : llvm::PoisonValue::get(LLVMTypes::Int32Type));
+        }
+        return ctx->ShuffleInst(value, llvm::PoisonValue::get(from), llvm::ConstantVector::get(mask),
+                                "intrinsic_vector");
+    } else if (from->getNumElements() == to->getNumElements() && from->getElementType()->isIntegerTy() &&
+               to->getElementType()->isPointerTy()) {
+        return ctx->IntToPtrInst(value, type, "intrinsic_ptr");
+    } else if (from->getNumElements() == to->getNumElements() && from->getElementType()->isPointerTy() &&
+               to->getElementType()->isIntegerTy()) {
+        return ctx->CastInst(llvm::Instruction::PtrToInt, value, type, "intrinsic_int");
+    }
+    return value;
+}
+
 llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     if (func == nullptr || args == nullptr) {
         return nullptr;
@@ -4273,6 +4318,11 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Do whatever type conversion is needed
         argExpr = TypeConvertExpr(argExpr, paramType, "function call argument");
+        if (argExpr != nullptr && lIsImmArgParam(callee, i)) {
+            // Fold the conversion of a constant (e.g. int to bool), so that
+            // the intrinsic gets an immediate value.
+            argExpr = ::Optimize(argExpr);
+        }
         if (argExpr == nullptr) {
             return nullptr;
         }
@@ -4312,6 +4362,19 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         argVals.push_back(argValue);
     }
 
+    // LLVM requires the arguments of the ImmArg parameters of an intrinsic to
+    // be immediate values.
+    for (unsigned int i = 0; i < argVals.size(); ++i) {
+        if (lIsImmArgParam(callee, i) && !llvm::isa<llvm::ConstantInt>(argVals[i]) &&
+            !llvm::isa<llvm::ConstantFP>(argVals[i])) {
+            const FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
+            std::string name = fse ? fse->GetName() : callee->getName().str();
+            Error(callargs[i]->pos, "Argument %u of LLVM intrinsic \"%s\" must be a compile-time constant.", i + 1,
+                  name.c_str());
+            return nullptr;
+        }
+    }
+
     llvm::Value *retVal = nullptr;
     ctx->SetDebugPos(pos);
     if (ft->IsTask()) {
@@ -4326,14 +4389,20 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         if (isInvoke) {
             return ctx->InvokeSyclInst(callee, ft, argVals);
         } else {
-            // if callee is llvm.masked.gather then cast with inttoptr the first arg to PtrVectorType
-            if (callee->getName().starts_with("llvm.masked.gather")) {
-                argVals[0] = ctx->IntToPtrInst(argVals[0], LLVMTypes::PtrVectorType);
+            const llvm::Function *intrinsic = llvm::dyn_cast<llvm::Function>(callee);
+            if (intrinsic != nullptr && !intrinsic->isIntrinsic()) {
+                intrinsic = nullptr;
             }
-            if (callee->getName().starts_with("llvm.masked.scatter")) {
-                argVals[1] = ctx->IntToPtrInst(argVals[1], LLVMTypes::PtrVectorType);
+            if (intrinsic != nullptr) {
+                llvm::FunctionType *intrinsicType = intrinsic->getFunctionType();
+                for (unsigned int i = 0; i < argVals.size() && i < intrinsicType->getNumParams(); ++i) {
+                    argVals[i] = lConvertIntrinsicValue(ctx, argVals[i], intrinsicType->getParamType(i));
+                }
             }
             retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
+            if (intrinsic != nullptr && retVal != nullptr && !isVoidFunc) {
+                retVal = lConvertIntrinsicValue(ctx, retVal, ft->GetReturnType()->LLVMType(g->ctx));
+            }
         }
     }
 
@@ -4697,7 +4766,7 @@ FunctionCallExpr *ispc::CreateLLVMIntrinsicCall(const std::string &name, ExprLis
         }
     }
 
-    if (hasDependentArgs && g->enableLLVMIntrinsics) {
+    if (hasDependentArgs) {
         // The LLVM types of the arguments are needed to declare the intrinsic,
         // so wait for template instantiation. The name doesn't depend on them,
         // so check it now.
@@ -7314,7 +7383,8 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
-            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
+            // uniform bool is i1 and varying bool is converted to <N x i1> above.
+            cast = exprVal;
             break;
         case AtomicType::TYPE_INT1:
             cast = exprVal;
@@ -7867,10 +7937,10 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             } else {
                 // Uniform -> varying pointer conversion
                 AssertPos(pos, fromType->IsUniformType() && toType->IsVaryingType());
-                if (fromPointerType->IsSlice()) {
+                if (toPointerType->IsSlice()) {
                     // For slice pointers, we need to smear out both the
-                    // pointer and the offset vector
-                    AssertPos(pos, toPointerType->IsSlice());
+                    // pointer and the offset vector. A non-slice source has
+                    // already been converted to a uniform slice pointer above.
                     llvm::Value *ptr = ctx->ExtractInst(value, 0);
                     llvm::Value *offset = ctx->ExtractInst(value, 1);
                     ptr = ctx->PtrToIntInst(ptr);
@@ -7880,6 +7950,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                 } else {
                     // Otherwise we just bitcast it to an int and smear it
                     // out to a vector
+                    AssertPos(pos, !fromPointerType->IsSlice());
                     value = ctx->PtrToIntInst(value);
                     return ctx->SmearUniform(value);
                 }
@@ -8121,6 +8192,17 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             exprVal = ctx->SmearUniform(exprVal);
         }
 
+        if (toPointerType->IsSlice()) {
+            // Build a slice pointer from the converted pointer and a zero
+            // offset, as for non-slice to slice pointer casts.
+            llvm::Type *llvmPtrType = toPointerType->GetAsNonSlice()->LLVMType(g->ctx);
+            if (llvmPtrType == nullptr) {
+                return nullptr;
+            }
+            llvm::Value *ptr = ctx->IntToPtrInst(exprVal, llvmPtrType, "int_to_ptr");
+            return ctx->MakeSlicePointer(ptr, toType->IsUniformType() ? LLVMInt32(0) : LLVMInt32Vector(0));
+        }
+
         llvm::Type *llvmToType = toType->LLVMType(g->ctx);
         if (llvmToType == nullptr) {
             return nullptr;
@@ -8270,6 +8352,16 @@ Expr *TypeCastExpr::TypeCheck() {
 
     // ptr -> int type casts
     if (fromPtr != nullptr && toAtomic != nullptr && toAtomic->IsIntType()) {
+        // A slice pointer to a struct, array or short vector doesn't
+        // address a single contiguous element, so it has no meaningful
+        // integer value.
+        if (fromPtr->IsSlice() && !Type::IsBasicType(fromPtr->GetBaseType())) {
+            Error(pos,
+                  "Can't cast from pointer to SOA type \"%s\" to integer type \"%s\". "
+                  "The pointed-to element is not stored contiguously.",
+                  fromType->GetString().c_str(), toType->GetString().c_str());
+            return nullptr;
+        }
         bool safeCast =
             (toAtomic->basicType == AtomicType::TYPE_INT64 || toAtomic->basicType == AtomicType::TYPE_UINT64);
         if (g->target->is32Bit()) {
@@ -8423,29 +8515,54 @@ void TypeCastExpr::Print(Indent &indent) const {
 
 Symbol *TypeCastExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
-static llvm::Constant *lConvertPointerConstant(llvm::Constant *c, const Type *constType) {
-    if (c == nullptr || constType->IsUniformType()) {
-        return c;
-    }
-
-    // Handle conversion to int and then to vector of int or array of int
-    // (for varying and soa types, respectively)
-    llvm::Constant *intPtr =
-        c->getType()->isPointerTy() ? llvm::ConstantExpr::getPtrToInt(c, LLVMTypes::PointerIntType) : c;
+// Smear a uniform constant to a vector or array (for varying and soa types,
+// respectively).
+static llvm::Constant *lSmearConstant(llvm::Constant *c, const Type *constType) {
     Assert(constType->IsVaryingType() || constType->IsSOAType());
     int count = constType->IsVaryingType() ? g->target->getVectorWidth() : constType->GetSOAWidth();
 
     std::vector<llvm::Constant *> smear;
     for (int i = 0; i < count; ++i) {
-        smear.push_back(intPtr);
+        smear.push_back(c);
     }
 
     if (constType->IsVaryingType()) {
         return llvm::ConstantVector::get(smear);
     } else {
-        llvm::ArrayType *at = llvm::ArrayType::get(LLVMTypes::PointerIntType, count);
+        llvm::ArrayType *at = llvm::ArrayType::get(c->getType(), count);
         return llvm::ConstantArray::get(at, smear);
     }
+}
+
+static llvm::Constant *lPtrToIntConstant(llvm::Constant *c) {
+    return c->getType()->isPointerTy() ? llvm::ConstantExpr::getPtrToInt(c, LLVMTypes::PointerIntType) : c;
+}
+
+static llvm::Constant *lConvertPointerConstant(llvm::Constant *c, const Type *constType) {
+    if (c == nullptr || constType->IsUniformType()) {
+        return c;
+    }
+
+    const PointerType *pt = CastType<PointerType>(constType);
+    if (pt != nullptr && pt->IsSlice()) {
+        // A uniform slice pointer is a { pointer, offset } struct: convert
+        // the pointer to an int and smear the pointer and the offset
+        // separately.
+        if (!c->getType()->isStructTy()) {
+            return nullptr;
+        }
+        llvm::StructType *st = llvm::dyn_cast_or_null<llvm::StructType>(constType->LLVMType(g->ctx));
+        if (st == nullptr) {
+            Assert(m->errorCount > 0);
+            return nullptr;
+        }
+        llvm::Constant *ptr = lSmearConstant(lPtrToIntConstant(c->getAggregateElement(0u)), constType);
+        llvm::Constant *offset = lSmearConstant(c->getAggregateElement(1u), constType);
+        return llvm::ConstantStruct::get(st, {ptr, offset});
+    }
+
+    // Convert the pointer to an int and then smear it to a vector or array
+    return lSmearConstant(lPtrToIntConstant(c), constType);
 }
 
 std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constType) const {
@@ -8957,6 +9074,12 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
         llvm::Constant *c = cPair.first;
         return std::pair<llvm::Constant *, bool>(lConvertPointerConstant(c, type), cPair.second);
     }
+    // The address of SOA data is a slice pointer, a { pointer, offset } pair
+    // that the GEP below doesn't compute.
+    const PointerType *exprPtrType = CastType<PointerType>(GetType());
+    if (pt->IsSlice() || (exprPtrType != nullptr && exprPtrType->IsSlice())) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
     llvm::Value *ptr = nullptr;
     if (GetBaseSymbol()) {
         ptr = GetBaseSymbol()->storageInfo ? GetBaseSymbol()->storageInfo->getPointer() : nullptr;
@@ -9104,6 +9227,10 @@ std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) con
     const Type *t = expr ? expr->GetType() : type;
     if (t == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
+
+    if (CastType<ReferenceType>(t) != nullptr) {
+        t = t->GetReferenceTarget();
     }
 
     bool isNotValidForMultiTargetGlobal = false;

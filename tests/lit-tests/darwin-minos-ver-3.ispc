@@ -5,7 +5,7 @@
 // RUN: %{ispc} %s --nostdlib --target-os=ios --arch=aarch64 --emit-llvm-text --nowrap --target=neon-i32x4 --darwin-version-min=15.0 -o - | FileCheck %s --check-prefix=CHECK-IOS-VER
 // RUN: %{ispc} %s --nostdlib --target-os=ios --arch=aarch64 --emit-llvm-text --nowrap --target=neon-i32x4 --darwin-version-min="" -o - | FileCheck %s --check-prefix=CHECK-IOS-VER-UNSET
 
-// REQUIRES: MACOS_HOST && MACOS_ARM_ENABLED && MACOS_IOS_ENABLED
+// REQUIRES: MACOS_HOST && ARM_ENABLED && MACOS_ARM_ENABLED && MACOS_IOS_ENABLED
 
 // CHECK-IOS-DEFAULT: target triple = "arm64-apple-ios11.0"
 // CHECK-IOS-VER: target triple = "arm64-apple-ios15.0"

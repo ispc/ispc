@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025, Intel Corporation
+  Copyright (c) 2024-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -8,6 +8,7 @@
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Transforms/Utils/Local.h>
+#include <llvm/Transforms/Utils/LowerAtomic.h>
 
 #include <numeric>
 
@@ -227,6 +228,56 @@ static llvm::Value *lLowerAtomicRMWIntrinsic(llvm::CallInst *CI) {
     return builder.CreateAtomicRMW(op, P, V, llvm::MaybeAlign(), ordering);
 }
 
+// Expands an atomicrmw of a vector value to a loop of cmpxchg of an integer of
+// the same size. LLVM backends lower an atomicrmw of a vector to such a loop
+// only if the vector is wider than their native atomic operations, and fail
+// to select it otherwise (for example <2 x i32> on x86 and on AArch64 with
+// LSE), so it's expanded for all vectors here.
+static void lExpandVectorAtomicRMW(llvm::AtomicRMWInst *AI) {
+    llvm::BasicBlock *BB = AI->getParent();
+    llvm::Function *F = BB->getParent();
+    llvm::LLVMContext &ctx = F->getContext();
+    llvm::Type *valueType = AI->getType();
+    llvm::Type *intType =
+        llvm::IntegerType::get(ctx, static_cast<unsigned>(valueType->getPrimitiveSizeInBits().getFixedValue()));
+    llvm::Value *P = AI->getPointerOperand();
+    llvm::AtomicOrdering ordering = AI->getOrdering();
+
+    llvm::BasicBlock *exitBB = BB->splitBasicBlock(AI, "atomicrmw.end");
+    llvm::BasicBlock *loopBB = llvm::BasicBlock::Create(ctx, "atomicrmw.start", F, exitBB);
+    // splitBasicBlock() terminates BB with a branch to exitBB, branch to the
+    // loop instead.
+    BB->getTerminator()->eraseFromParent();
+    // The initial value is loaded atomically, as the location may be modified
+    // concurrently, which makes a non-atomic load return undef.
+    llvm::IRBuilder<> builder(BB);
+    builder.SetCurrentDebugLocation(AI->getDebugLoc());
+    llvm::LoadInst *initial = builder.CreateAlignedLoad(intType, P, AI->getAlign());
+    initial->setAtomic(llvm::AtomicOrdering::Monotonic, AI->getSyncScopeID());
+    llvm::Value *initialValue = builder.CreateBitCast(initial, valueType);
+    builder.CreateBr(loopBB);
+
+    builder.SetInsertPoint(loopBB);
+    llvm::PHINode *loaded = builder.CreatePHI(valueType, 2, "loaded");
+    loaded->addIncoming(initialValue, BB);
+    llvm::Value *newValue = llvm::buildAtomicRMWValue(AI->getOperation(), builder, loaded, AI->getValOperand());
+    // The bitcasts are created in separate statements, as the evaluation order
+    // of function arguments is unspecified and the order of the instructions
+    // would depend on the host compiler.
+    llvm::Value *cmpInt = builder.CreateBitCast(loaded, intType);
+    llvm::Value *newInt = builder.CreateBitCast(newValue, intType);
+    llvm::Value *pair = builder.CreateAtomicCmpXchg(P, cmpInt, newInt, AI->getAlign(), ordering,
+                                                    llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(ordering),
+                                                    AI->getSyncScopeID());
+    llvm::Value *success = builder.CreateExtractValue(pair, 1, "success");
+    llvm::Value *newLoaded = builder.CreateBitCast(builder.CreateExtractValue(pair, 0), valueType, "newloaded");
+    loaded->addIncoming(newLoaded, loopBB);
+    builder.CreateCondBr(success, exitBB, loopBB);
+
+    AI->replaceAllUsesWith(newLoaded);
+    AI->eraseFromParent();
+}
+
 static llvm::Value *lLowerCmpXchgIntrinsic(llvm::CallInst *CI) {
     // generate cmpxchg instruction fetching success ordering and failure
     // ordering from intrinsic name
@@ -240,9 +291,9 @@ static llvm::Value *lLowerCmpXchgIntrinsic(llvm::CallInst *CI) {
 
     std::string prefix = CI->getCalledFunction()->getName().str();
     prefix = prefix.substr(0, prefix.find_last_of('.'));
-    std::string successOrdering = prefix.substr(prefix.find_last_of('.') + 1);
-    prefix = prefix.substr(0, prefix.find_last_of('.'));
     std::string failureOrdering = prefix.substr(prefix.find_last_of('.') + 1);
+    prefix = prefix.substr(0, prefix.find_last_of('.'));
+    std::string successOrdering = prefix.substr(prefix.find_last_of('.') + 1);
 
     llvm::AtomicOrdering SO = lSetMemoryOrdering(successOrdering);
     llvm::AtomicOrdering FO = lSetMemoryOrdering(failureOrdering);
@@ -299,7 +350,8 @@ static llvm::Value *lLowerPackMaskIntrinsic(llvm::CallInst *CI) {
     return builder.CreateZExt(packed, llvm::Type::getInt64Ty(builder.getContext()));
 }
 
-static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
+static bool lRunOnBasicBlock(llvm::BasicBlock &BB, std::vector<llvm::AtomicRMWInst *> &vectorAtomics) {
+    bool modified = false;
     for (llvm::BasicBlock::iterator iter = BB.begin(), e = BB.end(); iter != e;) {
         if (llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&*(iter++))) {
             llvm::Function *Callee = CI->getCalledFunction();
@@ -321,6 +373,9 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
                     D = lLowerStreamLoadIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.atomicrmw.")) {
                     D = lLowerAtomicRMWIntrinsic(CI);
+                    if (D->getType()->isVectorTy()) {
+                        vectorAtomics.push_back(llvm::cast<llvm::AtomicRMWInst>(D));
+                    }
                 } else if (Callee->getName().starts_with("llvm.ispc.cmpxchg.")) {
                     D = lLowerCmpXchgIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.select.")) {
@@ -334,27 +389,34 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
                 if (D) {
                     CI->replaceAllUsesWith(D);
                     CI->eraseFromParent();
+                    modified = true;
                 }
             }
         }
     }
-    return false;
+    return modified;
 }
 
 llvm::PreservedAnalyses LowerISPCIntrinsicsPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
     llvm::TimeTraceScope FuncScope("LowerISPCIntrinsicsPass::run", F.getName());
     bool modified = false;
+    std::vector<llvm::AtomicRMWInst *> vectorAtomics;
     for (llvm::BasicBlock &BB : F) {
-        modified |= lRunOnBasicBlock(BB);
+        modified |= lRunOnBasicBlock(BB, vectorAtomics);
+    }
+    // The expansion splits basic blocks, so it's done after the loop above.
+    for (llvm::AtomicRMWInst *AI : vectorAtomics) {
+        lExpandVectorAtomicRMW(AI);
     }
 
-    if (modified) {
-        llvm::PreservedAnalyses PA;
-        PA.preserveSet<llvm::CFGAnalyses>();
-        return PA;
-    } else {
+    if (!modified) {
         return llvm::PreservedAnalyses::all();
     }
+    llvm::PreservedAnalyses PA;
+    if (vectorAtomics.empty()) {
+        PA.preserveSet<llvm::CFGAnalyses>();
+    }
+    return PA;
 }
 
 } // namespace ispc

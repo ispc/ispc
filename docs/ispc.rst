@@ -337,6 +337,13 @@ Standard Library Changes:
   ``double`` denormal (magnitude above about ``4.5e307``) returns ``+-0``
   instead of NaN.
 
+LLVM Intrinsics:
+
+* Calling LLVM intrinsics from ``ispc`` source code is now a supported feature
+  and is always enabled. ``--enable-llvm-intrinsics`` is accepted for
+  compatibility but has no effect, and ``ISPC_LLVM_INTRINSICS_ENABLED`` is
+  always defined. See `LLVM Intrinsic Functions`_ for details.
+
 Updating ISPC Programs For Changes In ISPC 1.32.0
 -------------------------------------------------
 
@@ -1715,7 +1722,8 @@ preprocessor runs:
     - Deprecated alias for ISPC_TARGET_HAS_FP64_SUPPORT, kept for backward compatibility.
   * - ISPC_LLVM_INTRINSICS_ENABLED
     - 1
-    - The macro is defined if LLVM intrinsics support is enabled
+    - The macro is always defined, calling LLVM intrinsics is always enabled
+      (see `LLVM Intrinsic Functions`_)
   * - INT8_MIN, INT16_MIN, INT32_MIN, INT64_MIN
     -
     - Minimum value of signed integer types of the corresponding size
@@ -5248,38 +5256,156 @@ the instances of the set of launched tasks is running.
 LLVM Intrinsic Functions
 ------------------------
 
-``ispc`` has an experimental feature to call LLVM intrinsics directly from
-``ispc`` source code.  It's strongly discouraged to use this feature in production
-code, unless the consequences are well understood.  Specifically:
-
-* Availability and naming of LLVM intrinsics depend on the specific LLVM
-  version used for ``ispc`` build and may change without notice.
-* Only basic verification of availability of target-specific intrinsics
-  on the target CPU is performed. The attempt of using not supported
-  intrinsics may lead to compiler crash.
-
-Using LLVM intrinsics is encouraged for experiments and may be useful in the
-following cases:
-
-* If ``ispc`` fails to generate specific instruction, which is necessary
-  for better performance.
-* If there's no higher level primitives (in standard library or language itself)
-  for some of instructions. For example, this might be the case with new
-  ISA extensions.
-
-If you found the case where the use of LLVM intrinsics is beneficial in your code,
-please let us know by opening an issue in ``ispc`` `bug tracker`_.
-
-To use this feature, ``--enable-llvm-intrinsics`` switch must be passed to ``ispc``.
-The syntax is similar to a normal function call, but the name must start with ``@`` symbol.
-For example:
+``ispc`` programs can call LLVM intrinsics directly. The syntax is similar to
+a normal function call, but the name starts with the ``@`` symbol:
 
 ::
 
-    transpose = @llvm.matrix.transpose.v8f32.i32.i32(matrix, row, column);
+    uniform int bits = @llvm.ctpop(x);
+    float transpose = @llvm.matrix.transpose(matrix, 2, 4);
 
-To detect if this feature is enabled during compile time, check if ``ISPC_LLVM_INTRINSICS_ENABLED``
-macro is defined.
+LLVM intrinsics are useful when ``ispc`` doesn't generate a specific
+instruction that is needed for performance, or when there is no higher level
+primitive in the language or the standard library, for example for new ISA
+extensions (VNNI, AMX and so on). If you find a case where an LLVM intrinsic
+is beneficial in your code, please let us know by opening an issue in the
+``ispc`` `bug tracker`_.
+
+The set of intrinsics, their names and their signatures are defined by the
+LLVM version that ``ispc`` is built with, and may change between ``ispc``
+releases. Code that depends on a specific LLVM version should check the
+``LLVM_VERSION_MAJOR`` and ``LLVM_VERSION_MINOR`` macros:
+
+::
+
+    int8 masked_load(uniform int8 * uniform ptr, int8 passthru) {
+    #if LLVM_VERSION_MAJOR >= 22
+        return @llvm.masked.load(ptr, __mask, passthru);
+    #else
+        // The alignment argument was removed in LLVM 22, 1l is an int32 literal.
+        return @llvm.masked.load(ptr, 1l, __mask, passthru);
+    #endif
+    }
+
+Types of LLVM Intrinsic Arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The types of the arguments are mapped to LLVM types in the same way as for
+any other ``ispc`` function:
+
+* ``uniform`` values of atomic types are LLVM scalars: ``int8``/``uint8`` to
+  ``i8``, ``int16``/``uint16`` to ``i16``, ``int32``/``uint32`` to ``i32``,
+  ``int64``/``uint64`` to ``i64``, ``float16`` to ``half``, ``float`` to
+  ``float``, ``double`` to ``double`` and ``bool`` to ``i1``. LLVM integer
+  types are signless, so signed and unsigned types are passed the same way;
+  the intrinsic itself defines how the bits are interpreted (for example,
+  ``llvm.smax`` and ``llvm.umax``).
+* ``varying`` values are LLVM vectors with the target width, for example
+  ``varying float`` is ``<8 x float>`` on ``avx2-i32x8``. ``varying bool`` is
+  the mask type of the target, which is ``<N x i1>`` on AVX-512 targets and a
+  vector of integers of the target element width on other targets (for
+  example ``<8 x i32>`` on ``avx2-i32x8``).
+* ``uniform`` short vectors are passed as LLVM vectors with their number of
+  elements, for example ``uniform float<4>`` as ``<4 x float>`` and
+  ``uniform double<2>`` as ``<2 x double>``, also when the type of an
+  overloaded intrinsic is deduced from them (``@llvm.fabs`` of a
+  ``uniform float<4>`` calls ``llvm.fabs.v4f32``). In other code ``ispc``
+  pads ``uniform`` short vectors: the number of elements is rounded up to a
+  power of two and to at least 128 bits counted in ``TARGET_ELEMENT_WIDTH``
+  bytes per element. ``ispc`` removes the padding when it calls the intrinsic
+  and adds it back to the result, so the intrinsic works on the elements of the
+  vector only.
+* ``uniform`` pointers are LLVM pointers (``ptr``).
+
+The return type of the call is mapped back to an ``ispc`` type: LLVM scalars
+to ``uniform`` types (integers to signed types), vectors with the target width
+to ``varying`` types, other fixed-width vectors of atomic types to
+``uniform`` short vectors, pointers to ``uniform int8 * uniform`` and
+target-width vectors of pointers to ``varying uint64``. A vector with the
+target width is always mapped to a ``varying`` type, so a ``uniform`` short
+vector with the target width (for example ``uniform float<8>`` on
+``avx2-i32x8``) can't be passed to an intrinsic, and such a result is returned
+as a ``varying`` value. The result can then be converted to the needed
+type, for example to an unsigned type.
+
+Intrinsics with struct, token, metadata or scalable vector parameters or
+results (for example ``llvm.sadd.with.overflow``, the constrained
+floating-point intrinsics or the AArch64 SVE intrinsics) and intrinsics with a
+variable number of arguments can't be called from ``ispc``.
+
+Overloaded LLVM Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Many LLVM intrinsics are overloaded, i.e. they can be used with different
+types. ``ispc`` deduces these types from the types of the arguments and
+declares the intrinsic accordingly, so the name can be written without the type
+suffix. The type suffix in the name is ignored if it's present, so the
+following calls are equivalent and call ``llvm.ctpop.v8i32`` on
+``avx2-i32x8``:
+
+::
+
+    int popcount1(int x) { return @llvm.ctpop(x); }
+    int popcount2(int x) { return @llvm.ctpop.i32(x); }
+
+Omitting the suffix is recommended, especially in function templates, where
+the types of the arguments depend on the template parameters:
+
+::
+
+    template <typename T> T popcount(T x) { return @llvm.ctpop(x); }
+
+    uniform int64 a = popcount<uniform int64>(x); // calls llvm.ctpop.i64
+    varying int16 b = popcount<varying int16>(y); // calls llvm.ctpop.v8i16 on avx2-i32x8
+
+Each overloaded type has to be the type of one of the arguments (including
+the arguments that LLVM declares to have the same type as the result, as in
+``llvm.fshl``). Intrinsics whose overloaded types can't be deduced this way,
+such as ``llvm.vector.interleave2``, can't be called.
+
+An overloaded type is deduced from the first argument that has it. The other
+arguments of the same type are then converted to it like the arguments of any
+other function call, which can truncate them. For example, in
+``@llvm.umin(a, b)`` with ``uniform int8 a`` and ``uniform int32 b``, the
+intrinsic is ``llvm.umin.i8`` and ``b`` is converted to ``int8``. Convert the
+arguments explicitly if a different type is needed.
+
+For intrinsics that use a target-width vector of pointers, such as
+``llvm.masked.gather`` and ``llvm.masked.scatter``, the addresses are passed as
+``varying uint64`` values.
+
+Constant Arguments of LLVM Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some parameters of LLVM intrinsics must be immediate values, for example the
+``is_zero_poison`` flag of ``llvm.ctlz`` or the dimensions of
+``llvm.matrix.transpose``. The arguments of these parameters must be
+compile-time constants: literals, constant expressions, ``const`` variables
+with constant initializers or non-type template parameters.
+
+::
+
+    template <bool ZeroIsPoison> uniform int clz(uniform int x) {
+        return @llvm.ctlz(x, ZeroIsPoison);
+    }
+
+Target Checks of LLVM Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Target-specific intrinsics are checked against the target:
+
+* ``llvm.x86.*`` intrinsics can be called only on x86 targets, and the CPU
+  (set by ``--target`` or ``--cpu``) must support the ISA extension of the
+  intrinsic. For example, ``llvm.x86.avx512.vpdpbusd.512`` requires
+  ``avx512_vnni``, and the AMX intrinsics require the corresponding AMX
+  features.
+* ``llvm.arm.*`` intrinsics can be called only when compiling for 32-bit ARM
+  and ``llvm.aarch64.*`` intrinsics only when compiling for AArch64. The CPU
+  features are not checked for these intrinsics.
+* The intrinsics of other targets can be called only when compiling for that
+  target architecture, for example ``llvm.wasm.*`` for WebAssembly. Intrinsics
+  of targets that ``ispc`` doesn't compile for, such as ``llvm.nvvm.*`` or
+  ``llvm.amdgcn.*``, can't be called.
 
 
 Function Templates

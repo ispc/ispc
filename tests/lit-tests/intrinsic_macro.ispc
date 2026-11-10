@@ -1,10 +1,11 @@
-// RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text -o - | FileCheck %s -check-prefix=CHECK_DISABLED
-// RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text --enable-llvm-intrinsics -o - | FileCheck %s -check-prefix=CHECK_ENABLED
+// Calling LLVM intrinsics is enabled by default and ISPC_LLVM_INTRINSICS_ENABLED
+// is always defined. --enable-llvm-intrinsics is accepted as a no-op.
+// RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text --enable-llvm-intrinsics -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 
-// CHECK_DISABLED-NOT: call float @llvm.sqrt.f32(
-// CHECK_ENABLED: call float @llvm.sqrt.f32(
+// CHECK: call float @llvm.sqrt.f32(
 uniform float foo(uniform float a, uniform int b) {
     uniform float ret = -1;
 #ifdef ISPC_LLVM_INTRINSICS_ENABLED
@@ -12,4 +13,3 @@ uniform float foo(uniform float a, uniform int b) {
 #endif
     return ret;
 }
-

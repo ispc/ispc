@@ -31,7 +31,7 @@ check_cache_var_declaration(L0_URL "Level Zero url")
 check_cache_var_declaration(L0_TAG "Level Zero url")
 check_cache_var_declaration(ISPC_CORPUS_URL "ispc-corpus url")
 
-set(GNUWIN32 "c:/gnuwin32" CACHE STRING "Set path to gnuwin32 root dir (Windows only)")
+set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Optional directory containing shell tools for LLVM tests on Windows")
 set(CCACHE_VERSION "4.8.2" CACHE STRING "ccache version ")
 set(CCACHE_DIR "default" CACHE STRING "ccache cache directory")
 set(PREBUILT_STAGE1 "NO" CACHE STRING "Provide pre-built stage1 archive to skip stage1 jobs")
@@ -44,7 +44,6 @@ set(BUILD_TYPE_LLVM "Release" CACHE STRING "Set the build type for LLVM build")
 set(BUILD_TYPE_SPIRV_TRANSLATOR "Release" CACHE STRING "Set the build type for SPIR-V Translator build")
 set(BUILD_TYPE_VC_INTRINSICS "Release" CACHE STRING "Set the build type for VC Intrinsics build")
 set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
-set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
 set(ISPC_WINDOWS_SDK_PATH "NO" CACHE STRING "Path to Windows SDK. It is needed to ISPC_CROSS=ON on Linux.")
 set(ISPC_WINDOWS_VCTOOLS_PATH "NO" CACHE STRING "Path to Windows VC Tools. It is needed to ISPC_CROSS=ON on Linux.")
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
@@ -196,18 +195,12 @@ if (APPLE)
         set(MACOS_VERSION_MIN 11.0)
     endif()
 
-    if (APPLE AND ISPC_ANDROID_NDK_PATH STREQUAL "NO")
-        message(FATAL_ERROR "You need provide path to ANDROID NDK on macOS via -DISPC_ANDROID_NDK_PATH=..")
-    endif()
-
     if (MACOS_UNIVERSAL_BIN AND CMAKE_OSX_ARCHITECTURES)
         message(WARNING "CMAKE_OSX_ARCHITECTURES value ${CMAKE_OSX_ARCHITECTURES} is "
                         "discarded due to MACOS_UNIVERSAL_BIN is ON")
     endif()
 endif()
 
-
-string(APPEND LIT_TOOLS_DIR ${GNUWIN32} "/bin")
 
 unset(LLVM_TAG)
 unset(LLVM_VERSION_DOTTED)
@@ -314,8 +307,7 @@ message(STATUS "SPIRV_TRANSLATOR_URL is ${SPIRV_TRANSLATOR_URL}")
 message(STATUS "SPIRV_TRANSLATOR_SHA is ${SPIRV_TRANSLATOR_SHA}")
 message(STATUS "L0_URL is ${L0_URL}")
 message(STATUS "L0_TAG is ${L0_TAG}")
-message(STATUS "GNUWIN32 is ${GNUWIN32}")
-message(STATUS "LIT_TOOLS_DIR is ${LIT_TOOLS_DIR}")
+message(STATUS "LLVM_LIT_TOOLS_DIR is ${LLVM_LIT_TOOLS_DIR}")
 message(STATUS "ISPC_CORPUS_URL is ${ISPC_CORPUS_URL}")
 message(STATUS "CCACHE_VERSION is ${CCACHE_VERSION}")
 message(STATUS "CCACHE_DIR is ${CCACHE_DIR}")
@@ -328,7 +320,6 @@ message(STATUS "PREBUILT_XE_STAGE2_PATH is ${PREBUILT_XE_STAGE2_PATH}")
 message(STATUS "EXTERNAL_VERBOSE is ${EXTERNAL_VERBOSE}")
 message(STATUS "EXPLICIT_ENV_PATH is ${EXPLICIT_ENV_PATH}")
 message(STATUS "FULL_STAGE2_LLVM is ${FULL_STAGE2_LLVM}")
-message(STATUS "ISPC_ANDROID_NDK_PATH is ${ISPC_ANDROID_NDK_PATH}")
 message(STATUS "ISPC_WINDOWS_SDK_PATH is ${ISPC_WINDOWS_SDK_PATH}")
 message(STATUS "ISPC_WINDOWS_VCTOOLS_PATH is ${ISPC_WINDOWS_VCTOOLS_PATH}")
 if (ISPC_SIGN_KEY STREQUAL "NO")
@@ -605,9 +596,9 @@ list(APPEND LLVM_COMMON_CMAKE_ARGS
     -DLLVM_INSTALL_BINUTILS_SYMLINKS=ON
     )
 
-if (WIN32)
+if (WIN32 AND LLVM_LIT_TOOLS_DIR)
     list(APPEND LLVM_COMMON_CMAKE_ARGS
-        -DLLVM_LIT_TOOLS_DIR=${LIT_TOOLS_DIR}
+        -DLLVM_LIT_TOOLS_DIR=${LLVM_LIT_TOOLS_DIR}
         )
 endif()
 if (APPLE)
@@ -776,7 +767,6 @@ endif()
 if (WIN32)
     # XPU examples are not buildable on windows, issue: TODO!
     list(APPEND ISPC_COMMON_CMAKE_ARGS
-        -DISPC_GNUWIN32_PATH=${GNUWIN32}
         -DISPC_INCLUDE_EXAMPLES=OFF
         -DISPC_INCLUDE_XE_EXAMPLES=OFF
         )
@@ -795,13 +785,6 @@ if (NOT WIN32 AND ISPC_CROSS)
     )
 endif()
 if (APPLE)
-    # It is needed because of ISPC_CROSS=ON
-    if (ISPC_CROSS)
-        list(APPEND ISPC_COMMON_CMAKE_ARGS
-            -DISPC_ANDROID_NDK_PATH=${ISPC_ANDROID_NDK_PATH}
-            )
-    endif()
-
     # For APPLE explicitly enabled both arch.
     list(APPEND ISPC_COMMON_CMAKE_ARGS
         -DX86_ENABLED=ON

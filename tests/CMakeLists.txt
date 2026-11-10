@@ -29,9 +29,13 @@ list(APPEND LIT_ARGS "-Dxe_enabled=$<IF:$<BOOL:${XE_ENABLED}>,ON,OFF>")
 # ISPC enabled OS.
 list(APPEND LIT_ARGS "-Dwindows_enabled=$<IF:$<BOOL:${ISPC_WINDOWS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dlinux_enabled=$<IF:$<BOOL:${ISPC_LINUX_TARGET}>,ON,OFF>")
+# On Android hosts (Termux) the Linux target uses bionic, see cmake/GenerateBuiltins.cmake.
+list(APPEND LIT_ARGS "-Dandroid_host=$<IF:$<STREQUAL:${CMAKE_SYSTEM_NAME},Android>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dandroid_enabled=$<IF:$<BOOL:${ISPC_ANDROID_TARGET}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dfreebsd_enabled=$<IF:$<BOOL:${ISPC_FREEBSD_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dps_enabled=$<IF:$<BOOL:${ISPC_PS_TARGET}>,ON,OFF>")
-list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
-list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_ARM_TARGET}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<AND:$<BOOL:${ISPC_MACOS_TARGET}>,$<BOOL:${ARM_ENABLED}>>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_TARGET}>,ON,OFF>")
 # FileCheck executable
 list(APPEND LIT_ARGS "-Dfile_check_executable=${FILE_CHECK_EXECUTABLE}")
 # ISPC library is enabled
@@ -45,6 +49,24 @@ endif()
 if(TARGET libispc_shared)
     list(APPEND CHECK_ALL_DEPS libispc_shared)
 endif()
+# Exercise the production C and m4 builtin commands with intentional errors.
+if(X86_ENABLED)
+    set(BUILTINS_ERROR_TEST_ARCH x86)
+elseif(ARM_ENABLED)
+    set(BUILTINS_ERROR_TEST_ARCH arm)
+elseif(RISCV_ENABLED)
+    set(BUILTINS_ERROR_TEST_ARCH riscv)
+elseif(PPC64_ENABLED)
+    set(BUILTINS_ERROR_TEST_ARCH ppc)
+endif()
+configure_file(cmake/builtins-compile-error.cmake.in builtins-compile-error.cmake @ONLY)
+add_custom_target(check-builtins-compile-error
+    COMMAND ${CMAKE_COMMAND} "-DTEST_CONFIG=$<CONFIG>"
+        -P "${CMAKE_CURRENT_BINARY_DIR}/builtins-compile-error.cmake"
+    COMMENT "Checking builtin compiler and m4 error propagation"
+    VERBATIM)
+set_target_properties(check-builtins-compile-error PROPERTIES
+    EXCLUDE_FROM_DEFAULT_BUILD ON FOLDER "Tests")
 add_custom_target(check-all DEPENDS ${CHECK_ALL_DEPS}
     COMMAND ${LIT_COMMAND} ${LIT_ARGS} "${CMAKE_CURRENT_SOURCE_DIR}/lit-tests" "--verbose"
     COMMENT "Running lit tests"
@@ -52,6 +74,7 @@ add_custom_target(check-all DEPENDS ${CHECK_ALL_DEPS}
     )
 set_target_properties(check-all PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
 set_target_properties(check-all PROPERTIES FOLDER "Tests")
+add_dependencies(check-all check-builtins-compile-error)
 
 string(REPLACE ";" " " LIT_ARGS_STR "${LIT_ARGS}")
 string(REPLACE ";" " " LIT_COMMAND_STR "${LIT_COMMAND}")

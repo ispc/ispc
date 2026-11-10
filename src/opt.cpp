@@ -288,15 +288,25 @@ void DebugModulePassManager::commitLoopToFunctionPassManager() {
     m_isLPMOpen = false;
 }
 
+// Returns true if the module calls llvm.matrix.* intrinsics, which have to be
+// lowered by LowerMatrixIntrinsicsPass.
+static bool lUsesMatrixIntrinsics(const llvm::Module *module) {
+    for (const llvm::Function &F : *module) {
+        if (F.isIntrinsic() && F.getName().starts_with("llvm.matrix.") && !F.use_empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ispc::Optimize(llvm::Module *module, int optLevel) {
     if (g->debugPrint) {
         printf("*** Code going into optimization ***\n");
         module->print(llvm::errs(), nullptr);
     }
     DebugModulePassManager optPM(*module, optLevel);
-    if (g->enableLLVMIntrinsics) {
+    if (lUsesMatrixIntrinsics(module)) {
         // Required for matrix intrinsics. This needs to happen before VerifierPass.
-        // TODO : Limit pass to only when llvm.matrix.* intrinsics are used.
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::LowerMatrixIntrinsicsPass(), INIT_OPT_NUMBER); // llvm.matrix
         optPM.commitFunctionToModulePassManager();
@@ -316,7 +326,11 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     simplifyCFGopt.HoistCommonInsts = true;
 
     // SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to the -Oz flag.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // LLVM 24+ reads the inliner thresholds through the LLVMContext,
+    // so getInlineParamsFromOptLevel takes the context.
+    llvm::InlineParams IP = llvm::getInlineParamsFromOptLevel(module->getContext(), optLevel);
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
     // LLVM 23+ removed the SizeOptLevel parameter from getInlineParams.
     // Size optimization is now handled via function attributes (optsize/minsize).
     llvm::InlineParams IP = llvm::getInlineParamsFromOptLevel(optLevel);

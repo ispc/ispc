@@ -48,7 +48,6 @@ env:
                             "avx10.2nvl-x4", "avx10.2nvl-x8", "avx10.2nvl-x16", "avx10.2nvl-x32", "avx10.2nvl-x64"]'
   TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8", "neon-i8x16", "neon-i16x8", "neon-i8x32", "neon-i16x16"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
-  ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
 
 jobs:
   define-flow:

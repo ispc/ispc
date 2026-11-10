@@ -827,6 +827,9 @@ class FunctionSymbolExpr : public Expr {
     FunctionSymbolExpr *Instantiate(TemplateInstantiation &templInst) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
 
+    /** Returns the name of the function as written in the call. */
+    const std::string &GetName() const { return name; }
+
     /** Given the types of the function arguments, in the presence of
         function overloading, this method resolves which actual function
         the arguments match best.  If the argCouldBeNULL parameter is

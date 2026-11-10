@@ -1,41 +1,41 @@
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x32 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i8x32 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i16x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i32x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i32x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i32x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i64x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=sse4.2-i8x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=sse4.2-i16x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx512skx-x32 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i8x32 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i16x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i32x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i32x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i32x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=avx2-i64x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=sse4.2-i8x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O0 --nowrap --no-discard-value-names --target=sse4.2-i16x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
 
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x32 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i8x32 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i16x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i32x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i32x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i32x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i64x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=sse4.2-i8x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=sse4.2-i16x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx512skx-x32 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i8x32 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i16x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i32x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i32x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i32x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=avx2-i64x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=sse4.2-i8x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O1 --nowrap --no-discard-value-names --target=sse4.2-i16x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
 
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x32 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i8x32 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i16x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i32x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i32x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i32x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i64x4 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=sse4.2-i8x16 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
-// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=sse4.2-i16x8 --enable-llvm-intrinsics --debug-phase=11:11 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx512skx-x32 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i8x32 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i16x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i32x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i32x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i32x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=avx2-i64x4 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=sse4.2-i8x16 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
+// RUN: %{ispc} %s -O2 --nowrap --no-discard-value-names --target=sse4.2-i16x8 --enable-llvm-intrinsics --debug-phase=10:10 -o %t.o 2>&1 | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 
@@ -74,6 +74,12 @@ ATTRS uniform double atomicrmw(uniform int8 *uniform ptr, uniform double val) {
 // CHECK-DAG:   %calltmp = call half @llvm.ispc.bitcast.i16.f16(i16 {{%x.*}}, half {{0xH0000|0\.000000e\+00}})
 ATTRS uniform float16 bitcast(uniform int16 x) {
     return @llvm.ispc.bitcast(x, (uniform float16)0);
+}
+
+// CHECK-LABEL: @bitcast_ptr
+// CHECK-DAG:   %calltmp = call [[PTR]] @llvm.ispc.bitcast.p0.p0([[PTR]] {{%p.*}}, [[PTR]] {{%q.*}})
+ATTRS uniform int8 *uniform bitcast_ptr(uniform int8 *uniform p, uniform int8 *uniform q) {
+    return @llvm.ispc.bitcast(p, q);
 }
 
 // CHECK-LABEL: @blend_store

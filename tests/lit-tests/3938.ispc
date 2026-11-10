@@ -1,15 +1,12 @@
 // Check that LLVM intrinsics can be called with template-dependent argument types.
 // The intrinsic declaration is deferred until the template is instantiated.
 
-// RUN: %{ispc} --target=avx2-i32x8 --nowrap --enable-llvm-intrinsics --emit-llvm-text %s -o - 2>&1 | FileCheck %s
-// RUN: not %{ispc} --target=avx2-i32x8 --nowrap -DNO_INSTANCE %s -o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED
-// RUN: not %{ispc} --target=avx2-i32x8 --nowrap --enable-llvm-intrinsics -DNO_INSTANCE -DBAD_NAME %s -o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-NAME
+// RUN: %{ispc} --target=avx2-i32x8 --nowrap --emit-llvm-text %s -o - 2>&1 | FileCheck %s
+// RUN: not %{ispc} --target=avx2-i32x8 --nowrap -DNO_INSTANCE -DBAD_NAME %s -o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-NAME
 
 // REQUIRES: X86_ENABLED
 
 // CHECK-NOT: FATAL ERROR
-// CHECK-DISABLED: Calling LLVM intrinsics from ISPC source code is an experimental feature
-// CHECK-DISABLED-NOT: FATAL ERROR
 
 // Unknown intrinsic names are reported even if the template is never instantiated.
 // CHECK-BAD-NAME: Error: LLVM intrinsic "llvm.typo" not supported.

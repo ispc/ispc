@@ -3250,7 +3250,7 @@ UnmaskedStmt *UnmaskedStmt::Instantiate(TemplateInstantiation &templInst) const 
 ///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
-ReturnStmt::ReturnStmt(Expr *e, SourcePos p) : Stmt(p, ReturnStmtID), expr(e) {}
+ReturnStmt::ReturnStmt(Expr *e, SourcePos p) : Stmt(p, ReturnStmtID), expr(e), hasExpr(e != nullptr) {}
 
 void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) {
@@ -3259,6 +3259,14 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     if (ctx->InForeachLoop()) {
         Error(pos, "\"return\" statement is illegal inside a \"foreach\" loop.");
+        return;
+    }
+
+    if (hasExpr && expr == nullptr && m->errorCount > 0) {
+        // Type checking sets the expression to nullptr after it reports an
+        // error, so don't report "Must provide return value" for it too. If no
+        // error was reported, fall through so that the missing value is still
+        // reported.
         return;
     }
 
@@ -3293,7 +3301,9 @@ int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
 ReturnStmt *ReturnStmt::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
-    return new ReturnStmt(instExpr, pos);
+    ReturnStmt *inst = new ReturnStmt(instExpr, pos);
+    inst->hasExpr = hasExpr;
+    return inst;
 }
 
 std::string ReturnStmt::GetString() const {

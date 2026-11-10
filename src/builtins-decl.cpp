@@ -166,22 +166,15 @@ DECL_BUILTIN_NAME(__prefetch_read_uniform_2);
 DECL_BUILTIN_NAME(__prefetch_read_uniform_3);
 DECL_BUILTIN_NAME(__prefetch_read_uniform_nt);
 DECL_BUILTIN_NAME(__prefetch_read_varying_1);
-DECL_BUILTIN_NAME(__prefetch_read_varying_1_native);
 DECL_BUILTIN_NAME(__prefetch_read_varying_2);
-DECL_BUILTIN_NAME(__prefetch_read_varying_2_native);
 DECL_BUILTIN_NAME(__prefetch_read_varying_3);
-DECL_BUILTIN_NAME(__prefetch_read_varying_3_native);
 DECL_BUILTIN_NAME(__prefetch_read_varying_nt);
-DECL_BUILTIN_NAME(__prefetch_read_varying_nt_native);
 DECL_BUILTIN_NAME(__prefetch_write_uniform_1);
 DECL_BUILTIN_NAME(__prefetch_write_uniform_2);
 DECL_BUILTIN_NAME(__prefetch_write_uniform_3);
 DECL_BUILTIN_NAME(__prefetch_write_varying_1);
-DECL_BUILTIN_NAME(__prefetch_write_varying_1_native);
 DECL_BUILTIN_NAME(__prefetch_write_varying_2);
-DECL_BUILTIN_NAME(__prefetch_write_varying_2_native);
 DECL_BUILTIN_NAME(__prefetch_write_varying_3);
-DECL_BUILTIN_NAME(__prefetch_write_varying_3_native);
 DECL_BUILTIN_NAME(__pseudo_gather32_double);
 DECL_BUILTIN_NAME(__pseudo_gather32_float);
 DECL_BUILTIN_NAME(__pseudo_gather32_half);
@@ -232,19 +225,12 @@ DECL_BUILTIN_NAME(__pseudo_masked_store_i32);
 DECL_BUILTIN_NAME(__pseudo_masked_store_i64);
 DECL_BUILTIN_NAME(__pseudo_masked_store_i8);
 DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_1);
-DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_1_native);
 DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_2);
-DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_2_native);
 DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_3);
-DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_3_native);
 DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_nt);
-DECL_BUILTIN_NAME(__pseudo_prefetch_read_varying_nt_native);
 DECL_BUILTIN_NAME(__pseudo_prefetch_write_varying_1);
-DECL_BUILTIN_NAME(__pseudo_prefetch_write_varying_1_native);
 DECL_BUILTIN_NAME(__pseudo_prefetch_write_varying_2);
-DECL_BUILTIN_NAME(__pseudo_prefetch_write_varying_2_native);
 DECL_BUILTIN_NAME(__pseudo_prefetch_write_varying_3);
-DECL_BUILTIN_NAME(__pseudo_prefetch_write_varying_3_native);
 DECL_BUILTIN_NAME(__pseudo_scatter32_double);
 DECL_BUILTIN_NAME(__pseudo_scatter32_float);
 DECL_BUILTIN_NAME(__pseudo_scatter32_half);
@@ -542,38 +528,24 @@ std::unordered_map<PersistentGroup, std::vector<const char *>> persistentGroups 
         PersistentGroup::PREFETCH_READ,
         {
             __pseudo_prefetch_read_varying_1,
-            __pseudo_prefetch_read_varying_1_native,
             __prefetch_read_varying_1,
-            __prefetch_read_varying_1_native,
             __pseudo_prefetch_read_varying_2,
-            __pseudo_prefetch_read_varying_2_native,
             __prefetch_read_varying_2,
-            __prefetch_read_varying_2_native,
             __pseudo_prefetch_read_varying_3,
-            __pseudo_prefetch_read_varying_3_native,
             __prefetch_read_varying_3,
-            __prefetch_read_varying_3_native,
             __pseudo_prefetch_read_varying_nt,
-            __pseudo_prefetch_read_varying_nt_native,
             __prefetch_read_varying_nt,
-            __prefetch_read_varying_nt_native,
         },
     },
     {
         PersistentGroup::PREFETCH_WRITE,
         {
             __pseudo_prefetch_write_varying_1,
-            __pseudo_prefetch_write_varying_1_native,
             __prefetch_write_varying_1,
-            __prefetch_write_varying_1_native,
             __pseudo_prefetch_write_varying_2,
-            __pseudo_prefetch_write_varying_2_native,
             __prefetch_write_varying_2,
-            __prefetch_write_varying_2_native,
             __pseudo_prefetch_write_varying_3,
-            __pseudo_prefetch_write_varying_3_native,
             __prefetch_write_varying_3,
-            __prefetch_write_varying_3_native,
         },
     },
     {

@@ -318,8 +318,9 @@ class Target {
     Target(const Target &) = delete;
     Target &operator=(const Target &) = delete;
 
-    /** Check if LLVM intrinsic is supported for the current target. */
-    bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
+    /** Check if LLVM intrinsic is supported for the current target. isTargetIntrinsic is
+        true if the intrinsic is specific to a target (see llvm::Intrinsic::isTargetIntrinsic()). */
+    bool checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
@@ -429,8 +430,6 @@ class Target {
     bool hasScatter() const { return m_hasScatter; }
 
     bool useScatter() const;
-
-    bool hasVecPrefetch() const { return m_hasVecPrefetch; }
 
     /** Mask of x86 APX sub-features (Opt::APXFeature bits) enabled by the
         effective LLVM backend configuration for this target. */
@@ -542,9 +541,6 @@ class Target {
 
     /** Indicates whether the target has a native scatter instruction */
     bool m_hasScatter;
-
-    /** Indicates whether the target has hardware instruction for vector prefetch. */
-    bool m_hasVecPrefetch;
 
     /** Mask of disabled APX sub-features (--opt=disable-apx, or all of them
         for a host target without OS APX support). */
@@ -935,9 +931,6 @@ struct Globals {
         versions are generated, matching the behavior of the external_only
         attribute. */
     bool generateInternalExportFunctions;
-
-    /* If enabled, allows the user to directly call LLVM intrinsics. */
-    bool enableLLVMIntrinsics;
 
     /** Global LLVMContext object */
     llvm::LLVMContext *ctx;

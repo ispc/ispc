@@ -162,8 +162,6 @@ endif()
 
 option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ${LLVM_SUPPORTS_ARM})
-# 32-bit ARM builtins are compiled against 32-bit ARM C library headers. Turn this
-# option off on systems that don't provide them, e.g. Termux on Android.
 # ARM32_ENABLED is OFF while ARM_ENABLED is OFF, without changing its cached value.
 include(CMakeDependentOption)
 cmake_dependent_option(ARM32_ENABLED "Enable 32-bit ARM support (requires ARM_ENABLED)" ON "ARM_ENABLED" OFF)
@@ -174,6 +172,7 @@ option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
 option(XE_ENABLED "Enable Intel Xe support" OFF)
 
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
+
 # Default settings for cross compilation
 if (ISPC_CROSS)
     option(ISPC_WINDOWS_TARGET "Build ISPC with windows target support" ON)
@@ -184,46 +183,19 @@ if (ISPC_CROSS)
     option(ISPC_IOS_TARGET "Build ISPC with ios target support" ON)
     option(ISPC_ANDROID_TARGET "Build ISPC with android target support" ON)
     option(ISPC_PS_TARGET "Build ISPC with ps4 and ps5 targets support" ON)
-    # We silently disable some of cross targets. We should probably warn user or issue an error,
-    # but it seems good enough.
+    # If the Windows SDK and CRT are available, enable Windows.
+    if (NOT WIN32 AND (NOT ISPC_WINDOWS_SDK_PATH OR NOT ISPC_WINDOWS_VCTOOLS_PATH))
+        set(ISPC_WINDOWS_TARGET OFF)
+    endif()
     if (WIN32)
         set(ISPC_IOS_TARGET OFF)
-        if ((ISPC_LINUX_TARGET OR ISPC_ANDROID_TARGET OR ISPC_PS_TARGET) AND NOT ISPC_GNUWIN32_PATH)
-            message (FATAL_ERROR "Set ISPC_GNUWIN32_PATH variable for cross compilation to Linux/Android/PS4 e.g. C:/gnuwin32")
-        endif()
-        if (ISPC_MACOS_TARGET AND NOT ISPC_MACOS_SDK_PATH)
-            message (FATAL_ERROR "Set ISPC_MACOS_SDK_PATH variable for cross compilation to MacOS e.g. C:/iusers/MacOSX10.14.sdk")
-        endif()
     elseif (APPLE)
         set(ISPC_MACOS_TARGET ON)
-        # If the Windows SDK and CRT are available, enable Windows
-        if (NOT ISPC_WINDOWS_SDK_PATH OR NOT ISPC_WINDOWS_VCTOOLS_PATH)
-            set(ISPC_WINDOWS_TARGET OFF)
-        endif()
         set(ISPC_PS_TARGET OFF)
         set(ISPC_FREEBSD_TARGET OFF)
-        if ((ISPC_LINUX_TARGET OR ISPC_ANDROID_TARGET) AND NOT ISPC_ANDROID_NDK_PATH)
-            message (FATAL_ERROR "Set ISPC_ANDROID_NDK_PATH variable for cross compilation to Linux/Android e.g. /Users/Shared/android-ndk-r20")
-        endif()
-        if (ISPC_IOS_TARGET AND NOT ISPC_IOS_SDK_PATH)
-            # Use standard iOS SDK location if this is not specified.
-            set(command "xcrun" "--show-sdk-path" "--sdk" "iphoneos")
-            execute_process(COMMAND ${command}
-                OUTPUT_VARIABLE ISPC_IOS_SDK_PATH
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-            message(STATUS "Using iOS SDK path ${ISPC_IOS_SDK_PATH}")
-        endif()
     else()
-        # If the Windows SDK and CRT are available, enable Windows
-        if (NOT ISPC_WINDOWS_SDK_PATH OR NOT ISPC_WINDOWS_VCTOOLS_PATH)
-            set(ISPC_WINDOWS_TARGET OFF)
-        endif()
         set(ISPC_PS_TARGET OFF)
         set(ISPC_IOS_TARGET OFF)
-        if (ISPC_MACOS_TARGET AND NOT ISPC_MACOS_SDK_PATH)
-            message (FATAL_ERROR "Set ISPC_MACOS_SDK_PATH variable for cross compilation to MacOS e.g. /iusers/MacOSX10.14.sdk")
-        endif()
     endif()
 else()
     if (WIN32)
@@ -244,16 +216,6 @@ else()
 endif()
 
 if (APPLE)
-    # Use standard macOS SDK location if this is not specified.
-    if (NOT ISPC_MACOS_SDK_PATH)
-        set(command "xcrun" "--show-sdk-path")
-        execute_process(COMMAND ${command}
-            OUTPUT_VARIABLE ISPC_MACOS_SDK_PATH
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-        message(STATUS "Using macOS SDK path ${ISPC_MACOS_SDK_PATH}")
-    endif()
-
     # Workaround CMake/CPack issue https://gitlab.kitware.com/cmake/cmake/-/issues/24601
     # When llvm toolchain is presented in PATH, llvm-strip is preferred over
     # macOS strip. However, CPack fails to correctly call llvm-strip because it
@@ -261,48 +223,6 @@ if (APPLE)
     # It may be removed later when CMake fixes ambiguity.
     if (${CMAKE_VERSION} VERSION_LESS "3.27.0")
         set(CMAKE_STRIP strip)
-    endif()
-endif()
-
-set(ISPC_MACOS_ARM_TARGET OFF)
-if (ISPC_MACOS_TARGET AND ISPC_MACOS_SDK_PATH)
-    # Get macOS SDK version.
-    # xcrun is known not to work for standalone SDK or in the default environment
-    # on some systems (without explicitly running "xcode-select -s <path>" first).
-    # So we try to get the version from the SDK path first, and then fall back
-    # to looking at the SDK folder name.
-    set(command "xcrun" "--sdk" ${ISPC_MACOS_SDK_PATH} "--show-sdk-version")
-    execute_process(COMMAND ${command}
-        OUTPUT_VARIABLE SDK_VER
-        RESULT_VARIABLE XCRUN_RESULT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-
-    if (NOT XCRUN_RESULT STREQUAL "0")
-        if (IS_SYMLINK ${ISPC_MACOS_SDK_PATH})
-            # Follow symlinks, relative and absolute.
-            file(READ_SYMLINK "${ISPC_MACOS_SDK_PATH}" ISPC_MACOS_SDK_PATH_NEW)
-            if (NOT IS_ABSOLUTE "${ISPC_MACOS_SDK_PATH_NEW}")
-                get_filename_component(ISPC_MACOS_SDK_PATH_DIR "${ISPC_MACOS_SDK_PATH}" DIRECTORY)
-                set(ISPC_MACOS_SDK_PATH_NEW "${ISPC_MACOS_SDK_PATH_DIR}/${ISPC_MACOS_SDK_PATH_NEW}")
-            endif()
-            set(ISPC_MACOS_SDK_PATH "${ISPC_MACOS_SDK_PATH_NEW}")
-        endif()
-
-        string(REGEX MATCH "MacOSX([0-9]*.[0-9]*).sdk" _ ${ISPC_MACOS_SDK_PATH})
-        set(SDK_VER "${CMAKE_MATCH_1}")
-    endif()
-
-    message(STATUS "MacOS_SDK version: ${SDK_VER}")
-
-    if ("${SDK_VER}" STREQUAL "")
-        message(WARNING "MacOS SDK version was not detected, assuming 11.0 or later, enabling ARM support")
-        set(ISPC_MACOS_ARM_TARGET ON)
-    elseif("${SDK_VER}" VERSION_GREATER_EQUAL "11.0")
-        message(STATUS "MacOS_SDK supports ARM (SDK ver >= 11.0)")
-        set(ISPC_MACOS_ARM_TARGET ON)
-    else()
-        message(STATUS "MacOS_SDK does NOT supports ARM (SDK ver < 11.0)")
     endif()
 endif()
 
@@ -591,6 +511,10 @@ list(APPEND OPT_SOURCES
     src/opt/LowerAMXBuiltinsPass.h
     src/opt/MangleOpenCLBuiltins.cpp
     src/opt/MangleOpenCLBuiltins.h
+    src/opt/MemoryAccess.cpp
+    src/opt/MemoryAccess.h
+    src/opt/MemoryOpRegistry.cpp
+    src/opt/MemoryOpRegistry.h
     src/opt/PeepholePass.cpp
     src/opt/PeepholePass.h
     src/opt/RemovePersistentFuncs.cpp
@@ -925,17 +849,26 @@ if (WIN32)
     list(APPEND LINK_LIBRARIES ntdll.lib)
 else()
     run_llvm_config(LLVM_SYSTEM_LIBS "--system-libs")
-    if (LLVM_SYSTEM_LIBS MATCHES "pthread")
-        # ISPC doesn't use pthreads directly, but some LLVM does. Although, it
-        # looks like we do not use LLVM code that depend on pthreads, don't we?
-        find_library(PTHREAD_LIB REQUIRED NAMES pthread)
-        message(STATUS "Link with pthread library ${PTHREAD_LIB}")
-        list(APPEND LINK_LIBRARIES ${PTHREAD_LIB})
-    endif()
-    if (LLVM_SYSTEM_LIBS MATCHES "tinfo" OR LLVM_SYSTEM_LIBS MATCHES "curses")
-        find_library(TINFO_LIB REQUIRED NAMES terminfo tinfo curses ncurses ncursesw)
-        message(STATUS "Link with tinfo library ${TINFO_LIB}")
-        list(APPEND LINK_LIBRARIES ${TINFO_LIB})
+    if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        # On FreeBSD just link against the dependecies
+        str_to_list("${LLVM_SYSTEM_LIBS}" LLVM_DEPS)
+        list(APPEND LINK_LIBRARIES ${LLVM_DEPS})
+    else()
+        if (LLVM_SYSTEM_LIBS MATCHES "pthread")
+            # ISPC doesn't use pthreads directly, but some LLVM does. Although,
+            # it looks like we do not use LLVM code that depend on pthreads,
+            # don't we?
+            find_library(PTHREAD_LIB REQUIRED NAMES pthread)
+            message(STATUS "Link with pthread library ${PTHREAD_LIB}")
+            list(APPEND LINK_LIBRARIES ${PTHREAD_LIB})
+        endif()
+        if (LLVM_SYSTEM_LIBS MATCHES "tinfo" OR
+            LLVM_SYSTEM_LIBS MATCHES "curses")
+            find_library(TINFO_LIB REQUIRED
+                         NAMES terminfo tinfo curses ncurses ncursesw)
+            message(STATUS "Link with tinfo library ${TINFO_LIB}")
+            list(APPEND LINK_LIBRARIES ${TINFO_LIB})
+        endif()
     endif()
 endif()
 
@@ -960,6 +893,9 @@ function(configure_ispc_exe TARGET)
     configure_ispc_obj(${TARGET})
     target_link_options(${TARGET} PRIVATE ${LINK_OPTIONS_PRIVATE})
     target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
+    if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        target_link_directories(${TARGET} PUBLIC "/usr/local/lib")
+    endif()
 endfunction()
 
 # This function configures library target.
@@ -972,6 +908,9 @@ function(configure_ispc_lib TARGET)
         VERSION ${ISPC_VERSION}
         SOVERSION ${ISPC_VERSION_MAJOR}
         WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        target_link_directories(${TARGET} PUBLIC "/usr/local/lib")
+    endif()
 endfunction()
 
 # This function creates and configures an ISPC library target (shared for now)
@@ -1350,7 +1289,7 @@ if (ISPC_PREPARE_PACKAGE)
             endif()
         elseif (UNIX)
             # Add .aarch64 suffix if the package is built on AARCH64 system.
-	    # On Linux we don't build cross packages, so host corresponds to target platform.
+            # On Linux we don't build cross packages, so host corresponds to target platform.
             if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
                 set(ISPC_ARCH_SUFFIX ".aarch64")
             endif()

@@ -1322,9 +1322,6 @@ UNMANGLED CDECL void __prefetch_write_varying_3(varying int64 addr) {
         __prefetch_write_uniform_3((uniform int8 * uniform) p_lane);
     }
 }
-UNMANGLED CDECL void __prefetch_write_varying_3_native(uniform int8 *uniform, uniform int32, varying int32) {
-    __not_supported();
-}
 
 // shuffle
 template <typename T> unmasked varying T __shuffle(varying T v, varying int32 perm) {

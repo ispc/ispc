@@ -2,6 +2,8 @@
 // an unsigned loop induction variable: the offset of the unsigned index is
 // computed with nuw and stays zero extended, so the loop has one 64-bit
 // induction variable and no sign extension (cdqe/movsxd) of a 32-bit one.
+// The stored value is a parameter, not a constant, so that LoopIdiomRecognize
+// does not replace the loop with a memset_pattern16 call on macOS.
 
 // REQUIRES: X86_ENABLED
 
@@ -20,14 +22,14 @@
 
 // ASM-LABEL: fill:
 // ASM-NOT:     {{cdqe|movsxd}}
-// ASM:         vmovups ymmword ptr [{{[a-z0-9]+}} + 4*[[R:[a-z0-9]+]]], ymm0
+// ASM:         vmov{{dqu|ups}} ymmword ptr [{{[a-z0-9]+}} + 4*[[R:[a-z0-9]+]]], ymm0
 // ASM-NEXT:    add [[R]], 8
 // ASM-NEXT:    cmp [[R]], {{[a-z0-9]+}}
 // ASM-NOT:     {{cdqe|movsxd}}
 // ASM:         ret
 
-export void fill(uint32* uniform buffer, uniform int count) {
+export void fill(uint32* uniform buffer, uniform int count, uniform uint32 value) {
     for (uniform uint i = 0; i < count; i += programCount) {
-        buffer[i + programIndex] = 7;
+        buffer[i + programIndex] = value;
     }
 }

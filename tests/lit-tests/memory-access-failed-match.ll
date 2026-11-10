@@ -1,11 +1,11 @@
-; Step 1 of #3990: unsuccessful base/offset matching must leave IR unchanged.
-; SSE4 has no vector prefetch, so this operation cannot be converted. The
-; current matcher constructs an unused offset before rejecting it.
-; Unlike codegen pins, this checks before dead-code cleanup can hide mutation.
+; An operation the pass does not convert must leave the IR unchanged. No
+; target has a vector prefetch instruction, so a varying prefetch is left
+; alone. The matcher used to construct an unused offset vector before
+; rejecting the prefetch; unlike codegen pins, this checks the pass output
+; before dead-code cleanup can hide mutation.
 ;
 ; RUN: %{ispc-opt} --target=sse4-i32x4 --passes=improve-memory-ops %s -o - | FileCheck %s
 ; REQUIRES: X86_ENABLED
-; XFAIL: *
 
 declare void @__pseudo_prefetch_read_varying_1(<4 x i64>, <4 x i32>)
 

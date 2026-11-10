@@ -197,7 +197,13 @@ int main(int argc, char **argv) {
     if (!lAddPass(PM, Passes)) {
         return 1;
     }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // Metadata nodes keep persistent IDs, so renumber them for canonical output as opt does.
+    PM.addModulePass(PrintModulePass(Out.os(), "", /*ShouldPreserveUseListOrder=*/false, /*EmitSummaryIndex=*/false,
+                                     /*ShouldRenumberMetadata=*/true));
+#else
     PM.addModulePass(PrintModulePass(Out.os(), ""));
+#endif
 
     PM.run();
     Out.keep();
