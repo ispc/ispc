@@ -91,6 +91,9 @@ Contents:
 
   + `Basic Command-line Options`_
   + `Selecting The Compilation Target`_
+
+    * `Choosing Targets For Recent x86 CPUs`_
+
   + `Selecting 32 or 64 Bit Addressing`_
   + `Stack smash protection (SSP)`_
   + `The Preprocessor`_
@@ -1624,6 +1627,45 @@ Note that cross-OS compilation is in the experimental stage. We encourage you to
 try it and send us a note with your experiences or to file a bug or feature
 requests with the ``ispc`` `bug tracker`_.
 
+Choosing Targets For Recent x86 CPUs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+======================== ========== ==============================
+CPU                      ``--cpu``  Target selected by ``--cpu``
+======================== ========== ==============================
+AMD Zen 4                znver4     ``avx512icl-x16``
+AMD Zen 5                znver5     ``avx512icl-x16``
+AMD Zen 6 [#]_           znver6     ``avx512icl-x16``
+Intel Sapphire Rapids    spr        ``avx512spr-x16``
+Intel Granite Rapids     gnr        ``avx512gnr-x16``
+Intel Diamond Rapids     dmr        ``avx10.2dmr-x16``
+Intel Nova Lake [#]_     nvl        ``avx10.2nvl-x8``
+======================== ========== ==============================
+
+.. [#] Requires ``ispc`` built with LLVM 23 or newer.
+.. [#] Requires ``ispc`` built with LLVM 22 or newer.
+
+``sapphirerapids``, ``graniterapids``, ``diamondrapids`` and ``novalake`` are
+accepted as synonyms. There is no AMD-specific target: use ``avx512icl`` and
+add ``--cpu`` to tune for the CPU, for example
+``--target=avx512icl-x16 --cpu=znver5``; ``--cpu=znver6`` also enables native
+``float16`` arithmetic. ``--cpu`` must be compatible with
+the target, so ``--target=avx512spr-x16 --cpu=znver5`` is an error.
+
+The gang sizes above are defaults, not performance recommendations; benchmark
+candidate gang sizes such as ``x8`` and ``x16`` on the target hardware.
+
+To cover several of these CPUs in one binary, pass a list of targets (see the
+FAQ entry on multiple instruction sets), for example
+``--target=avx2-i32x8,avx512icl-x16,avx512spr-x16,avx10.2dmr-x16``. In this
+case:
+
+* only one target per ISA family can be used, so
+  ``--target=avx512icl-x8,avx512icl-x16`` is an error;
+* ``--cpu`` cannot be used;
+* the dispatcher checks that the CPU supports APX, but not that the
+  operating system does. Use ``--opt=disable-apx`` if the program may run on
+  an operating system without APX support (see the APX note above).
 
 Selecting 32 or 64 Bit Addressing
 ---------------------------------
