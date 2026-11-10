@@ -274,6 +274,11 @@ of recent changes to the compiler.
 Updating ISPC Programs For Changes In ISPC 1.33.0
 -------------------------------------------------
 
+Predefined Macros:
+
+* Generic targets now define ``ISPC_TARGET_GENERIC`` instead of
+  ``ISPC_TARGET_SSE2``.
+
 Language Changes:
 
 * A forward-declared struct can now be used through pointers, references and
@@ -1674,7 +1679,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Enables detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR, AVX512GNR, AVX10_2DMR, AVX10_2NVL}
+  * - ISPC_TARGET_{GENERIC, NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR, AVX512GNR, AVX10_2DMR, AVX10_2NVL}
     - 1
     - One of these will be set, depending on the compilation target
   * - ISPC_POINTER_SIZE
