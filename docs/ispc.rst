@@ -322,6 +322,21 @@ Linkage Changes:
   translation units no longer causes duplicate symbol errors when linking on
   Windows.
 
+Standard Library Changes:
+
+* On x86 targets, ``rcp()`` and ``rsqrt()`` now handle zero and infinite
+  inputs correctly for ``float``, ``double`` and ``float16``. Results for
+  ``float`` denormals and tiny ``double`` inputs also have corrected signs.
+  The ``float`` changes do not apply with ``--math-lib=fast`` and are not
+  guaranteed with ``--opt=fast-math:aggressive``. ``rcp_fast()`` and
+  ``rsqrt_fast()`` for ``float`` are unchanged.
+
+* Known limitation: ``rsqrt()`` of a negative ``float`` denormal returns
+  ``-inf`` instead of NaN on SSE and AVX2 targets. On targets without a native
+  ``double`` ``rcp()``, ``rcp()`` of a ``double`` whose reciprocal is a
+  ``double`` denormal (magnitude above about ``4.5e307``) returns ``+-0``
+  instead of NaN.
+
 LLVM Intrinsics:
 
 * Calling LLVM intrinsics from ``ispc`` source code is now a supported feature

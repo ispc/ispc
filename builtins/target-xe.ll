@@ -180,6 +180,18 @@ define float @__rsqrt_uniform_float(float %v) nounwind readonly alwaysinline {
   ret float %res
 }
 
+;; Xe keeps a single variant of rcp and rsqrt. The unclamped builtins used by --math-lib=fast are the same
+;; functions.
+define float @__rcp_unclamped_uniform_float(float) nounwind readonly alwaysinline {
+  %res = call float @__rcp_uniform_float(float %0)
+  ret float %res
+}
+
+define float @__rsqrt_unclamped_uniform_float(float) nounwind readonly alwaysinline {
+  %res = call float @__rsqrt_uniform_float(float %0)
+  ret float %res
+}
+
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
   %res = call float @__spirv_ocl_native_rsqrt_DvWIDTH1f(float %0)
   ret float %res
@@ -608,6 +620,16 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind reado
   %three_sub = fsub <WIDTH x float> const_vector(float, 3.), %mult2
   %mult3 = fmul <WIDTH x float> %r, %three_sub
   %res = fmul <WIDTH x float> const_vector(float, 0.5), %mult3
+  ret <WIDTH x float> %res
+}
+
+define <WIDTH x float> @__rcp_unclamped_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %0)
+  ret <WIDTH x float> %res
+}
+
+define <WIDTH x float> @__rsqrt_unclamped_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
+  %res = call <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v)
   ret <WIDTH x float> %res
 }
 

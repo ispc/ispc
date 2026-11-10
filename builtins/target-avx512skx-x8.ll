@@ -1014,7 +1014,26 @@ define <8 x float> @__rcp_fast_varying_float(<8 x float>) nounwind readonly alwa
   %ret = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %0, <8 x float> poison, i8 -1)
   ret <8 x float> %ret
 }
+; The Newton-Raphson step multiplies the estimate by a factor that is about 1. For 0 and Inf inputs the factor
+; is NaN (0 * Inf), which turns an exact estimate into NaN. The factor is clamped from below, so a NaN factor
+; takes the constant and the result is the estimate (scaled by the constant, which is harmless for 0 and Inf).
 define <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinline {
+  %call = call <8 x float> @__rcp_fast_varying_float(<8 x float> %0)
+  ;; do one Newton-Raphson iteration to improve precision
+  ;;  float iv = __rcp_v(v);
+  ;;  return iv * (2. - v * iv);
+  %v_iv = fmul <8 x float> %0, %call
+  %two_minus = fsub <8 x float> <float 2., float 2., float 2., float 2.,
+                                 float 2., float 2., float 2., float 2.>, %v_iv
+  %keep = fcmp ogt <8 x float> %two_minus, <float 0.5, float 0.5, float 0.5, float 0.5,
+                                            float 0.5, float 0.5, float 0.5, float 0.5>
+  %factor = select <8 x i1> %keep, <8 x float> %two_minus, <8 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                                                        float 0.5, float 0.5, float 0.5, float 0.5>
+  %iv_mul = fmul <8 x float> %call,  %factor
+  ret <8 x float> %iv_mul
+}
+; The same step without the clamp, used by --math-lib=fast.
+define <8 x float> @__rcp_unclamped_varying_float(<8 x float>) nounwind readonly alwaysinline {
   %call = call <8 x float> @__rcp_fast_varying_float(<8 x float> %0)
   ;; do one Newton-Raphson iteration to improve precision
   ;;  float iv = __rcp_v(v);
@@ -1044,7 +1063,12 @@ define <8 x double> @__rcp_varying_double(<8 x double>) nounwind readonly always
   %v_iv = fmul <8 x double> %0, %call
   %two_minus = fsub <8 x double> <double 2., double 2., double 2., double 2.,
                                    double 2., double 2., double 2., double 2.>, %v_iv
-  %iv_mul = fmul <8 x double> %call,  %two_minus
+  ; clamp the factor from below, as in __rcp_varying_float, so that 0 * Inf does not give NaN
+  %keep = fcmp ogt <8 x double> %two_minus, <double 0.5, double 0.5, double 0.5, double 0.5,
+                                             double 0.5, double 0.5, double 0.5, double 0.5>
+  %factor = select <8 x i1> %keep, <8 x double> %two_minus, <8 x double> <double 0.5, double 0.5, double 0.5, double 0.5,
+                                                                          double 0.5, double 0.5, double 0.5, double 0.5>
+  %iv_mul = fmul <8 x double> %call,  %factor
   ret <8 x double> %iv_mul
 }
 
@@ -1052,6 +1076,26 @@ rsqrt14_uniform()
 ;; rsqrt float
 declare <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float>,  <8 x float>,  i8) nounwind readnone
 define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
+  %is = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> poison,  i8 -1)
+  ; Newton-Raphson iteration to improve precision, with the factor clamped from below so that a NaN factor
+  ; (0 * Inf, for 0 and Inf inputs) takes the constant and the result is the estimate
+  ;  float is = __rsqrt_v(v);
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul <8 x float> %v,  %is
+  %v_is_is = fmul <8 x float> %v_is,  %is
+  %three_sub = fsub <8 x float> <float 3., float 3., float 3., float 3.,
+                                 float 3., float 3., float 3., float 3.>, %v_is_is
+  %keep = fcmp ogt <8 x float> %three_sub, <float 1., float 1., float 1., float 1.,
+                                            float 1., float 1., float 1., float 1.>
+  %factor = select <8 x i1> %keep, <8 x float> %three_sub, <8 x float> <float 1., float 1., float 1., float 1.,
+                                                                        float 1., float 1., float 1., float 1.>
+  %is_mul = fmul <8 x float> %is,  %factor
+  %half_scale = fmul <8 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                  float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
+  ret <8 x float> %half_scale
+}
+; The same step without the clamp, used by --math-lib=fast.
+define <8 x float> @__rsqrt_unclamped_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
   %is = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> poison,  i8 -1)
   ; Newton-Raphson iteration to improve precision
   ;  float is = __rsqrt_v(v);

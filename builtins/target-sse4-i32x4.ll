@@ -26,7 +26,22 @@ define_shuffles()
 
 declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>) nounwind readnone
 
+; See target-sse4-common.ll for why the Newton-Raphson factor is clamped.
 define <4 x float> @__rcp_varying_float(<4 x float>) nounwind readonly alwaysinline {
+  ; do one N-R iteration to improve precision
+  ;  float iv = __rcp_v(v);
+  ;  return iv * (2. - v * iv);
+  %call = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %0)
+  %v_iv = fmul <4 x float> %0, %call
+  %two_minus = fsub <4 x float> <float 2., float 2., float 2., float 2.>, %v_iv
+  %keep = fcmp ogt <4 x float> %two_minus, <float 0.5, float 0.5, float 0.5, float 0.5>
+  %factor = select <4 x i1> %keep, <4 x float> %two_minus, <4 x float> <float 0.5, float 0.5, float 0.5, float 0.5>
+  %iv_mul = fmul <4 x float> %call, %factor
+  ret <4 x float> %iv_mul
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define <4 x float> @__rcp_unclamped_varying_float(<4 x float>) nounwind readonly alwaysinline {
   ; do one N-R iteration to improve precision
   ;  float iv = __rcp_v(v);
   ;  return iv * (2. - v * iv);
@@ -48,6 +63,22 @@ define <4 x float> @__rcp_fast_varying_float(<4 x float>) nounwind readonly alwa
 declare <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float>) nounwind readnone
 
 define <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
+  ;  float is = __rsqrt_v(v);
+  %is = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %v)
+  ; Newton-Raphson iteration to improve precision, with the factor clamped
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul <4 x float> %v, %is
+  %v_is_is = fmul <4 x float> %v_is, %is
+  %three_sub = fsub <4 x float> <float 3., float 3., float 3., float 3.>, %v_is_is
+  %keep = fcmp ogt <4 x float> %three_sub, <float 1., float 1., float 1., float 1.>
+  %factor = select <4 x i1> %keep, <4 x float> %three_sub, <4 x float> <float 1., float 1., float 1., float 1.>
+  %is_mul = fmul <4 x float> %is, %factor
+  %half_scale = fmul <4 x float> <float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
+  ret <4 x float> %half_scale
+}
+
+; The same step without the clamp, used by --math-lib=fast.
+define <4 x float> @__rsqrt_unclamped_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
   ;  float is = __rsqrt_v(v);
   %is = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %v)
   ; Newton-Raphson iteration to improve precision
