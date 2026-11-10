@@ -1190,6 +1190,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     }
 #else
     (void)hostRequested;
+    if (g->mockHostOSAPX >= 0) {
+        Warning(SourcePos(), "--mock-host-os-apx is ignored on non-x86 hosts.");
+    }
 #endif
 
     if (arch == Arch::none) {

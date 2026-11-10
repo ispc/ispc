@@ -32,8 +32,9 @@
 //; RUN: %{ispc} %s --target=avx10.2nvl-x8 --mock-host-target=avx10.2nvl-x8 --mock-host-os-apx=off --opt=disable-apx=egpr --print-target --nowrap -o /dev/null 2>&1 | FileCheck %s --check-prefixes=NVL,NO-EGPR
 //; RUN: %{ispc} %s --cpu=nvl --mock-host-target=avx10.2nvl-x8 --mock-host-os-apx=off --print-target --nowrap -o /dev/null 2>&1 | FileCheck %s --check-prefixes=NVL,DEFAULT
 
-// An unknown --mock-host-target is rejected.
+// An unknown or non-x86 --mock-host-target is rejected.
 //; RUN: not %{ispc} %s --mock-host-target=bogus --nowrap -o /dev/null 2>&1 | FileCheck %s --check-prefix=BAD-TARGET
+//; RUN: not %{ispc} %s --mock-host-target=neon-i32x4 --nowrap -o /dev/null 2>&1 | FileCheck %s --check-prefix=NON-X86-TARGET
 
 // REQUIRES: X86_ENABLED && X86_64_HOST && !MACOS_HOST && LLVM_22_0+
 
@@ -52,7 +53,8 @@
 // NO-EGPR-NEXT: Target Feature String: -egpr{{$}}
 // NO-EGPR-NEXT: Target APX Features: ndd,push2pop2,ppx,ccmp,nf,zu{{(,jmpabs)?}}{{$}}
 
-// BAD-TARGET: Error: Unknown or unsupported target "bogus" in --mock-host-target.
+// BAD-TARGET: Error: Unknown or non-x86 target "bogus" in --mock-host-target.
+// NON-X86-TARGET: Error: Unknown or non-x86 target "neon-i32x4" in --mock-host-target.
 
 void foo(uniform int a[], uniform int n) {
     for (uniform int i = 0; i < n; ++i)

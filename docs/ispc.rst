@@ -1556,99 +1556,42 @@ requests with the ``ispc`` `bug tracker`_.
 Choosing Targets For Recent x86 CPUs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The following table lists the target family to use for recent AMD and Intel
-CPUs, the ``--cpu`` value for each, and the target that ``ispc`` selects when
-``--cpu`` is given without ``--target``:
-
-======================== ========== ============= ===========================
-CPU                      ``--cpu``  Target family Default target for ``--cpu``
-======================== ========== ============= ===========================
-AMD Zen 4                znver4     avx512icl     ``avx512icl-x16``
-AMD Zen 5                znver5     avx512icl     ``avx512icl-x16``
-AMD Zen 6 [#]_           znver6     avx512icl     ``avx512icl-x16``
-Intel Sapphire Rapids    spr        avx512spr     ``avx512spr-x16``
-Intel Granite Rapids     gnr        avx512gnr     ``avx512gnr-x16``
-Intel Diamond Rapids     dmr        avx10.2dmr    ``avx10.2dmr-x16``
-Intel Nova Lake [#]_     nvl        avx10.2nvl    ``avx10.2nvl-x8``
-======================== ========== ============= ===========================
+======================== ========== ==============================
+CPU                      ``--cpu``  Target selected by ``--cpu``
+======================== ========== ==============================
+AMD Zen 4                znver4     ``avx512icl-x16``
+AMD Zen 5                znver5     ``avx512icl-x16``
+AMD Zen 6 [#]_           znver6     ``avx512icl-x16``
+Intel Sapphire Rapids    spr        ``avx512spr-x16``
+Intel Granite Rapids     gnr        ``avx512gnr-x16``
+Intel Diamond Rapids     dmr        ``avx10.2dmr-x16``
+Intel Nova Lake [#]_     nvl        ``avx10.2nvl-x8``
+======================== ========== ==============================
 
 .. [#] Requires ``ispc`` built with LLVM 23 or newer.
-.. [#] Requires ``ispc`` built with LLVM 22 or newer, for both ``--cpu=nvl``
-       and the ``avx10.2nvl`` targets.
+.. [#] Requires ``ispc`` built with LLVM 22 or newer.
 
-The ``--cpu`` values ``sapphirerapids``, ``graniterapids``, ``diamondrapids``
-and ``novalake`` are accepted as synonyms.
+``sapphirerapids``, ``graniterapids``, ``diamondrapids`` and ``novalake`` are
+accepted as synonyms. There is no AMD-specific target: use ``avx512icl`` and
+add ``--cpu`` to tune for the CPU, for example
+``--target=avx512icl-x16 --cpu=znver5``; ``--cpu=znver6`` also enables native
+``float16`` arithmetic. ``--cpu`` must be compatible with
+the target, so ``--target=avx512spr-x16 --cpu=znver5`` is an error.
 
-* **AMD Zen 4, Zen 5 and Zen 6**: there is no AMD-specific target; use
-  ``avx512icl``. ``avx512skx`` also runs on these CPUs, but it does not use
-  the AVX-512 extensions that ``avx512icl`` enables and that these CPUs
-  support, such as VNNI, VBMI2, BITALG and VPOPCNTDQ. The other targets in
-  the table are not supported on these CPUs: ``avx512spr``, ``avx512gnr``
-  and ``avx10.2dmr`` require AMX, and ``avx10.2nvl`` requires AVX10.2 and
-  APX. To also tune code generation for the specific CPU, add ``--cpu``, for example
-  ``--target=avx512icl-x16 --cpu=znver5``. With ``--cpu=znver6``, the
-  ``avx512icl`` target also uses native ``float16`` arithmetic.
-* **Intel Sapphire Rapids and Granite Rapids**: use ``avx512spr`` and
-  ``avx512gnr``, respectively. These targets enable AMX (see
-  `Intel AMX (Advanced Matrix Extensions)`_). ``avx512gnr`` is not supported
-  on Sapphire Rapids, which lacks AMX-FP16. ``avx512icl`` runs on both.
-* **Intel Diamond Rapids and Nova Lake**: use ``avx10.2dmr`` and
-  ``avx10.2nvl``, respectively. Nova Lake has no AMX, so ``avx512spr``,
-  ``avx512gnr`` and ``avx10.2dmr`` are not supported there. Both target
-  families enable APX by default. Code that uses APX also requires operating
-  system support; ``--opt=disable-apx`` without a sub-feature list removes
-  this requirement (see ``disable-apx`` in `Optimization Settings`_).
+The gang sizes above are defaults, not performance recommendations; benchmark
+candidate gang sizes such as ``x8`` and ``x16`` on the target hardware.
 
-``--cpu`` must be compatible with the requested target. For example,
-``--target=avx512icl-x16 --cpu=znver5`` and
-``--target=avx512spr-x16 --cpu=gnr`` are accepted, but
-``--target=avx512spr-x16 --cpu=znver5`` and
-``--target=avx512gnr-x16 --cpu=spr`` are errors.
+To cover several of these CPUs in one binary, pass a list of targets (see the
+FAQ entry on multiple instruction sets), for example
+``--target=avx2-i32x8,avx512icl-x16,avx512spr-x16,avx10.2dmr-x16``. In this
+case:
 
-To build one binary that runs on several of these CPUs, pass a comma-separated
-list of targets to ``--target``. ``ispc`` then produces one object file and
-one header file per target, plus a dispatch object file that selects a
-variant at runtime and a header file that declares the dispatched
-functions. For
-example, the following command line covers AVX2 CPUs, Skylake-SP, AMD Zen 4,
-Zen 5 and Zen 6, and Intel Sapphire Rapids, Granite Rapids and Diamond Rapids:
-
-::
-
-   ispc foo.ispc -o foo.o -h foo.h \
-       --target=avx2-i32x8,avx512skx-x16,avx512icl-x16,avx512spr-x16,avx512gnr-x16,avx10.2dmr-x16
-
-The following rules apply to multi-target compilation:
-
-* At most one target per target family can be used. For example,
-  ``--target=avx512icl-x8,avx512icl-x16`` and
-  ``--target=avx2-i32x8,avx2-i64x4`` are errors.
-* ``--cpu`` cannot be combined with multiple targets, so the per-CPU tuning
-  described above, including native ``float16`` arithmetic on Zen 6, is
-  available only in single-target compilation.
-* At runtime, the dispatcher selects the most capable variant that the CPU
-  supports, in this order (most capable first): ``avx10.2dmr``,
-  ``avx10.2nvl``, ``avx512gnr``, ``avx512spr``, ``avx512icl``, ``avx512skx``,
-  ``avx2vnni``, ``avx2``, and then the older targets. It skips the
-  ``avx512spr``, ``avx512gnr`` and ``avx10.2dmr`` variants on CPUs without
-  AMX. AMD Zen 4, Zen 5 and Zen 6 run the ``avx512icl`` variant if present,
-  otherwise the next lower one, for example ``avx512skx``. A Nova Lake CPU
-  runs the ``avx10.2nvl`` variant if present, otherwise the next lower
-  variant that does not require AMX, for example ``avx512icl``.
-* The dispatcher checks only CPU support for APX, not operating system
-  support. If the program might run on an operating system that does not
-  support APX, compile with ``--opt=disable-apx`` without a sub-feature list;
-  disabling only some sub-features still requires operating system support.
-  The option applies to all APX-capable targets in the list, and the other
-  targets are not affected.
-
-The gang sizes in the table and examples above are the defaults that
-``ispc`` selects with ``--cpu``. They are not performance recommendations;
-this guide does not recommend a particular gang size for these CPUs. The
-fastest gang size depends on the program, for example on its data types,
-memory access patterns and control flow divergence. Benchmark the candidate
-gang sizes, such as ``x8`` and ``x16``, on the target hardware.
-
+* only one target per ISA family can be used, so
+  ``--target=avx512icl-x8,avx512icl-x16`` is an error;
+* ``--cpu`` cannot be used;
+* the dispatcher checks that the CPU supports APX, but not that the
+  operating system does. Use ``--opt=disable-apx`` if the program may run on
+  an operating system without APX support (see the APX note above).
 
 Selecting 32 or 64 Bit Addressing
 ---------------------------------
