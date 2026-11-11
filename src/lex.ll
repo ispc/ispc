@@ -676,18 +676,19 @@ lParseInteger(bool dotdotdot) {
             // No u or l suffix
             // If we're compiling to an 8-bit mask target and the constant
             // fits into 8 bits, return an 8-bit int.
+            // Only use the narrow signed types: an unsuffixed literal such as
+            // 128 must not become an unsigned int8, otherwise -128 would be
+            // folded to +128.
             if (g->target->getDataTypeWidth() == 8) {
                 if (yylval.intVal <= 0x7fULL)
                     return TOKEN_INT8_CONSTANT;
-                else if (yylval.intVal <= 0xffULL)
-                    return TOKEN_UINT8_CONSTANT;
+                else if (yylval.intVal <= 0x7fffULL)
+                    return TOKEN_INT16_CONSTANT;
             }
             // And similarly for 16-bit masks and constants
             if (g->target->getDataTypeWidth() == 16) {
                 if (yylval.intVal <= 0x7fffULL)
                     return TOKEN_INT16_CONSTANT;
-                else if (yylval.intVal <= 0xffffULL)
-                    return TOKEN_UINT16_CONSTANT;
             }
             // Otherwise, see if we can fit this into a 32-bit integer...
             if (yylval.intVal <= 0x7fffffffULL)
