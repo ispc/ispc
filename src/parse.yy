@@ -1316,8 +1316,10 @@ declaration_specifiers
     | type_qualifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
-          if (ds != nullptr)
+          if (ds != nullptr) {
               ds->typeQualifiers |= $1;
+              ds->explicitTypeQualifiers |= $1;
+          }
           $$ = ds;
       }
     | attribute_specifier
@@ -2928,19 +2930,14 @@ external_declaration
             if ($1->declarators.empty() && ds != nullptr && (ds->typeQualifiers & TYPEQUAL_EXPORT)) {
                 // "export Foo;" is a shorthand for "export { Foo };". A typedef
                 // name may carry a uniform/varying qualifier in its type, which is
-                // ignored like in the export list. Explicit qualifiers are errors.
-                // DeclSpecs::SetTypeSpecifier() copies the typedef's variability
-                // into typeQualifiers, so that bit is not an explicit qualifier.
-                int allowedQualifiers = TYPEQUAL_EXPORT;
-                if (ds->baseType != nullptr && ds->baseType->IsVaryingType())
-                    allowedQualifiers |= TYPEQUAL_VARYING;
-                else if (ds->baseType != nullptr && ds->baseType->IsUniformType())
-                    allowedQualifiers |= TYPEQUAL_UNIFORM;
-                int otherQualifiers = ds->typeQualifiers & ~allowedQualifiers;
+                // ignored like in the export list. Anything else written in the
+                // declaration besides the type name is an error.
+                int otherQualifiers = ds->explicitTypeQualifiers & ~TYPEQUAL_EXPORT;
                 if (ds->baseType == nullptr)
                     Error(@1, "Expected a type name after \"export\".");
                 else if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->soaWidth != 0 ||
-                         !std::holds_alternative<std::monostate>(ds->vectorSize))
+                         !std::holds_alternative<std::monostate>(ds->vectorSize) || !ds->declSpecList.empty() ||
+                         ds->attributeList != nullptr)
                     Error(@1, "Only a type name is allowed after \"export\" in a type export declaration.");
                 else
                     m->AddExportedTypes({std::make_pair(ds->baseType, @1)});

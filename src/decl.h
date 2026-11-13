@@ -163,6 +163,11 @@ class DeclSpecs : public Traceable {
     /** Zero or more of the TYPEQUAL_* values, ANDed together. */
     int typeQualifiers;
 
+    /** The TYPEQUAL_* values written in the declaration. Unlike
+        typeQualifiers, it doesn't include the uniform/varying qualifier
+        inherited from a typedef. */
+    int explicitTypeQualifiers;
+
     /** The basic type provided in the declaration; this should be an
         AtomicType, EnumType, StructType, or VectorType; other types (like
         ArrayTypes) will end up being created if a particular declaration
