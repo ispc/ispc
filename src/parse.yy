@@ -2929,7 +2929,14 @@ external_declaration
                 // "export Foo;" is a shorthand for "export { Foo };". A typedef
                 // name may carry a uniform/varying qualifier in its type, which is
                 // ignored like in the export list. Explicit qualifiers are errors.
-                int otherQualifiers = ds->typeQualifiers & ~TYPEQUAL_EXPORT;
+                // DeclSpecs::SetTypeSpecifier() copies the typedef's variability
+                // into typeQualifiers, so that bit is not an explicit qualifier.
+                int allowedQualifiers = TYPEQUAL_EXPORT;
+                if (ds->baseType != nullptr && ds->baseType->IsVaryingType())
+                    allowedQualifiers |= TYPEQUAL_VARYING;
+                else if (ds->baseType != nullptr && ds->baseType->IsUniformType())
+                    allowedQualifiers |= TYPEQUAL_UNIFORM;
+                int otherQualifiers = ds->typeQualifiers & ~allowedQualifiers;
                 if (ds->baseType == nullptr)
                     Error(@1, "Expected a type name after \"export\".");
                 else if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->soaWidth != 0 ||
