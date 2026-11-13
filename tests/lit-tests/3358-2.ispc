@@ -27,9 +27,10 @@ unmasked void foo(uniform int64 Result[], uniform int64 Source[]) {
 // CHECK:      define void @bar
 // CHECK-NEXT: allocas:
 // CHECK-NEXT:   %R = alloca
-// CHECK:        [[PTR1:%.*]] = getelementptr i8, ptr %Source, i64 %0
+// CHECK:        [[OFF:%.*]] = sext i32 {{%.*}} to i64
+// CHECK-NEXT:   [[PTR1:%.*]] = getelementptr i8, ptr %Source, i64 [[OFF]]
 // CHECK-NEXT:   [[S:%.*]] = load <1 x i64>, ptr [[PTR1]]
-// CHECK-NEXT:   [[PTR2:%.*]] = getelementptr i8, ptr %R, i64 %0
+// CHECK-NEXT:   [[PTR2:%.*]] = getelementptr i8, ptr %R, i64 [[OFF]]
 // CHECK-NEXT:   [[VAL:%.*]] = extractelement <1 x i64> [[S]], i64 0
 // CHECK-NEXT:   store i64 [[VAL]], ptr [[PTR2]], align 8
 // CHECK-NEXT:   [[R:%.*]] = load <4 x i32>, ptr %R

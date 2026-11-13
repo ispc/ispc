@@ -2,7 +2,7 @@
 // gather instruction): two loads from attr[] at offsets (j & ~3) and
 // (j & ~3) + 1. Every 4-lane block reads the same two elements.
 // Today: sse4-i32x4 needs no gather (one index per 4-lane block becomes a
-// broadcast); avx2-i32x8 gathers with constant splat offsets (vgatherqps);
+// broadcast); avx2-i32x8 gathers with constant offsets (vgatherdps);
 // avx512skx-x16 emits 2 gathers. Both AVX targets warn twice.
 // TODO(#304, #330): replace repeated reads with scalar loads and broadcasts
 // on the AVX targets too, removing the gather warnings. Only load an element
@@ -34,7 +34,9 @@
 // SSE4-NOT: call {{.*}}@llvm.x86.{{.*}}gather
 
 // AVX2-LABEL: @computePatchHull___
-// AVX2: call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> poison, ptr {{.*}}%attr, <4 x i64> {{zeroinitializer|splat \(i64 [0-9]+\)}},
+// AVX2: call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> poison, ptr {{.*}}%attr, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 16,
+// AVX2: call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> poison, ptr {{.*}}%attr, <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 20,
+// AVX2-NOT: call {{.*}}@llvm.x86.avx2.gather.q.ps.256(
 
 // SKX-LABEL: @computePatchHull___
 // SKX: call <16 x float> @llvm.x86.avx512.mask.gather.dps.512(

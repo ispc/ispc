@@ -1,11 +1,10 @@
 ; An unfolded constant displacement of +2^31 is not safe to truncate to i32.
-; This reaches the FIXME in the factored narrowing path. 3985-2.ispc already
+; The factored narrowing path folds it and keeps the 64-bit form. 3985-2.ispc already
 ; covers a folded constant; gather-index-width.ispc's big_const is truncated
 ; by the frontend before ImproveMemoryOps, so it does not exercise this case.
 ;
 ; RUN: %{ispc-opt} --target=sse4-i32x4 --addressing=32 --passes=improve-memory-ops %s -o - | FileCheck %s
 ; REQUIRES: X86_ENABLED
-; XFAIL: *
 
 declare <4 x float> @__pseudo_gather64_float(<4 x i64>, <4 x i32>)
 declare <4 x float> @__pseudo_gather_factored_base_offsets64_float(ptr, <4 x i64>, i32, <4 x i64>, <4 x i32>)
