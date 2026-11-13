@@ -365,8 +365,10 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) 
     typeQualifiers = tq;
     explicitTypeQualifiers = tq;
     soaWidth = 0;
+    hasSoaWidth = false;
     vectorSize = std::monostate{};
     attributeList = nullptr;
+    numTypeSpecifiers = 0;
     SetTypeSpecifier(t);
 }
 
@@ -374,6 +376,8 @@ void DeclSpecs::SetTypeSpecifier(const Type *t) {
     // A typedef of a forward declared struct refers to the struct's definition
     // once it has been provided.
     baseType = ResolveForwardDeclaredStruct(t);
+    if (t != nullptr)
+        ++numTypeSpecifiers;
     if (t != nullptr && m->symbolTable->ContainsType(t)) {
         // Typedefs might have uniform/varying qualifiers inside.
         if (t->IsVaryingType()) {
