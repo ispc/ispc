@@ -2923,9 +2923,24 @@ external_declaration
     }
     | declaration
     {
-        if ($1 != nullptr)
+        if ($1 != nullptr) {
+            DeclSpecs *ds = $1->declSpecs;
+            if ($1->declarators.empty() && ds != nullptr && (ds->typeQualifiers & TYPEQUAL_EXPORT)) {
+                // "export Foo;" is a shorthand for "export { Foo };". A typedef
+                // name may carry its uniform/varying qualifier, which is ignored
+                // like in the export list.
+                int otherQualifiers = ds->typeQualifiers & ~(TYPEQUAL_EXPORT | TYPEQUAL_UNIFORM | TYPEQUAL_VARYING);
+                if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->soaWidth != 0 ||
+                    !std::holds_alternative<std::monostate>(ds->vectorSize))
+                    Error(@1, "Only a type name is allowed after \"export\" in a type export declaration.");
+                else if (ds->baseType == nullptr)
+                    Assert(m->errorCount > 0);
+                else
+                    m->AddExportedTypes({std::make_pair(ds->baseType, @1)});
+            }
             for (unsigned int i = 0; i < $1->declarators.size(); ++i)
                 lAddDeclaration($1->declSpecs, $1->declarators[i]);
+        }
     }
     | ';'
     ;
