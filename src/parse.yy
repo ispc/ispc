@@ -2927,14 +2927,14 @@ external_declaration
             DeclSpecs *ds = $1->declSpecs;
             if ($1->declarators.empty() && ds != nullptr && (ds->typeQualifiers & TYPEQUAL_EXPORT)) {
                 // "export Foo;" is a shorthand for "export { Foo };". A typedef
-                // name may carry its uniform/varying qualifier, which is ignored
-                // like in the export list.
-                int otherQualifiers = ds->typeQualifiers & ~(TYPEQUAL_EXPORT | TYPEQUAL_UNIFORM | TYPEQUAL_VARYING);
-                if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->soaWidth != 0 ||
-                    !std::holds_alternative<std::monostate>(ds->vectorSize))
+                // name may carry a uniform/varying qualifier in its type, which is
+                // ignored like in the export list. Explicit qualifiers are errors.
+                int otherQualifiers = ds->typeQualifiers & ~TYPEQUAL_EXPORT;
+                if (ds->baseType == nullptr)
+                    Error(@1, "Expected a type name after \"export\".");
+                else if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->soaWidth != 0 ||
+                         !std::holds_alternative<std::monostate>(ds->vectorSize))
                     Error(@1, "Only a type name is allowed after \"export\" in a type export declaration.");
-                else if (ds->baseType == nullptr)
-                    Assert(m->errorCount > 0);
                 else
                     m->AddExportedTypes({std::make_pair(ds->baseType, @1)});
             }

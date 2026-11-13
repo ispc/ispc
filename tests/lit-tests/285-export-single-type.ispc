@@ -36,6 +36,12 @@ export const S;
 export soa<4> S;
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
 export int<3>;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
+export uniform S;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
+export varying S;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Expected a type name after "export".
+export;
 #elif defined(ISPC)
 struct Foo {
     int x;
