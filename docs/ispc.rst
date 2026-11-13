@@ -342,6 +342,20 @@ Standard Library Changes:
   ``double`` denormal (magnitude above about ``4.5e307``) returns ``+-0``
   instead of NaN.
 
+* The emulated ``dot4add_i8i8packed_sat``, ``dot2add_i16i16packed_sat`` and
+  ``dot2add_u16i16packed_sat``, used on targets without the matching VNNI
+  instructions, now return the same results as the instructions:
+  ``dot4add_i8i8packed_sat`` sign-extends the bytes, and the 16-bit forms
+  saturate the exact sum once instead of saturating twice. Programs that
+  relied on the old results get different values near the int32 limits, and
+  for ``dot4add_i8i8packed_sat`` whenever a byte is negative.
+
+* Generic targets on ARM no longer define ``ISPC_TARGET_HAS_ARM_DOT_PRODUCT``
+  and ``ISPC_TARGET_HAS_ARM_I8MM``, even when ``--cpu`` selects a CPU with
+  these features, and they always use the emulated dot product operations.
+  Before, programs that called the dot product functions on these targets
+  failed to link.
+
 LLVM Intrinsics:
 
 * Calling LLVM intrinsics from ``ispc`` source code is now a supported feature
@@ -6476,17 +6490,27 @@ Dot product
 -----------
 
 ISPC supports dot product operations for both unsigned and signed int8 and int16 data types,
-utilizing the AVX-VNNI, AVX512-VNNI, and AARCH64 instruction sets. The ISPC targets that
-include native dot product instruction support are ``avx2vnni-i32x*``, ``avx512icl-i32x*``,
-``avx512spr-i32x*`` and newer targets on x86, as well as ``neon-i32x*`` on ARM hardware with
-native dot product capabilities.
+utilizing the AVX-VNNI, AVX512-VNNI, AVX10.2 and Arm dot product instruction sets. The ISPC targets
+that include native dot product instruction support are ``avx2vnni-i32x*``, ``avx512icl-x*``,
+``avx512spr-x*`` and newer targets on x86, as well as the ``neon-*`` targets on ARM when the CPU
+they are compiled for has the dot product extension. That is the CPU given with ``--cpu``, or the
+default CPU when ``--cpu`` is not given. The choice is made at compile time, so the native
+instructions are used only if the selected target or CPU has them.
 
-Please note that not all combinations of signed and unsigned data types are supported on these
-targets. For instance, some versions of ARMv8 natively supports only signed/signed and
-unsigned/unsigned int8 dot product operations, while AVX2-VNNI and AVX512-VNNI provide support
-solely for mixed-sign int8 operations.
+Not all combinations of signed and unsigned data types are supported natively on these targets.
+AVX-VNNI and AVX512-VNNI provide the mixed-sign int8 forms and the signed int16 forms, and the
+AVX10.2 targets provide all of them. On ARM, the dot product extension provides the plain
+signed/signed and unsigned/unsigned int8 forms, and the I8MM extension adds the plain mixed-sign
+int8 form.
 
-If the selected target or platform lacks native dot product support, these operations are emulated.
+ISPC builds some of the forms that are not native from the native forms the target has, and
+emulates the others with vector integer arithmetic. Either way, the result is the same as the
+native instruction would return: the products are exact, the plain forms wrap around on overflow,
+and the ``_sat`` forms saturate the exact sum of ``acc`` and all products once.
+
+Generic targets always use the emulated operations. On ARM, they do not define
+``ISPC_TARGET_HAS_ARM_DOT_PRODUCT`` or ``ISPC_TARGET_HAS_ARM_I8MM``, even when ``--cpu`` selects a
+CPU with these features.
 
 These dot product operations are specifically designed to operate on *packed* input vectors,
 necessitating proper packing or casting of input vectors by the programmer before use. For example:
@@ -6502,7 +6526,7 @@ necessitating proper packing or casting of input vectors by the programmer befor
 For 8-bit Integer Vectors:
 
 The functions below multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
-four signed 8-bit integers packed in ``b``, resulting in four intermediate unsigned 16-bit values.
+four signed 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
 The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
 
 ::
