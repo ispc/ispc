@@ -43,6 +43,14 @@ export varying S;
 typedef uniform S US;
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
 export varying US;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
+export uniform US;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
+export US uniform;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
+export __declspec(safe) S;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
+export __attribute__((noescape)) S;
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Expected a type name after "export".
 export;
 #elif defined(ISPC)

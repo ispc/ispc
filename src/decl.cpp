@@ -363,6 +363,7 @@ void AttributeList::Print() const {
 
 DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) {
     typeQualifiers = tq;
+    explicitTypeQualifiers = tq;
     soaWidth = 0;
     vectorSize = std::monostate{};
     attributeList = nullptr;
