@@ -163,12 +163,21 @@ class DeclSpecs : public Traceable {
     /** Zero or more of the TYPEQUAL_* values, ANDed together. */
     int typeQualifiers;
 
+    /** The TYPEQUAL_* values written in the declaration. Unlike
+        typeQualifiers, it doesn't include the uniform/varying qualifier
+        inherited from a typedef. */
+    int explicitTypeQualifiers;
+
     /** The basic type provided in the declaration; this should be an
         AtomicType, EnumType, StructType, or VectorType; other types (like
         ArrayTypes) will end up being created if a particular declaration
         has an array size, etc.
     */
     const Type *baseType;
+
+    /** The number of type specifiers given in the declaration. More than one
+        is only accepted without an error for "typedef struct foo { } foo;". */
+    int numTypeSpecifiers;
 
     /** Applies the type specifier of the declaration: sets the base type to
         it (a forward declared struct is replaced by its definition, if it has
@@ -187,6 +196,10 @@ class DeclSpecs : public Traceable {
         SOA width specified.  Otherwise this is zero.
      */
     int soaWidth;
+
+    /** True if an "soa<n>" qualifier is written in the declaration, even if
+        n is zero. */
+    bool hasSoaWidth;
 
     std::vector<std::pair<std::string, SourcePos>> declSpecList;
 

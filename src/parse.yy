@@ -1252,6 +1252,7 @@ declaration_specifiers
       {
           DeclSpecs *ds = new DeclSpecs;
           ds->soaWidth = (int32_t)$1;
+          ds->hasSoaWidth = true;
           $$ = ds;
       }
     | soa_width_specifier declaration_specifiers
@@ -1262,6 +1263,7 @@ declaration_specifiers
                   Error(@1, "soa<> qualifier supplied multiple times in declaration.");
               else
                   ds->soaWidth = (int32_t)$1;
+              ds->hasSoaWidth = true;
           }
           $$ = ds;
       }
@@ -1316,8 +1318,10 @@ declaration_specifiers
     | type_qualifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
-          if (ds != nullptr)
+          if (ds != nullptr) {
               ds->typeQualifiers |= $1;
+              ds->explicitTypeQualifiers |= $1;
+          }
           $$ = ds;
       }
     | attribute_specifier
@@ -2923,9 +2927,26 @@ external_declaration
     }
     | declaration
     {
-        if ($1 != nullptr)
+        if ($1 != nullptr) {
+            DeclSpecs *ds = $1->declSpecs;
+            if ($1->declarators.empty() && ds != nullptr && (ds->typeQualifiers & TYPEQUAL_EXPORT)) {
+                // "export Foo;" is a shorthand for "export { Foo };". A typedef
+                // name may carry a uniform/varying qualifier in its type, which is
+                // ignored like in the export list. Anything else written in the
+                // declaration besides the type name is an error.
+                int otherQualifiers = ds->explicitTypeQualifiers & ~TYPEQUAL_EXPORT;
+                if (ds->baseType == nullptr)
+                    Error(@1, "Expected a type name after \"export\".");
+                else if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->hasSoaWidth ||
+                         !std::holds_alternative<std::monostate>(ds->vectorSize) || !ds->declSpecList.empty() ||
+                         ds->attributeList != nullptr || ds->numTypeSpecifiers > 1)
+                    Error(@1, "Only a type name is allowed after \"export\" in a type export declaration.");
+                else
+                    m->AddExportedTypes({std::make_pair(ds->baseType, @1)});
+            }
             for (unsigned int i = 0; i < $1->declarators.size(); ++i)
                 lAddDeclaration($1->declSpecs, $1->declarators[i]);
+        }
     }
     | ';'
     ;
