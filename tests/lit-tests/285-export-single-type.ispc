@@ -40,6 +40,9 @@ export int<3>;
 export uniform S;
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
 export varying S;
+typedef uniform S US;
+// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Only a type name is allowed after "export" in a type export declaration.
+export varying US;
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Expected a type name after "export".
 export;
 #elif defined(ISPC)
