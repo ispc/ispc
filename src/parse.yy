@@ -1252,6 +1252,7 @@ declaration_specifiers
       {
           DeclSpecs *ds = new DeclSpecs;
           ds->soaWidth = (int32_t)$1;
+          ds->hasSoaWidth = true;
           $$ = ds;
       }
     | soa_width_specifier declaration_specifiers
@@ -1262,6 +1263,7 @@ declaration_specifiers
                   Error(@1, "soa<> qualifier supplied multiple times in declaration.");
               else
                   ds->soaWidth = (int32_t)$1;
+              ds->hasSoaWidth = true;
           }
           $$ = ds;
       }
@@ -2935,9 +2937,9 @@ external_declaration
                 int otherQualifiers = ds->explicitTypeQualifiers & ~TYPEQUAL_EXPORT;
                 if (ds->baseType == nullptr)
                     Error(@1, "Expected a type name after \"export\".");
-                else if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->soaWidth != 0 ||
+                else if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->hasSoaWidth ||
                          !std::holds_alternative<std::monostate>(ds->vectorSize) || !ds->declSpecList.empty() ||
-                         ds->attributeList != nullptr)
+                         ds->attributeList != nullptr || ds->numTypeSpecifiers > 1)
                     Error(@1, "Only a type name is allowed after \"export\" in a type export declaration.");
                 else
                     m->AddExportedTypes({std::make_pair(ds->baseType, @1)});
