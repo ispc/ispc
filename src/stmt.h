@@ -596,4 +596,10 @@ class DeleteStmt : public Stmt {
 };
 
 extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
+
+/** Issues a warning if the value that is returned from the given function,
+    given both as the expression after conversion to the return type and as
+    the code generated for it, is the address of, or a reference to, stack
+    memory that stops existing when the function returns. */
+extern void CheckReturnOfStackAddress(Expr *expr, llvm::Value *value, const Function *func);
 } // namespace ispc

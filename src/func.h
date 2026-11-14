@@ -27,6 +27,9 @@ class Function {
     const Type *GetReturnType() const;
     const FunctionType *GetType() const;
 
+    /** Returns true if the given symbol is one of the function's parameters. */
+    bool IsParameter(const Symbol *s) const;
+
     /** Generate LLVM IR for the function into the current module. */
     void GenerateIR() const;
 
