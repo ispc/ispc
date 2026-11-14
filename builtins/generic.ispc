@@ -1846,7 +1846,7 @@ UNMANGLED CDECL READONLY varying double __gather64_generic_double(varying uint64
 // gather functions with base offsets
 EXT READONLY varying int8 __gather_base_offsets32_i8(uniform int8 *uniform ptr, uniform int32 scale,
                                                      varying int32 offsets, UIntMaskType mask) {
-    return __masked_gather<int8>((uniform uint64)ptr + offsets * scale, mask);
+    return __masked_gather<int8>((uniform uint64)ptr + (varying int64)offsets * scale, mask);
 }
 EXT READONLY varying int8 __gather_base_offsets64_i8(uniform int8 *uniform ptr, uniform int32 scale,
                                                      varying int64 offsets, UIntMaskType mask) {
@@ -1854,7 +1854,7 @@ EXT READONLY varying int8 __gather_base_offsets64_i8(uniform int8 *uniform ptr, 
 }
 EXT READONLY varying int16 __gather_base_offsets32_i16(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int32 offsets, UIntMaskType mask) {
-    return __masked_gather<int16>((uniform uint64)ptr + offsets * scale, mask);
+    return __masked_gather<int16>((uniform uint64)ptr + (varying int64)offsets * scale, mask);
 }
 EXT READONLY varying int16 __gather_base_offsets64_i16(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int64 offsets, UIntMaskType mask) {
@@ -1862,7 +1862,7 @@ EXT READONLY varying int16 __gather_base_offsets64_i16(uniform int8 *uniform ptr
 }
 EXT READONLY varying float16 __gather_base_offsets32_half(uniform int8 *uniform ptr, uniform int32 scale,
                                                           varying int32 offsets, UIntMaskType mask) {
-    return __masked_gather<float16>((uniform uint64)ptr + offsets * scale, mask);
+    return __masked_gather<float16>((uniform uint64)ptr + (varying int64)offsets * scale, mask);
 }
 EXT READONLY varying float16 __gather_base_offsets64_half(uniform int8 *uniform ptr, uniform int32 scale,
                                                           varying int64 offsets, UIntMaskType mask) {
@@ -1870,7 +1870,7 @@ EXT READONLY varying float16 __gather_base_offsets64_half(uniform int8 *uniform 
 }
 EXT READONLY varying int32 __gather_base_offsets32_i32(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int32 offsets, UIntMaskType mask) {
-    return __masked_gather<int32>((uniform uint64)ptr + offsets * scale, mask);
+    return __masked_gather<int32>((uniform uint64)ptr + (varying int64)offsets * scale, mask);
 }
 EXT READONLY varying int32 __gather_base_offsets64_i32(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int64 offsets, UIntMaskType mask) {
@@ -1878,7 +1878,7 @@ EXT READONLY varying int32 __gather_base_offsets64_i32(uniform int8 *uniform ptr
 }
 EXT READONLY varying float __gather_base_offsets32_float(uniform int8 *uniform ptr, uniform int32 scale,
                                                          varying int32 offsets, UIntMaskType mask) {
-    return __masked_gather<float>((uniform uint64)ptr + offsets * scale, mask);
+    return __masked_gather<float>((uniform uint64)ptr + (varying int64)offsets * scale, mask);
 }
 EXT READONLY varying float __gather_base_offsets64_float(uniform int8 *uniform ptr, uniform int32 scale,
                                                          varying int64 offsets, UIntMaskType mask) {
@@ -1886,7 +1886,7 @@ EXT READONLY varying float __gather_base_offsets64_float(uniform int8 *uniform p
 }
 EXT READONLY varying int64 __gather_base_offsets32_i64(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int32 offsets, UIntMaskType mask) {
-    return __masked_gather<int64>((uniform uint64)ptr + offsets * scale, mask);
+    return __masked_gather<int64>((uniform uint64)ptr + (varying int64)offsets * scale, mask);
 }
 EXT READONLY varying int64 __gather_base_offsets64_i64(uniform int8 *uniform ptr, uniform int32 scale,
                                                        varying int64 offsets, UIntMaskType mask) {
@@ -1894,7 +1894,7 @@ EXT READONLY varying int64 __gather_base_offsets64_i64(uniform int8 *uniform ptr
 }
 EXT READONLY varying double __gather_base_offsets32_double(uniform int8 *uniform ptr, uniform int32 scale,
                                                            varying int32 offsets, UIntMaskType mask) {
-    return __masked_gather<double>((uniform uint64)ptr + offsets * scale, mask);
+    return __masked_gather<double>((uniform uint64)ptr + (varying int64)offsets * scale, mask);
 }
 EXT READONLY varying double __gather_base_offsets64_double(uniform int8 *uniform ptr, uniform int32 scale,
                                                            varying int64 offsets, UIntMaskType mask) {
@@ -2081,7 +2081,7 @@ EXT void __scatter64_double(varying uint64 addr, varying double val, UIntMaskTyp
 // scatter functions with base offsets
 EXT void __scatter_base_offsets32_i8(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                      varying int8 val, UIntMaskType mask) {
-    __masked_scatter<int8>(val, (uniform uint64)base + offset * scale, mask);
+    __masked_scatter<int8>(val, (uniform uint64)base + (varying int64)offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i8(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                      varying int8 val, UIntMaskType mask) {
@@ -2089,7 +2089,7 @@ EXT void __scatter_base_offsets64_i8(uniform int8 *uniform base, uniform int32 s
 }
 EXT void __scatter_base_offsets32_i16(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                       varying int16 val, UIntMaskType mask) {
-    __masked_scatter<int16>(val, (uniform uint64)base + offset * scale, mask);
+    __masked_scatter<int16>(val, (uniform uint64)base + (varying int64)offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i16(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                       varying int16 val, UIntMaskType mask) {
@@ -2097,7 +2097,7 @@ EXT void __scatter_base_offsets64_i16(uniform int8 *uniform base, uniform int32 
 }
 EXT void __scatter_base_offsets32_half(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                        varying float16 val, UIntMaskType mask) {
-    __masked_scatter<float16>(val, (uniform uint64)base + offset * scale, mask);
+    __masked_scatter<float16>(val, (uniform uint64)base + (varying int64)offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_half(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                        varying float16 val, UIntMaskType mask) {
@@ -2105,7 +2105,7 @@ EXT void __scatter_base_offsets64_half(uniform int8 *uniform base, uniform int32
 }
 EXT void __scatter_base_offsets32_i32(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                       varying int32 val, UIntMaskType mask) {
-    __masked_scatter<int32>(val, (uniform uint64)base + offset * scale, mask);
+    __masked_scatter<int32>(val, (uniform uint64)base + (varying int64)offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i32(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                       varying int32 val, UIntMaskType mask) {
@@ -2113,7 +2113,7 @@ EXT void __scatter_base_offsets64_i32(uniform int8 *uniform base, uniform int32 
 }
 EXT void __scatter_base_offsets32_float(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                         varying float val, UIntMaskType mask) {
-    __masked_scatter<float>(val, (uniform uint64)base + offset * scale, mask);
+    __masked_scatter<float>(val, (uniform uint64)base + (varying int64)offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_float(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                         varying float val, UIntMaskType mask) {
@@ -2121,7 +2121,7 @@ EXT void __scatter_base_offsets64_float(uniform int8 *uniform base, uniform int3
 }
 EXT void __scatter_base_offsets32_i64(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                       varying int64 val, UIntMaskType mask) {
-    __masked_scatter<int64>(val, (uniform uint64)base + offset * scale, mask);
+    __masked_scatter<int64>(val, (uniform uint64)base + (varying int64)offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_i64(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                       varying int64 val, UIntMaskType mask) {
@@ -2129,7 +2129,7 @@ EXT void __scatter_base_offsets64_i64(uniform int8 *uniform base, uniform int32 
 }
 EXT void __scatter_base_offsets32_double(uniform int8 *uniform base, uniform int32 scale, varying int32 offset,
                                          varying double val, UIntMaskType mask) {
-    __masked_scatter<double>(val, (uniform uint64)base + offset * scale, mask);
+    __masked_scatter<double>(val, (uniform uint64)base + (varying int64)offset * scale, mask);
 }
 EXT void __scatter_base_offsets64_double(uniform int8 *uniform base, uniform int32 scale, varying int64 offset,
                                          varying double val, UIntMaskType mask) {

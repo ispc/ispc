@@ -80,12 +80,12 @@ void g_i64(uniform int64 *uniform f, uniform int *uniform i, uniform int64 *unif
 void s_f(uniform float *uniform f, uniform int *uniform i, uniform float *uniform r) { f[i[programIndex]] = r[programIndex]; }
 
 // The nested table lookup from #1531 (examples/cpu/noise). The table is not
-// static, so its contents are unknown here. Both lookups use scale 1; the
-// inner one is also qword (see gather-index-width.ispc).
-// TODO(#1531): select dword indices with scale 4 for both lookups, preserving
-// the original arithmetic and its no-wrap conditions.
+// static, so its contents are unknown here. Both lookups use scale 1 and
+// dword indices with --addressing=32 (see gather-index-width.ispc).
+// TODO(#1531): select scale 4 for both lookups, preserving the original
+// arithmetic and its no-wrap conditions.
 // IR32-LABEL: @lookup___
-// IR32: call {{.*}}@llvm.x86.{{avx2.gather.q.d.256|avx512.mask.gather.qpi.512}}({{.*}}, {{i8|i32}} 1)
+// IR32: call {{.*}}@llvm.x86.{{avx2.gather.d.d.256|avx512.mask.gather.dpi.512}}({{.*}}, {{i8|i32}} 1)
 // IR32: shl nsw <{{[0-9]+}} x i32> {{%.*}}, splat (i32 2)
 // IR32: call {{.*}}@llvm.x86.{{avx2.gather.d.d.256|avx512.mask.gather.dpi.512}}({{.*}}, {{i8|i32}} 1)
 // ASM64-LABEL: {{^}}lookup___

@@ -40,6 +40,172 @@ static bool lSplitIsNUW(llvm::Value *vec) {
     }
 }
 
+/** Returns true if every add, shl and mul that lExtractConstantOffset()
+    looks through in vec is nsw (a disjoint or can't wrap). Then sign
+    extending the parts gives the sign extension of their sum. A zext inside
+    vec is split exactly or not at all, and a sext only under this rule. A
+    trunc is split modulo 2^N: trunc(x + INT32_MIN) with an i64 x = INT32_MIN
+    is 0, but sign extending its parts gives -2^32.
+ */
+static bool lSplitIsNSW(llvm::Value *vec) {
+    if (llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(vec)) {
+        switch (cast->getOpcode()) {
+        case llvm::Instruction::SExt:
+            return lSplitIsNSW(cast->getOperand(0));
+        case llvm::Instruction::ZExt:
+            return true;
+        default:
+            return false;
+        }
+    }
+    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(vec);
+    if (bop == nullptr) {
+        return true;
+    }
+    switch (bop->getOpcode()) {
+    case llvm::Instruction::Add:
+    case llvm::Instruction::Shl:
+    case llvm::Instruction::Mul:
+        return bop->hasNoSignedWrap() && lSplitIsNSW(bop->getOperand(0)) && lSplitIsNSW(bop->getOperand(1));
+    default:
+        return !IsOrEquivalentToAdd(bop) || (lSplitIsNSW(bop->getOperand(0)) && lSplitIsNSW(bop->getOperand(1)));
+    }
+}
+
+/** Returns false if lExtractConstantOffset() can't split a constant part
+    off vec. May return true even if it can't. */
+static bool lHasConstantPart(llvm::Value *vec) {
+    if (llvm::isa<llvm::Constant>(vec)) {
+        return true;
+    }
+    if (llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(vec)) {
+        return lHasConstantPart(cast->getOperand(0));
+    }
+    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(vec);
+    if (bop == nullptr) {
+        return false;
+    }
+    llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
+    if (bop->getOpcode() == llvm::Instruction::Add || IsOrEquivalentToAdd(bop)) {
+        return lHasConstantPart(op0) || lHasConstantPart(op1);
+    }
+    if (bop->getOpcode() == llvm::Instruction::Shl) {
+        return lHasConstantPart(op0);
+    }
+    if (bop->getOpcode() == llvm::Instruction::Mul) {
+        return lHasConstantPart(op0) && lHasConstantPart(op1);
+    }
+    return false;
+}
+
+/** Folds v to a constant if it is a tree of side-effect-free instructions
+    over constants, as lExtractConstantOffset() builds for constant parts. */
+static llvm::Constant *lFoldToConstant(llvm::Value *v, const llvm::DataLayout &dl, int depth = 0) {
+    if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(v)) {
+        return c;
+    }
+    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
+    if (inst == nullptr || depth > 16 || llvm::isa<llvm::PHINode>(inst) || llvm::isa<llvm::CallBase>(inst) ||
+        inst->mayReadOrWriteMemory()) {
+        return nullptr;
+    }
+    llvm::SmallVector<llvm::Constant *, 4> ops;
+    for (llvm::Value *op : inst->operands()) {
+        llvm::Constant *c = lFoldToConstant(op, dl, depth + 1);
+        if (c == nullptr) {
+            return nullptr;
+        }
+        ops.push_back(c);
+    }
+    return llvm::ConstantFoldInstOperands(inst, ops, dl);
+}
+
+/** Computes in *out the exact value of lane `lane` of the constant part c
+    that lExtractConstantOffset() built: the leaves are sign extended and the
+    adds, shls and muls it regroups are done in i64, with overflow checks.
+    Only valid if the expression c was split from passes lSplitIsNSW(): then
+    each of those operations, and each sext it looks through, is nsw in the
+    original. The regrouped narrow constant can wrap where the original sum
+    doesn't: (x + 0x40000000) + 0x40000000 regroups 0x40000000 + 0x40000000,
+    which is INT32_MIN at i32 width. Returns false if c doesn't fold or
+    overflows i64. */
+static bool lEvalExact(llvm::Value *c, unsigned lane, llvm::APInt *out, const llvm::DataLayout &dl, int depth = 0) {
+    if (depth > 16) {
+        return false;
+    }
+    if (llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(c)) {
+        llvm::Instruction::BinaryOps opcode = bop->getOpcode();
+        if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::Shl || opcode == llvm::Instruction::Mul ||
+            IsOrEquivalentToAdd(bop)) {
+            llvm::APInt op0;
+            if (!lEvalExact(bop->getOperand(0), lane, &op0, dl, depth + 1)) {
+                return false;
+            }
+            bool overflow = false;
+            if (opcode == llvm::Instruction::Shl) {
+                llvm::Constant *amount = lFoldToConstant(bop->getOperand(1), dl);
+                llvm::ConstantInt *ci =
+                    amount ? llvm::dyn_cast_or_null<llvm::ConstantInt>(amount->getAggregateElement(lane)) : nullptr;
+                if (ci == nullptr || ci->getValue().uge(64)) {
+                    return false;
+                }
+                *out = op0.sshl_ov(ci->getValue().zextOrTrunc(64), overflow);
+                return !overflow;
+            }
+            llvm::APInt op1;
+            if (!lEvalExact(bop->getOperand(1), lane, &op1, dl, depth + 1)) {
+                return false;
+            }
+            *out = opcode == llvm::Instruction::Mul ? op0.smul_ov(op1, overflow) : op0.sadd_ov(op1, overflow);
+            return !overflow;
+        }
+    }
+    if (llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(c)) {
+        if (cast->getOpcode() == llvm::Instruction::SExt) {
+            return lEvalExact(cast->getOperand(0), lane, out, dl, depth + 1);
+        }
+        if (cast->getOpcode() == llvm::Instruction::Trunc) {
+            return false;
+        }
+    }
+    // Anything else isn't regrouped: fold it at its own width and extend it.
+    // (A zext result has a clear sign bit, so sign extending it is exact.)
+    llvm::Constant *folded = lFoldToConstant(c, dl);
+    llvm::ConstantInt *ci =
+        folded ? llvm::dyn_cast_or_null<llvm::ConstantInt>(folded->getAggregateElement(lane)) : nullptr;
+    if (ci == nullptr || ci->getBitWidth() > 64) {
+        return false;
+    }
+    *out = ci->getValue().sext(64);
+    return true;
+}
+
+/** Returns true if every lane of the constant part c, evaluated exactly
+    (lEvalExact()), fits in a signed integer of the given width. */
+static bool lExactFitsSigned(llvm::Value *c, unsigned width, const llvm::DataLayout &dl) {
+    unsigned n = llvm::cast<llvm::FixedVectorType>(c->getType())->getNumElements();
+    for (unsigned i = 0; i < n; ++i) {
+        llvm::APInt value;
+        if (!lEvalExact(c, i, &value, dl) || !value.isSignedIntN(width)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/** Returns true if every lane of the integer vector constant c fits in a
+    signed i32. */
+static bool lConstantFits32(llvm::Constant *c) {
+    unsigned n = llvm::cast<llvm::FixedVectorType>(c->getType())->getNumElements();
+    for (unsigned i = 0; i < n; ++i) {
+        llvm::ConstantInt *ci = llvm::dyn_cast_or_null<llvm::ConstantInt>(c->getAggregateElement(i));
+        if (ci == nullptr || !ci->getValue().isSignedIntN(32)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /** Given a vector expression in vec, separate it into a compile-time
     constant component and a variable component, returning the two parts in
     *constOffset and *variableOffset.  (It should be the case that the sum
@@ -65,11 +231,12 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
     if (cast != nullptr) {
         llvm::Instruction::CastOps opcode = cast->getOpcode();
         if (opcode == llvm::Instruction::ZExt) {
-            if (cast->hasNonNeg()) {
+            if (cast->hasNonNeg() && lSplitIsNSW(cast->getOperand(0))) {
                 // InstCombine turns a sext of a value that is known to be
-                // non-negative into a zext nneg. One of the parts may still be
-                // negative, so the parts are sign extended, assuming like for
-                // a sext that the add doesn't wrap as a signed value.
+                // non-negative into a zext nneg. nneg bounds only the sum and
+                // one of the parts may be negative, so the parts are sign
+                // extended. That is exact only if the sum doesn't wrap as a
+                // signed value: x + INT32_MIN wraps to zero for x = INT32_MIN.
                 opcode = llvm::Instruction::SExt;
             } else if (!lSplitIsNUW(cast->getOperand(0))) {
                 // zext(c + v) is zext(c) + zext(v) only if c + v doesn't wrap.
@@ -83,6 +250,18 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
         // Check the cast target.
         llvm::Value *co = nullptr, *vo = nullptr;
         lExtractConstantOffset(cast->getOperand(0), &co, &vo, insertBefore);
+
+        // nsw holds for the original grouping, not for the regrouped
+        // constant: sign extending it is exact only if its exact value fits.
+        // (Without nsw, a sext is split modulo 2^N, as before.)
+        if (opcode == llvm::Instruction::SExt && co != nullptr && lSplitIsNSW(cast->getOperand(0))) {
+            const llvm::DataLayout &dl = insertBefore->getModule()->getDataLayout();
+            if (!lExactFitsSigned(co, co->getType()->getScalarSizeInBits(), dl)) {
+                *constOffset = nullptr;
+                *variableOffset = vec;
+                return;
+            }
+        }
 
         // make new cast instructions for the two parts
         if (co == nullptr) {
@@ -288,6 +467,15 @@ static llvm::Value *lExtract248Scale(llvm::Value *splatOperand, int splatValue, 
     nuw shl by 1, 2 or 3 or a nuw multiply by 2, 4 or 8 is looked through,
     without recursion or a partial scale. InstCombine turns the multiply of an
     unsigned index by the element size into a shl.
+
+    A zext nneg is not looked through. nneg bounds only the product, not x
+    (an unflagged mul i32 -1073741823, 4 wraps to 4), and the product
+    narrows to a 32-bit index anyway (lOffsets32BitSafe()). Extracting a
+    scale of a nuw or nsw product would be exact, but when the gather then
+    becomes a load or store, lGSToLoadStore() rebuilds the offset as
+    sext(x) * scale, which no longer matches the shl of neighboring
+    accesses: the loop loses its scaled induction variable addressing
+    (07_loop_unroll_varying).
  */
 static llvm::Value *lExtractNUWScale(llvm::Value **vec) {
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(*vec);
@@ -331,11 +519,16 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
     if (cast != nullptr) {
         llvm::Value *castOp = cast->getOperand(0);
         llvm::Value *scale = nullptr;
-        if (cast->getOpcode() == llvm::Instruction::ZExt && !cast->hasNonNeg()) {
+        if (cast->getOpcode() == llvm::Instruction::ZExt) {
+            if (cast->hasNonNeg()) {
+                return LLVMInt32(1);
+            }
             // zext(x * s) is zext(x) * s only if x * s doesn't wrap.
             scale = lExtractNUWScale(&castOp);
+            if (castOp == cast->getOperand(0)) {
+                return scale;
+            }
         } else {
-            // Check the cast target. A zext nneg is handled like a sext.
             scale = lExtractOffsetVector248Scale(&castOp);
         }
         if (scale == nullptr) {
@@ -346,11 +539,6 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
         // type
         llvm::CastInst *newCast = llvm::CastInst::Create(cast->getOpcode(), castOp, cast->getType(), "offset_cast",
                                                          ISPC_INSERTION_POINT_INSTRUCTION(cast));
-        if (cast->getOpcode() == llvm::Instruction::ZExt) {
-            // Like for a sext, x * s is assumed not to overflow as a signed
-            // value, so x is non-negative, too.
-            newCast->setNonNeg(cast->hasNonNeg());
-        }
         *vec = newCast;
         return scale;
     }
@@ -423,9 +611,14 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
         if (auto *castInst = llvm::dyn_cast<llvm::CastInst>(variableOffset)) {
             auto opcode = castInst->getOpcode();
             // The 32-bit variants sign extend the offsets, so a zext is only
-            // good if the sign bit is known to be clear.
-            if ((opcode == llvm::Instruction::SExt || (opcode == llvm::Instruction::ZExt && castInst->hasNonNeg())) &&
-                castInst->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
+            // good if the sign bit is known to be clear. lExtractConstantOffset()
+            // refused to split a zext nneg whose sum may wrap, like
+            // zext nneg (x + INT32_MIN); without the zext, the exposed i32 sum
+            // would be split later (lGSBaseOffsetsGetMoreConst()) into
+            // sext(x) + sext(INT32_MIN), -2^32 instead of 0 for x = INT32_MIN.
+            llvm::Value *narrow = castInst->getOperand(0);
+            bool zextNNegOK = opcode == llvm::Instruction::ZExt && castInst->hasNonNeg() && !lHasConstantPart(narrow);
+            if ((opcode == llvm::Instruction::SExt || zextNNegOK) && narrow->getType() == LLVMTypes::Int32VectorType) {
 
                 // sext or zext nneg of a 32-bit vector -> the 32-bit vector is good
                 variableOffset = castInst->getOperand(0);
@@ -464,6 +657,14 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
             if (LLVMExtractVectorInts(constOffset, elts, &nElts)) {
                 return false;
             }
+            // Nor a constant part that folds to such a value, like the
+            // 0x40000000 + 0x40000000 of (x + 0x40000000) + 0x40000000.
+            const llvm::DataLayout &dl = insertBefore->getModule()->getDataLayout();
+            if (llvm::Constant *folded = lFoldToConstant(constOffset, dl)) {
+                if (!lConstantFits32(folded)) {
+                    return false;
+                }
+            }
             // FIXME: otherwise we just assume that all constant offsets
             // can actually always fit into 32-bits...  (This could be
             // wrong, but it should be only in pretty esoteric cases).  We
@@ -490,7 +691,10 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
  */
 
 static bool lIs32BitSafeHelper(llvm::Value *v) {
-    // handle Adds, SExts, Constant Vectors
+    // handle Adds, SExts, Constant Vectors. A sum of 32-bit parts is not
+    // known to fit in 32 bits (address-gap-narrow-sum.ispc), so zext nneg
+    // isn't accepted here, unlike in lOffsets32BitSafe(): that would widen
+    // this gap to the unsigned and the nonnegative indices.
     if (llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v)) {
         if ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) {
             return lIs32BitSafeHelper(bop->getOperand(0)) && lIs32BitSafeHelper(bop->getOperand(1));
@@ -513,10 +717,15 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
         return true;
     }
 
-    llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(offset);
-    if (sext != nullptr && sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
-        // sext of a 32-bit vector -> the 32-bit vector is good
-        *offsetPtr = sext->getOperand(0);
+    // The 32-bit native forms sign extend their index before applying the
+    // hardware scale. A zext nneg has the same value as a sext on every
+    // defined lane.
+    auto *cast = llvm::dyn_cast<llvm::CastInst>(offset);
+    if (cast != nullptr &&
+        (cast->getOpcode() == llvm::Instruction::SExt ||
+         (cast->getOpcode() == llvm::Instruction::ZExt && cast->hasNonNeg())) &&
+        cast->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
+        *offsetPtr = cast->getOperand(0);
         return true;
     } else if (lIs32BitSafeHelper(offset)) {
         // The only constant vector we should have here is a vector of
@@ -637,6 +846,17 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
         llvm::Value *constOffset = nullptr;
         llvm::Value *variableOffset = nullptr;
         lExtractConstantOffset(offsetVector, &constOffset, &variableOffset, callInst);
+        // A constant part that doesn't fit in 32 bits keeps the offset in the
+        // 64-bit form, unsplit: a variable part the split built can have
+        // wrapped at i32 width, which only the truncated constant offsets.
+        if (constOffset != nullptr && g->opt.force32BitAddressing &&
+            constOffset->getType() == LLVMTypes::Int64VectorType) {
+            llvm::Constant *folded = lFoldToConstant(constOffset, callInst->getModule()->getDataLayout());
+            if (folded != nullptr && !lConstantFits32(folded)) {
+                constOffset = nullptr;
+                variableOffset = offsetVector;
+            }
+        }
         if (constOffset == nullptr) {
             constOffset = LLVMIntAsType(0, offsetVector->getType());
         }
@@ -685,6 +905,70 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
     return newCall;
 }
 
+/** Returns true if v is root or one of the operands that
+    lExtractConstantOffset() looks through in root, i.e. a value of the
+    original expression rather than one the split built. */
+static bool lIsOriginalPart(llvm::Value *v, llvm::Value *root, int depth = 0) {
+    if (v == root) {
+        return true;
+    }
+    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(root);
+    if (inst == nullptr || depth > 16 || !(llvm::isa<llvm::BinaryOperator>(inst) || llvm::isa<llvm::CastInst>(inst))) {
+        return false;
+    }
+    for (llvm::Value *op : inst->operands()) {
+        if (lIsOriginalPart(v, op, depth + 1)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Returns constOffset * scale + delta as an i32 vector constant, with each
+    element sign extended and the arithmetic done in i64, or nullptr if the
+    parts don't fold to constants or a lane doesn't fit in i32.
+
+    If exact, the offset constOffset was split from is all nsw, and the
+    constant part is evaluated exactly (lEvalExact()). If the narrow constant
+    must also not have wrapped (sameAsNarrow), its value as the IR computes
+    it must be the exact one. Otherwise the constant part is taken as the IR
+    computes it. */
+static llvm::Constant *lScaledDelta32(llvm::Value *constOffset, bool exact, bool sameAsNarrow, int64_t scale,
+                                      llvm::Value *delta, const llvm::DataLayout &dl) {
+    llvm::Constant *c = lFoldToConstant(constOffset, dl);
+    llvm::Constant *d = lFoldToConstant(delta, dl);
+    if (c == nullptr || d == nullptr) {
+        return nullptr;
+    }
+    unsigned n = llvm::cast<llvm::FixedVectorType>(constOffset->getType())->getNumElements();
+    std::vector<llvm::Constant *> lanes;
+    for (unsigned i = 0; i < n; ++i) {
+        llvm::ConstantInt *ci = llvm::dyn_cast_or_null<llvm::ConstantInt>(c->getAggregateElement(i));
+        llvm::ConstantInt *di = llvm::dyn_cast_or_null<llvm::ConstantInt>(d->getAggregateElement(i));
+        if (ci == nullptr || di == nullptr || ci->getBitWidth() > 64) {
+            return nullptr;
+        }
+        llvm::APInt value = ci->getValue().sext(64);
+        if (exact) {
+            llvm::APInt exactValue;
+            if (!lEvalExact(constOffset, i, &exactValue, dl) || (sameAsNarrow && exactValue != value)) {
+                return nullptr;
+            }
+            value = exactValue;
+        }
+        bool overflow = false;
+        value = value.smul_ov(llvm::APInt(64, scale, /*isSigned*/ true), overflow);
+        if (!overflow) {
+            value = value.sadd_ov(di->getValue().sext(64), overflow);
+        }
+        if (overflow || !value.isSignedIntN(32)) {
+            return nullptr;
+        }
+        lanes.push_back(LLVMInt32((int32_t)value.getSExtValue()));
+    }
+    return llvm::ConstantVector::get(lanes);
+}
+
 /** Try to improve the decomposition between compile-time constant and
     compile-time unknown offsets in calls to the __pseudo_*_base_offsets*
     functions. After other optimizations have run, we will sometimes be
@@ -710,6 +994,10 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
         return nullptr;
     }
 
+    // With 64-bit pointers, the lowering of the 32-bit form adds sext(delta)
+    // to sext(offsets) * scale in i64 (__gather_elt32_*).
+    const bool offsets32 = origVariableOffset->getType() == LLVMTypes::Int32VectorType && !g->target->is32Bit();
+
     // Try to decompose the old variable offset
     llvm::Value *constOffset = nullptr;
     llvm::Value *variableOffset = nullptr;
@@ -721,7 +1009,8 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
     }
 
     // Total luck: everything could be moved to the constant offset
-    if (variableOffset == nullptr) {
+    const bool allConstant = variableOffset == nullptr;
+    if (allConstant) {
         variableOffset = LLVMIntAsType(0, origVariableOffset->getType());
     }
 
@@ -730,11 +1019,35 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
     llvm::ConstantInt *varScale = llvm::dyn_cast<llvm::ConstantInt>(access.scale());
     Assert(varScale != nullptr);
 
+    // The scale is signed, as in the lowering (__gather_elt*_*).
+    const int64_t scale = varScale->getSExtValue();
+
+    // The new i32 delta must not wrap either: a constant 0x40000000 with
+    // scale 4 is 4 GiB, not 0.
+    if (offsets32) {
+        // If the offset is all nsw, the constant part is evaluated exactly:
+        // regrouped at i32 width, 0x40000000 + 0x40000000 wraps to INT32_MIN.
+        // Then variable + constant is the offset if the variable part is a
+        // value of the original offset. A variable part the split built,
+        // like x + y of ((x + 0x40000000) + 0x40000000) + y, is computed at
+        // i32 width; the constant must then not have wrapped either.
+        bool exact = lSplitIsNSW(origVariableOffset);
+        bool sameAsNarrow = !allConstant && !lIsOriginalPart(variableOffset, origVariableOffset);
+        llvm::Constant *delta = lScaledDelta32(constOffset, exact, sameAsNarrow, scale, access.delta(),
+                                               callInst->getModule()->getDataLayout());
+        if (delta == nullptr) {
+            return nullptr;
+        }
+        callInst->setArgOperand(access.op->layout.offsets, variableOffset);
+        callInst->setArgOperand(access.op->layout.delta, delta);
+        return callInst;
+    }
+
     llvm::Value *scaleSmear = nullptr;
     if (origVariableOffset->getType() == LLVMTypes::Int64VectorType) {
-        scaleSmear = LLVMInt64Vector((int64_t)varScale->getZExtValue());
+        scaleSmear = LLVMInt64Vector(scale);
     } else {
-        scaleSmear = LLVMInt32Vector((int32_t)varScale->getZExtValue());
+        scaleSmear = LLVMInt32Vector((int32_t)scale);
     }
 
     constOffset = llvm::BinaryOperator::Create(llvm::Instruction::Mul, constOffset, scaleSmear, constOffset->getName(),
@@ -972,7 +1285,9 @@ static llvm::Instruction *lReverseVector(llvm::Value *v, llvm::Instruction *inse
 static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
     llvm::ConstantInt *offsetScaleInt = llvm::dyn_cast<llvm::ConstantInt>(offsetScale);
     Assert(offsetScaleInt != nullptr);
-    uint64_t scaleValue = offsetScaleInt->getZExtValue();
+    // The lowerings sign extend the i32 scale (__gather_elt32_* and
+    // __gather_elt64_* in builtins/util.m4); a factored scale may be negative.
+    int64_t scaleValue = offsetScaleInt->getSExtValue();
 
     std::vector<llvm::Constant *> scales;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
@@ -984,6 +1299,27 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
         }
     }
     return llvm::ConstantVector::get(scales);
+}
+
+/** With 64-bit pointers, the x86 lowering of a 32-bit-index form sign
+    extends the offsets and the delta before it scales and adds them
+    (__gather_elt32_* in builtins/util.m4), so offsets * scale + delta may
+    exceed i32. Returns v sign extended to i64 in that case, so that the
+    load/store computes the same address; otherwise v itself. */
+static llvm::Value *lExtendToIndexWidth(llvm::Value *v, llvm::Value *base, llvm::Instruction *insertBefore) {
+    const llvm::DataLayout &dl = insertBefore->getModule()->getDataLayout();
+    if (v->getType() != LLVMTypes::Int32VectorType ||
+        dl.getPointerSizeInBits(base->getType()->getPointerAddressSpace()) != 64) {
+        return v;
+    }
+    if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(v)) {
+        if (llvm::Constant *folded =
+                llvm::ConstantFoldCastOperand(llvm::Instruction::SExt, c, LLVMTypes::Int64VectorType, dl)) {
+            return folded;
+        }
+    }
+    return llvm::CastInst::Create(llvm::Instruction::SExt, v, LLVMTypes::Int64VectorType, "",
+                                  ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 /** After earlier optimization passes have run, we are sometimes able to
@@ -1006,6 +1342,10 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
     // its operand layout follows from the callee, not from the target.
     if (!access.isPseudo() || (access.form() != MemoryOpForm::BaseOffsets && access.form() != MemoryOpForm::Factored) ||
         (access.kind() != MemoryOpKind::Gather && access.kind() != MemoryOpKind::Scatter)) {
+        return nullptr;
+    }
+    llvm::ConstantInt *scale = llvm::dyn_cast<llvm::ConstantInt>(access.scale());
+    if (scale == nullptr) {
         return nullptr;
     }
     llvm::CallInst *callInst = access.call;
@@ -1032,30 +1372,43 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
     llvm::Value *storeValue = access.value();
     llvm::Value *mask = access.mask();
     if (access.form() == MemoryOpForm::Factored) {
-        llvm::Value *varyingOffsets = access.offsets();
+        llvm::Value *varyingOffsets = lExtendToIndexWidth(access.offsets(), base, callInst);
         llvm::Value *offsetScale = access.scale();
-        llvm::Value *constOffsets = access.delta();
+        llvm::Value *constOffsets = lExtendToIndexWidth(access.delta(), base, callInst);
 
         // Compute the full offset vector: offsetScale * varyingOffsets + constOffsets
         llvm::Constant *offsetScaleVec = lGetOffsetScaleVec(offsetScale, varyingOffsets->getType());
 
-        llvm::Value *scaledVarying =
+        llvm::BinaryOperator *scaledVarying =
             llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, varyingOffsets, "scaled_varying",
                                          ISPC_INSERTION_POINT_INSTRUCTION(callInst));
-        fullOffsets = llvm::BinaryOperator::Create(llvm::Instruction::Add, scaledVarying, constOffsets,
-                                                   "varying+const_offsets", ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        llvm::BinaryOperator *sum =
+            llvm::BinaryOperator::Create(llvm::Instruction::Add, scaledVarying, constOffsets, "varying+const_offsets",
+                                         ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        if (varyingOffsets != access.offsets()) {
+            // Sign extended i32 values: |offset * scale| < 2^63 and
+            // |offset * scale + delta| < 2^63, so neither wraps.
+            scaledVarying->setHasNoSignedWrap(true);
+            sum->setHasNoSignedWrap(true);
+        }
+        fullOffsets = sum;
     } else {
         llvm::Value *offsetScale = access.scale();
-        llvm::Value *offsets = access.offsets();
+        llvm::Value *offsets = lExtendToIndexWidth(access.offsets(), base, callInst);
 
         // When offsetScale is 1, skip the multiplication to preserve linearity detection
-        llvm::ConstantInt *offsetScaleInt = llvm::dyn_cast<llvm::ConstantInt>(offsetScale);
-        if (offsetScaleInt != nullptr && offsetScaleInt->isOne()) {
+        if (scale->isOne()) {
             fullOffsets = offsets;
         } else {
             llvm::Value *offsetScaleVec = lGetOffsetScaleVec(offsetScale, offsets->getType());
-            fullOffsets = llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, offsets,
-                                                       "scaled_offsets", ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+            llvm::BinaryOperator *scaled =
+                llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, offsets, "scaled_offsets",
+                                             ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+            if (offsets != access.offsets()) {
+                // A sign extended i32 offset times the scale doesn't wrap in i64.
+                scaled->setHasNoSignedWrap(true);
+            }
+            fullOffsets = scaled;
         }
     }
 

@@ -7474,12 +7474,12 @@ define <WIDTH x $1>
 @__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale,
                            <WIDTH x i32> %offsets,
                            <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %scale_vec = bitcast i32 %offset_scale to <1 x i32>
-  %smear_scale = shufflevector <1 x i32> %scale_vec, <1 x i32> poison,
-     <WIDTH x i32> < forloop(i, 1, eval(WIDTH-1), `i32 0, ') i32 0 >
-  %scaled_offsets = mul <WIDTH x i32> %smear_scale, %offsets
-  %v = call <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32> %scaled_offsets, i32 1,
-                                                     <WIDTH x i32> zeroinitializer, <WIDTH x MASK> %vecmask)
+  ; The factored form sign extends the offsets and the scale before
+  ; multiplying, like the native 32-bit gathers. Scaling the offsets at
+  ; i32 width first would wrap: index 0x20000000 times 4 is -2^31.
+  %v = call <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32> %offsets,
+                                                     i32 %offset_scale, <WIDTH x i32> zeroinitializer,
+                                                     <WIDTH x MASK> %vecmask)
   ret <WIDTH x $1> %v
 }
 
@@ -7487,13 +7487,10 @@ define <WIDTH x $1>
 @__gather_base_offsets64_$1(i8 * %ptr, i32 %offset_scale,
                             <WIDTH x i64> %offsets,
                             <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  %scale64 = zext i32 %offset_scale to i64
-  %scale_vec = bitcast i64 %scale64 to <1 x i64>
-  %smear_scale = shufflevector <1 x i64> %scale_vec, <1 x i64> poison,
-     <WIDTH x i32> < forloop(i, 1, eval(WIDTH-1), `i32 0, ') i32 0 >
-  %scaled_offsets = mul <WIDTH x i64> %smear_scale, %offsets
-  %v = call <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64> %scaled_offsets,
-                                                     i32 1, <WIDTH x i64> zeroinitializer, <WIDTH x MASK> %vecmask)
+  ; The factored form sign extends the scale, as the other lowerings do.
+  %v = call <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64> %offsets,
+                                                     i32 %offset_scale, <WIDTH x i64> zeroinitializer,
+                                                     <WIDTH x MASK> %vecmask)
   ret <WIDTH x $1> %v
 }
 

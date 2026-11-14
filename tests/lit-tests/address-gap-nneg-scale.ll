@@ -6,8 +6,6 @@
 ;
 ; RUN: %{ispc-opt} --target=avx2-i32x8 --passes=improve-memory-ops %s -o - | FileCheck %s
 ; REQUIRES: X86_ENABLED
-; XFAIL: *
-
 declare <8 x float> @__pseudo_gather64_float(<8 x i64>, <8 x i32>)
 declare <8 x float> @__pseudo_gather_base_offsets64_float(ptr, i32, <8 x i64>, <8 x i32>)
 declare <8 x float> @__pseudo_gather_base_offsets32_float(ptr, i32, <8 x i32>, <8 x i32>)

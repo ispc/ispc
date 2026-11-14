@@ -124,7 +124,7 @@ define <8 x i32> @sext_index(ptr %base, <8 x i32> %index, <8 x i32> %mask) {
 ; CHECK:      %addresses = add <8 x i64>
 ; CHECK-NEXT: {{%.*}} = add <8 x i64> <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>, zeroinitializer
 ; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i32 {{%.*}}
+; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
 ; A64:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 0
 ; CHECK-NEXT: [[V:%.*]] = load <8 x float>, ptr [[PTR]], align 4
 ; CHECK-NEXT: ret <8 x float> [[V]]

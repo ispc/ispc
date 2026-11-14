@@ -168,7 +168,7 @@ define <4 x float> @constant_lanes_plus(<4 x i64> %extra, <4 x i32> %mask) {
 ; Linear displacements alone become a masked load.
 ; CHECK-LABEL: define <4 x float> @constant_lanes_only(
 ; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i32 {{%.*}}
+; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
 ; A64:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
 ; CHECK-NEXT: [[V:%.*]] = call <4 x float> @__masked_load_float(ptr [[PTR]], <4 x i32> %mask)
 ; CHECK-NEXT: ret <4 x float> [[V]]
@@ -222,7 +222,7 @@ define <4 x i32> @sext_index(ptr %base, <4 x i32> %index, <4 x i32> %mask) {
 ; CHECK:      %addresses = add <4 x i64>
 ; CHECK-NEXT: {{%.*}} = add <4 x i64> <i64 0, i64 4, i64 8, i64 12>, zeroinitializer
 ; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 ptrtoint (ptr @table to i64) to ptr
-; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i32 {{%.*}}
+; A32:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
 ; A64:        [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
 ; CHECK-NEXT: [[V:%.*]] = load <4 x float>, ptr [[PTR]], align 4
 ; CHECK-NEXT: ret <4 x float> [[V]]
