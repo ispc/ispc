@@ -3252,6 +3252,93 @@ UnmaskedStmt *UnmaskedStmt::Instantiate(TemplateInstantiation &templInst) const 
 
 ReturnStmt::ReturnStmt(Expr *e, SourcePos p) : Stmt(p, ReturnStmtID), expr(e), hasExpr(e != nullptr) {}
 
+/** Given an lvalue expression, returns the variable whose storage it
+    designates, or nullptr if that can't be determined.  Only element and
+    member accesses that stay inside the variable itself are looked
+    through: anything reached through a pointer or a reference lives
+    somewhere else. */
+static Symbol *lGetStorageSymbol(Expr *expr) {
+    while (expr != nullptr) {
+        if (llvm::isa<SymbolExpr>(expr) || llvm::isa<ConstSymbolExpr>(expr)) {
+            return expr->GetBaseSymbol();
+        } else if (IndexExpr *ie = llvm::dyn_cast<IndexExpr>(expr)) {
+            if (ie->baseExpr == nullptr || CastType<SequentialType>(ie->baseExpr->GetType()) == nullptr) {
+                return nullptr;
+            }
+            expr = ie->baseExpr;
+        } else if (MemberExpr *me = llvm::dyn_cast<MemberExpr>(expr)) {
+            if (me->expr == nullptr || CastType<PointerType>(me->expr->GetType()) != nullptr) {
+                return nullptr;
+            }
+            expr = me->expr;
+        } else {
+            return nullptr;
+        }
+    }
+    return nullptr;
+}
+
+/** Issues a warning if the value returned from a function is the address
+    of, or a reference to, a variable that stops existing when the
+    function returns. */
+static void lCheckReturnOfStackAddress(Expr *expr, const Function *func) {
+    const Type *returnType = func->GetReturnType();
+    const Type *exprType = expr->GetType();
+    if (exprType == nullptr) {
+        return;
+    }
+
+    const bool returnsReference = IsReferenceType(returnType);
+    Expr *lvalue = nullptr;
+    if (returnsReference) {
+        if (IsReferenceType(exprType) == false) {
+            lvalue = expr;
+        }
+    } else if (CastType<PointerType>(returnType) != nullptr) {
+        // Look through type casts and pointer arithmetic to find the
+        // expression that the returned pointer is derived from.
+        Expr *e = expr;
+        while (e != nullptr) {
+            if (TypeCastExpr *tce = llvm::dyn_cast<TypeCastExpr>(e)) {
+                e = tce->expr;
+            } else if (BinaryExpr *be = llvm::dyn_cast<BinaryExpr>(e)) {
+                if ((be->op != BinaryExpr::Add && be->op != BinaryExpr::Sub) || be->arg0 == nullptr ||
+                    be->arg1 == nullptr || CastType<PointerType>(be->GetType()) == nullptr) {
+                    return;
+                }
+                // Only one of the operands of pointer arithmetic is a pointer.
+                e = (CastType<PointerType>(be->arg0->GetType()) != nullptr) ? be->arg0 : be->arg1;
+            } else {
+                break;
+            }
+        }
+        if (e == nullptr) {
+            return;
+        }
+        if (AddressOfExpr *aoe = llvm::dyn_cast<AddressOfExpr>(e)) {
+            lvalue = aoe->expr;
+        } else if (CastType<ArrayType>(e->GetType()) != nullptr) {
+            // The array is implicitly converted to a pointer to its first element.
+            lvalue = e;
+        }
+    }
+
+    // The variable lives on the stack if its storage was allocated in the
+    // function.  This is what tells apart locals and parameters from
+    // globals and static locals; Symbol::parentFunction can't be used for
+    // this, as it is also set for the copies of global symbols that are made
+    // when a function template is instantiated.
+    Symbol *sym = lGetStorageSymbol(lvalue);
+    if (sym == nullptr || IsReferenceType(sym->type) || sym->storageInfo == nullptr ||
+        llvm::isa<llvm::AllocaInst>(sym->storageInfo->getPointer()) == false) {
+        return;
+    }
+
+    Warning(expr->pos, "%s stack memory associated with %s \"%s\" returned.",
+            returnsReference ? "Reference to" : "Address of", func->IsParameter(sym) ? "parameter" : "local variable",
+            sym->name.c_str());
+}
+
 void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) {
         return;
@@ -3289,6 +3376,10 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
                   returnType->GetString().c_str());
             return;
         }
+    }
+
+    if (expr != nullptr) {
+        lCheckReturnOfStackAddress(expr, func);
     }
 
     ctx->SetDebugPos(pos);
