@@ -19,6 +19,7 @@
 #include "type.h"
 #include "util.h"
 
+#include <algorithm>
 #include <stdio.h>
 
 #include <llvm/IR/CFG.h>
@@ -257,6 +258,10 @@ const FunctionType *Function::GetType() const {
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != nullptr);
     return type;
+}
+
+bool Function::IsParameter(const Symbol *s) const {
+    return s != nullptr && std::find(args.begin(), args.end(), s) != args.end();
 }
 
 /** Parameters for tasks are stored in a big structure; this utility
