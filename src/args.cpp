@@ -22,6 +22,7 @@
 #include <sstream>
 #include <vector>
 
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/FileSystem.h>
 
@@ -1337,7 +1338,15 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
         } else {
             Args[1] = "--x86-asm-syntax=att";
         }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+        // LLVM 24 declares -x86-asm-syntax as a library option, which
+        // cl::ParseCommandLineOptions rejects since LLVM commit 77949b7c8b29
+        // (#242689). Parse it into the library options of g->ctx, which
+        // Target passes to the TargetMachine.
+        llvm::cl::parseCommandLineOptions(g->ctx->getLibraryOptions(), llvm::ArrayRef<const char *>(Args.data(), 2));
+#else
         llvm::cl::ParseCommandLineOptions(2, Args.data());
+#endif
     }
 
     bool targetIsGen = false;

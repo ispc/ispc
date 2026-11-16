@@ -2398,6 +2398,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             break;
         }
         llvm::TargetOptions options;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+        // Library options (e.g. -x86-asm-syntax) parsed in ParseCommandLineArgs
+        // live in g->ctx. The TargetMachine reads them from here when it is
+        // created.
+        options.MCOptions.LibraryOptions = &g->ctx->getLibraryOptions();
+#endif
 #ifdef ISPC_ARM_ENABLED
 #if ISPC_LLVM_VERSION < ISPC_LLVM_24_0
         options.FloatABIType = llvm::FloatABI::Hard;
