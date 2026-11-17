@@ -108,9 +108,12 @@ Allowed:
 - Uniform conditions for control flow.
 - ``break`` and ``continue``.
 - ``return`` with a value.
-- Calls to other ``constexpr`` functions.
+- Calls to other ``constexpr`` functions and compiler-registered equal-width
+  integer/floating-point ``@llvm.ispc.bitcast`` overloads.
 - ``sizeof``, ``alignof``, and type casts.
-- Aggregate local variables with constant initializers.
+- Initialized aggregate local variables, including nested element assignments
+  and compound assignments. Writes require uniform in-bounds indices and
+  preserve independent copies of aggregate values.
 
 Disallowed (v1):
 
@@ -122,7 +125,7 @@ Disallowed (v1):
   atomics, and any other side-effecting builtins.
 - ``foreach*`` statements (``foreach``, ``foreach_active``, ``foreach_unique``).
 - ``goto`` and labels.
-- Calls to non-``constexpr`` functions.
+- Calls to other non-``constexpr`` functions or unsupported intrinsics.
 - Return type ``void`` (v1 restriction).
 
 These checks are purely structural; the function body is not executed at
@@ -338,7 +341,8 @@ Requirements (v1):
 
 - The function body must be constexpr-suitable at definition time.
 - The function must return a value (no ``void`` return in v1).
-- The function may only call other ``constexpr`` functions.
+- The function may call other ``constexpr`` functions and supported
+  integer/floating-point ``@llvm.ispc.bitcast`` overloads.
 - ``constexpr`` is not allowed on function parameters.
 - Control flow conditions must be uniform.
 - Pointer dereference is not allowed; address-of is limited to

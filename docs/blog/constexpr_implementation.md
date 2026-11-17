@@ -133,6 +133,13 @@ deferred intrinsic checks in templates, and `static_assert` into the current
 implementation. Static assertions validate AMX tile ranges and builtin
 prefetch controls before intrinsic lowering; constant-scale gather tests
 exercise the same contract for the legal scales 1, 2, 4, and 8.
+The next conversions brought in local aggregate element assignment and exact
+integer/floating-point bit reinterpretation. Rotation tables and AMX tile
+descriptors can now be built with constexpr loops. Existing bit-conversion,
+floating classification, and selected SSE construction/shuffle functions are
+usable during constant evaluation with their ordinary call syntax. These
+changes preserve the existing public interfaces; new explicit gather/scatter
+APIs are not a prerequisite for internal migration.
 The remaining “v2” candidates are:
 
 - Extend forward-definition support to array sizes, vector lengths, and
@@ -142,5 +149,5 @@ The remaining “v2” candidates are:
   constant folding to remove constexpr-only paths.
 
 The implementation notes record the reasons for keeping these separate, along
-with aggregate mutation, masked control flow, pure-intrinsic evaluation for
-more math functions, and a possible constant-scale gather/scatter API.
+with masked control flow, writes through pointers/references, and evaluation
+of further pure intrinsics for more math functions.

@@ -567,18 +567,14 @@ static inline unmasked uniform int _mm_movemask_pd(uniform __m128d _A) {
     return packmask(signbits(S0));
 }
 
-static inline unmasked uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B, uniform unsigned int _I) {
-    uniform __m128d result;
-    result.m128d_f64[0] = _A.m128d_f64[_I & 1];
-    result.m128d_f64[1] = _B.m128d_f64[(_I >> 1) & 1];
+static inline unmasked constexpr uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B,
+                                                                uniform unsigned int _I) {
+    uniform __m128d result = {{_A.m128d_f64[_I & 1], _B.m128d_f64[(_I >> 1) & 1]}};
     return result;
 }
 
-template <int I> inline unmasked uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B) {
-    uniform __m128d result;
-    result.m128d_f64[0] = _A.m128d_f64[I & 1];
-    result.m128d_f64[1] = _B.m128d_f64[(I >> 1) & 1];
-    return result;
+template <int I> inline unmasked constexpr uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B) {
+    return _mm_shuffle_pd(_A, _B, I);
 }
 
 /*
@@ -625,29 +621,29 @@ static inline unmasked uniform __m128d _mm_loadl_pd(uniform __m128d _A, uniform 
  * DP, sets
  */
 
-static inline unmasked uniform __m128d _mm_set_sd(uniform double _W) {
-    const uniform double<2> _R = {_W, 0.0};
-    return *((uniform __m128d * uniform) & _R);
+static inline unmasked constexpr uniform __m128d _mm_set_sd(uniform double _W) {
+    uniform __m128d result = {{_W, 0.0}};
+    return result;
 }
 
-static inline unmasked uniform __m128d _mm_set1_pd(uniform double _A) {
-    const uniform double<2> _R = {_A, _A};
-    return *((uniform __m128d * uniform) & _R);
+static inline unmasked constexpr uniform __m128d _mm_set1_pd(uniform double _A) {
+    uniform __m128d result = {{_A, _A}};
+    return result;
 }
 
-static inline unmasked uniform __m128d _mm_set_pd(uniform double _Z, uniform double _Y) {
-    const uniform double<2> _R = {_Y, _Z};
-    return *((uniform __m128d * uniform) & _R);
+static inline unmasked constexpr uniform __m128d _mm_set_pd(uniform double _Z, uniform double _Y) {
+    uniform __m128d result = {{_Y, _Z}};
+    return result;
 }
 
-static inline unmasked uniform __m128d _mm_setr_pd(uniform double _Y, uniform double _Z) {
-    const uniform double<2> _R = {_Y, _Z};
-    return *((uniform __m128d * uniform) & _R);
+static inline unmasked constexpr uniform __m128d _mm_setr_pd(uniform double _Y, uniform double _Z) {
+    uniform __m128d result = {{_Y, _Z}};
+    return result;
 }
 
-static inline unmasked uniform __m128d _mm_setzero_pd() {
-    const uniform double<2> _R = {0, 0};
-    return *((uniform __m128d * uniform) & _R);
+static inline unmasked constexpr uniform __m128d _mm_setzero_pd() {
+    uniform __m128d result = {{0, 0}};
+    return result;
 }
 
 static inline unmasked uniform __m128d _mm_move_sd(uniform __m128d _A, uniform __m128d _B) {
@@ -1409,22 +1405,14 @@ static inline unmasked uniform int _mm_movemask_epi8(uniform __m128i _A) {
     return Result;
 }
 
-static inline unmasked uniform __m128i _mm_shuffle_epi32(uniform __m128i _A, uniform unsigned int _Imm8) {
-    uniform __m128i result;
-    result.m128i_i32[0] = _A.m128i_i32[_Imm8 & 3];
-    result.m128i_i32[1] = _A.m128i_i32[(_Imm8 >> 2) & 3];
-    result.m128i_i32[2] = _A.m128i_i32[(_Imm8 >> 4) & 3];
-    result.m128i_i32[3] = _A.m128i_i32[(_Imm8 >> 6) & 3];
+static inline unmasked constexpr uniform __m128i _mm_shuffle_epi32(uniform __m128i _A, uniform unsigned int _Imm8) {
+    uniform __m128i result = {{_A.m128i_i32[_Imm8 & 3], _A.m128i_i32[(_Imm8 >> 2) & 3],
+                               _A.m128i_i32[(_Imm8 >> 4) & 3], _A.m128i_i32[(_Imm8 >> 6) & 3]}};
     return result;
 }
 
-template <int Imm8> inline unmasked uniform __m128i _mm_shuffle_epi32(uniform __m128i _A) {
-    uniform __m128i result;
-    result.m128i_i32[0] = _A.m128i_i32[Imm8 & 3];
-    result.m128i_i32[1] = _A.m128i_i32[(Imm8 >> 2) & 3];
-    result.m128i_i32[2] = _A.m128i_i32[(Imm8 >> 4) & 3];
-    result.m128i_i32[3] = _A.m128i_i32[(Imm8 >> 6) & 3];
-    return result;
+template <int Imm8> inline unmasked constexpr uniform __m128i _mm_shuffle_epi32(uniform __m128i _A) {
+    return _mm_shuffle_epi32(_A, Imm8);
 }
 
 static inline unmasked uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
@@ -1576,10 +1564,10 @@ static inline unmasked uniform __m128i _mm_set_epi64x(uniform int64 _I1, uniform
     return *((uniform __m128i * uniform) & _R);
 }
 
-static inline unmasked uniform __m128i _mm_set_epi32(uniform int32 _I3, uniform int32 _I2, uniform int32 _I1,
-                                                     uniform int32 _I0) {
-    const uniform int32<4> _R = {_I0, _I1, _I2, _I3};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set_epi32(uniform int32 _I3, uniform int32 _I2, uniform int32 _I1,
+                                                               uniform int32 _I0) {
+    uniform __m128i result = {{_I0, _I1, _I2, _I3}};
+    return result;
 }
 
 static inline unmasked uniform __m128i _mm_set_epi16(uniform int16 _W7, uniform int16 _W6, uniform int16 _W5,
@@ -1608,9 +1596,9 @@ static inline unmasked uniform __m128i _mm_set1_epi64x(uniform int64 i) {
     return *((uniform __m128i * uniform) & _R);
 }
 
-static inline unmasked uniform __m128i _mm_set1_epi32(uniform int32 _I) {
-    const uniform int32<4> _R = {_I, _I, _I, _I};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set1_epi32(uniform int32 _I) {
+    uniform __m128i result = {{_I, _I, _I, _I}};
+    return result;
 }
 
 static inline unmasked uniform __m128i _mm_set1_epi16(uniform int16 _W) {
@@ -1628,10 +1616,10 @@ NOT_IMPLEMENTED(extern __m128i _mm_setl_epi64(__m128i _Q));
 NOT_IMPLEMENTED(extern __m128i _mm_setr_epi64(__m64 _Q0, __m64 _Q1));
 #endif
 
-static inline unmasked uniform __m128i _mm_setr_epi32(uniform int32 _I0, uniform int32 _I1, uniform int32 _I2,
-                                                      uniform int32 _I3) {
-    const uniform int32<4> _R = {_I0, _I1, _I2, _I3};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_setr_epi32(uniform int32 _I0, uniform int32 _I1, uniform int32 _I2,
+                                                                uniform int32 _I3) {
+    uniform __m128i result = {{_I0, _I1, _I2, _I3}};
+    return result;
 }
 
 static inline unmasked uniform __m128i _mm_setr_epi16(uniform int16 _W0, uniform int16 _W1, uniform int16 _W2,
@@ -1651,9 +1639,9 @@ static inline unmasked uniform __m128i _mm_setr_epi8(uniform int8 _B15, uniform 
     return *((uniform __m128i * uniform) & _R);
 }
 
-static inline unmasked uniform __m128i _mm_setzero_si128() {
-    const uniform int<4> _R = {0, 0, 0, 0};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_setzero_si128() {
+    uniform __m128i result = {{0, 0, 0, 0}};
+    return result;
 }
 
 /*

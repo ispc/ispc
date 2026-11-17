@@ -23,52 +23,6 @@
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
-__declspec(safe, cost0) static inline float16 float16bits(unsigned int16 a) { return __halfbits_varying_int16(a); }
-
-__declspec(safe, cost0) static inline uniform float16 float16bits(uniform unsigned int16 a) {
-    return __halfbits_uniform_int16(a);
-}
-
-__declspec(safe, cost0) static inline float16 float16bits(int16 a) { return __halfbits_varying_int16(a); }
-
-__declspec(safe, cost0) static inline uniform float16 float16bits(uniform int16 a) {
-    return __halfbits_uniform_int16(a);
-}
-
-__declspec(safe, cost0) static inline float floatbits(unsigned int a) { return __floatbits_varying_int32(a); }
-
-__declspec(safe, cost0) static inline uniform float floatbits(uniform unsigned int a) {
-    return __floatbits_uniform_int32(a);
-}
-
-__declspec(safe, cost0) static inline float floatbits(int a) { return __floatbits_varying_int32(a); }
-
-__declspec(safe, cost0) static inline uniform float floatbits(uniform int a) { return __floatbits_uniform_int32(a); }
-
-__declspec(safe, cost0) static inline double doublebits(unsigned int64 a) { return __doublebits_varying_int64(a); }
-
-__declspec(safe, cost0) static inline uniform double doublebits(uniform unsigned int64 a) {
-    return __doublebits_uniform_int64(a);
-}
-
-__declspec(safe, cost0) static inline unsigned int16 intbits(float16 a) { return __intbits_varying_half(a); }
-
-__declspec(safe, cost0) static inline uniform unsigned int16 intbits(uniform float16 a) {
-    return __intbits_uniform_half(a);
-}
-
-__declspec(safe, cost0) static inline unsigned int intbits(float a) { return __intbits_varying_float(a); }
-
-__declspec(safe, cost0) static inline uniform unsigned int intbits(uniform float a) {
-    return __intbits_uniform_float(a);
-}
-
-__declspec(safe, cost0) static inline unsigned int64 intbits(double d) { return __intbits_varying_double(d); }
-
-__declspec(safe, cost0) static inline uniform unsigned int64 intbits(uniform double d) {
-    return __intbits_uniform_double(d);
-}
-
 __declspec(safe) static inline float broadcast(float v, uniform int i) { return __broadcast_float(v, i); }
 
 __declspec(safe) static inline int8 broadcast(int8 v, uniform int i) { return __broadcast_i8(v, i); }
@@ -97,41 +51,23 @@ __declspec(safe) static inline unsigned int64 broadcast(unsigned int64 v, unifor
     return __broadcast_i64(v, i);
 }
 
-static constexpr varying int32 __rotate_shuffle_mask(uniform int32 amount) {
-    return (programIndex + amount) & (programCount - 1);
+struct __RotateShuffleMasks {
+    varying int32 lanes[programCount];
+};
+
+static constexpr uniform __RotateShuffleMasks __make_rotate_shuffle_masks() {
+    uniform __RotateShuffleMasks masks = {{0}};
+    for (uniform int32 i = 0; i < programCount; ++i) {
+        masks.lanes[i] = (programIndex + i) & (programCount - 1);
+    }
+    return masks;
 }
 
-template <typename T> unmasked varying T __rotate_via_shuffle(varying T v, uniform int32 i) {
-    // Precompute the shuffle for each runtime rotation offset.
-    static constexpr varying int32 masks[programCount] = {
-        __rotate_shuffle_mask(0),  __rotate_shuffle_mask(1),  __rotate_shuffle_mask(2),  __rotate_shuffle_mask(3),
-#if TARGET_WIDTH > 4
-        __rotate_shuffle_mask(4),  __rotate_shuffle_mask(5),  __rotate_shuffle_mask(6),  __rotate_shuffle_mask(7),
-#endif
-#if TARGET_WIDTH > 8
-        __rotate_shuffle_mask(8),  __rotate_shuffle_mask(9),  __rotate_shuffle_mask(10), __rotate_shuffle_mask(11),
-        __rotate_shuffle_mask(12), __rotate_shuffle_mask(13), __rotate_shuffle_mask(14), __rotate_shuffle_mask(15),
-#endif
-#if TARGET_WIDTH > 16
-        __rotate_shuffle_mask(16), __rotate_shuffle_mask(17), __rotate_shuffle_mask(18), __rotate_shuffle_mask(19),
-        __rotate_shuffle_mask(20), __rotate_shuffle_mask(21), __rotate_shuffle_mask(22), __rotate_shuffle_mask(23),
-        __rotate_shuffle_mask(24), __rotate_shuffle_mask(25), __rotate_shuffle_mask(26), __rotate_shuffle_mask(27),
-        __rotate_shuffle_mask(28), __rotate_shuffle_mask(29), __rotate_shuffle_mask(30), __rotate_shuffle_mask(31),
-#endif
-#if TARGET_WIDTH > 32
-        __rotate_shuffle_mask(32), __rotate_shuffle_mask(33), __rotate_shuffle_mask(34), __rotate_shuffle_mask(35),
-        __rotate_shuffle_mask(36), __rotate_shuffle_mask(37), __rotate_shuffle_mask(38), __rotate_shuffle_mask(39),
-        __rotate_shuffle_mask(40), __rotate_shuffle_mask(41), __rotate_shuffle_mask(42), __rotate_shuffle_mask(43),
-        __rotate_shuffle_mask(44), __rotate_shuffle_mask(45), __rotate_shuffle_mask(46), __rotate_shuffle_mask(47),
-        __rotate_shuffle_mask(48), __rotate_shuffle_mask(49), __rotate_shuffle_mask(50), __rotate_shuffle_mask(51),
-        __rotate_shuffle_mask(52), __rotate_shuffle_mask(53), __rotate_shuffle_mask(54), __rotate_shuffle_mask(55),
-        __rotate_shuffle_mask(56), __rotate_shuffle_mask(57), __rotate_shuffle_mask(58), __rotate_shuffle_mask(59),
-        __rotate_shuffle_mask(60), __rotate_shuffle_mask(61), __rotate_shuffle_mask(62), __rotate_shuffle_mask(63),
-#endif
-    };
+static constexpr uniform __RotateShuffleMasks __rotate_shuffle_masks = __make_rotate_shuffle_masks();
 
-    i = i & (TARGET_WIDTH - 1);
-    return shuffle(v, masks[i]);
+template <typename T> unmasked varying T __rotate_via_shuffle(varying T v, uniform int32 i) {
+    i = i & (programCount - 1);
+    return shuffle(v, __rotate_shuffle_masks.lanes[i]);
 }
 
 __declspec(safe) static inline int8 rotate(int8 v, uniform int i) {
@@ -1928,109 +1864,6 @@ __declspec(safe) static inline uniform int64 clock() { return __clock(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // Floating-Point Math
-
-__declspec(safe, cost1) static inline uniform bool isinf(uniform float16 v) { return intbits(abs(v)) == 0x7C00; }
-
-__declspec(safe, cost1) static inline bool isinf(float16 v) { return intbits(abs(v)) == 0x7C00; }
-
-__declspec(safe, cost1) static inline uniform bool isinf(uniform float v) { return intbits(abs(v)) == 0x7F800000; }
-
-__declspec(safe, cost1) static inline bool isinf(float v) { return intbits(abs(v)) == 0x7F800000; }
-
-__declspec(safe, cost1) static inline uniform bool isinf(uniform double v) {
-    return intbits(abs(v)) == 0x7FF0000000000000;
-}
-
-__declspec(safe, cost1) static inline bool isinf(double v) { return intbits(abs(v)) == 0x7FF0000000000000; }
-
-__declspec(safe, cost1) static inline uniform bool isfinite(uniform float16 v) {
-    return (intbits(v) & 0x7C00) != 0x7C00;
-}
-
-__declspec(safe, cost1) static inline bool isfinite(float16 v) { return (intbits(v) & 0x7C00) != 0x7C00; }
-
-__declspec(safe, cost1) static inline uniform bool isfinite(uniform float v) {
-    return (intbits(v) & 0x7F800000) != 0x7F800000;
-}
-
-__declspec(safe, cost1) static inline bool isfinite(float v) { return (intbits(v) & 0x7F800000) != 0x7F800000; }
-
-__declspec(safe, cost1) static inline uniform bool isfinite(uniform double v) {
-    return (intbits(v) & 0x7FF0000000000000) != 0x7FF0000000000000;
-}
-
-__declspec(safe, cost1) static inline bool isfinite(double v) {
-    return (intbits(v) & 0x7FF0000000000000) != 0x7FF0000000000000;
-}
-
-__declspec(safe, cost1) static inline float16 abs(float16 a) {
-    // Floating-point hack: zeroing the high bit clears the sign
-    unsigned int16 i = intbits(a);
-    i &= 0x7fff;
-    return float16bits(i);
-}
-
-__declspec(safe, cost1) static inline uniform float16 abs(uniform float16 a) {
-    uniform unsigned int16 i = intbits(a);
-    i &= 0x7fff;
-    return float16bits(i);
-}
-
-__declspec(safe, cost1) static inline float abs(float a) {
-    // Floating-point hack: zeroing the high bit clears the sign
-    unsigned int i = intbits(a);
-    i &= 0x7fffffff;
-    return floatbits(i);
-}
-
-__declspec(safe, cost1) static inline uniform float abs(uniform float a) {
-    uniform unsigned int i = intbits(a);
-    i &= 0x7fffffff;
-    return floatbits(i);
-}
-
-__declspec(safe, cost1) static inline double abs(double a) {
-    // zeroing the high bit clears the sign
-    unsigned int64 i = intbits(a);
-    i &= 0x7fffffffffffffff;
-    return doublebits(i);
-}
-
-__declspec(safe, cost1) static inline uniform double abs(uniform double a) {
-    uniform unsigned int64 i = intbits(a);
-    i &= 0x7fffffffffffffff;
-    return doublebits(i);
-}
-
-__declspec(safe, cost1) static inline unsigned int16 signbits(float16 x) {
-    unsigned int16 i = intbits(x);
-    return (i & 0x8000);
-}
-
-__declspec(safe, cost1) static inline uniform unsigned int16 signbits(uniform float16 x) {
-    uniform unsigned int16 i = intbits(x);
-    return (i & 0x8000);
-}
-
-__declspec(safe, cost1) static inline unsigned int signbits(float x) {
-    unsigned int i = intbits(x);
-    return (i & 0x80000000);
-}
-
-__declspec(safe, cost1) static inline uniform unsigned int signbits(uniform float x) {
-    uniform unsigned int i = intbits(x);
-    return (i & 0x80000000);
-}
-
-__declspec(safe, cost1) static inline unsigned int64 signbits(double x) {
-    unsigned int64 i = intbits(x);
-    return (i & 0x8000000000000000);
-}
-
-__declspec(safe, cost1) static inline uniform unsigned int64 signbits(uniform double x) {
-    uniform unsigned int64 i = intbits(x);
-    return (i & 0x8000000000000000);
-}
 
 __declspec(safe, cost2) static inline float16 round(float16 x) { return __round_varying_half(x); }
 
@@ -6643,22 +6476,22 @@ __attribute__((unmangled)) unmasked uniform double __extendhfdf2(uniform float16
 // value, as computed in floats using the official formula): 0.544403 at
 // 0x3e9f8000
 
-__declspec(safe) static inline int float_to_srgb8(float inval) {
-    static const uniform unsigned int table[104] = {
-        0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d, 0x00a7001a,
-        0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a, 0x010e0033, 0x01280033,
-        0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033, 0x01dc0067, 0x020f0067, 0x02430067,
-        0x02760067, 0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067, 0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce,
-        0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5, 0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112,
-        0x09940106, 0x0a1700fc, 0x0a9500f2, 0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e,
-        0x0fbc0150, 0x10630143, 0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0,
-        0x182401af, 0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
-        0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300, 0x31d105b0,
-        0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401, 0x44c20798, 0x488e071e,
-        0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559, 0x5e0c0a23, 0x631c0980, 0x67db08f6,
-        0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
-    };
+static constexpr uniform unsigned int __float_to_srgb8_table[104] = {
+    0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d, 0x00a7001a,
+    0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a, 0x010e0033, 0x01280033,
+    0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033, 0x01dc0067, 0x020f0067, 0x02430067,
+    0x02760067, 0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067, 0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce,
+    0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5, 0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112,
+    0x09940106, 0x0a1700fc, 0x0a9500f2, 0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e,
+    0x0fbc0150, 0x10630143, 0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0,
+    0x182401af, 0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
+    0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300, 0x31d105b0,
+    0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401, 0x44c20798, 0x488e071e,
+    0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559, 0x5e0c0a23, 0x631c0980, 0x67db08f6,
+    0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
+};
 
+__declspec(safe) static inline int float_to_srgb8(float inval) {
     static const uniform unsigned int near_zero = 0x39000000;
     static const uniform unsigned int almost_one = 0x3f7fffff;
 
@@ -6667,7 +6500,7 @@ __declspec(safe) static inline int float_to_srgb8(float inval) {
     inval = min(inval, floatbits(almost_one));
 
     // Do the table lookup and unpack bias, scale
-    unsigned int tab = table[(intbits(inval) - 0x39000000u) >> 20];
+    unsigned int tab = __float_to_srgb8_table[(intbits(inval) - 0x39000000u) >> 20];
     unsigned int bias = (tab >> 16) << 9;
     unsigned int scale = tab & 0xfffful;
 
@@ -6677,21 +6510,6 @@ __declspec(safe) static inline int float_to_srgb8(float inval) {
 }
 
 __declspec(safe) static inline uniform int float_to_srgb8(uniform float inval) {
-    static const uniform unsigned int table[104] = {
-        0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d, 0x00a7001a,
-        0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a, 0x010e0033, 0x01280033,
-        0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033, 0x01dc0067, 0x020f0067, 0x02430067,
-        0x02760067, 0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067, 0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce,
-        0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5, 0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112,
-        0x09940106, 0x0a1700fc, 0x0a9500f2, 0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e,
-        0x0fbc0150, 0x10630143, 0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0,
-        0x182401af, 0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
-        0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300, 0x31d105b0,
-        0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401, 0x44c20798, 0x488e071e,
-        0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559, 0x5e0c0a23, 0x631c0980, 0x67db08f6,
-        0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
-    };
-
     static const uniform unsigned int near_zero = 0x39000000;
     static const uniform unsigned int almost_one = 0x3f7fffff;
 
@@ -6700,7 +6518,7 @@ __declspec(safe) static inline uniform int float_to_srgb8(uniform float inval) {
     inval = min(inval, floatbits(almost_one));
 
     // Do the table lookup and unpack bias, scale
-    uniform unsigned int tab = table[(intbits(inval) - 0x39000000u) >> 20];
+    uniform unsigned int tab = __float_to_srgb8_table[(intbits(inval) - 0x39000000u) >> 20];
     uniform unsigned int bias = (tab >> 16) << 9;
     uniform unsigned int scale = tab & 0xfffful;
 
@@ -7107,54 +6925,6 @@ static inline varying unsigned int64 saturating_sub(varying unsigned int64 a, va
         result &= (-(varying int64)(result <= a));
         return result;
     }
-}
-
-static inline uniform int8 saturating_div(uniform int8 a, uniform int8 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((uniform unsigned int8)a + INT8_MIN));
-    return a / b;
-}
-
-static inline varying int8 saturating_div(varying int8 a, varying int8 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((varying unsigned int8)a + INT8_MIN));
-    return a / b;
-}
-
-static inline uniform int16 saturating_div(uniform int16 a, uniform int16 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((uniform unsigned int16)a + INT16_MIN));
-    return a / b;
-}
-
-static inline varying int16 saturating_div(varying int16 a, varying int16 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((varying unsigned int16)a + INT16_MIN));
-    return a / b;
-}
-
-static inline uniform int32 saturating_div(uniform int32 a, uniform int32 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((uniform unsigned int32)a + INT32_MIN));
-    return a / b;
-}
-
-static inline varying int32 saturating_div(varying int32 a, varying int32 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((varying unsigned int32)a + INT32_MIN));
-    return a / b;
-}
-
-static inline uniform int64 saturating_div(uniform int64 a, uniform int64 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((uniform unsigned int64)a + INT64_MIN));
-    return a / b;
-}
-
-static inline varying int64 saturating_div(varying int64 a, varying int64 b) {
-    /* Only one way to overflow, so test for and prevent it. */
-    a += !((b + 1) | ((varying unsigned int64)a + INT64_MIN));
-    return a / b;
 }
 
 static inline uniform unsigned int8 saturating_div(uniform unsigned int8 a, uniform unsigned int8 b) {

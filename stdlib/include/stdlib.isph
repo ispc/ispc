@@ -14,22 +14,69 @@
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
-__declspec(safe, cost0) inline float16 float16bits(unsigned int16 a);
-__declspec(safe, cost0) inline uniform float16 float16bits(uniform unsigned int16 a);
-__declspec(safe, cost0) inline float16 float16bits(int16 a);
-__declspec(safe, cost0) inline uniform float16 float16bits(uniform int16 a);
-__declspec(safe, cost0) inline float floatbits(unsigned int a);
-__declspec(safe, cost0) inline uniform float floatbits(uniform unsigned int a);
-__declspec(safe, cost0) inline float floatbits(int a);
-__declspec(safe, cost0) inline uniform float floatbits(uniform int a);
-__declspec(safe, cost0) inline double doublebits(unsigned int64 a);
-__declspec(safe, cost0) inline uniform double doublebits(uniform unsigned int64 a);
-__declspec(safe, cost0) inline unsigned int16 intbits(float16 a);
-__declspec(safe, cost0) inline uniform unsigned int16 intbits(uniform float16 a);
-__declspec(safe, cost0) inline unsigned int intbits(float a);
-__declspec(safe, cost0) inline uniform unsigned int intbits(uniform float a);
-__declspec(safe, cost0) inline unsigned int64 intbits(double d);
-__declspec(safe, cost0) inline uniform unsigned int64 intbits(uniform double d);
+__declspec(safe, cost0) static inline constexpr float16 float16bits(unsigned int16 a) {
+    return @llvm.ispc.bitcast(a, (varying float16)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform float16 float16bits(uniform unsigned int16 a) {
+    return @llvm.ispc.bitcast(a, (uniform float16)0);
+}
+
+__declspec(safe, cost0) static inline constexpr float16 float16bits(int16 a) {
+    return @llvm.ispc.bitcast(a, (varying float16)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform float16 float16bits(uniform int16 a) {
+    return @llvm.ispc.bitcast(a, (uniform float16)0);
+}
+
+__declspec(safe, cost0) static inline constexpr float floatbits(unsigned int a) {
+    return @llvm.ispc.bitcast(a, (varying float)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform float floatbits(uniform unsigned int a) {
+    return @llvm.ispc.bitcast(a, (uniform float)0);
+}
+
+__declspec(safe, cost0) static inline constexpr float floatbits(int a) {
+    return @llvm.ispc.bitcast(a, (varying float)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform float floatbits(uniform int a) {
+    return @llvm.ispc.bitcast(a, (uniform float)0);
+}
+
+__declspec(safe, cost0) static inline constexpr double doublebits(unsigned int64 a) {
+    return @llvm.ispc.bitcast(a, (varying double)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform double doublebits(uniform unsigned int64 a) {
+    return @llvm.ispc.bitcast(a, (uniform double)0);
+}
+
+__declspec(safe, cost0) static inline constexpr unsigned int16 intbits(float16 a) {
+    return @llvm.ispc.bitcast(a, (varying int16)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform unsigned int16 intbits(uniform float16 a) {
+    return @llvm.ispc.bitcast(a, (uniform int16)0);
+}
+
+__declspec(safe, cost0) static inline constexpr unsigned int intbits(float a) {
+    return @llvm.ispc.bitcast(a, (varying int)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform unsigned int intbits(uniform float a) {
+    return @llvm.ispc.bitcast(a, (uniform int)0);
+}
+
+__declspec(safe, cost0) static inline constexpr unsigned int64 intbits(double d) {
+    return @llvm.ispc.bitcast(d, (varying int64)0);
+}
+
+__declspec(safe, cost0) static inline constexpr uniform unsigned int64 intbits(uniform double d) {
+    return @llvm.ispc.bitcast(d, (uniform int64)0);
+}
 
 __declspec(safe) inline float broadcast(float v, uniform int i);
 __declspec(safe) inline int8 broadcast(int8 v, uniform int i);
@@ -558,20 +605,6 @@ __declspec(safe, cost1) static inline constexpr bool isnan(float v) { return v !
 __declspec(safe, cost1) static inline constexpr uniform bool isnan(uniform double v) { return v != v; }
 __declspec(safe, cost1) static inline constexpr bool isnan(double v) { return v != v; }
 
-__declspec(safe, cost1) inline uniform bool isinf(uniform float16 v);
-__declspec(safe, cost1) inline bool isinf(float16 v);
-__declspec(safe, cost1) inline uniform bool isinf(uniform float v);
-__declspec(safe, cost1) inline bool isinf(float v);
-__declspec(safe, cost1) inline uniform bool isinf(uniform double v);
-__declspec(safe, cost1) inline bool isinf(double v);
-
-__declspec(safe, cost1) inline uniform bool isfinite(uniform float16 v);
-__declspec(safe, cost1) inline bool isfinite(float16 v);
-__declspec(safe, cost1) inline uniform bool isfinite(uniform float v);
-__declspec(safe, cost1) inline bool isfinite(float v);
-__declspec(safe, cost1) inline uniform bool isfinite(uniform double v);
-__declspec(safe, cost1) inline bool isfinite(double v);
-
 __declspec(safe, cost1) static inline constexpr int8 abs(int8 a) { return a > 0 ? a : -a; }
 __declspec(safe, cost1) static inline constexpr uniform int8 abs(uniform int8 a) { return a > 0 ? a : -a; }
 __declspec(safe, cost1) static inline constexpr int16 abs(int16 a) { return a > 0 ? a : -a; }
@@ -580,19 +613,109 @@ __declspec(safe, cost1) static inline constexpr int abs(int a) { return a > 0 ? 
 __declspec(safe, cost1) static inline constexpr uniform int abs(uniform int a) { return a > 0 ? a : -a; }
 __declspec(safe, cost1) static inline constexpr int64 abs(int64 a) { return a > 0 ? a : -a; }
 __declspec(safe, cost1) static inline constexpr uniform int64 abs(uniform int64 a) { return a > 0 ? a : -a; }
-__declspec(safe, cost1) inline float16 abs(float16 a);
-__declspec(safe, cost1) inline uniform float16 abs(uniform float16 a);
-__declspec(safe, cost1) inline float abs(float a);
-__declspec(safe, cost1) inline uniform float abs(uniform float a);
-__declspec(safe, cost1) inline double abs(double a);
-__declspec(safe, cost1) inline uniform double abs(uniform double a);
 
-__declspec(safe, cost1) inline unsigned int16 signbits(float16 x);
-__declspec(safe, cost1) inline uniform unsigned int16 signbits(uniform float16 x);
-__declspec(safe, cost1) inline unsigned int signbits(float x);
-__declspec(safe, cost1) inline uniform unsigned int signbits(uniform float x);
-__declspec(safe, cost1) inline unsigned int64 signbits(double x);
-__declspec(safe, cost1) inline uniform unsigned int64 signbits(uniform double x);
+__declspec(safe, cost1) static inline constexpr float16 abs(float16 a) {
+    // Floating-point hack: zeroing the high bit clears the sign
+    unsigned int16 i = intbits(a);
+    i &= 0x7fff;
+    return float16bits(i);
+}
+
+__declspec(safe, cost1) static inline constexpr uniform float16 abs(uniform float16 a) {
+    uniform unsigned int16 i = intbits(a);
+    i &= 0x7fff;
+    return float16bits(i);
+}
+
+__declspec(safe, cost1) static inline constexpr float abs(float a) {
+    // Floating-point hack: zeroing the high bit clears the sign
+    unsigned int i = intbits(a);
+    i &= 0x7fffffff;
+    return floatbits(i);
+}
+
+__declspec(safe, cost1) static inline constexpr uniform float abs(uniform float a) {
+    uniform unsigned int i = intbits(a);
+    i &= 0x7fffffff;
+    return floatbits(i);
+}
+
+__declspec(safe, cost1) static inline constexpr double abs(double a) {
+    // zeroing the high bit clears the sign
+    unsigned int64 i = intbits(a);
+    i &= 0x7fffffffffffffff;
+    return doublebits(i);
+}
+
+__declspec(safe, cost1) static inline constexpr uniform double abs(uniform double a) {
+    uniform unsigned int64 i = intbits(a);
+    i &= 0x7fffffffffffffff;
+    return doublebits(i);
+}
+
+__declspec(safe, cost1) static inline constexpr unsigned int16 signbits(float16 x) {
+    unsigned int16 i = intbits(x);
+    return (i & 0x8000);
+}
+
+__declspec(safe, cost1) static inline constexpr uniform unsigned int16 signbits(uniform float16 x) {
+    uniform unsigned int16 i = intbits(x);
+    return (i & 0x8000);
+}
+
+__declspec(safe, cost1) static inline constexpr unsigned int signbits(float x) {
+    unsigned int i = intbits(x);
+    return (i & 0x80000000);
+}
+
+__declspec(safe, cost1) static inline constexpr uniform unsigned int signbits(uniform float x) {
+    uniform unsigned int i = intbits(x);
+    return (i & 0x80000000);
+}
+
+__declspec(safe, cost1) static inline constexpr unsigned int64 signbits(double x) {
+    unsigned int64 i = intbits(x);
+    return (i & 0x8000000000000000);
+}
+
+__declspec(safe, cost1) static inline constexpr uniform unsigned int64 signbits(uniform double x) {
+    uniform unsigned int64 i = intbits(x);
+    return (i & 0x8000000000000000);
+}
+
+__declspec(safe, cost1) static inline constexpr uniform bool isinf(uniform float16 v) { return intbits(abs(v)) == 0x7C00; }
+
+__declspec(safe, cost1) static inline constexpr bool isinf(float16 v) { return intbits(abs(v)) == 0x7C00; }
+
+__declspec(safe, cost1) static inline constexpr uniform bool isinf(uniform float v) { return intbits(abs(v)) == 0x7F800000; }
+
+__declspec(safe, cost1) static inline constexpr bool isinf(float v) { return intbits(abs(v)) == 0x7F800000; }
+
+__declspec(safe, cost1) static inline constexpr uniform bool isinf(uniform double v) {
+    return intbits(abs(v)) == 0x7FF0000000000000;
+}
+
+__declspec(safe, cost1) static inline constexpr bool isinf(double v) { return intbits(abs(v)) == 0x7FF0000000000000; }
+
+__declspec(safe, cost1) static inline constexpr uniform bool isfinite(uniform float16 v) {
+    return (intbits(v) & 0x7C00) != 0x7C00;
+}
+
+__declspec(safe, cost1) static inline constexpr bool isfinite(float16 v) { return (intbits(v) & 0x7C00) != 0x7C00; }
+
+__declspec(safe, cost1) static inline constexpr uniform bool isfinite(uniform float v) {
+    return (intbits(v) & 0x7F800000) != 0x7F800000;
+}
+
+__declspec(safe, cost1) static inline constexpr bool isfinite(float v) { return (intbits(v) & 0x7F800000) != 0x7F800000; }
+
+__declspec(safe, cost1) static inline constexpr uniform bool isfinite(uniform double v) {
+    return (intbits(v) & 0x7FF0000000000000) != 0x7FF0000000000000;
+}
+
+__declspec(safe, cost1) static inline constexpr bool isfinite(double v) {
+    return (intbits(v) & 0x7FF0000000000000) != 0x7FF0000000000000;
+}
 
 __declspec(safe, cost2) inline float16 round(float16 x);
 __declspec(safe, cost2) inline uniform float16 round(uniform float16 x);
@@ -1257,14 +1380,58 @@ inline uniform unsigned int32 saturating_sub(uniform unsigned int32 a, uniform u
 inline varying unsigned int32 saturating_sub(varying unsigned int32 a, varying unsigned int32 b);
 inline uniform unsigned int64 saturating_sub(uniform unsigned int64 a, uniform unsigned int64 b);
 inline varying unsigned int64 saturating_sub(varying unsigned int64 a, varying unsigned int64 b);
-inline uniform int8 saturating_div(uniform int8 a, uniform int8 b);
-inline varying int8 saturating_div(varying int8 a, varying int8 b);
-inline uniform int16 saturating_div(uniform int16 a, uniform int16 b);
-inline varying int16 saturating_div(varying int16 a, varying int16 b);
-inline uniform int32 saturating_div(uniform int32 a, uniform int32 b);
-inline varying int32 saturating_div(varying int32 a, varying int32 b);
-inline uniform int64 saturating_div(uniform int64 a, uniform int64 b);
-inline varying int64 saturating_div(varying int64 a, varying int64 b);
+static inline constexpr uniform int8 saturating_div(uniform int8 a, uniform int8 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT8_MIN) & (b == -1);
+    return a / b;
+}
+
+static inline constexpr varying int8 saturating_div(varying int8 a, varying int8 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT8_MIN) & (b == -1);
+#pragma ignore warning(perf)
+    return a / b;
+}
+
+static inline constexpr uniform int16 saturating_div(uniform int16 a, uniform int16 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT16_MIN) & (b == -1);
+    return a / b;
+}
+
+static inline constexpr varying int16 saturating_div(varying int16 a, varying int16 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT16_MIN) & (b == -1);
+#pragma ignore warning(perf)
+    return a / b;
+}
+
+static inline constexpr uniform int32 saturating_div(uniform int32 a, uniform int32 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT32_MIN) & (b == -1);
+    return a / b;
+}
+
+static inline constexpr varying int32 saturating_div(varying int32 a, varying int32 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT32_MIN) & (b == -1);
+#pragma ignore warning(perf)
+    return a / b;
+}
+
+static inline constexpr uniform int64 saturating_div(uniform int64 a, uniform int64 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT64_MIN) & (b == -1);
+    return a / b;
+}
+
+static inline constexpr varying int64 saturating_div(varying int64 a, varying int64 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += (a == INT64_MIN) & (b == -1);
+#pragma ignore warning(perf)
+    return a / b;
+}
+
 inline uniform unsigned int8 saturating_div(uniform unsigned int8 a, uniform unsigned int8 b);
 inline varying unsigned int8 saturating_div(varying unsigned int8 a, varying unsigned int8 b);
 inline uniform unsigned int16 saturating_div(uniform unsigned int16 a, uniform unsigned int16 b);

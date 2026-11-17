@@ -18,6 +18,7 @@ struct TileConfig {
   int16 colsb[16];   // 16-47: tile0.colsb through tile15.colsb
   int8 rows[16];     // 48-63: tile0.rows through tile15.rows
 };
+static_assert(sizeof(uniform TileConfig) == 64);
 
 // Constants for AMX-FP16 tile sizes (hardware limits)
 static const uniform int TILE_M = 16; // AMX tile rows
@@ -45,29 +46,29 @@ static const uniform int TILES_M = (MAT_SIZE_M + TILE_M - 1) / TILE_M;
 static const uniform int TILES_N = (MAT_SIZE_N + TILE_N - 1) / TILE_N;
 static const uniform int TILES_K = (MAT_SIZE_K + TILE_K - 1) / TILE_K;
 
+static constexpr uniform TileConfig make_amx_config() {
+  uniform TileConfig config = {0, 0, {0}, {0}, {0}};
+  config.palette_id = 1;
+
+  // Result tile C: TILE_M×TILE_N FP32 values.
+  config.colsb[TMM_C] = TILE_N * 4;
+  config.rows[TMM_C] = TILE_M;
+
+  // Matrix A tile: TILE_M×TILE_K FP16 values.
+  config.colsb[TMM_A] = TILE_K * 2;
+  config.rows[TMM_A] = TILE_M;
+
+  // Matrix B tile: Each row holds two matrix rows of FP16 values.
+  config.colsb[TMM_B] = TILE_N * 4;
+  config.rows[TMM_B] = TILE_K / 2;
+  return config;
+}
+
+static constexpr uniform TileConfig amx_config = make_amx_config();
+
 // Initialize tile configuration for AMX-FP16
 export void init_amx_config(uniform TileConfig config[]) {
-  // Clear the entire structure
-  for (uniform int i = 0; i < sizeof(uniform TileConfig); ++i) {
-    ((uniform int8 *)config)[i] = 0;
-  }
-
-  config->palette_id = 1;
-  config->start_row = 0;
-
-  // Configure tile 0 (result tile C): TILE_M×TILE_N FP32 values
-  config->colsb[0] = TILE_N * 4; // 4 bytes per FP32
-  config->rows[0] = TILE_M;
-
-  // Configure tile 1 (matrix A): TILE_M×TILE_K FP16 values
-  config->colsb[1] = TILE_K * 2; // 2 bytes per FP16
-  config->rows[1] = TILE_M;
-
-  // Configure tile 2 (matrix B): Special AMX layout for TILE_K×TILE_N
-  config->colsb[2] = TILE_N * 4; // TILE_N * 4 bytes per row
-  config->rows[2] = TILE_K / 2;  // TILE_K/2 rows
-
-  // Load the tile configuration
+  config[0] = amx_config;
   amx_tile_loadconfig((uniform int8 * uniform) config);
 }
 

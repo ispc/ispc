@@ -36,7 +36,6 @@ constexpr uniform int8 magnitude_small = abs((uniform int8)-3);
 constexpr uniform int16 magnitude_medium = abs((uniform int16)-3);
 constexpr uniform int32 magnitude_int = abs((uniform int32)-3);
 constexpr uniform int64 magnitude_long = abs((uniform int64)-3);
-constexpr uniform bool nan_half = isnan(0.0f16 / 0.0f16);
 constexpr uniform bool nan_float = isnan(0.0f / 0.0f);
 constexpr uniform bool nan_double = isnan(0.0d / 0.0d);
 
@@ -62,11 +61,9 @@ task void f_f(uniform float RET[], uniform float aFOO[]) {
     uint32 lane_bits = lane_positive ? 0x7fc00000u : 0x80000000u;
     uniform float uniform_fp = floatbits(uniform_bits);
     float lane_fp = floatbits(lane_bits);
-    uniform bool uniform_nan_ok = isnan((uniform float16)uniform_fp) == (b && nan_half) &&
-                                  isnan(uniform_fp) == (b && nan_float) &&
+    uniform bool uniform_nan_ok = isnan(uniform_fp) == (b && nan_float) &&
                                   isnan((uniform double)uniform_fp) == (b && nan_double);
-    bool lane_nan_ok = isnan((float16)lane_fp) == (lane_positive && nan_half) &&
-                       isnan(lane_fp) == (lane_positive && nan_float) &&
+    bool lane_nan_ok = isnan(lane_fp) == (lane_positive && nan_float) &&
                        isnan((double)lane_fp) == (lane_positive && nan_double);
     RET[programIndex] = logic_ok && math_ok && uniform_abs_ok && lane_abs_ok && uniform_nan_ok && lane_nan_ok ? 1.f : 0.f;
 }

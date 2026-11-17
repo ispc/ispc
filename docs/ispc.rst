@@ -4138,7 +4138,9 @@ Requirements (v1):
 
 - The function body must be constexpr-suitable at definition time.
 - The function must return a value (no ``void`` return in v1).
-- The function may only call other ``constexpr`` functions.
+- The function may call other ``constexpr`` functions and supported
+  ``@llvm.ispc.bitcast`` overloads for equal-width integer/floating-point
+  reinterpretation.
 - ``constexpr`` is not allowed on function parameters.
 - Control flow conditions must be uniform.
 - Pointer dereference is not allowed; address-of is limited to globals/functions
@@ -4196,8 +4198,19 @@ checked before conversion to the intrinsic's operand type.
 
 Uniform scalar ``&&``, ``||``, and ``?:`` short-circuit during constant
 evaluation. Varying expressions that require writes under a partial lane mask
-cannot be evaluated as constexpr in v1. Local array and struct element writes
-are also unsupported; aggregate initialization and reading are supported.
+cannot be evaluated as constexpr in v1. Initialized local arrays, structs, and
+short vectors support element assignment, including nested elements and
+compound assignments. Array and short-vector indices must be uniform and in
+bounds. Copying an aggregate preserves value semantics: changing the copy does
+not change the original. Writes through pointers or references remain
+unsupported.
+
+Existing ``float16bits``, ``floatbits``, ``doublebits``, and ``intbits`` calls
+can be used in constant expressions. These operations preserve the exact bit
+pattern, including signed zero and NaN payloads, for uniform and varying
+values. Floating-point ``abs``, ``isinf``, ``isfinite``, and ``signbits`` share
+their implementations with constant evaluation. Their call syntax and runtime
+semantics are unchanged.
 
 **Forward references**
 

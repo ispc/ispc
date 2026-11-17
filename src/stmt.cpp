@@ -4406,7 +4406,7 @@ bool StaticAssertStmt::CheckCondition(bool allowDeferred) {
         return false;
     }
 
-    bool condition;
+    bool condition = false;
     result.value->GetValues(&condition);
     if (condition) {
         return true;

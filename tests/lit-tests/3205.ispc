@@ -12,6 +12,35 @@
 // DM: MyValue
 // DM-NOT: my_func
 
+// Intrinsic tokens must not end macro scanning, even without the implicit stdlib.
+// RUN: %{ispc} %s --target=host --nostdlib --nowrap -DMACROS_AFTER_INTRINSIC -dM -o - | FileCheck %s --check-prefix=INTRINSIC
+// INTRINSIC-DAG: #define AfterIntrinsic 1
+// INTRINSIC-DAG: #define DumpEmpty {{ *$}}
+// INTRINSIC-DAG: #define DumpFunction(a,b) a ## b
+// INTRINSIC-DAG: #define DumpGNU(args...) args
+// INTRINSIC-DAG: #define DumpOdd(__VA_ARGS__,last) last
+// INTRINSIC-DAG: #define DumpString(a) #a
+// INTRINSIC-DAG: #define DumpVariadic(first,...) first,__VA_ARGS__
+// INTRINSIC-DAG: #define ObjCFeature 0
+
+#ifdef MACROS_AFTER_INTRINSIC
+uniform float intrinsic_value(uniform int bits) {
+    return @llvm.ispc.bitcast(bits, (uniform float)0);
+}
+#define AfterIntrinsic 1
+#define DumpEmpty
+#define DumpFunction(a,b) a ## b
+#define DumpGNU(args...) args
+#define DumpOdd(__VA_ARGS__,last) last
+#define DumpString(a) #a
+#define DumpVariadic(first,...) first,__VA_ARGS__
+#if __has_feature(objc_fixed_enum)
+#define ObjCFeature 1
+#else
+#define ObjCFeature 0
+#endif
+#endif
+
 // Ensure that output(-E) has functions but doesn't include macros
 // -E has "ShowComments", so need to count lit comments
 // RUN: %{ispc} %s -E --outfile=%t.E.cpp

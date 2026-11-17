@@ -1238,6 +1238,9 @@ static void lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type 
     }
 }
 
+static llvm::Value *lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr, const Type *ptrRefType);
+static bool lVaryingStructHasUniformMember(const Type *type, SourcePos pos);
+
 /** Utility routine to emit code to do a {pre,post}-{inc,dec}rement of the
     given expresion.
  */
@@ -1248,20 +1251,17 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
         return nullptr;
     }
 
-    // Get both the lvalue and the rvalue of the given expression
-    llvm::Value *lvalue = nullptr, *rvalue = nullptr;
+    // Compute the operand address once, including any side effects in subscripts.
+    llvm::Value *lvalue = nullptr;
     const Type *lvalueType = nullptr;
-    if (CastType<ReferenceType>(type) != nullptr) {
+    bool isReference = CastType<ReferenceType>(type) != nullptr;
+    if (isReference) {
         lvalueType = type;
         type = type->GetReferenceTarget();
         lvalue = expr->GetValue(ctx);
-
-        RefDerefExpr *deref = new RefDerefExpr(expr, expr->pos);
-        rvalue = deref->GetValue(ctx);
     } else {
         lvalue = expr->GetLValue(ctx);
         lvalueType = expr->GetLValueType();
-        rvalue = expr->GetValue(ctx);
     }
 
     if (lvalue == nullptr) {
@@ -1270,6 +1270,30 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
         const char *incdec = (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc) ? "increment" : "decrement";
         Error(pos, "Can't %s-%s non-lvalues.", prepost, incdec);
         return nullptr;
+    }
+    if (lvalueType == nullptr) {
+        AssertPos(pos, m->errorCount > 0);
+        return nullptr;
+    }
+
+    Symbol *baseSym = expr->GetBaseSymbol();
+    llvm::Value *rvalue = nullptr;
+    if (!isReference && llvm::isa<SymbolExpr>(expr)) {
+        rvalue = expr->GetValue(ctx);
+    } else {
+        llvm::Value *loadAddress = lvalue;
+        if (llvm::isa<DerefExpr>(expr)) {
+            if (lVaryingStructHasUniformMember(lvalueType, expr->pos)) {
+                return nullptr;
+            }
+            loadAddress = lAddVaryingOffsetsIfNeeded(ctx, lvalue, lvalueType);
+        } else if (auto *index = llvm::dyn_cast<IndexExpr>(expr)) {
+            if (index->index->GetType()->IsVaryingType() && lVaryingStructHasUniformMember(type, expr->pos)) {
+                return nullptr;
+            }
+        }
+        ctx->SetDebugPos(expr->pos);
+        rvalue = ctx->LoadInst(loadAddress, lMaskForSymbol(baseSym, ctx), lvalueType);
     }
     if (rvalue == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -1304,7 +1328,6 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
     }
 
     // And store the result out to the lvalue
-    Symbol *baseSym = expr->GetBaseSymbol();
     lStoreAssignResult(binop, lvalue, type, lvalueType, ctx, baseSym);
 
     // And then if it's a pre increment/decrement, return the final

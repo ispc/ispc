@@ -45,6 +45,24 @@ uniform bool integer_shuffles(uniform int offset) {
            equal_m128i(_mm_shuffle_epi32(ints, reverse_lanes), reversed_ints);
 }
 
+uniform bool dynamic_shuffles(uniform unsigned int mask) {
+    uniform __m128 a = _mm_setr_ps(1, 2, 3, 4);
+    uniform __m128 b = _mm_setr_ps(5, 6, 7, 8);
+    uniform __m128 f = _mm_shuffle_ps(a, b, mask);
+    uniform __m128d da = _mm_setr_pd(1, 2);
+    uniform __m128d db = _mm_setr_pd(3, 4);
+    uniform __m128d d = _mm_shuffle_pd(da, db, mask);
+    uniform __m128i ints = _mm_setr_epi32(-1, -2, -3, -4);
+    uniform __m128i i = _mm_shuffle_epi32(ints, mask);
+    for (uniform int lane = 0; lane < 4; ++lane) {
+        uniform int index = (mask >> (lane * 2)) & 3;
+        if (i.m128i_i32[lane] != -1 - index || f.m128_f32[lane] != (lane < 2 ? 1 : 5) + index) {
+            return false;
+        }
+    }
+    return d.m128d_f64[0] == 1 + (mask & 1) && d.m128d_f64[1] == 3 + ((mask >> 1) & 1);
+}
+
 uniform bool byte_shifts(uniform int64 seed) {
     uniform __m128i data = _mm_set_epi64x(seed, seed);
     uniform __m128i zero = _mm_setzero_si128();
@@ -113,7 +131,7 @@ uniform bool insert_extract(uniform int offset) {
 task void f_f(uniform float RET[], uniform float input[]) {
     uniform int seed = 1 + ((uniform int)input[0] & 3);
     uniform bool ok = float_shuffles(seed) && integer_shuffles(seed) && byte_shifts(seed) && bit_shifts(seed) &&
-                      shift_boundaries(seed) && insert_extract(seed);
+                      shift_boundaries(seed) && insert_extract(seed) && dynamic_shuffles(0x100u | (0x49u * seed));
     RET[programIndex] = ok ? 1.f : 0.f;
 }
 

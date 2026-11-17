@@ -355,6 +355,14 @@ static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTab
     Debug(noPos, "Created Intrinsic symbol \"%s\" [%s]\n", funcName.c_str(), funcType->GetString().c_str());
     Symbol *sym = new Symbol(funcName, noPos, Symbol::SymbolKind::Function, funcType);
     sym->function = func;
+    if (lLookupISPCInstrinsic(name) == ISPCIntrinsics::bitcast) {
+        const auto *from = CastType<AtomicType>(argTypes[0]);
+        const auto *to = CastType<AtomicType>(returnType);
+        // Reinterpret 16-, 32- or 64-bit values, independently in each lane.
+        sym->isConstexprBitcast =
+            from && to && from->IsVaryingType() == to->IsVaryingType() &&
+            ((from->IsIntType() && to->IsFloatType()) || (from->IsFloatType() && to->IsIntType()));
+    }
     symbolTable->AddIntrinsics(sym);
     return sym;
 }
@@ -1027,7 +1035,7 @@ static llvm::Function *lGetGenXIntrinsicDeclaration(llvm::Module *module, const 
 static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std::string &name, ExprList *args,
                                                 SourcePos pos) {
 #ifdef ISPC_XE_ENABLED
-    if (g->target->isXeTarget()) {
+    if (g->target->isXeTarget() && lLookupISPCInstrinsic(name) != ISPCIntrinsics::bitcast) {
         return lGetGenXIntrinsicDeclaration(module, name, args, pos);
     }
 #endif // ISPC_XE_ENABLED

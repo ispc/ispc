@@ -97,6 +97,9 @@ class Symbol : public Traceable {
          variables declared inside functions, this gives the
          function they're in. */
 
+    /** Indicates a float/integer bitcast intrinsic supported during constant evaluation. */
+    bool isConstexprBitcast = false;
+
     /** Attributes associated with the symbol. */
     AttributeList *attrs;
 

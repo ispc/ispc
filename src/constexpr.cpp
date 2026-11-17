@@ -25,6 +25,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/Support/SaveAndRestore.h>
 
@@ -299,6 +300,45 @@ static ConstExpr *lConstExprFromConstant(const Type *type, llvm::Constant *const
     return nullptr;
 }
 
+template <typename T>
+static ConstExpr *lBitcastFloatToInt(const std::vector<llvm::APFloat> &floats, const Type *type, SourcePos pos) {
+    T bits[ISPC_MAX_NVEC];
+    for (size_t i = 0; i < floats.size(); ++i) {
+        bits[i] = static_cast<T>(floats[i].bitcastToAPInt().getSExtValue());
+    }
+    return type->IsVaryingType() ? new ConstExpr(type, bits, pos) : new ConstExpr(type, bits[0], pos);
+}
+
+static ConstExpr *lEvalBitcast(const ConstExpr *value, const Type *type, SourcePos pos) {
+    auto *atomicType = CastType<AtomicType>(type);
+    Assert(atomicType != nullptr);
+    if (atomicType->IsFloatType()) {
+        llvm::Type *elementType = type->LLVMType(g->ctx)->getScalarType();
+        uint64_t bits[ISPC_MAX_NVEC];
+        int count = value->GetValues(bits);
+        std::vector<llvm::APFloat> floats;
+        floats.reserve(count);
+        for (int i = 0; i < count; ++i) {
+            floats.emplace_back(elementType->getFltSemantics(),
+                                llvm::APInt(elementType->getScalarSizeInBits(), bits[i]));
+        }
+        return new ConstExpr(type, floats, pos);
+    }
+
+    std::vector<llvm::APFloat> floats;
+    value->GetValues(floats);
+    switch (atomicType->basicType) {
+    case AtomicType::TYPE_INT16:
+        return lBitcastFloatToInt<int16_t>(floats, type, pos);
+    case AtomicType::TYPE_INT32:
+        return lBitcastFloatToInt<int32_t>(floats, type, pos);
+    case AtomicType::TYPE_INT64:
+        return lBitcastFloatToInt<int64_t>(floats, type, pos);
+    default:
+        UNREACHABLE();
+    }
+}
+
 static int lVectorSwizzleIndex(char id) {
     switch (id) {
     case 'x':
@@ -318,6 +358,66 @@ static int lVectorSwizzleIndex(char id) {
     default:
         return -1;
     }
+}
+
+// Only direct projections into a value can be written. In particular, a
+// GetBaseSymbol() walk alone would also allow writes through pointers/references.
+static const Expr *lGetAggregateLValueBase(const Expr *expr) {
+    if (auto *index = llvm::dyn_cast<IndexExpr>(expr)) {
+        const Type *type = index->baseExpr->GetType();
+        if (type != nullptr && type->IsDependent()) {
+            return index->baseExpr;
+        }
+        const auto *sequence = CastType<SequentialType>(type);
+        if (sequence != nullptr && !sequence->GetElementType()->IsSOAType()) {
+            return index->baseExpr;
+        }
+    } else if (auto *member = llvm::dyn_cast<MemberExpr>(expr)) {
+        const Type *type = member->expr->GetType();
+        if (!member->dereferenceExpr && type != nullptr && !type->IsSOAType() &&
+            (CastType<StructType>(type) || (CastType<VectorType>(type) && member->identifier.size() == 1) ||
+             type->IsDependent())) {
+            return member->expr;
+        }
+    }
+    return nullptr;
+}
+
+static const Symbol *lGetDirectLValueSymbol(const Expr *expr) {
+    for (; expr != nullptr; expr = lGetAggregateLValueBase(expr)) {
+        if (auto *se = llvm::dyn_cast<SymbolExpr>(expr)) {
+            const Symbol *symbol = se->GetBaseSymbol();
+            if (symbol != nullptr && symbol->type != nullptr && !symbol->type->IsReferenceType() &&
+                !symbol->storageClass.IsStatic()) {
+                return symbol;
+            }
+            break;
+        }
+    }
+    return nullptr;
+}
+
+static ConstExpr *lReplaceSubobject(ConstExpr *base, llvm::ArrayRef<int> indices, ConstExpr *value) {
+    if (indices.empty()) {
+        return value;
+    }
+    if (base == nullptr || !base->IsAggregate()) {
+        return nullptr;
+    }
+    const auto &elements = base->GetAggregateValues();
+    int index = indices.front();
+    if (index < 0 || index >= int(elements.size())) {
+        return nullptr;
+    }
+    ConstExpr *updated = lReplaceSubobject(elements[index], indices.drop_front(), value);
+    if (updated == nullptr) {
+        return nullptr;
+    }
+    // Aggregates can share ConstExpr nodes with copies and function arguments.
+    // Replace only the nodes on this path to preserve value semantics.
+    std::vector<ConstExpr *> updatedElements(elements);
+    updatedElements[index] = updated;
+    return new ConstExpr(base->GetType(), updatedElements, base->pos);
 }
 
 static ConstExpr *lMakeZeroConstExpr(const Type *type, SourcePos pos) {
@@ -718,9 +818,99 @@ class ConstexprEvaluator {
         return FoldExpr(expr);
     }
 
+    struct LocalLValue {
+        const Symbol *symbol;
+        llvm::SmallVector<int, 4> indices;
+    };
+
+    std::optional<LocalLValue> EvalLValue(const Expr *expr);
+    ConstExpr *ReadLValue(const LocalLValue &lvalue);
+    ConstExpr *WriteLValue(const LocalLValue &lvalue, ConstExpr *value, const Expr *expr);
     ConstExpr *EvalAssign(const AssignExpr *expr);
     ConstExpr *EvalIncDec(const UnaryExpr *expr);
 };
+
+static std::optional<int> lGetAggregateIndex(const IndexExpr *expr, ConstExpr *index, int elementCount) {
+    if (index == nullptr) {
+        return std::nullopt;
+    }
+    if (!index->GetType()->IsUniformType()) {
+        Error(expr->pos, "constexpr array/vector index must be a uniform constant.");
+        return std::nullopt;
+    }
+    ConstExpr *converted = lConvertConstExpr(index, AtomicType::UniformInt64, expr->index->pos);
+    int64_t values[ISPC_MAX_NVEC];
+    if (converted == nullptr || converted->GetValues(values) != 1) {
+        Error(expr->pos, "constexpr array/vector index must be a uniform constant.");
+        return std::nullopt;
+    }
+    if (values[0] < 0 || values[0] >= elementCount) {
+        Error(expr->pos, "constexpr array/vector index is out of bounds.");
+        return std::nullopt;
+    }
+    return int(values[0]);
+}
+
+std::optional<ConstexprEvaluator::LocalLValue> ConstexprEvaluator::EvalLValue(const Expr *expr) {
+    const Symbol *symbol = lGetDirectLValueSymbol(expr);
+    const Type *type = expr->GetType();
+    if (symbol == nullptr || LookupValue(symbol) == nullptr || symbol->type->IsConstType() || type == nullptr ||
+        type->IsConstType()) {
+        return std::nullopt;
+    }
+
+    LocalLValue result{symbol, {}};
+    // Runtime lvalue evaluation computes each subscript before its base address.
+    while (const Expr *base = lGetAggregateLValueBase(expr)) {
+        if (auto *index = llvm::dyn_cast<IndexExpr>(expr)) {
+            const auto *sequence = CastType<SequentialType>(base->GetType());
+            if (sequence == nullptr) {
+                return std::nullopt;
+            }
+            std::optional<int> offset = lGetAggregateIndex(index, EvalExpr(index->index), sequence->GetElementCount());
+            if (!offset) {
+                return std::nullopt;
+            }
+            result.indices.push_back(*offset);
+        } else {
+            int offset = llvm::cast<MemberExpr>(expr)->getElementNumber();
+            if (offset < 0) {
+                return std::nullopt;
+            }
+            result.indices.push_back(offset);
+        }
+        expr = base;
+    }
+    std::reverse(result.indices.begin(), result.indices.end());
+    return result;
+}
+
+ConstExpr *ConstexprEvaluator::ReadLValue(const LocalLValue &lvalue) {
+    ConstExpr *value = LookupValue(lvalue.symbol);
+    for (int index : lvalue.indices) {
+        if (value == nullptr || !value->IsAggregate() || index >= int(value->GetAggregateValues().size())) {
+            return nullptr;
+        }
+        value = value->GetAggregateValues()[index];
+    }
+    return value;
+}
+
+ConstExpr *ConstexprEvaluator::WriteLValue(const LocalLValue &lvalue, ConstExpr *value, const Expr *expr) {
+    // Compound operations can promote narrow integer operands. Store and return
+    // the value converted back to the type of the assignment target.
+    value = lConvertConstExpr(value, expr->GetType(), expr->pos);
+    if (value == nullptr) {
+        SetError();
+        return nullptr;
+    }
+    ConstExpr *updated = lReplaceSubobject(LookupValue(lvalue.symbol), lvalue.indices, value);
+    if (updated == nullptr || !UpdateValue(lvalue.symbol, updated)) {
+        SetError();
+        return nullptr;
+    }
+    return value;
+}
 
 ConstExpr *ConstexprEvaluator::EvalAssign(const AssignExpr *expr) {
     if (partialMask) {
@@ -728,13 +918,8 @@ ConstExpr *ConstexprEvaluator::EvalAssign(const AssignExpr *expr) {
         SetError();
         return nullptr;
     }
-    const SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(expr->lvalue);
-    if (se == nullptr) {
-        SetError();
-        return nullptr;
-    }
-    Symbol *sym = se->GetBaseSymbol();
-    if (sym == nullptr || sym->type == nullptr || sym->type->IsConstType()) {
+    std::optional<LocalLValue> lvalue = EvalLValue(expr->lvalue);
+    if (!lvalue) {
         SetError();
         return nullptr;
     }
@@ -744,7 +929,7 @@ ConstExpr *ConstexprEvaluator::EvalAssign(const AssignExpr *expr) {
         return nullptr;
     }
     if (expr->op != AssignExpr::Assign) {
-        ConstExpr *lhs = LookupValue(sym);
+        ConstExpr *lhs = ReadLValue(*lvalue);
         if (lhs == nullptr) {
             SetError();
             return nullptr;
@@ -791,11 +976,7 @@ ConstExpr *ConstexprEvaluator::EvalAssign(const AssignExpr *expr) {
             return nullptr;
         }
     }
-    if (!UpdateValue(sym, rhs)) {
-        SetError();
-        return nullptr;
-    }
-    return rhs;
+    return WriteLValue(*lvalue, rhs, expr->lvalue);
 }
 
 ConstExpr *ConstexprEvaluator::EvalIncDec(const UnaryExpr *expr) {
@@ -803,17 +984,12 @@ ConstExpr *ConstexprEvaluator::EvalIncDec(const UnaryExpr *expr) {
         SetError();
         return nullptr;
     }
-    const SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(expr->expr);
-    if (se == nullptr) {
+    std::optional<LocalLValue> lvalue = EvalLValue(expr->expr);
+    if (!lvalue) {
         SetError();
         return nullptr;
     }
-    Symbol *sym = se->GetBaseSymbol();
-    if (sym == nullptr || sym->type == nullptr || sym->type->IsConstType()) {
-        SetError();
-        return nullptr;
-    }
-    ConstExpr *current = LookupValue(sym);
+    ConstExpr *current = ReadLValue(*lvalue);
     if (current == nullptr) {
         SetError();
         return nullptr;
@@ -826,8 +1002,8 @@ ConstExpr *ConstexprEvaluator::EvalIncDec(const UnaryExpr *expr) {
         SetError();
         return nullptr;
     }
-    if (!UpdateValue(sym, updated)) {
-        SetError();
+    updated = WriteLValue(*lvalue, updated, expr->expr);
+    if (updated == nullptr) {
         return nullptr;
     }
     if (expr->op == UnaryExpr::PostInc || expr->op == UnaryExpr::PostDec) {
@@ -1019,12 +1195,12 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
             return nullptr;
         }
         const FunctionType *calleeType = CastType<FunctionType>(calleeSym->type);
-        if (calleeType == nullptr || !calleeType->IsConstexpr()) {
+        if (calleeType == nullptr || (!calleeType->IsConstexpr() && !calleeSym->isConstexprBitcast)) {
             SetError();
             return nullptr;
         }
         const Function *calleeFunc = calleeSym->parentFunction;
-        if (calleeFunc == nullptr || calleeFunc->GetCode() == nullptr) {
+        if (!calleeSym->isConstexprBitcast && (calleeFunc == nullptr || calleeFunc->GetCode() == nullptr)) {
             if (allowDeferred) {
                 SetDeferred();
                 return nullptr;
@@ -1067,6 +1243,12 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
             argValues.push_back(val);
         }
 
+        if (calleeSym->isConstexprBitcast) {
+            // Both arguments were evaluated. Only the first contributes bits
+            // to the result, as the second supplies the destination type.
+            return lEvalBitcast(argValues[0], calleeType->GetReturnType(), fce->pos);
+        }
+
         ConstexprEvaluator nested(depth + 1, allowDeferred);
         ConstExpr *result = nested.EvalFunction(calleeFunc, argValues);
         if (nested.Deferred()) {
@@ -1099,32 +1281,32 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
         return new ConstExpr(ptrType, cpair.first, ao->pos);
     }
     if (auto *ie = llvm::dyn_cast<IndexExpr>(expr)) {
+        ConstExpr *subscript = nullptr;
+        bool direct = lGetDirectLValueSymbol(ie) != nullptr;
+        if (direct) {
+            // Read the stored aggregate after evaluating the subscript, which
+            // can itself write to the aggregate.
+            subscript = EvalExpr(ie->index);
+            if (subscript == nullptr) {
+                SetError();
+                return nullptr;
+            }
+        }
         ConstExpr *base = EvalExpr(ie->baseExpr);
-        ConstExpr *idxExpr = EvalExpr(ie->index);
-        if (base == nullptr || idxExpr == nullptr || !base->IsAggregate()) {
+        if (base == nullptr || !base->IsAggregate()) {
             SetError();
             return nullptr;
         }
-        ConstExpr *idxConst = lConvertConstExpr(idxExpr, AtomicType::UniformInt64, ie->index->pos);
-        if (idxConst == nullptr) {
+        const auto &elements = base->GetAggregateValues();
+        if (!direct) {
+            subscript = EvalExpr(ie->index);
+        }
+        std::optional<int> index = lGetAggregateIndex(ie, subscript, int(elements.size()));
+        if (!index) {
             SetError();
             return nullptr;
         }
-        int64_t idxVals[ISPC_MAX_NVEC];
-        int count = idxConst->GetValues(idxVals);
-        if (count != 1) {
-            Error(ie->pos, "constexpr array/vector index must be a uniform constant.");
-            SetError();
-            return nullptr;
-        }
-        int64_t idx = idxVals[0];
-        const std::vector<ConstExpr *> &elements = base->GetAggregateValues();
-        if (idx < 0 || idx >= (int64_t)elements.size()) {
-            Error(ie->pos, "constexpr array/vector index is out of bounds.");
-            SetError();
-            return nullptr;
-        }
-        return elements[(int)idx];
+        return elements[*index];
     }
     if (auto *me = llvm::dyn_cast<MemberExpr>(expr)) {
         ConstExpr *base = EvalExpr(me->expr);
@@ -1986,7 +2168,7 @@ bool ConstexprValidator::CheckExpr(const Expr *expr) {
             return false;
         }
         Symbol *callee = fse->GetBaseSymbol();
-        if (!callee->isConstexpr) {
+        if (!callee->isConstexpr && !callee->isConstexprBitcast) {
             Error(expr->pos, "constexpr function \"%s\" calls non-constexpr function \"%s\".", funcName.c_str(),
                   callee->name.c_str());
             ok = false;
@@ -1994,9 +2176,7 @@ bool ConstexprValidator::CheckExpr(const Expr *expr) {
         }
     }
     if (auto *ae = llvm::dyn_cast<AssignExpr>(expr)) {
-        const SymbolExpr *lhs = llvm::dyn_cast<SymbolExpr>(ae->lvalue);
-        Symbol *sym = lhs ? lhs->GetBaseSymbol() : nullptr;
-        if (lhs == nullptr || sym == nullptr || !IsLocalOrParam(sym) || sym->storageClass.IsStatic()) {
+        if (!IsLocalOrParam(lGetDirectLValueSymbol(ae->lvalue))) {
             DisallowedExpr(expr, "assignment");
             return false;
         }
@@ -2004,9 +2184,7 @@ bool ConstexprValidator::CheckExpr(const Expr *expr) {
     if (auto *ue = llvm::dyn_cast<UnaryExpr>(expr)) {
         if (ue->op == UnaryExpr::PreInc || ue->op == UnaryExpr::PreDec || ue->op == UnaryExpr::PostInc ||
             ue->op == UnaryExpr::PostDec) {
-            const SymbolExpr *lhs = llvm::dyn_cast<SymbolExpr>(ue->expr);
-            Symbol *sym = lhs ? lhs->GetBaseSymbol() : nullptr;
-            if (lhs == nullptr || sym == nullptr || !IsLocalOrParam(sym) || sym->storageClass.IsStatic()) {
+            if (!IsLocalOrParam(lGetDirectLValueSymbol(ue->expr))) {
                 DisallowedExpr(expr, "increment/decrement");
                 return false;
             }

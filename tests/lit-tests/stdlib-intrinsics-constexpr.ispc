@@ -10,6 +10,24 @@ constexpr uniform int prefetch_hint() { return _MM_HINT_T1; }
 constexpr uniform int lane() { return 4; }
 constexpr uniform int shift() { return 3; }
 
+// Ordinary shuffle calls can initialize constants, and the template forms remain available.
+constexpr uniform __m128 ps_a = _mm_set_ps(4, 3, 2, 1);
+constexpr uniform __m128 ps_b = _mm_setr_ps(5, 6, 7, 8);
+constexpr uniform __m128 ps = _mm_shuffle_ps(ps_a, ps_b, _MM_SHUFFLE(0, 2, 1, 3));
+static_assert(ps.m128_f32[0] == 4 && ps.m128_f32[1] == 2 && ps.m128_f32[2] == 7 && ps.m128_f32[3] == 5);
+
+constexpr uniform __m128d pd_a = _mm_set_pd(2, 1);
+constexpr uniform __m128d pd_b = _mm_setr_pd(3, 4);
+constexpr uniform __m128d pd = _mm_shuffle_pd(pd_a, pd_b, _MM_SHUFFLE2(1, 0));
+constexpr uniform __m128d pd_template = _mm_shuffle_pd<_MM_SHUFFLE2(0, 1)>(pd_a, pd_b);
+static_assert(pd.m128d_f64[0] == 1 && pd.m128d_f64[1] == 4);
+static_assert(pd_template.m128d_f64[0] == 2 && pd_template.m128d_f64[1] == 3);
+
+constexpr uniform __m128i ints = _mm_set_epi32(-4, 3, -2, 1);
+constexpr uniform __m128i shuffled_ints = _mm_shuffle_epi32(ints, _MM_SHUFFLE(0, 2, 1, 3));
+static_assert(shuffled_ints.m128i_i32[0] == -4 && shuffled_ints.m128i_i32[1] == -2 &&
+              shuffled_ints.m128i_i32[2] == 3 && shuffled_ints.m128i_i32[3] == 1);
+
 export uniform double shuffle_pd_constexpr_template() {
     uniform __m128d a = _mm_setr_pd(1.0, 2.0);
     uniform __m128d b = _mm_setr_pd(3.0, 4.0);

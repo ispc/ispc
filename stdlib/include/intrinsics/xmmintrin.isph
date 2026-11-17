@@ -543,22 +543,15 @@ NOT_IMPLEMENTED(extern __m128 _mm_cvtsi64_ss(__m128 _A, __int64 _B));
  * FP, misc
  */
 
-static inline unmasked uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B, uniform unsigned int _Imm8) {
-    uniform __m128 result;
-    result.m128_f32[0] = _A.m128_f32[_Imm8 & 3];
-    result.m128_f32[1] = _A.m128_f32[(_Imm8 >> 2) & 3];
-    result.m128_f32[2] = _B.m128_f32[(_Imm8 >> 4) & 3];
-    result.m128_f32[3] = _B.m128_f32[(_Imm8 >> 6) & 3];
+static inline unmasked constexpr uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B,
+                                                               uniform unsigned int _Imm8) {
+    uniform __m128 result = {{_A.m128_f32[_Imm8 & 3], _A.m128_f32[(_Imm8 >> 2) & 3],
+                              _B.m128_f32[(_Imm8 >> 4) & 3], _B.m128_f32[(_Imm8 >> 6) & 3]}};
     return result;
 }
 
-template <int Imm8> inline unmasked uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B) {
-    uniform __m128 result;
-    result.m128_f32[0] = _A.m128_f32[Imm8 & 3];
-    result.m128_f32[1] = _A.m128_f32[(Imm8 >> 2) & 3];
-    result.m128_f32[2] = _B.m128_f32[(Imm8 >> 4) & 3];
-    result.m128_f32[3] = _B.m128_f32[(Imm8 >> 6) & 3];
-    return result;
+template <int Imm8> inline unmasked constexpr uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B) {
+    return _mm_shuffle_ps(_A, _B, Imm8);
 }
 
 static inline unmasked uniform __m128 _mm_unpackhi_ps(uniform __m128 _A, uniform __m128 _B) {
@@ -616,31 +609,31 @@ NOT_IMPLEMENTED(extern __m64 _m_psadbw(__m64, __m64));
  * memory & initialization
  */
 
-static inline unmasked uniform __m128 _mm_set_ss(uniform float _A) {
-    const uniform float<4> _R = {_A, 0, 0, 0};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_set_ss(uniform float _A) {
+    uniform __m128 result = {{_A, 0, 0, 0}};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_set_ps1(uniform float _A) {
-    const uniform float<4> _R = {_A, _A, _A, _A};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_set_ps1(uniform float _A) {
+    uniform __m128 result = {{_A, _A, _A, _A}};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_set_ps(uniform float _A, uniform float _B, uniform float _C,
-                                                 uniform float _D) {
-    const uniform float<4> _R = {_D, _C, _B, _A};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_set_ps(uniform float _A, uniform float _B, uniform float _C,
+                                                           uniform float _D) {
+    uniform __m128 result = {{_D, _C, _B, _A}};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_setr_ps(uniform float _A, uniform float _B, uniform float _C,
-                                                  uniform float _D) {
-    const uniform float<4> _R = {_A, _B, _C, _D};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_setr_ps(uniform float _A, uniform float _B, uniform float _C,
+                                                            uniform float _D) {
+    uniform __m128 result = {{_A, _B, _C, _D}};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_setzero_ps() {
-    const uniform float<4> _R = {0, 0, 0, 0};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_setzero_ps() {
+    uniform __m128 result = {{0, 0, 0, 0}};
+    return result;
 }
 
 static inline unmasked uniform __m128 _mm_load_ss(uniform float const *uniform _A) {
