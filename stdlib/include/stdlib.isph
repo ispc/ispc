@@ -1031,6 +1031,31 @@ __declspec(safe) inline uniform float erf(uniform float x);
 __declspec(safe) inline float erfc(float x);
 __declspec(safe) inline uniform float erfc(uniform float x);
 
+// Arithmetic shared by the cube root implementation and constant evaluation.
+__declspec(safe) static inline constexpr uniform uint32 _fast_div3(uniform uint32 x) {
+    return ((uniform uint64)x * (uniform uint64)1431655766) >> (uniform uint64)32;
+}
+
+__declspec(safe) static inline constexpr varying uint32 _fast_div3(varying uint32 x) {
+    return ((varying uint64)x * (varying uint64)1431655766) >> (varying uint64)32;
+}
+
+// One Newton-Raphson iteration for the cube root, in single or double precision.
+template <typename T> __declspec(safe) static inline constexpr T _cbrt_newton_iter(T a, T b) {
+    const uniform T third = (uniform T)1 / (uniform T)3;
+    return a - third * (a - b / (a * a));
+}
+
+// One Halley iteration for the cube root, in single or double precision.
+// See "Machine Method for the Extraction of Cube Root" by Otis E. Lancaster (https://www.jstor.org/stable/2279437).
+template <typename T> __declspec(safe) static inline constexpr T _cbrt_halley_iter(T a, T b) {
+    // Preserve the order of operations to limit overflow for large and small inputs.
+    const uniform T two = (uniform T)2;
+    const T a3 = a * a * a;
+    const T correction_factor = (a3 + two * b) / (two * a3 + b);
+    return a * correction_factor;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (16-bit float precision)
 

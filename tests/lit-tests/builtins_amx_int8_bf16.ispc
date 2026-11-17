@@ -50,7 +50,11 @@
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
-// CHECK_ICL_ERROR: Error: Some AMX functions used in the source are not supported on the current target
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tdpbssd" requires feature "amxint8"
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tdpbsud" requires feature "amxint8"
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tdpbusd" requires feature "amxint8"
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tdpbuud" requires feature "amxint8"
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tdpbf16ps" requires feature "amxbf16"
 
 // CHECK_SPR_SUCCESS: call void @llvm.x86.tdpbssd
 // CHECK_SPR_SUCCESS: call void @llvm.x86.tdpbsud

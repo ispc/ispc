@@ -35,6 +35,7 @@
 #include <llvm/PassRegistry.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/SaveAndRestore.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -102,6 +103,7 @@ void Function::debugPrintHelper(DebugPrintPoint dumpPoint) {
         }
     }
 
+    llvm::SaveAndRestore<bool> restorePrintingState(g->printingInitialAST, dumpPoint == DebugPrintPoint::Initial);
     Print();
     printf("\n");
 }
@@ -911,7 +913,8 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 // TemplateArg
 
 TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(ArgType::Type), type(t), pos(pos) {}
-TemplateArg::TemplateArg(const Expr *c, SourcePos pos) : argType(ArgType::NonType), expr(c), pos(pos) {}
+TemplateArg::TemplateArg(const Expr *c, SourcePos pos, bool requiresInstantiation)
+    : argType(ArgType::NonType), expr(c), pos(pos), requiresInstantiation(requiresInstantiation) {}
 
 const Type *TemplateArg::GetAsType() const {
     switch (argType) {
@@ -989,17 +992,23 @@ void TemplateArg::SetAsVaryingType() {
 }
 
 const ConstExpr *TemplateArg::GetAsConstExpr() const {
-    if (IsNonType()) {
-        const ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
-        if (!constExpr) {
-            const SymbolExpr *symExpr = llvm::dyn_cast<SymbolExpr>(expr);
-            if (symExpr->GetBaseSymbol()->constValue) {
-                constExpr = llvm::dyn_cast<ConstExpr>(symExpr->GetBaseSymbol()->constValue);
-            }
-        }
-        return constExpr;
+    return IsNonType() ? llvm::dyn_cast_or_null<ConstExpr>(expr) : nullptr;
+}
+
+ConstExpr *TemplateArg::EvaluateNonType(Expr *expr, SourcePos pos) {
+    if (expr == nullptr) {
+        return nullptr;
     }
-    return nullptr;
+    ConstExpr *value = ConstexprEvaluate(expr, expr->GetType());
+    const Type *type = value ? value->GetType() : nullptr;
+    if (!type || !type->IsUniformType() ||
+        !(CastType<EnumType>(type) || (CastType<AtomicType>(type) && (type->IsIntType() || type->IsBoolType())))) {
+        Error(pos,
+              "Only integral, bool, enum types and non-type template parameters are allowed as template arguments.");
+        return nullptr;
+    }
+    // A template argument carries the value, independent of the symbol it came from.
+    return llvm::isa<ConstSymbolExpr>(value) ? new ConstExpr(value, pos) : value;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1374,6 +1383,7 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
         instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
     }
 
+    instSym->isConstexpr = sym->isConstexpr;
     instSym->varyingCFDepth = sym->varyingCFDepth;
     instSym->parentFunction = nullptr;
     instSym->storageInfo = sym->storageInfo;

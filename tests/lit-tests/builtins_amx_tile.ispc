@@ -50,7 +50,10 @@
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
-// CHECK_ICL_ERROR: Error: Some AMX functions used in the source are not supported on the current target
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tilezero" requires feature "amxtile"
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tileloadd64" requires feature "amxtile"
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tileloaddt164" requires feature "amxtile"
+// CHECK_ICL_ERROR-DAG: Error: Target specific LLVM intrinsic "llvm.x86.tilestored64" requires feature "amxtile"
 
 // CHECK_SPR_SUCCESS: call void @llvm.x86.ldtilecfg
 // CHECK_SPR_SUCCESS: call void @llvm.x86.sttilecfg

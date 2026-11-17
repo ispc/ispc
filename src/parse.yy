@@ -150,6 +150,7 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
 static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos,
                                     const char *usage, bool requireUniform);
+static bool lIsDependentTemplateArgument(Expr *expr);
 static StructType *lCreateStructType(const std::string &name, const Type *declType,
                                      const std::vector<StructDeclaration *> *decl, AttributeList *attrs,
                                      SourcePos pos);
@@ -755,20 +756,15 @@ intrincall_expression
       {
           std::string *name = $1;
           name->erase(0, 1);
-          Symbol* sym = m->AddLLVMIntrinsicDecl(*name, nullptr, Union(@1,@3));
-          const char *fname = name->c_str();
-          const std::vector<Symbol *> funcs{sym};
-          FunctionSymbolExpr *fSym = nullptr;
-          if (sym != nullptr)
-              fSym = new FunctionSymbolExpr(fname, funcs, {}, TemplateArgs(), @1);
-          $$ = new FunctionCallExpr(fSym, new ExprList(Union(@1,@2)), Union(@1,@3));
+          $$ = CreateLLVMIntrinsicCall(*name, new ExprList(Union(@1,@2)), @1, Union(@1,@3), false);
           delete name;
       }
     | intrinsic_name '(' argument_expression_list ')'
       {
           std::string *name = $1;
           name->erase(0, 1);
-          $$ = CreateLLVMIntrinsicCall(*name, $3, @1, Union(@1,@4));
+          const bool dependsOnTemplate = m->symbolTable->HasTemplateParameterScope() && lIsDependentTemplateArgument($3);
+          $$ = CreateLLVMIntrinsicCall(*name, $3, @1, Union(@1,@4), dependsOnTemplate);
           delete name;
       }
     ;
@@ -3216,29 +3212,16 @@ template_argument
     | constant_expression_no_gt
     {
         Expr *expr = $1;
-        if (expr != nullptr) {
+        const bool inTemplate = m->symbolTable->HasTemplateParameterScope();
+        bool deferred = !m->symbolTable->IsGlobalScope() && lIsDependentTemplateArgument(expr);
+        if (!deferred) {
             expr = TypeCheckAndOptimize(expr);
-        }
-        if (expr == nullptr) {
-            $$ = nullptr;
-        } else {
-            SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(expr);
-            if (se && se->GetBaseSymbol()->GetSymbolKind() == Symbol::SymbolKind::TemplateNonTypeParm) {
-                $$ = new TemplateArg(se, @1);
-            } else {
-            ConstExpr *ce = ConstexprEvaluate(expr, expr->GetType());
-            const Type *ceType = ce ? ce->GetType() : nullptr;
-            if (ce == nullptr || ceType->IsVaryingType() ||
-                !(ceType->IsIntType() || ceType->IsBoolType())) {
-                Error(@1,
-                      "Only integral, bool, enum types and non-type template parameters are allowed as template "
-                      "arguments.");
-                $$ = nullptr;
-            } else {
-                $$ = new TemplateArg(ce, @1);
-            }
+            deferred = inTemplate && lIsDependentTemplateArgument(expr);
+            if (!deferred) {
+                expr = TemplateArg::EvaluateNonType(expr, @1);
             }
         }
+        $$ = expr ? new TemplateArg(expr, @1, deferred && inTemplate) : nullptr;
     }
     ;
 
@@ -3841,6 +3824,41 @@ static std::string lGetAlternates(std::vector<std::string> &alternates) {
     return alts;
 }
 
+
+/** Check for dependencies hidden by a concrete result type, such as N in
+    N + 1 or T in sizeof(T). A local constexpr initializer may also need
+    to be evaluated during function body type checking. */
+static bool
+lIsDependentTemplateArgument(Expr *expr) {
+    bool dependent = false;
+    WalkAST(expr, [](ASTNode *node, void *data) {
+        bool &found = *static_cast<bool *>(data);
+        if (found) {
+            return false;
+        }
+        if (auto *symbolExpr = llvm::dyn_cast<SymbolExpr>(node)) {
+            const Symbol *sym = symbolExpr->GetBaseSymbol();
+            if (sym && !sym->constValue &&
+                (sym->GetSymbolKind() == Symbol::SymbolKind::TemplateNonTypeParm || sym->isConstexpr)) {
+                found = true;
+                return false;
+            }
+        }
+
+        const Type *type = nullptr;
+        if (auto *sizeOf = llvm::dyn_cast<SizeOfExpr>(node); sizeOf && sizeOf->type) {
+            type = sizeOf->type;
+        } else if (auto *func = llvm::dyn_cast<FunctionSymbolExpr>(node)) {
+            found = func->HasPendingNonTypeTemplateArgs();
+            return !found;
+        } else if (node->IsTypeChecked() && !llvm::isa<ExprList>(node)) {
+            type = llvm::cast<Expr>(node)->GetTypeUnsafe();
+        }
+        found = type && type->IsDependent();
+        return !found;
+    }, nullptr, &dependent);
+    return dependent;
+}
 
 /** Given an expression, see if it is equal to a compile-time constant
     integer value.  If so, return true and return the value in *value.

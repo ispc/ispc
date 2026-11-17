@@ -1,6 +1,5 @@
-// RUN: %{ispc} %s --target=sse4.1-i32x4 --math-lib=fast --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK_FAST
-// RUN: %{ispc} %s --target=sse4.1-i32x4 --math-lib=default --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK_ISPC
-// REQUIRES: X86_ENABLED
+// RUN: %{ispc} %s --target=host --nostdlib --math-lib=fast --nowrap --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK_FAST
+// RUN: %{ispc} %s --target=host --nostdlib --math-lib=default --nowrap --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK_ISPC
 
 // Use constexpr with fast-math configuration and feed it into a template
 // non-type parameter to verify constexpr + template integration.

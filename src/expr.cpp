@@ -43,6 +43,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
@@ -50,10 +51,41 @@
 
 using namespace ispc;
 
+static bool lHasPendingCall(const Expr *expr, bool includeDeferredIntrinsics = false) {
+    struct Search {
+        bool includeDeferredIntrinsics;
+        bool found = false;
+    } search{includeDeferredIntrinsics};
+    WalkAST(
+        const_cast<Expr *>(expr),
+        [](ASTNode *node, void *data) {
+            auto &search = *static_cast<Search *>(data);
+            if (auto *func = llvm::dyn_cast<FunctionSymbolExpr>(node)) {
+                search.found |= func->HasPendingNonTypeTemplateArgs();
+            } else if (search.includeDeferredIntrinsics) {
+                if (auto *call = llvm::dyn_cast<FunctionCallExpr>(node)) {
+                    search.found |= !call->deferredIntrinsicName.empty();
+                }
+            }
+            return !search.found;
+        },
+        nullptr, &search);
+    return search.found;
+}
+
+static bool lIsPendingInInitialAST(const Expr *expr) {
+    // Parent expressions can query their children's types while printing.
+    // A pending call must wait for earlier local declarations to be checked.
+    return g && g->printingInitialAST && !expr->IsTypeChecked() && lHasPendingCall(expr, true);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////
 // Expr
 
 const Type *Expr::GetType() const {
+    if (lIsPendingInInitialAST(this)) {
+        return AtomicType::Dependent;
+    }
     const Expr *node = this;
     if (!IsTypeChecked()) {
         // It should not happen but if we're currently in the process of type checking this node,
@@ -77,7 +109,7 @@ const Type *Expr::GetType() const {
     return node->GetTypeImpl();
 }
 
-const Type *Expr::GetTypeUnsafe() const { return GetTypeImpl(); }
+const Type *Expr::GetTypeUnsafe() const { return lIsPendingInInitialAST(this) ? AtomicType::Dependent : GetTypeImpl(); }
 
 llvm::Value *Expr::GetLValue(FunctionEmitContext *ctx) const {
     // Expressions that can't provide an lvalue can just return nullptr
@@ -4234,14 +4266,6 @@ static const Type *lGetFunctionType(Expr *func) {
     return ftype;
 }
 
-// Returns true if parameter i of the called function is an ImmArg parameter of
-// an LLVM intrinsic, whose argument must be an immediate value.
-static bool lIsImmArgParam(const llvm::Value *callee, unsigned int i) {
-    const llvm::Function *func = llvm::dyn_cast<llvm::Function>(callee);
-    return func != nullptr && func->isIntrinsic() && i < func->arg_size() &&
-           func->hasParamAttribute(i, llvm::Attribute::ImmArg);
-}
-
 // Converts a value passed to or returned from an LLVM intrinsic to the given
 // type. ISPC pads uniform short vectors (see VectorType::getVectorMemoryCount()),
 // so they are shortened to the width of the intrinsic and padded back, and
@@ -4334,11 +4358,6 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Do whatever type conversion is needed
         argExpr = TypeConvertExpr(argExpr, paramType, "function call argument");
-        if (argExpr != nullptr && lIsImmArgParam(callee, i)) {
-            // Fold the conversion of a constant (e.g. int to bool), so that
-            // the intrinsic gets an immediate value.
-            argExpr = ::Optimize(argExpr);
-        }
         if (argExpr == nullptr) {
             return nullptr;
         }
@@ -4376,19 +4395,6 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         argVals.push_back(argValue);
-    }
-
-    // LLVM requires the arguments of the ImmArg parameters of an intrinsic to
-    // be immediate values.
-    for (unsigned int i = 0; i < argVals.size(); ++i) {
-        if (lIsImmArgParam(callee, i) && !llvm::isa<llvm::ConstantInt>(argVals[i]) &&
-            !llvm::isa<llvm::ConstantFP>(argVals[i])) {
-            const FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
-            std::string name = fse ? fse->GetName() : callee->getName().str();
-            Error(callargs[i]->pos, "Argument %u of LLVM intrinsic \"%s\" must be a compile-time constant.", i + 1,
-                  name.c_str());
-            return nullptr;
-        }
     }
 
     llvm::Value *retVal = nullptr;
@@ -4457,6 +4463,9 @@ static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const 
 }
 
 const Type *FunctionCallExpr::GetTypeImpl() const {
+    if (!deferredIntrinsicName.empty()) {
+        return AtomicType::Dependent;
+    }
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (func == nullptr || args == nullptr) {
@@ -4480,8 +4489,11 @@ const Type *FunctionCallExpr::GetTypeImpl() const {
 }
 
 const Type *FunctionCallExpr::GetLValueType() const {
+    if (!deferredIntrinsicName.empty()) {
+        return nullptr;
+    }
     const Type *type = lGetFunctionType(func);
-    if (type->IsDependent()) {
+    if (!type || type->IsDependent()) {
         return nullptr;
     }
     const FunctionType *ftype = CastType<FunctionType>(type);
@@ -4529,6 +4541,18 @@ static bool lCheckExportedFunctionCall(SourcePos pos, const FunctionType *funcTy
 Expr *FunctionCallExpr::TypeCheck() {
     if (func == nullptr || args == nullptr) {
         return nullptr;
+    }
+
+    if (!deferredIntrinsicName.empty()) {
+        if (intrinsicRequiresInstantiation) {
+            return this;
+        }
+        Symbol *sym = m->AddLLVMIntrinsicDecl(deferredIntrinsicName, args->exprs.empty() ? nullptr : args, pos);
+        if (!sym) {
+            return nullptr;
+        }
+        func = new FunctionSymbolExpr(deferredIntrinsicName.c_str(), {sym}, {}, TemplateArgs(), func->pos);
+        deferredIntrinsicName.clear();
     }
 
     std::vector<const Expr *> warn;
@@ -4693,15 +4717,14 @@ Expr *FunctionCallExpr::TypeCheck() {
     }
 
     bool immArgError = false;
-    if (funcType != nullptr && args != nullptr) {
+    if (funcType != nullptr && args != nullptr && !intrinsicRequiresInstantiation) {
         int argCount = (int)args->exprs.size();
         int paramCount = funcType->GetNumParameters();
         int checkCount = (argCount < paramCount) ? argCount : paramCount;
-        Symbol *funcSym = (fse != nullptr) ? fse->GetBaseSymbol() : nullptr;
-        const std::string funcName = funcSym ? funcSym->name : "";
+        const std::string funcName = fse ? fse->GetName() : "";
         auto emitImmArgError = [&](Expr *argExpr, int index, const char *message) {
             if (!funcName.empty()) {
-                Error(argExpr->pos, "Immediate argument %d to \"%s\" %s.", index + 1, funcName.c_str(), message);
+                Error(argExpr->pos, "Argument %d of LLVM intrinsic \"%s\" %s.", index + 1, funcName.c_str(), message);
             } else {
                 Error(argExpr->pos, "Immediate argument %d %s.", index + 1, message);
             }
@@ -4771,13 +4794,9 @@ int FunctionCallExpr::EstimateCost() const {
 
 FunctionCallExpr *FunctionCallExpr::Instantiate(TemplateInstantiation &templInst) const {
     ExprList *instantiatedArgs = args ? args->Instantiate(templInst) : nullptr;
-    if (!deferredIntrinsicName.empty()) {
-        // Now the argument types are known and the intrinsic can be declared.
-        // Intrinsic calls are never launches, so launch fields are not needed.
-        return CreateLLVMIntrinsicCall(deferredIntrinsicName, instantiatedArgs, func ? func->pos : pos, pos);
-    }
     Expr *instFunc = func ? func->Instantiate(templInst) : nullptr;
     FunctionCallExpr *inst = new FunctionCallExpr(instFunc, instantiatedArgs, pos, isLaunch);
+    inst->deferredIntrinsicName = deferredIntrinsicName;
     inst->launchCountExpr[0] = launchCountExpr[0] ? launchCountExpr[0]->Instantiate(templInst) : nullptr;
     inst->launchCountExpr[1] = launchCountExpr[1] ? launchCountExpr[1]->Instantiate(templInst) : nullptr;
     inst->launchCountExpr[2] = launchCountExpr[2] ? launchCountExpr[2]->Instantiate(templInst) : nullptr;
@@ -4792,6 +4811,18 @@ std::string FunctionCallExpr::GetString() const {
 }
 
 void FunctionCallExpr::Print(Indent &indent) const {
+    const auto *fse = llvm::dyn_cast_or_null<FunctionSymbolExpr>(func);
+    if (fse && args &&
+        (!deferredIntrinsicName.empty() || fse->HasPendingNonTypeTemplateArgs() || lIsPendingInInitialAST(this))) {
+        // Debug printing can precede type checking of local constexpr declarations.
+        indent.Print("FunctionCallExpr", pos);
+        printf("[unresolved] %s\n", fse->GetName().c_str());
+        indent.pushSingle();
+        indent.setNextLabel("args");
+        args->Print(indent);
+        indent.Done();
+        return;
+    }
     if (!func || !args || !GetTypeUnsafe()) {
         indent.Print("FunctionCallExpr: <NULL EXPR>\n");
         indent.Done();
@@ -4811,37 +4842,49 @@ void FunctionCallExpr::Print(Indent &indent) const {
 }
 
 FunctionCallExpr *ispc::CreateLLVMIntrinsicCall(const std::string &name, ExprList *args, SourcePos namePos,
-                                                SourcePos pos) {
-    bool hasDependentArgs = false;
-    if (args != nullptr) {
+                                                SourcePos pos, bool dependsOnTemplate) {
+    const bool hasPendingTemplateArgs = lHasPendingCall(args);
+    bool requiresInstantiation = false;
+    if (dependsOnTemplate) {
+        const auto id = llvm::Intrinsic::lookupIntrinsicID(name);
+        if (id != llvm::Intrinsic::not_intrinsic) {
+            requiresInstantiation =
+                !g->target->checkIntrinsticSupport(name, llvm::Intrinsic::isTargetIntrinsic(id), pos, false);
+        }
+    }
+    if (!requiresInstantiation && !hasPendingTemplateArgs && args) {
         for (const Expr *arg : args->exprs) {
-            const Type *argType = arg ? arg->GetType() : nullptr;
-            if (argType && argType->IsDependent()) {
-                hasDependentArgs = true;
+            const Type *type = arg ? arg->GetType() : nullptr;
+            if (type && type->IsDependent()) {
+                requiresInstantiation = true;
                 break;
             }
         }
     }
 
-    if (hasDependentArgs) {
-        // The LLVM types of the arguments are needed to declare the intrinsic,
-        // so wait for template instantiation. The name doesn't depend on them,
-        // so check it now.
+    if (requiresInstantiation || hasPendingTemplateArgs) {
+        // Argument types, immediate values, and target constraints are checked
+        // when the call is type-checked. The spelling can be checked now.
         if (!m->CheckLLVMIntrinsicName(name, pos)) {
             return new FunctionCallExpr(nullptr, args, pos);
         }
         FunctionSymbolExpr *fSym = new FunctionSymbolExpr(name.c_str(), {}, {}, TemplateArgs(), namePos);
         FunctionCallExpr *call = new FunctionCallExpr(fSym, args, pos);
         call->deferredIntrinsicName = name;
+        call->intrinsicRequiresInstantiation = requiresInstantiation || dependsOnTemplate;
         return call;
     }
 
-    Symbol *sym = m->AddLLVMIntrinsicDecl(name, args, pos);
+    Symbol *sym = m->AddLLVMIntrinsicDecl(name, args && !args->exprs.empty() ? args : nullptr, pos);
     FunctionSymbolExpr *fSym = nullptr;
     if (sym != nullptr) {
         fSym = new FunctionSymbolExpr(name.c_str(), {sym}, {}, TemplateArgs(), namePos);
     }
-    return new FunctionCallExpr(fSym, args, pos);
+    // A concrete signature is usable in a parse-time context such as
+    // sizeof even when an immediate argument depends on a template parameter.
+    FunctionCallExpr *call = new FunctionCallExpr(fSym, args, pos);
+    call->intrinsicRequiresInstantiation = dependsOnTemplate;
+    return call;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -6118,6 +6161,13 @@ const Type *DependentMemberExpr::getElementType() const { UNREACHABLE(); };
 // MemberExpr
 
 MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue) {
+    if (lHasPendingCall(e)) {
+        return new DependentMemberExpr(e, id, p, idpos, derefLValue);
+    }
+    return resolve(e, id, p, idpos, derefLValue);
+}
+
+MemberExpr *MemberExpr::resolve(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue) {
     // FIXME: we need to call TypeCheck() here so that we can call
     // e->GetType() in the following.  But really we just shouldn't try to
     // resolve this now but just have a generic MemberExpr type that
@@ -6302,7 +6352,12 @@ llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
     return ptr;
 }
 
-Expr *MemberExpr::TypeCheck() { return expr ? this : nullptr; }
+Expr *MemberExpr::TypeCheck() {
+    if (llvm::isa<DependentMemberExpr>(this)) {
+        return resolve(expr, identifier.c_str(), pos, identifierPos, dereferenceExpr);
+    }
+    return expr ? this : nullptr;
+}
 
 Expr *MemberExpr::Optimize() { return expr ? this : nullptr; }
 
@@ -9523,6 +9578,9 @@ std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) con
     if (CastType<ReferenceType>(t) != nullptr) {
         t = t->GetReferenceTarget();
     }
+    if (t->IsDependent()) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     bool isNotValidForMultiTargetGlobal = false;
     if (t->IsVaryingType()) {
@@ -9732,8 +9790,7 @@ void FunctionSymbolExpr::normalizeTemplateArgs() {
     // If template argument is template type parameter (i.e. nested templates case), don't change its variability,
     // it should be resolved during parent template instantiation and propagated to all nested templates.
     for (auto &arg : templateArgs) {
-        const TemplateTypeParmType *t = CastType<TemplateTypeParmType>(arg.GetAsType());
-        if (t == nullptr) {
+        if (arg.IsType() && !CastType<TemplateTypeParmType>(arg.GetAsType())) {
             arg.SetAsVaryingType();
         }
     }
@@ -9771,6 +9828,10 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
                          : TemplateArg(arg.GetAsExpr()->Instantiate(templInst), arg.GetPos()));
     }
     return new FunctionSymbolExpr(name.c_str(), candidateFunctions, candidateTemplateFunctions, instTemplateArgs, pos);
+}
+
+bool FunctionSymbolExpr::HasPendingNonTypeTemplateArgs() const {
+    return llvm::any_of(templateArgs, [](const TemplateArg &arg) { return arg.IsNonType() && !arg.GetAsConstExpr(); });
 }
 
 std::string FunctionSymbolExpr::GetString() const {
@@ -10565,19 +10626,25 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
 
     // Check for dependent template arguments
     bool hasDependentTemplateArgs = false;
-    for (const auto &arg : templateArgs) {
+    for (auto &arg : templateArgs) {
         if (arg.IsType()) {
             if (arg.GetAsType() && arg.GetAsType()->IsDependent()) {
                 hasDependentTemplateArgs = true;
                 break;
             }
-        } else if (arg.IsNonType()) {
-            const ConstExpr *ce = arg.GetAsConstExpr();
-            // template argument is not resolved yet
-            if (ce == nullptr) {
+        } else if (!arg.GetAsConstExpr()) {
+            if (arg.RequiresInstantiation()) {
                 hasDependentTemplateArgs = true;
                 break;
             }
+            // Check after substitution, when the enclosing function's earlier local
+            // declarations can already have provided their constexpr values.
+            Expr *expr = TypeCheckAndOptimize(const_cast<Expr *>(arg.GetAsExpr()));
+            ConstExpr *value = TemplateArg::EvaluateNonType(expr, arg.GetPos());
+            if (!value) {
+                return false;
+            }
+            arg = TemplateArg(value, arg.GetPos());
         }
     }
 

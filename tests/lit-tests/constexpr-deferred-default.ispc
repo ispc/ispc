@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --target=host --nostdlib --emit-llvm-text -O0 -o - | FileCheck %s
+// RUN: %{ispc} %s --target=host --nostdlib --nowrap --emit-llvm-text -O0 -o - | FileCheck %s
 
 constexpr uniform int later();
 

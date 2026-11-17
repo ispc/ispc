@@ -19,11 +19,14 @@
 #include "type.h"
 #include "util.h"
 
+#include <algorithm>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include <llvm/IR/Constants.h>
+#include <llvm/Support/SaveAndRestore.h>
 
 using namespace ispc;
 
@@ -40,6 +43,18 @@ struct EvalResult {
 static ConstExpr *lMakeZeroConstExpr(const Type *type, SourcePos pos);
 static bool lIsNullPointerConstexpr(ConstExpr *value);
 static llvm::Constant *lConvertConstexprPointer(llvm::Constant *c, const Type *toType);
+
+static std::optional<bool> lGetAgreedCondition(const ConstExpr *value) {
+    if (value->IsAggregate()) {
+        return std::nullopt;
+    }
+    bool lanes[ISPC_MAX_NVEC];
+    int count = value->GetValues(lanes);
+    if (count > 0 && std::all_of(lanes + 1, lanes + count, [&](bool lane) { return lane == lanes[0]; })) {
+        return lanes[0];
+    }
+    return std::nullopt;
+}
 
 static ConstExpr *lConvertConstExpr(ConstExpr *value, const Type *toType, SourcePos pos) {
     if (value == nullptr || toType == nullptr) {
@@ -457,10 +472,16 @@ class ConstexprEvaluator {
     bool allowDeferred = false;
     bool deferred = false;
     bool targetDependent = false;
+    bool partialMask = false;
 
     void SetError() { hasError = true; }
     void SetDeferred() { deferred = true; }
     void SetTargetDependent() { targetDependent = true; }
+
+    ConstExpr *EvalConditionalOperand(const Expr *expr, bool needsPartialMask) {
+        llvm::SaveAndRestore<bool> restoreMask(partialMask, partialMask || needsPartialMask);
+        return EvalExpr(expr);
+    }
 
     void PushScope() { scopes.push_back(Scope()); }
     void PopScope() {
@@ -702,6 +723,11 @@ class ConstexprEvaluator {
 };
 
 ConstExpr *ConstexprEvaluator::EvalAssign(const AssignExpr *expr) {
+    if (partialMask) {
+        // The evaluator cannot update only the active lanes of a local variable.
+        SetError();
+        return nullptr;
+    }
     const SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(expr->lvalue);
     if (se == nullptr) {
         SetError();
@@ -773,6 +799,10 @@ ConstExpr *ConstexprEvaluator::EvalAssign(const AssignExpr *expr) {
 }
 
 ConstExpr *ConstexprEvaluator::EvalIncDec(const UnaryExpr *expr) {
+    if (partialMask) {
+        SetError();
+        return nullptr;
+    }
     const SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(expr->expr);
     if (se == nullptr) {
         SetError();
@@ -858,8 +888,20 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
             return EvalExpr(be->arg1);
         }
         ConstExpr *lhs = EvalExpr(be->arg0);
-        ConstExpr *rhs = EvalExpr(be->arg1);
-        if (lhs == nullptr || rhs == nullptr) {
+        if (lhs == nullptr) {
+            return nullptr;
+        }
+        bool needsPartialMask = false;
+        if ((be->op == BinaryExpr::LogicalAnd || be->op == BinaryExpr::LogicalOr) &&
+            CastType<VectorType>(be->GetType()) == nullptr) {
+            std::optional<bool> lhsValue = lGetAgreedCondition(lhs);
+            if (lhsValue == (be->op == BinaryExpr::LogicalOr)) {
+                return lConvertConstExpr(lhs, be->GetType(), be->pos);
+            }
+            needsPartialMask = !lhsValue.has_value();
+        }
+        ConstExpr *rhs = EvalConditionalOperand(be->arg1, needsPartialMask);
+        if (rhs == nullptr) {
             SetError();
             return nullptr;
         }
@@ -937,9 +979,21 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
     }
     if (auto *se = llvm::dyn_cast<SelectExpr>(expr)) {
         ConstExpr *cond = EvalExpr(se->test);
-        ConstExpr *tExpr = EvalExpr(se->expr1);
-        ConstExpr *fExpr = EvalExpr(se->expr2);
-        if (cond == nullptr || tExpr == nullptr || fExpr == nullptr) {
+        if (cond == nullptr) {
+            return nullptr;
+        }
+        if (std::optional<bool> condValue = lGetAgreedCondition(cond)) {
+            ConstExpr *selected = EvalExpr(*condValue ? se->expr1 : se->expr2);
+            return lConvertConstExpr(selected, se->GetType(), se->pos);
+        }
+        // Short-vector conditions evaluate both operands without changing the lane mask.
+        bool needsPartialMask = !cond->IsAggregate();
+        ConstExpr *tExpr = EvalConditionalOperand(se->expr1, needsPartialMask);
+        if (tExpr == nullptr) {
+            return nullptr;
+        }
+        ConstExpr *fExpr = EvalConditionalOperand(se->expr2, needsPartialMask);
+        if (fExpr == nullptr) {
             SetError();
             return nullptr;
         }

@@ -45,8 +45,9 @@ Key goals for v1:
    Global initializers and default parameter values can reference constexpr
    functions defined later in the file. The front end defers evaluation until
    after parsing and then resolves any remaining constexpr work. Array sizes,
-   vector lengths, and template args are still evaluated immediately and must
-   see definitions before use.
+   vector lengths, and non-dependent template args must see definitions before
+   use. Dependent template arguments are retained until substitution; local
+   constexpr arguments are resolved after their declarations are checked.
 
 6. **Immediate-operand enforcement for intrinsics**
    LLVM requires certain intrinsic operands to be immediates. The front end now
@@ -74,14 +75,24 @@ The implementation is layered end-to-end:
 
 - **Compiler-side immarg checks** no longer rely on fragile constant folding; the
   front end now enforces immarg parameters and rewrites constexpr arguments to
-  immediate constants in IR.
+  immediate constants in IR. The late code-generation constant-folding and
+  validation path is removed.
+- **Generic builtin literal workarounds** are replaced by named constexpr
+  controls and a shared prefetch template. Vector widths are computed from
+  `programCount` rather than a preprocessor case table.
+- **AMX template wrappers** call LLVM intrinsics directly and validate tile IDs
+  before narrowing. They work with optimization and the AMX lowering pass
+  disabled. Legacy argument-taking wrappers retain their compatibility path.
+- **Cube-root arithmetic helpers** are header-defined constexpr functions used
+  both by production math code and compile-time calculations.
+- **Rotation masks** are generated with constexpr lane arithmetic in place of
+  separate handwritten tables for each supported vector width.
+- **SSE/SSE2 template overloads** expose constant controls for shuffles, shifts,
+  lane insertion/extraction, and prefetch. The new shift and shuffle bodies
+  have boundary and runtime reference tests.
 
 ### Still present (by design or future work)
 
-- **`*l` immarg literal spellings** in `builtins/generic.ispc` remain unchanged.
-  They satisfy existing builtin intrinsic calls, while the new constexpr
-  evaluator is focused on source-level constant expressions at immarg call
-  sites.
 - **`convert_scale_to_const*` switch macros** in `builtins/util.m4` and
   `builtins/target-avx512-utils.ll` remain as runtime fallbacks for dynamic
   gather/scatter scales. The front end can now enforce constant scales, but
@@ -113,10 +124,16 @@ honest.
 
 ## What remains
 
-The feature is usable, but there are obvious follow-ups for a “v2”:
+Library adoption brought dependent NTTP expressions, constexpr local arguments,
+and deferred intrinsic checks in templates into the current implementation.
+The remaining “v2” candidates are:
 
-- Extend deferred constexpr evaluation to array sizes, vector lengths, and
+- Extend forward-definition support to array sizes, vector lengths, and
   template arguments.
 - Relax the `constant_expression_no_gt` grammar workaround for template args.
 - Evaluate whether aggregate folding should be unified with general optimizer
   constant folding to remove constexpr-only paths.
+
+The implementation notes record the reasons for keeping these separate, along
+with aggregate mutation, masked control flow, pure-intrinsic evaluation for
+more math functions, and a possible constant-scale gather/scatter API.

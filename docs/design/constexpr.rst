@@ -184,6 +184,23 @@ short vector lengths, or template arguments; those contexts still require
 definitions to be visible before use.
 
 
+Dependent template expressions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Non-type template expressions that depend on template parameters are retained
+until instantiation, including arithmetic and calls to constexpr functions.
+Local constexpr variables can feed non-type arguments after declaration
+checking. This is distinct from permitting forward constexpr definitions:
+function bodies used for evaluation must still be available when needed.
+
+Immediate operands are checked and rewritten to literal constants in the
+front end. Runtime library wrappers should carry controls as non-type template
+arguments to the direct LLVM intrinsic, rather than ordinary function
+parameters. Calls whose operands depend on template parameters can defer
+intrinsic checks until instantiation. This lets unused AMX immediate wrappers
+remain available without requiring their instructions on the current target.
+Independent calls retain their normal checks when parsed.
+
 Examples
 --------
 

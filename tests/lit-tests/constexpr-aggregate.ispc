@@ -1,5 +1,4 @@
-// REQUIRES: X86_ENABLED && X86_64_HOST
-// RUN: %{ispc} %s --target=generic-i32x4 --nostdlib --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=generic-i32x4 --nostdlib --nowrap --emit-llvm-text -o - | FileCheck %s
 
 struct Pair {
     uniform int a;

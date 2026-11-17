@@ -126,19 +126,21 @@ class TemplateArg : public Traceable {
         const Expr *expr;
     };
     SourcePos pos;
+    bool requiresInstantiation = false;
 
   public:
     TemplateArg(const Type *t, SourcePos pos);
-    TemplateArg(const Expr *c, SourcePos pos);
+    TemplateArg(const Expr *c, SourcePos pos, bool requiresInstantiation = false);
 
     // Returns ISPC type of the argument.
     const Type *GetAsType() const;
-    // Returns const expression if this argument is a ConstExpr or SymbolExpr with constValue.
-    // Note that SymbolExpr may not have constValue until it has been instantiated during template function call.
-    // See: FunctionSymbolExpr::Instantiate()
+    // Returns the constant expression for an evaluated non-type argument.
     const ConstExpr *GetAsConstExpr() const;
+    // Evaluates and validates a type-checked non-type template argument.
+    static ConstExpr *EvaluateNonType(Expr *expr, SourcePos pos);
     // Returns expression if this argument is a non-type, nullptr otherwise.
     const Expr *GetAsExpr() const;
+    bool RequiresInstantiation() const { return requiresInstantiation; }
     // Returns the source position associated with this template argument.
     SourcePos GetPos() const;
     // Produces a string representation of the argument.

@@ -319,8 +319,9 @@ class Target {
     Target &operator=(const Target &) = delete;
 
     /** Check if LLVM intrinsic is supported for the current target. isTargetIntrinsic is
-        true if the intrinsic is specific to a target (see llvm::Intrinsic::isTargetIntrinsic()). */
-    bool checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos);
+        true if the intrinsic is specific to a target (see llvm::Intrinsic::isTargetIntrinsic()).
+        Set diagnose to false to query support before template instantiation. */
+    bool checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos, bool diagnose = true);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
@@ -804,6 +805,7 @@ struct Globals {
     /** When \c true, voluminous debugging output will be printed during
         ispc's execution. */
     bool debugPrint;
+    bool printingInitialAST = false;
 
     /** When \c true, print verbose output from PassManager.
      * (Default is false.)

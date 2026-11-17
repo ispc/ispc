@@ -1053,21 +1053,19 @@ static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std:
 }
 
 bool Module::CheckLLVMIntrinsicName(const std::string &name, SourcePos pos) {
+    // A template can contain instructions for a target other than the current
+    // one. Check only the name here; declaration checks the target when used.
+    if (llvm::Intrinsic::lookupIntrinsicID(name) != llvm::Intrinsic::not_intrinsic ||
+        lLookupISPCInstrinsic(name) != ISPCIntrinsics::not_intrinsic) {
+        return true;
+    }
 #ifdef ISPC_XE_ENABLED
-    if (g->target->isXeTarget()) {
-        if (llvm::GenXIntrinsic::lookupGenXIntrinsicID(name) == llvm::GenXIntrinsic::not_any_intrinsic) {
-            Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
-            return false;
-        }
+    if (llvm::GenXIntrinsic::lookupGenXIntrinsicID(name) != llvm::GenXIntrinsic::not_any_intrinsic) {
         return true;
     }
 #endif // ISPC_XE_ENABLED
-    if (llvm::Intrinsic::lookupIntrinsicID(name) == llvm::Intrinsic::not_intrinsic &&
-        lLookupISPCInstrinsic(name) == ISPCIntrinsics::not_intrinsic) {
-        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
-        return false;
-    }
-    return true;
+    Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+    return false;
 }
 
 Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {

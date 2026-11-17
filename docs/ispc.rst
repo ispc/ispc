@@ -4165,6 +4165,40 @@ Example:
 
     uniform int buf[gcd(48, 18)];
 
+**Templates and intrinsic immediates**
+
+A constexpr function can calculate a control value for a normal runtime
+function template. Dependent expressions such as ``operation<N + 1>()`` and
+``operation<control(N)>()`` are evaluated after template substitution. Local
+constexpr variables can also be used as non-type arguments.
+
+LLVM intrinsic immediate arguments must evaluate to uniform scalar constants.
+The compiler evaluates and emits these operands before optimization; this does
+not depend on inlining. To preserve this guarantee across library layers, pass
+the control as a non-type template argument until the direct intrinsic call.
+An ordinary ``uniform int`` function parameter is not a constant inside its
+callee, even if every caller supplies a constant.
+
+For example, the AMX template overloads use this pattern::
+
+    #include <amx.isph>
+
+    constexpr uniform int accumulator_tile(uniform int first) {
+        return first + 2;
+    }
+
+    template<int First> void clear_accumulator() {
+        amx_tile_zero<accumulator_tile(First)>();
+    }
+
+The target must support the instantiated AMX operation. Tile indices are
+checked before conversion to the intrinsic's operand type.
+
+Uniform scalar ``&&``, ``||``, and ``?:`` short-circuit during constant
+evaluation. Varying expressions that require writes under a partial lane mask
+cannot be evaluated as constexpr in v1. Local array and struct element writes
+are also unsupported; aggregate initialization and reading are supported.
+
 **Forward references**
 
 Global initializers and default parameter values may call ``constexpr``

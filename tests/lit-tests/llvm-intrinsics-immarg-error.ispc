@@ -7,4 +7,4 @@ float bad_round(float v) {
     return @llvm.x86.sse41.round.ps(v, gMode);
 }
 
-// CHECK: Error: Immediate argument 2 to "llvm.x86.sse41.round.ps" must be a compile-time constant.
+// CHECK: Error: Argument 2 of LLVM intrinsic "llvm.x86.sse41.round.ps" must be a compile-time constant.

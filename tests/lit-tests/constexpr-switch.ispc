@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --target=host --nostdlib --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=host --nostdlib --nowrap --emit-llvm-text -o - | FileCheck %s
 
 constexpr uniform int pick(uniform int x) {
     switch (x) {

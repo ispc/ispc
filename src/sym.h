@@ -180,6 +180,9 @@ class SymbolTable {
         struct; see AddType() and AddEnumerator(). */
     bool IsTemplateParameterScope() const { return types.size() == templateParameterScope; }
 
+    /** Returns true when the parser is in a template parameter scope or a nested scope. */
+    bool HasTemplateParameterScope() const { return templateParameterScope != 0; }
+
     /** Adds the given variable symbol to the symbol table.
         @param symbol The symbol to be added
 
