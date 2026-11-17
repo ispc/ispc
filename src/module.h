@@ -43,6 +43,7 @@ class raw_string_ostream;
 namespace ispc {
 
 struct StructIdentity;
+class StaticAssertStmt;
 
 #ifdef ISPC_XE_ENABLED
 // Derived from ocloc_api.h
@@ -97,6 +98,8 @@ class Module {
     /** Record a deferred constexpr default parameter for later evaluation. */
     void AddDeferredConstexprParam(FunctionType *funcType, int index, Expr *expr, SourcePos pos,
                                    const std::string &paramName);
+
+    void AddDeferredStaticAssert(StaticAssertStmt *stmt);
 
     /** Add a declaration of the function defined by the given function
         symbol to the module. */
@@ -512,6 +515,7 @@ class Module {
 
     std::vector<DeferredConstexprGlobal> deferredConstexprGlobals;
     std::vector<DeferredConstexprParam> deferredConstexprParams;
+    std::vector<StaticAssertStmt *> deferredStaticAsserts;
 
     void ResolveDeferredConstexpr();
 

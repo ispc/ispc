@@ -4201,10 +4201,34 @@ are also unsupported; aggregate initialization and reading are supported.
 
 **Forward references**
 
-Global initializers and default parameter values may call ``constexpr``
+Global initializers, default parameter values, and static assertions may call ``constexpr``
 functions defined later in the same file. Other constant-expression contexts
 (array sizes, short vector lengths, template arguments) still require
 definitions to be visible before use.
+
+**Static assertions**
+
+``static_assert(condition, "message");`` checks a condition during compilation.
+The message is optional. The condition must be a uniform scalar compile-time
+constant convertible to ``bool``. Static assertions can appear at file scope
+or inside a function body and emit no runtime instructions.
+
+Use static assertions to validate immediate operands before narrowing them to
+the type required by an intrinsic::
+
+    template<uint64 Scale>
+    constexpr uniform int checked_scale() {
+        static_assert(Scale == 1 || Scale == 2 || Scale == 4 || Scale == 8,
+                      "Scale must be one of 1, 2, 4, or 8.");
+        return (uniform int)Scale;
+    }
+
+Assertions in templates are checked when the template is instantiated.
+Local constexpr variables can be used after their declarations. An ordinary
+function parameter is not a compile-time constant, including a parameter of
+a constexpr function. ``static_assert`` is a declaration check, so an assertion
+in a runtime-dead branch still applies. ``--opt=disable-assertions`` affects
+runtime assertions and does not disable static assertions.
 
 
 Attributes

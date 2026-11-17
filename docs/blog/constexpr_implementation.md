@@ -85,11 +85,15 @@ The implementation is layered end-to-end:
   disabled. Legacy argument-taking wrappers retain their compatibility path.
 - **Cube-root arithmetic helpers** are header-defined constexpr functions used
   both by production math code and compile-time calculations.
+- **Integer `abs` and floating-point `isnan`** use shared header-defined
+  constexpr bodies, preserving their existing arithmetic semantics.
 - **Rotation masks** are generated with constexpr lane arithmetic in place of
   separate handwritten tables for each supported vector width.
 - **SSE/SSE2 template overloads** expose constant controls for shuffles, shifts,
   lane insertion/extraction, and prefetch. The new shift and shuffle bodies
-  have boundary and runtime reference tests.
+  have boundary and runtime reference tests. Matching ordinary overloads also
+  have corrected edge-case semantics and scalar lane accesses; template
+  operands retain their constant path.
 
 ### Still present (by design or future work)
 
@@ -125,7 +129,10 @@ honest.
 ## What remains
 
 Library adoption brought dependent NTTP expressions, constexpr local arguments,
-and deferred intrinsic checks in templates into the current implementation.
+deferred intrinsic checks in templates, and `static_assert` into the current
+implementation. Static assertions validate AMX tile ranges and builtin
+prefetch controls before intrinsic lowering; constant-scale gather tests
+exercise the same contract for the legal scales 1, 2, 4, and 8.
 The remaining “v2” candidates are:
 
 - Extend forward-definition support to array sizes, vector lengths, and

@@ -11,6 +11,7 @@
 // Unknown intrinsic names are reported even if the template is never instantiated.
 // CHECK-BAD-NAME: Error: LLVM intrinsic "llvm.typo" not supported.
 // CHECK-BAD-NAME: Error: LLVM intrinsic "llvm.ispc.typo" not supported.
+// CHECK-BAD-NAME: Error: LLVM intrinsic "llvm.genx.typo" not supported.
 // CHECK-BAD-NAME-NOT: FATAL ERROR
 
 // Never instantiated.
@@ -19,6 +20,7 @@ template <typename T> T unused(T x) { return @llvm.ctlz(x, false); }
 #ifdef BAD_NAME
 template <typename T> T bad_llvm(T x) { return @llvm.typo(x); }
 template <typename T> T bad_ispc(T x) { return @llvm.ispc.typo(x); }
+template <typename T> T bad_genx(T x) { return @llvm.genx.typo(x); }
 #endif
 
 #ifndef NO_INSTANCE

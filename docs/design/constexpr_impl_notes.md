@@ -244,8 +244,8 @@ Stdlib/builtins hacks inventory
 Library validation and follow-up assessment
 ------------------------------------------
 
-- AMX template overloads call LLVM intrinsics directly. A constexpr tile lookup
-  validates the full integer value before narrowing it to i8; negative and
+- AMX template overloads call LLVM intrinsics directly. Static assertions
+  validate the full integer value before narrowing it to i8; negative and
   greater-than-seven tile IDs are rejected. CPU instruction features are checked
   when a template is instantiated, so including the header does not require
   every AMX instruction set. Tests disable optimization and the legacy AMX
@@ -253,12 +253,18 @@ Library validation and follow-up assessment
 - Existing argument-taking AMX functions retain the old builtins and lowering
   pass for source compatibility. Backend constant probes and dynamic
   gather/scatter scale switches remain independently useful.
+- The AMX matrix-multiply example, its integer/BF16/FP16 runtime tests, and
+  SSE/SSE2 benchmarks use the new template overloads. Separate positive and
+  negative tests retain coverage of ordinary-call compatibility.
 - The existing `_fast_div3`, `_cbrt_newton_iter`, and `_cbrt_halley_iter` math
   helpers are shared header-defined constexpr functions. Production cube-root
   code and constant evaluation use the same arithmetic. Other math routines
   that call runtime builtins are not implicitly constexpr. A constexpr body
   must be visible to the front end; merely marking a declaration whose body
   exists only in precompiled stdlib bitcode is insufficient.
+- Public integer `abs` and floating-point `isnan` overloads now share their
+  existing arithmetic bodies with constant evaluation. Their prior overflow
+  and floating-point rules are unchanged; no intrinsic interpreter is needed.
 - Derived NTTP expressions such as `callee<N + 1>()` and
   `callee<control(N)>()` are retained until substitution. Constexpr local
   values can also feed NTTPs. These are requirements of composable library
@@ -271,8 +277,10 @@ Library validation and follow-up assessment
 - SSE/SSE2 template overloads retain portable implementations. Boundary tests
   cover oversized shifts, sign fill, zero extension, and nonidentity shuffles;
   template controls remain available while those implementations are compiled.
+  The matching ordinary overloads use correct scalar lane accesses as well,
+  preserving runtime controls without depending on padded short-vector layout.
 
-The remaining candidates have different purposes:
+The follow-up decisions after library adoption are:
 
 | Candidate | Current decision and reason |
 | --- | --- |
@@ -280,7 +288,7 @@ The remaining candidates have different purposes:
 | Dedicated template-argument parser | Keep deferred: parentheses handle relational expressions containing `>`; changing parser/lexer context is not required by the converted APIs. |
 | Unified aggregate constant folding | Keep deferred: architectural cleanup, not needed for literal scalar intrinsic operands. |
 | Local array/struct element mutation | Keep deferred: useful for generated AMX descriptors or tables, but requires lvalue/storage modeling beyond the read-only aggregates used here. |
-| Assertions during constant evaluation | Keep deferred: useful for clearer immediate-domain errors, but needs defined behavior for SIMD conditions and disabled runtime assertions. AMX currently validates through checked constexpr array indexing. |
+| Static assertions | Included: `static_assert` validates uniform compile-time conditions at file/block scope and template instantiation, independently of runtime assertions. AMX tile ranges and generic prefetch controls use it; gather-scale tests verify values 1/2/4/8 before intrinsic narrowing. Executing runtime `assert` in constexpr functions remains separate. |
 | Constexpr evaluation of pure intrinsics | Keep deferred: would enable more math routines, but requires explicit intrinsic semantics and floating-point parity tests, including NaNs and signed zero. |
 | Varying control flow and masked mutation | Keep deferred: expression folding is supported, but writes requiring a partial lane mask are rejected rather than evaluated with incorrect side effects. |
 | Public constant-scale gather/scatter API | Keep separate from this migration: the existing dynamic APIs must retain their fallback, and a useful portable interface needs its own design. |

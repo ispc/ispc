@@ -996,8 +996,10 @@ static llvm::Function *lGetLLVMIntrinsicDeclaration(llvm::Module *module, llvm::
 #ifdef ISPC_XE_ENABLED
 static llvm::Function *lGetGenXIntrinsicDeclaration(llvm::Module *module, const std::string &name, ExprList *args,
                                                     SourcePos pos) {
-    llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
-    if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
+    llvm::GenXIntrinsic::ID ID = llvm::StringRef(name).starts_with(llvm::GenXIntrinsic::getGenXIntrinsicPrefix())
+                                     ? llvm::GenXIntrinsic::lookupGenXIntrinsicID(name)
+                                     : llvm::GenXIntrinsic::not_genx_intrinsic;
+    if (ID == llvm::GenXIntrinsic::not_genx_intrinsic) {
         Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
         return nullptr;
     }
@@ -1060,7 +1062,8 @@ bool Module::CheckLLVMIntrinsicName(const std::string &name, SourcePos pos) {
         return true;
     }
 #ifdef ISPC_XE_ENABLED
-    if (llvm::GenXIntrinsic::lookupGenXIntrinsicID(name) != llvm::GenXIntrinsic::not_any_intrinsic) {
+    if (llvm::StringRef(name).starts_with(llvm::GenXIntrinsic::getGenXIntrinsicPrefix()) &&
+        llvm::GenXIntrinsic::lookupGenXIntrinsicID(name) != llvm::GenXIntrinsic::not_genx_intrinsic) {
         return true;
     }
 #endif // ISPC_XE_ENABLED

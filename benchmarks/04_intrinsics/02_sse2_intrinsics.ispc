@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 #include "intrinsics/emmintrin.isph"
 
@@ -606,7 +606,7 @@ export void mm_shuffle_pd(uniform double Result[], const uniform double Source1[
         const uniform __m128d S1 = _mm_loadu_pd(&Source1[k]);
         const uniform __m128d S2 = _mm_loadu_pd(&Source2[k]);
         const uniform __m128d S = _mm_add_pd(S1, S2);
-        const uniform __m128d R = _mm_shuffle_pd(S, S, 0x1);
+        const uniform __m128d R = _mm_shuffle_pd<_MM_SHUFFLE2(0, 1)>(S, S);
         _mm_storeu_pd(&Result[k], R);
     }
 }
@@ -1090,7 +1090,7 @@ export void mm_xor_si128(uniform uint32 Result[], const uniform uint32 Source1[]
 export void mm_slli_si128(uniform uint32 Result[], const uniform uint32 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_slli_si128(S1, 8);
+        const uniform __m128i R = _mm_slli_si128<8>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1098,7 +1098,7 @@ export void mm_slli_si128(uniform uint32 Result[], const uniform uint32 Source1[
 export void mm_slli_epi16(uniform int16 Result[], const uniform int16 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 8) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_slli_epi16(S1, 8);
+        const uniform __m128i R = _mm_slli_epi16<8>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1116,7 +1116,7 @@ export void mm_sll_epi16(uniform int16 Result[], const uniform int16 Source1[], 
 export void mm_slli_epi32(uniform int32 Result[], const uniform int32 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_slli_epi32(S1, 8);
+        const uniform __m128i R = _mm_slli_epi32<8>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1134,7 +1134,7 @@ export void mm_sll_epi32(uniform int32 Result[], const uniform int32 Source1[], 
 export void mm_slli_epi64(uniform int64 Result[], const uniform int64 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 2) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_slli_epi64(S1, 8);
+        const uniform __m128i R = _mm_slli_epi64<8>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1152,7 +1152,7 @@ export void mm_sll_epi64(uniform int64 Result[], const uniform int64 Source1[], 
 export void mm_srai_epi16(uniform int16 Result[], const uniform int16 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 8) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_srai_epi16(S1, 4);
+        const uniform __m128i R = _mm_srai_epi16<4>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1170,7 +1170,7 @@ export void mm_sra_epi16(uniform int16 Result[], const uniform int16 Source1[], 
 export void mm_srai_epi32(uniform int32 Result[], const uniform int32 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_srai_epi32(S1, 4);
+        const uniform __m128i R = _mm_srai_epi32<4>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1188,7 +1188,7 @@ export void mm_sra_epi32(uniform int32 Result[], const uniform int32 Source1[], 
 export void mm_srli_si128(uniform uint32 Result[], const uniform uint32 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_srli_si128(S1, 4);
+        const uniform __m128i R = _mm_srli_si128<4>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1196,7 +1196,7 @@ export void mm_srli_si128(uniform uint32 Result[], const uniform uint32 Source1[
 export void mm_srli_epi16(uniform uint16 Result[], const uniform uint16 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 8) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_srli_epi16(S1, 4);
+        const uniform __m128i R = _mm_srli_epi16<4>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1214,7 +1214,7 @@ export void mm_srl_epi16(uniform uint16 Result[], const uniform uint16 Source1[]
 export void mm_srli_epi32(uniform uint32 Result[], const uniform uint32 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_srli_epi32(S1, 4);
+        const uniform __m128i R = _mm_srli_epi32<4>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1232,7 +1232,7 @@ export void mm_srl_epi32(uniform uint32 Result[], const uniform uint32 Source1[]
 export void mm_srli_epi64(uniform uint64 Result[], const uniform uint64 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 2) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        const uniform __m128i R = _mm_srli_epi64(S1, 4);
+        const uniform __m128i R = _mm_srli_epi64<4>(S1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1381,14 +1381,14 @@ export void mm_packus_epi16(uniform uint8 Result[], const uniform int16 Source1[
 export void mm_extract_epi16(uniform int16 Result[], const uniform int16 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 8) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        *((uniform int *uniform) & Result[k]) = _mm_extract_epi16(S1, 4);
+        *((uniform int *uniform) & Result[k]) = _mm_extract_epi16<4>(S1);
     }
 }
 
 export void mm_insert_epi16(uniform int16 Result[], const uniform int16 Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 8) {
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
-        uniform __m128i R = _mm_insert_epi16(S1, 1, 4);
+        uniform __m128i R = _mm_insert_epi16<4>(S1, 1);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1407,7 +1407,7 @@ export void mm_shuffle_epi32(uniform int32 Result[], const uniform int32 Source1
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
         const uniform __m128i S2 = _mm_loadu_si128((uniform __m128i * uniform) & Source2[k]);
         const uniform __m128i S = _mm_add_epi32(S1, S2);
-        const uniform __m128i R = _mm_shuffle_epi32(S, 0x1B);
+        const uniform __m128i R = _mm_shuffle_epi32<_MM_SHUFFLE(0, 1, 2, 3)>(S);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1418,7 +1418,7 @@ export void mm_shufflehi_epi16(uniform int16 Result[], const uniform int16 Sourc
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
         const uniform __m128i S2 = _mm_loadu_si128((uniform __m128i * uniform) & Source2[k]);
         const uniform __m128i S = _mm_add_epi16(S1, S2);
-        const uniform __m128i R = _mm_shufflehi_epi16(S, 0x1B);
+        const uniform __m128i R = _mm_shufflehi_epi16<_MM_SHUFFLE(0, 1, 2, 3)>(S);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }
@@ -1429,7 +1429,7 @@ export void mm_shufflelo_epi16(uniform int16 Result[], const uniform int16 Sourc
         const uniform __m128i S1 = _mm_loadu_si128((uniform __m128i * uniform) & Source1[k]);
         const uniform __m128i S2 = _mm_loadu_si128((uniform __m128i * uniform) & Source2[k]);
         const uniform __m128i S = _mm_add_epi16(S1, S2);
-        const uniform __m128i R = _mm_shufflelo_epi16(S, 0x1B);
+        const uniform __m128i R = _mm_shufflelo_epi16<_MM_SHUFFLE(0, 1, 2, 3)>(S);
         _mm_storeu_si128((uniform __m128i * uniform) & Result[k], R);
     }
 }

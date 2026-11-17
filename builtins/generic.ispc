@@ -1277,6 +1277,8 @@ static constexpr uniform int32 __prefetch_locality_l3 = 1;
 static constexpr uniform int32 __prefetch_locality_nt = 0;
 
 template <int Access, int Locality> static inline unmasked void __prefetch_uniform(uniform int8 *uniform ptr) {
+    static_assert(Access == 0 || Access == 1, "Prefetch access must be read (0) or write (1).");
+    static_assert(Locality >= 0 && Locality <= 3, "Prefetch locality must be between 0 and 3.");
     @llvm.prefetch(ptr, Access, Locality, __prefetch_data_cache);
 }
 

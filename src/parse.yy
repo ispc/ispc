@@ -172,7 +172,7 @@ static const char *lBuiltinTokens[] = {
     "float16", "float", "for", "foreach", "foreach_active", "foreach_tiled",
     "foreach_unique", "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "invoke_sycl", "launch", "new", "NULL",
-    "print", "return", "signed", "sizeof", "static", "struct", "switch",
+    "print", "return", "signed", "sizeof", "static", "static_assert", "struct", "switch",
     "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned",
     "varying", "void", "while", "__attribute__", NULL
 };
@@ -271,7 +271,7 @@ struct ForeachDimension {
 %token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
-%token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT TOKEN_INVOKE_SYCL
+%token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT TOKEN_STATIC_ASSERT TOKEN_INVOKE_SYCL
 %token TOKEN_ATTRIBUTE
 
 %type <expr> primary_expression postfix_expression integer_dotdotdot
@@ -292,7 +292,7 @@ struct ForeachDimension {
 %type <stmt> attributed_statement labeled_statement compound_statement for_init_statement statement
 %type <stmt> expression_statement selection_statement iteration_statement
 %type <stmt> jump_statement statement_list declaration_statement print_statement
-%type <stmt> assert_statement sync_statement delete_statement unmasked_statement
+%type <stmt> assert_statement static_assert_declaration sync_statement delete_statement unmasked_statement
 
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list
@@ -2515,6 +2515,7 @@ statement
     | declaration_statement
     | print_statement
     | assert_statement
+    | static_assert_declaration
     | sync_statement
     | delete_statement
     | unmasked_statement
@@ -2964,6 +2965,16 @@ assert_statement
       }
     ;
 
+static_assert_declaration
+    : TOKEN_STATIC_ASSERT '(' assignment_expression ')' ';'
+      { $$ = new StaticAssertStmt("", $3, @1); }
+    | TOKEN_STATIC_ASSERT '(' assignment_expression ',' string_constant ')' ';'
+      {
+          $$ = new StaticAssertStmt(*$5, $3, @1);
+          lCleanUpString($5);
+      }
+    ;
+
 translation_unit
     : external_declaration
     | translation_unit external_declaration
@@ -2975,6 +2986,7 @@ external_declaration
     | template_function_declaration_or_definition
     | template_function_specialization
     | template_function_instantiation
+    | static_assert_declaration { TypeCheck($1); }
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
     | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL '{' declaration '}'
     | TOKEN_EXPORT '{' type_specifier_list '}' ';'

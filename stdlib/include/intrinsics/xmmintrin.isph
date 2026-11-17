@@ -544,12 +544,12 @@ NOT_IMPLEMENTED(extern __m128 _mm_cvtsi64_ss(__m128 _A, __int64 _B));
  */
 
 static inline unmasked uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B, uniform unsigned int _Imm8) {
-    uniform float<4> _R;
-    _R[0] = _A.m128_f32[_Imm8 & 0x3];
-    _R[1] = _A.m128_f32[(_Imm8 >> 2) & 0x3];
-    _R[2] = _B.m128_f32[(_Imm8 >> 4) & 0x3];
-    _R[3] = _B.m128_f32[(_Imm8 >> 6) & 0x3];
-    return *((uniform __m128 * uniform) & _R);
+    uniform __m128 result;
+    result.m128_f32[0] = _A.m128_f32[_Imm8 & 3];
+    result.m128_f32[1] = _A.m128_f32[(_Imm8 >> 2) & 3];
+    result.m128_f32[2] = _B.m128_f32[(_Imm8 >> 4) & 3];
+    result.m128_f32[3] = _B.m128_f32[(_Imm8 >> 6) & 3];
+    return result;
 }
 
 template <int Imm8> inline unmasked uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B) {

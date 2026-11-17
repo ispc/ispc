@@ -4365,6 +4365,65 @@ AssertStmt *AssertStmt::Instantiate(TemplateInstantiation &templInst) const {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// StaticAssertStmt
+
+StaticAssertStmt::StaticAssertStmt(const std::string &message, Expr *expr, SourcePos pos)
+    : Stmt(pos, StaticAssertStmtID), expr(expr), message(message) {}
+
+std::string StaticAssertStmt::GetString() const {
+    return "static_assert(" + (expr ? expr->GetString() : "<NULL>") + ")";
+}
+
+void StaticAssertStmt::Print(Indent &indent) const {
+    indent.PrintLn("StaticAssertStmt", pos);
+    if (expr) {
+        indent.pushSingle();
+        expr->Print(indent);
+    }
+    indent.Done();
+}
+
+Stmt *StaticAssertStmt::TypeCheck() { return CheckCondition(true) ? this : nullptr; }
+
+bool StaticAssertStmt::CheckCondition(bool allowDeferred) {
+    const Type *type = expr ? expr->GetType() : nullptr;
+    if (type == nullptr) {
+        return false;
+    }
+    const Type *boolType = AtomicType::UniformBool;
+    if (!type->IsUniformType() || type->IsVoidType() || !CanConvertTypes(type, boolType, nullptr, pos)) {
+        Error(pos, "static_assert condition must have a uniform scalar type convertible to bool.");
+        return false;
+    }
+
+    ConstexprEvalResult result = ConstexprEvaluateDetailed(expr, boolType, allowDeferred);
+    if (result.value == nullptr) {
+        if (result.deferred) {
+            m->AddDeferredStaticAssert(this);
+            return true;
+        }
+        Error(pos, "static_assert condition must be a compile-time constant.");
+        return false;
+    }
+
+    bool condition;
+    result.value->GetValues(&condition);
+    if (condition) {
+        return true;
+    }
+    if (message.empty()) {
+        Error(pos, "static assertion failed.");
+    } else {
+        Error(pos, "static assertion failed: %s", message.c_str());
+    }
+    return false;
+}
+
+StaticAssertStmt *StaticAssertStmt::Instantiate(TemplateInstantiation &templInst) const {
+    return new StaticAssertStmt(message, expr ? expr->Instantiate(templInst) : nullptr, pos);
+}
+
+///////////////////////////////////////////////////////////////////////////
 // DeleteStmt
 
 DeleteStmt::DeleteStmt(Expr *e, SourcePos p) : Stmt(p, DeleteStmtID) { expr = e; }

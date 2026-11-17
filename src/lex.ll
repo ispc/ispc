@@ -110,6 +110,7 @@ void ParserInit() {
     tokenToName[TOKEN_SIZEOF] = "sizeof";
     tokenToName[TOKEN_ALLOCA] = "alloca";
     tokenToName[TOKEN_STATIC] = "static";
+    tokenToName[TOKEN_STATIC_ASSERT] = "static_assert";
     tokenToName[TOKEN_STRUCT] = "struct";
     tokenToName[TOKEN_SWITCH] = "switch";
     tokenToName[TOKEN_SYNC] = "sync";
@@ -241,6 +242,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_SIZEOF"] = "\'sizeof\'";
     tokenNameRemap["TOKEN_ALLOCA"] = "\'TOKEN_ALLOCA\'";
     tokenNameRemap["TOKEN_STATIC"] = "\'static\'";
+    tokenNameRemap["TOKEN_STATIC_ASSERT"] = "\'static_assert\'";
     tokenNameRemap["TOKEN_STRUCT"] = "\'struct\'";
     tokenNameRemap["TOKEN_SWITCH"] = "\'switch\'";
     tokenNameRemap["TOKEN_SYNC"] = "\'sync\'";
@@ -386,6 +388,7 @@ signed { return TOKEN_SIGNED; }
 sizeof { return TOKEN_SIZEOF; }
 __alloca { return TOKEN_ALLOCA; }
 static { return TOKEN_STATIC; }
+static_assert { return TOKEN_STATIC_ASSERT; }
 struct { return TOKEN_STRUCT; }
 switch { return TOKEN_SWITCH; }
 sync { return TOKEN_SYNC; }

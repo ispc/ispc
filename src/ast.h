@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -165,6 +165,7 @@ class ASTNode : public Traceable {
         LabeledStmtID,
         PrintStmtID,
         ReturnStmtID,
+        StaticAssertStmtID,
         StmtListID,
         SwitchStmtID,
         UnmaskedStmtID

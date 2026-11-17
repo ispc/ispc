@@ -177,7 +177,7 @@ args, etc.). This mirrors existing behavior for constant expressions with
 Forward references and deferral
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Global initializers and default parameter values may call constexpr functions
+Global initializers, default parameter values, and static assertions may call constexpr functions
 defined later in the same file. The compiler defers evaluation of such
 initializers until after parsing. This deferral does not apply to array sizes,
 short vector lengths, or template arguments; those contexts still require
@@ -200,6 +200,21 @@ parameters. Calls whose operands depend on template parameters can defer
 intrinsic checks until instantiation. This lets unused AMX immediate wrappers
 remain available without requiring their instructions on the current target.
 Independent calls retain their normal checks when parsed.
+
+Static assertions
+~~~~~~~~~~~~~~~~~
+
+``static_assert(condition[, "message"]);`` is permitted at file and block
+scope. Its uniform scalar condition is checked by a fresh constant evaluator
+during declaration checking. It cannot use a constexpr function's runtime
+parameter environment. Assertions in template bodies are checked after
+instantiation, and earlier local constexpr declarations are available.
+
+A static assertion emits no runtime code and applies even inside a runtime-dead
+branch or when runtime assertions are disabled. Assertions awaiting constexpr
+definitions are resolved after deferred globals and default arguments. This is
+separate from executing runtime ``assert`` during constant evaluation, which
+remains unsupported.
 
 Examples
 --------

@@ -1351,6 +1351,12 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
         return nullptr;
     }
 
+    // Keep the original symbol for a global with a deferred initializer.
+    // The module will set its constant value after template instantiation.
+    if (sym->constEvalPending) {
+        return sym;
+    }
+
     // A note about about global symbols.
     // In the current state of symbol table there's no clear way to differentiate between global and local symbols.
     // There's "parentFunction" field, but it's empty for some local symbols and paramters, which prevents using it

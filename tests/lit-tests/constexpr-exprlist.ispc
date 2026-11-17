@@ -1,4 +1,5 @@
-// RUN: %{ispc} %s --target=generic-i32x4 --nostdlib --nowrap --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s %{generic_i32x4} --nostdlib --nowrap --emit-llvm-text -o - | FileCheck %s
+// REQUIRES: GENERIC_I32X4
 
 constexpr varying int Lanes = {0, 1, 2, 3};
 constexpr varying int Lanes2 = Lanes + 5;

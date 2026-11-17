@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 #include "intrinsics/xmmintrin.isph"
 
@@ -537,7 +537,7 @@ export void mm_shuffle_ps(uniform float Result[], const uniform float Source1[],
         const uniform __m128 S1 = _mm_loadu_ps(&Source1[k]);
         const uniform __m128 S2 = _mm_loadu_ps(&Source2[k]);
         const uniform __m128 S = _mm_add_ps(S1, S2);
-        const uniform __m128 R = _mm_shuffle_ps(S, S, 0x1B);
+        const uniform __m128 R = _mm_shuffle_ps<_MM_SHUFFLE(0, 1, 2, 3)>(S, S);
         _mm_storeu_ps(&Result[k], R);
     }
 }
@@ -702,7 +702,7 @@ export void mm_storeu_ps(uniform float Result[], const uniform float Source1[], 
 
 export void mm_prefetch_nt(uniform float Result[], const uniform float Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
-        _mm_prefetch((const uniform int8 *uniform) & Source1[k + 64], _MM_HINT_NTA);
+        _mm_prefetch<_MM_HINT_NTA>((const uniform int8 *uniform) & Source1[k + 64]);
         const uniform __m128 S1 = _mm_loadu_ps(&Source1[k]);
         _mm_storeu_ps(&Result[k], S1);
     }
@@ -710,7 +710,7 @@ export void mm_prefetch_nt(uniform float Result[], const uniform float Source1[]
 
 export void mm_prefetch_t0(uniform float Result[], const uniform float Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
-        _mm_prefetch((const uniform int8 *uniform) & Source1[k + 64], _MM_HINT_T0);
+        _mm_prefetch<_MM_HINT_T0>((const uniform int8 *uniform) & Source1[k + 64]);
         const uniform __m128 S1 = _mm_loadu_ps(&Source1[k]);
         _mm_storeu_ps(&Result[k], S1);
     }
@@ -718,7 +718,7 @@ export void mm_prefetch_t0(uniform float Result[], const uniform float Source1[]
 
 export void mm_prefetch_t1(uniform float Result[], const uniform float Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
-        _mm_prefetch((const uniform int8 *uniform) & Source1[k + 64], _MM_HINT_T1);
+        _mm_prefetch<_MM_HINT_T1>((const uniform int8 *uniform) & Source1[k + 64]);
         const uniform __m128 S1 = _mm_loadu_ps(&Source1[k]);
         _mm_storeu_ps(&Result[k], S1);
     }
@@ -726,7 +726,7 @@ export void mm_prefetch_t1(uniform float Result[], const uniform float Source1[]
 
 export void mm_prefetch_t2(uniform float Result[], const uniform float Source1[], const uniform int Iterations) {
     for (uniform int k = 0; k < Iterations; k += 4) {
-        _mm_prefetch((const uniform int8 *uniform) & Source1[k + 64], _MM_HINT_T2);
+        _mm_prefetch<_MM_HINT_T2>((const uniform int8 *uniform) & Source1[k + 64]);
         const uniform __m128 S1 = _mm_loadu_ps(&Source1[k]);
         _mm_storeu_ps(&Result[k], S1);
     }

@@ -551,12 +551,12 @@ __declspec(safe) inline uniform int64 clock();
 ///////////////////////////////////////////////////////////////////////////
 // Floating-Point Math
 
-__declspec(safe, cost1) inline uniform bool isnan(uniform float16 v);
-__declspec(safe, cost1) inline bool isnan(float16 v);
-__declspec(safe, cost1) inline uniform bool isnan(uniform float v);
-__declspec(safe, cost1) inline bool isnan(float v);
-__declspec(safe, cost1) inline uniform bool isnan(uniform double v);
-__declspec(safe, cost1) inline bool isnan(double v);
+__declspec(safe, cost1) static inline constexpr uniform bool isnan(uniform float16 v) { return v != v; }
+__declspec(safe, cost1) static inline constexpr bool isnan(float16 v) { return v != v; }
+__declspec(safe, cost1) static inline constexpr uniform bool isnan(uniform float v) { return v != v; }
+__declspec(safe, cost1) static inline constexpr bool isnan(float v) { return v != v; }
+__declspec(safe, cost1) static inline constexpr uniform bool isnan(uniform double v) { return v != v; }
+__declspec(safe, cost1) static inline constexpr bool isnan(double v) { return v != v; }
 
 __declspec(safe, cost1) inline uniform bool isinf(uniform float16 v);
 __declspec(safe, cost1) inline bool isinf(float16 v);
@@ -572,14 +572,14 @@ __declspec(safe, cost1) inline bool isfinite(float v);
 __declspec(safe, cost1) inline uniform bool isfinite(uniform double v);
 __declspec(safe, cost1) inline bool isfinite(double v);
 
-__declspec(safe, cost1) inline int8 abs(int8 a);
-__declspec(safe, cost1) inline uniform int8 abs(uniform int8 a);
-__declspec(safe, cost1) inline int16 abs(int16 a);
-__declspec(safe, cost1) inline uniform int16 abs(uniform int16 a);
-__declspec(safe, cost1) inline int abs(int a);
-__declspec(safe, cost1) inline uniform int abs(uniform int a);
-__declspec(safe, cost1) inline int64 abs(int64 a);
-__declspec(safe, cost1) inline uniform int64 abs(uniform int64 a);
+__declspec(safe, cost1) static inline constexpr int8 abs(int8 a) { return a > 0 ? a : -a; }
+__declspec(safe, cost1) static inline constexpr uniform int8 abs(uniform int8 a) { return a > 0 ? a : -a; }
+__declspec(safe, cost1) static inline constexpr int16 abs(int16 a) { return a > 0 ? a : -a; }
+__declspec(safe, cost1) static inline constexpr uniform int16 abs(uniform int16 a) { return a > 0 ? a : -a; }
+__declspec(safe, cost1) static inline constexpr int abs(int a) { return a > 0 ? a : -a; }
+__declspec(safe, cost1) static inline constexpr uniform int abs(uniform int a) { return a > 0 ? a : -a; }
+__declspec(safe, cost1) static inline constexpr int64 abs(int64 a) { return a > 0 ? a : -a; }
+__declspec(safe, cost1) static inline constexpr uniform int64 abs(uniform int64 a) { return a > 0 ? a : -a; }
 __declspec(safe, cost1) inline float16 abs(float16 a);
 __declspec(safe, cost1) inline uniform float16 abs(uniform float16 a);
 __declspec(safe, cost1) inline float abs(float a);

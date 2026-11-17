@@ -1,4 +1,5 @@
-// RUN: not %{ispc} %s --target=generic-i32x4 --nostdlib --nowrap -o /dev/null 2>&1 | FileCheck %s
+// RUN: not %{ispc} %s %{generic_i32x4} --nostdlib --nowrap -o /dev/null 2>&1 | FileCheck %s
+// REQUIRES: GENERIC_I32X4
 
 struct Pair {
     uniform int a;

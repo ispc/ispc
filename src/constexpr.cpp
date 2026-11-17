@@ -1506,7 +1506,7 @@ EvalResult ConstexprEvaluator::EvalStmtList(const StmtList *stmtList) {
 }
 
 EvalResult ConstexprEvaluator::EvalStmt(const Stmt *stmt) {
-    if (stmt == nullptr) {
+    if (stmt == nullptr || llvm::isa<StaticAssertStmt>(stmt)) {
         return {EvalResult::Kind::Ok, nullptr};
     }
     if (hasError) {

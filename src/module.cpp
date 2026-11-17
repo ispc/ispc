@@ -375,10 +375,6 @@ int Module::parse() {
 }
 
 void Module::ResolveDeferredConstexpr() {
-    if (deferredConstexprGlobals.empty() && deferredConstexprParams.empty()) {
-        return;
-    }
-
     bool progress = true;
     while (progress) {
         progress = false;
@@ -486,6 +482,11 @@ void Module::ResolveDeferredConstexpr() {
         }
         deferredConstexprParams.clear();
     }
+
+    for (StaticAssertStmt *stmt : deferredStaticAsserts) {
+        stmt->CheckCondition(false);
+    }
+    deferredStaticAsserts.clear();
 }
 
 int Module::CompileFile() {
@@ -1089,6 +1090,8 @@ void Module::AddDeferredConstexprParam(FunctionType *funcType, int index, Expr *
                                        const std::string &paramName) {
     deferredConstexprParams.push_back({funcType, index, expr, pos, paramName});
 }
+
+void Module::AddDeferredStaticAssert(StaticAssertStmt *stmt) { deferredStaticAsserts.push_back(stmt); }
 
 /** Given an arbitrary type, see if it or any of the leaf types contained
     in it has a type that's illegal to have exported to C/C++

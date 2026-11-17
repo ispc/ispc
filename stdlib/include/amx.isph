@@ -101,26 +101,25 @@ static constexpr uniform int amx_tmm7 = 7;
 // AMX template wrappers for compile-time tile IDs
 ///////////////////////////////////////////////////////////////////////////////
 
-// Validate the full tile index before converting it to the intrinsic's i8 operand.
-static constexpr uniform int8 __amx_checked_tile_id(uniform uint64 tile) {
-    constexpr uniform int8 tileIds[8] = {amx_tmm0, amx_tmm1, amx_tmm2, amx_tmm3,
-                                         amx_tmm4, amx_tmm5, amx_tmm6, amx_tmm7};
-    // Use a one-past-end index for invalid IDs even with 32-bit addressing.
-    return tileIds[tile < 8 ? (uniform int)tile : 8];
+// Check tile IDs before narrowing them to the intrinsic's i8 operands.
+template <uint64 Tile> inline void amx_tile_zero() {
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tilezero((uniform int8)Tile);
 }
 
-template <uint64 Tile> inline void amx_tile_zero() { @llvm.x86.tilezero(__amx_checked_tile_id(Tile)); }
-
 template <uint64 Tile> inline void amx_tile_load(const uniform int8 *uniform data, uniform int64 stride) {
-    @llvm.x86.tileloadd64(__amx_checked_tile_id(Tile), (uniform int8 * uniform) data, stride);
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tileloadd64((uniform int8)Tile, (uniform int8 * uniform) data, stride);
 }
 
 template <uint64 Tile> inline void amx_tile_load_t1(const uniform int8 *uniform data, uniform int64 stride) {
-    @llvm.x86.tileloaddt164(__amx_checked_tile_id(Tile), (uniform int8 * uniform) data, stride);
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tileloaddt164((uniform int8)Tile, (uniform int8 * uniform) data, stride);
 }
 
 template <uint64 Tile> inline void amx_tile_store(uniform int8 *uniform data, uniform int64 stride) {
-    @llvm.x86.tilestored64(__amx_checked_tile_id(Tile), data, stride);
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tilestored64((uniform int8)Tile, data, stride);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -152,19 +151,23 @@ inline void amx_dpbusd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2
 inline void amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpbuud(dst, src1, src2); }
 
 template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbssd() {
-    @llvm.x86.tdpbssd(__amx_checked_tile_id(DstTile), __amx_checked_tile_id(Src1Tile), __amx_checked_tile_id(Src2Tile));
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbssd((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
 }
 
 template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbsud() {
-    @llvm.x86.tdpbsud(__amx_checked_tile_id(DstTile), __amx_checked_tile_id(Src1Tile), __amx_checked_tile_id(Src2Tile));
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbsud((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
 }
 
 template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbusd() {
-    @llvm.x86.tdpbusd(__amx_checked_tile_id(DstTile), __amx_checked_tile_id(Src1Tile), __amx_checked_tile_id(Src2Tile));
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbusd((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
 }
 
 template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbuud() {
-    @llvm.x86.tdpbuud(__amx_checked_tile_id(DstTile), __amx_checked_tile_id(Src1Tile), __amx_checked_tile_id(Src2Tile));
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbuud((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -178,8 +181,8 @@ template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbu
 inline void amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpfp16ps(dst, src1, src2); }
 
 template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpfp16ps() {
-    @llvm.x86.tdpfp16ps(__amx_checked_tile_id(DstTile), __amx_checked_tile_id(Src1Tile),
-                        __amx_checked_tile_id(Src2Tile));
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpfp16ps((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -193,8 +196,8 @@ template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpfp
 inline void amx_dpbf16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpbf16ps(dst, src1, src2); }
 
 template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbf16ps() {
-    @llvm.x86.tdpbf16ps(__amx_checked_tile_id(DstTile), __amx_checked_tile_id(Src1Tile),
-                        __amx_checked_tile_id(Src2Tile));
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbf16ps((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
 }
 
 #undef EXT

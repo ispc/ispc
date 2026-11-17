@@ -256,6 +256,11 @@ ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBac
             ps->values = (Expr *)WalkAST(ps->values, preFunc, postFunc, data);
         } else if (AssertStmt *as = llvm::dyn_cast<AssertStmt>(node)) {
             as->expr = (Expr *)WalkAST(as->expr, preFunc, postFunc, data);
+        } else if (StaticAssertStmt *sas = llvm::dyn_cast<StaticAssertStmt>(node)) {
+            // Once checked, a static assertion is a no-op in the function body.
+            if (!sas->IsTypeChecked()) {
+                sas->expr = (Expr *)WalkAST(sas->expr, preFunc, postFunc, data);
+            }
         } else if (DeleteStmt *dels = llvm::dyn_cast<DeleteStmt>(node)) {
             dels->expr = (Expr *)WalkAST(dels->expr, preFunc, postFunc, data);
         } else if (UnmaskedStmt *ums = llvm::dyn_cast<UnmaskedStmt>(node)) {
