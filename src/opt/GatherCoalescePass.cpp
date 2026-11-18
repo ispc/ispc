@@ -876,23 +876,42 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
     DEBUG_START_BB("GatherCoalescePass");
 
     llvm::Module *M = bb.getModule();
-    // The pseudo factored gathers of 32-bit elements, with either offset width.
-    auto factoredGather = [M](MemoryElement element, uint8_t offsetBits) {
+    // The pseudo factored gathers of 32-bit elements, with either offset
+    // width. Gathers of the same element and width are coalesced whether
+    // their 32-bit offsets are Extended or Wrapped (OffsetSum): for both, the
+    // coalesced loads add the constant deltas to base + offsets * scale
+    // computed at the offset width (lComputeBasePtr()), which is neither
+    // address if offsets * scale + delta crosses the i32 limits.
+    auto factoredGather = [M](MemoryElement element, uint8_t offsetBits, OffsetSum offsetSum) {
         MemoryOpKey key;
         key.kind = MemoryOpKind::Gather;
         key.form = MemoryOpForm::Factored;
         key.element = element;
         key.flavor = MemoryOpFlavor::Pseudo;
         key.offsetBits = offsetBits;
+        key.offsetSum = offsetSum;
         return GetMemoryOpFunction(M, key);
     };
-    llvm::Function *gatherFuncs[] = {
-        factoredGather(MemoryElement::I32, 32),
-        factoredGather(MemoryElement::Float, 32),
-        factoredGather(MemoryElement::I32, 64),
-        factoredGather(MemoryElement::Float, 64),
+    const struct {
+        llvm::Function *func;
+        int group;
+    } gatherFuncs[] = {
+        {factoredGather(MemoryElement::I32, 32, OffsetSum::Extended), 0},
+        {factoredGather(MemoryElement::I32, 32, OffsetSum::Wrapped), 0},
+        {factoredGather(MemoryElement::Float, 32, OffsetSum::Extended), 1},
+        {factoredGather(MemoryElement::Float, 32, OffsetSum::Wrapped), 1},
+        {factoredGather(MemoryElement::I32, 64, OffsetSum::Extended), 2},
+        {factoredGather(MemoryElement::Float, 64, OffsetSum::Extended), 3},
     };
-    int nGatherFuncs = sizeof(gatherFuncs) / sizeof(gatherFuncs[0]);
+    // The group of the gathers that calls of f can be coalesced with, or -1.
+    auto groupOf = [&gatherFuncs](llvm::Function *f) {
+        for (const auto &g : gatherFuncs) {
+            if (g.func != nullptr && g.func == f) {
+                return g.group;
+            }
+        }
+        return -1;
+    };
 
     bool modifiedAny = false;
 
@@ -912,13 +931,8 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
             continue;
         }
 
-        int i = 0;
-        for (i = 0; i < nGatherFuncs; ++i) {
-            if (gatherFuncs[i] != nullptr && calledFunc == gatherFuncs[i]) {
-                break;
-            }
-        }
-        if (i == nGatherFuncs) {
+        const int group = groupOf(calledFunc);
+        if (group < 0) {
             // Doesn't match any of the types of gathers we care about
             continue;
         }
@@ -972,7 +986,7 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
             }
 
             llvm::CallInst *fwdCall = llvm::dyn_cast<llvm::CallInst>(&*fwdIter);
-            if (fwdCall == nullptr || fwdCall->getCalledFunction() != calledFunc) {
+            if (fwdCall == nullptr || groupOf(fwdCall->getCalledFunction()) != group) {
                 continue;
             }
 

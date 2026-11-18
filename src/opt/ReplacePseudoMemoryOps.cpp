@@ -166,6 +166,8 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     // the generic one when the native instruction is disabled.
     MemoryOpKey lowered = op->key;
     lowered.flavor = MemoryOpFlavor::Lowered;
+    // A Wrapped form is lowered like the Extended one.
+    lowered.offsetSum = OffsetSum::Extended;
     if (op->form() == MemoryOpForm::General) {
         if ((isGather && g->target->hasGather() && g->opt.disableGathers) ||
             (op->kind() == MemoryOpKind::Scatter && g->target->hasScatter() && g->opt.disableScatters)) {

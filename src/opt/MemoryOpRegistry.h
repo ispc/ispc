@@ -13,7 +13,8 @@
     Passes that recognize or replace these builtins look them up here
     instead of keeping their own name tables: a replacement is the same key
     with a different form, width or flavor. The names themselves are the
-    builtin:: constants of builtins-decl.h.
+    builtin:: constants of builtins-decl.h, except for the Wrapped forms
+    (OffsetSum), which only the optimizer creates.
 */
 
 #pragma once
@@ -54,6 +55,26 @@ enum class MemoryOpFlavor : uint8_t {
     vector prefetch instruction. */
 enum class PrefetchHint : uint8_t { None, Read1, Read2, Read3, ReadNT, Write1, Write2, Write3 };
 
+/** How the i32 offsets (and delta) of a 32-bit base-offset or factored
+    pseudo form give its address with 64-bit pointers. */
+enum class OffsetSum : uint8_t {
+    /** base + sext(offsets) * scale (+ sext(delta)), as the lowering computes
+        it (__gather_elt32_* in builtins/util.m4, and the hardware gathers). */
+    Extended,
+    /** base + sext(offsets * scale (+ delta)), with the sum computed at i32
+        width. This is the address of an i32 offset expression that was
+        decomposed under a sign extension (a constant split off or a scale
+        extracted) without proving the parts exact: the sum of the extended
+        parts differs from it if a part wraps. A load or store rebuilt from
+        the access (lGSToLoadStore) computes the i32 sum. The form is
+        lowered and coalesced like Extended, so only that rebuild computes
+        the i32 sum: a gather that stays one computes the extended parts, and
+        coalesced gathers add the extended deltas to base + sext(offsets *
+        scale) (GatherCoalescePass). It is not declared by core.isph:
+        GetOrInsertMemoryOpFunction() creates it. */
+    Wrapped,
+};
+
 /** What identifies a memory builtin. */
 struct MemoryOpKey {
     MemoryOpKind kind = MemoryOpKind::Gather;
@@ -64,6 +85,9 @@ struct MemoryOpKey {
         Pointer form, which has no integer address operand. */
     uint8_t offsetBits = 0;
     PrefetchHint hint = PrefetchHint::None;
+    /** Wrapped only for a 32-bit base-offset or factored pseudo gather or
+        scatter. */
+    OffsetSum offsetSum = OffsetSum::Extended;
 };
 
 /** Operand positions of a form, -1 when the form has no such operand. */
@@ -102,6 +126,11 @@ const MemoryOp *FindMemoryOp(const MemoryOpKey &key);
 /** The declaration in M of the builtin with this key; nullptr if no builtin
     has the key or M does not declare it. */
 llvm::Function *GetMemoryOpFunction(llvm::Module *M, const MemoryOpKey &key);
+
+/** Like GetMemoryOpFunction(), but for a Wrapped form that M doesn't declare
+    yet, creates the declaration from that of the Extended form with the same
+    key, with its type and attributes. nullptr if neither is declared. */
+llvm::Function *GetOrInsertMemoryOpFunction(llvm::Module *M, const MemoryOpKey &key);
 
 /** Scalar LLVM type of an element for the current context; nullptr for None. */
 llvm::Type *GetMemoryElementType(MemoryElement element);

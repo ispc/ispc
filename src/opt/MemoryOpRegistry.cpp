@@ -52,6 +52,7 @@ struct Family {
         MemoryOpForm form;
         MemoryOpFlavor flavor;
         uint8_t offsetBits;
+        OffsetSum offsetSum = OffsetSum::Extended;
     } key;
     std::array<const char *, kElements.size()> names;
 };
@@ -120,7 +121,7 @@ bool lIsElementVector(llvm::Type *t, unsigned lanes, llvm::Type *elem) {
 
 uint32_t lPack(const MemoryOpKey &k) {
     return uint32_t(k.kind) | uint32_t(k.form) << 4 | uint32_t(k.element) << 8 | uint32_t(k.flavor) << 12 |
-           uint32_t(k.offsetBits) << 16 | uint32_t(k.hint) << 24;
+           uint32_t(k.offsetBits) << 16 | uint32_t(k.hint) << 24 | uint32_t(k.offsetSum) << 28;
 }
 
 struct Registry {
@@ -187,6 +188,37 @@ struct Registry {
               __pseudo_scatter_factored_base_offsets64_half, __pseudo_scatter_factored_base_offsets64_i32,
               __pseudo_scatter_factored_base_offsets64_float, __pseudo_scatter_factored_base_offsets64_i64,
               __pseudo_scatter_factored_base_offsets64_double}},
+
+            // The 32-bit forms whose offset is the i32 sum of the parts
+            // (OffsetSum::Wrapped). core.isph doesn't declare them:
+            // GetOrInsertMemoryOpFunction() creates them from the Extended
+            // forms, and ReplacePseudoMemoryOps lowers them like those.
+            {{MemoryOpKind::Gather, MemoryOpForm::BaseOffsets, MemoryOpFlavor::Pseudo, 32, OffsetSum::Wrapped},
+             {"__pseudo_gather_wrapped_base_offsets32_i8", "__pseudo_gather_wrapped_base_offsets32_i16",
+              "__pseudo_gather_wrapped_base_offsets32_half", "__pseudo_gather_wrapped_base_offsets32_i32",
+              "__pseudo_gather_wrapped_base_offsets32_float", "__pseudo_gather_wrapped_base_offsets32_i64",
+              "__pseudo_gather_wrapped_base_offsets32_double"}},
+            {{MemoryOpKind::Gather, MemoryOpForm::Factored, MemoryOpFlavor::Pseudo, 32, OffsetSum::Wrapped},
+             {"__pseudo_gather_wrapped_factored_base_offsets32_i8",
+              "__pseudo_gather_wrapped_factored_base_offsets32_i16",
+              "__pseudo_gather_wrapped_factored_base_offsets32_half",
+              "__pseudo_gather_wrapped_factored_base_offsets32_i32",
+              "__pseudo_gather_wrapped_factored_base_offsets32_float",
+              "__pseudo_gather_wrapped_factored_base_offsets32_i64",
+              "__pseudo_gather_wrapped_factored_base_offsets32_double"}},
+            {{MemoryOpKind::Scatter, MemoryOpForm::BaseOffsets, MemoryOpFlavor::Pseudo, 32, OffsetSum::Wrapped},
+             {"__pseudo_scatter_wrapped_base_offsets32_i8", "__pseudo_scatter_wrapped_base_offsets32_i16",
+              "__pseudo_scatter_wrapped_base_offsets32_half", "__pseudo_scatter_wrapped_base_offsets32_i32",
+              "__pseudo_scatter_wrapped_base_offsets32_float", "__pseudo_scatter_wrapped_base_offsets32_i64",
+              "__pseudo_scatter_wrapped_base_offsets32_double"}},
+            {{MemoryOpKind::Scatter, MemoryOpForm::Factored, MemoryOpFlavor::Pseudo, 32, OffsetSum::Wrapped},
+             {"__pseudo_scatter_wrapped_factored_base_offsets32_i8",
+              "__pseudo_scatter_wrapped_factored_base_offsets32_i16",
+              "__pseudo_scatter_wrapped_factored_base_offsets32_half",
+              "__pseudo_scatter_wrapped_factored_base_offsets32_i32",
+              "__pseudo_scatter_wrapped_factored_base_offsets32_float",
+              "__pseudo_scatter_wrapped_factored_base_offsets32_i64",
+              "__pseudo_scatter_wrapped_factored_base_offsets32_double"}},
 
             // Their lowerings, selected by ReplacePseudoMemoryOps.
             {{MemoryOpKind::Gather, MemoryOpForm::General, MemoryOpFlavor::Lowered, 32},
@@ -301,6 +333,7 @@ struct Registry {
                 key.element = kElements[i].element;
                 key.flavor = f.key.flavor;
                 key.offsetBits = f.key.offsetBits;
+                key.offsetSum = f.key.offsetSum;
                 ops.push_back({f.names[i], key, lLayout(key.kind, key.form)});
             }
         }
@@ -344,6 +377,26 @@ const MemoryOp *FindMemoryOp(const MemoryOpKey &key) {
 llvm::Function *GetMemoryOpFunction(llvm::Module *M, const MemoryOpKey &key) {
     const MemoryOp *op = FindMemoryOp(key);
     return op == nullptr ? nullptr : M->getFunction(op->name);
+}
+
+llvm::Function *GetOrInsertMemoryOpFunction(llvm::Module *M, const MemoryOpKey &key) {
+    if (llvm::Function *f = GetMemoryOpFunction(M, key)) {
+        return f;
+    }
+    const MemoryOp *op = FindMemoryOp(key);
+    if (op == nullptr || key.offsetSum != OffsetSum::Wrapped) {
+        return nullptr;
+    }
+    MemoryOpKey extendedKey = key;
+    extendedKey.offsetSum = OffsetSum::Extended;
+    llvm::Function *extended = GetMemoryOpFunction(M, extendedKey);
+    if (extended == nullptr) {
+        return nullptr;
+    }
+    llvm::Function *f =
+        llvm::Function::Create(extended->getFunctionType(), llvm::GlobalValue::ExternalLinkage, op->name, M);
+    f->copyAttributesFrom(extended);
+    return f;
 }
 
 llvm::Type *GetMemoryElementType(MemoryElement element) {
