@@ -4,9 +4,10 @@
 // The lane representation remains uniform even when its short-vector width equals the gang width.
 // RUN: %{ispc} %s --target=sse2-i32x4 -I %S/../../stdlib/include --werror --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2-i32x8 -I %S/../../stdlib/include --werror --nowrap --emit-llvm-text -o %t.ll
-// RUN: %{ispc} %s --target=avx512icl-x16 -I %S/../../stdlib/include --werror --nowrap --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=avx512icl-x16 -I %S/../../stdlib/include --werror --nowrap --emit-asm -o - | FileCheck %s --check-prefix=PACK
 // RUN: %{ispc} %s --target=avx512icl-x32 -I %S/../../stdlib/include --werror --nowrap --emit-llvm-text -o %t.ll
-// RUN: %{ispc} %s --target=avx512icl-x64 -I %S/../../stdlib/include --werror --nowrap --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=avx512icl-x64 -I %S/../../stdlib/include --werror --nowrap --emit-asm -o - | FileCheck %s --check-prefix=CMPMASK
+// RUN: %{ispc} %s --target=avx512icl-x64 -I %S/../../stdlib/include --werror --nowrap --emit-llvm-text -o - | FileCheck %s --check-prefix=MASKIR
 // REQUIRES: X86_ENABLED
 
 #include "intrinsics/emmintrin.isph"
@@ -75,6 +76,57 @@ static_assert(intbits(ps.m128_f32[0]) == 0x80000000u && intbits(ps.m128_f32[1]) 
 static_assert(pd.m128d_f64[1] == 1.0 && _mm_castpd_si128(pd).m128i_i32[1] == 0x7fc01234);
 static_assert(_mm_castps_si128(_mm_castpd_ps(pd)).m128i_i32[0] == INT32_MIN);
 static_assert(_mm_castsi128_pd(float_bits).m128d_f64[1] == 1.0);
+static_assert(intbits(_mm_cvtss_f32(ps)) == 0x80000000u);
+static_assert(intbits(_mm_cvtsd_f64(pd)) == 0x7fc0123480000000ull);
+
+// Packed integer arithmetic wraps each lane independently.
+static_assert(_mm_add_epi8(_mm_set1_epi8(INT8_MAX), _mm_set1_epi8(1)).m128i_i32[0] == (uniform int32)0x80808080u);
+static_assert(_mm_extract_epi16(_mm_add_epi16(_mm_set1_epi16(INT16_MAX), _mm_set1_epi16(1)), 7) == 0x8000);
+static_assert(_mm_add_epi32(_mm_set1_epi32(INT32_MAX), _mm_set1_epi32(1)).m128i_i32[0] == INT32_MIN);
+static_assert(_mm_cvtsi128_si64(_mm_sub_epi64(_mm_set1_epi64x(INT64_MIN), _mm_set1_epi64x(1))) == INT64_MAX);
+static_assert(_mm_extract_epi16(_mm_mullo_epi16(_mm_set1_epi16(-1), _mm_set1_epi16(-1)), 2) == 1);
+static_assert(_mm_madd_epi16(_mm_set1_epi16(INT16_MIN), _mm_set1_epi16(INT16_MIN)).m128i_i32[0] == INT32_MIN);
+
+static_assert(_mm_adds_epi8(_mm_set1_epi8(INT8_MAX), _mm_set1_epi8(1)).m128i_i32[3] == 0x7f7f7f7f);
+static_assert(_mm_extract_epi16(_mm_subs_epi16(_mm_set1_epi16(INT16_MIN), _mm_set1_epi16(1)), 3) == 0x8000);
+static_assert(_mm_adds_epu8(_mm_set1_epi8(-1), _mm_set1_epi8(1)).m128i_i32[2] == -1);
+static_assert(_mm_subs_epu16(_mm_setzero_si128(), _mm_set1_epi16(1)).m128i_i32[2] == 0);
+static_assert(_mm_avg_epu8(_mm_set1_epi8(-1), _mm_set1_epi8(-2)).m128i_i32[1] == -1);
+static_assert(_mm_extract_epi16(_mm_avg_epu16(_mm_set1_epi16(-1), _mm_set1_epi16(-2)), 4) == 65535);
+
+static_assert(_mm_extract_epi16(_mm_max_epi16(words, word_splat), 7) == 65535);
+static_assert(_mm_min_epu8(bytes, byte_splat).m128i_i32[0] == 0x040302fe);
+static_assert(_mm_cmpeq_epi8(bytes, bytes).m128i_i32[1] == -1);
+static_assert(_mm_extract_epi16(_mm_cmpgt_epi16(words, word_splat), 7) == 65535);
+static_assert(_mm_cmplt_epi32(_mm_set1_epi32(-1), _mm_setzero_si128()).m128i_i32[2] == -1);
+static_assert(_mm_extract_epi16(_mm_mulhi_epi16(_mm_set1_epi16(-1), _mm_set1_epi16(1)), 4) == 65535);
+static_assert(_mm_extract_epi16(_mm_mulhi_epu16(_mm_set1_epi16(-1), _mm_set1_epi16(-1)), 4) == 65534);
+constexpr uniform __m128i products = _mm_mul_epu32(_mm_setr_epi32(7, 11, 13, 17), _mm_setr_epi32(2, 3, 4, 5));
+static_assert(_mm_cvtsi128_si64(products) == 14 && products.m128i_i32[2] == 33 && products.m128i_i32[3] == 0);
+constexpr uniform __m128i distances = _mm_sad_epu8(bytes, _mm_setzero_si128());
+static_assert(_mm_cvtsi128_si64(distances) == 290 && distances.m128i_i32[2] == 100);
+
+constexpr uniform __m128i pack_a = _mm_setr_epi16(-400, INT8_MIN, -1, 0, 1, 127, 128, 500);
+constexpr uniform __m128i pack_b = _mm_setr_epi16(300, -300, 2, 3, 4, 5, 6, 7);
+constexpr uniform __m128i signed_bytes = _mm_packs_epi16(pack_a, pack_b);
+constexpr uniform __m128i unsigned_bytes = _mm_packus_epi16(pack_a, pack_b);
+static_assert(signed_bytes.m128i_i32[0] == 0x00ff8080 && signed_bytes.m128i_i32[2] == 0x0302807f);
+static_assert((uniform uint32)unsigned_bytes.m128i_i32[1] == 0xff807f01u && unsigned_bytes.m128i_i32[2] == 0x030200ff);
+constexpr uniform __m128i signed_words =
+    _mm_packs_epi32(_mm_setr_epi32(-70000, INT16_MIN, INT16_MAX, 70000), _mm_setr_epi32(11, -12, 13, -14));
+static_assert((uniform uint32)signed_words.m128i_i32[0] == 0x80008000u && signed_words.m128i_i32[1] == 0x7fff7fff);
+static_assert(_mm_extract_epi16(signed_words, 5) == 65524 && _mm_extract_epi16(signed_words, 7) == 65522);
+static_assert(_mm_unpacklo_epi8(bytes, byte_splat).m128i_i32[0] == (uniform int32)0xfe02feffu);
+static_assert(_mm_extract_epi16(_mm_unpackhi_epi16(words, word_splat), 6) == 65535);
+
+static_assert(_mm_xor_si128(bytes, bytes).m128i_i32[0] == 0);
+static_assert(intbits(_mm_and_ps(ps, ps).m128_f32[1]) == 0x7fc01234u);
+static_assert(intbits(_mm_or_pd(pd, pd).m128d_f64[0]) == intbits(pd.m128d_f64[0]));
+static_assert(intbits(_mm_unpacklo_ps(ps, _mm_setzero_ps()).m128_f32[0]) == 0x80000000u);
+static_assert(intbits(_mm_move_ss(_mm_setzero_ps(), ps).m128_f32[0]) == 0x80000000u);
+static_assert(intbits(_mm_move_sd(pd, _mm_setzero_pd()).m128d_f64[0]) == 0);
+static_assert(_mm_movemask_epi8(bytes) == 1 && _mm_movemask_ps(ps) == 1);
+static_assert(_mm_movemask_pd(_mm_castsi128_pd(_mm_set_epi64x(INT64_MIN, 1))) == 2);
 
 // CHECK-LABEL: shift_packed_words___
 // CHECK: psllw
@@ -92,4 +144,40 @@ void shuffle_high_words(uniform __m128i data[]) {
 // CHECK: pslldq
 void shift_left_bytes(uniform __m128i data[]) {
     data[0] = _mm_slli_si128<3>(data[0]);
+}
+
+// CHECK-LABEL: mask_packed_bytes___
+// CHECK: pmovmskb
+uniform int mask_packed_bytes(uniform __m128i data[]) { return _mm_movemask_epi8(data[0]); }
+
+// CHECK-LABEL: add_saturated_words___
+// CHECK: paddsw
+void add_saturated_words(uniform __m128i data[]) { data[0] = _mm_adds_epi16(data[0], data[1]); }
+
+// PACK-LABEL: pack_signed_dwords___
+// PACK: {{vpackssdw|vpmovsdw}}
+void pack_signed_dwords(uniform __m128i a[], uniform __m128i b[], uniform __m128i result[]) {
+    result[0] = _mm_packs_epi32(a[0], b[0]);
+}
+
+// CMPMASK-LABEL: compare_packed_dwords___
+// CMPMASK: vpcmpgtd
+// CMPMASK-NOT: vpmovm2d
+// CMPMASK: ret
+// MASKIR-LABEL: @compare_packed_dwords___
+// MASKIR: icmp sgt <4 x i32>
+void compare_packed_dwords(uniform int32 a[], uniform int32 b[], uniform int32 result[]) {
+    const uniform __m128i lhs = {{a[0], a[1], a[2], a[3]}};
+    const uniform __m128i rhs = {{b[0], b[1], b[2], b[3]}};
+    const uniform __m128i mask = _mm_cmpgt_epi32(lhs, rhs);
+    result[0] = mask.m128i_i32[0];
+    result[1] = mask.m128i_i32[1];
+    result[2] = mask.m128i_i32[2];
+    result[3] = mask.m128i_i32[3];
+}
+
+// MASKIR-LABEL: @compare_full_dwords___
+// MASKIR: icmp sgt <16 x i32>
+void compare_full_dwords(uniform int32<16> a[], uniform int32<16> b[], uniform int32<16> result[]) {
+    result[0] = -(uniform int32<16>)(a[0] > b[0]);
 }

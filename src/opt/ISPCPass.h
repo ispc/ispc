@@ -54,8 +54,9 @@
 #endif
 
 // LLVM 24 moved PassInfoMixin into llvm::detail and requires passes to derive
-// from RequiredPassInfoMixin or OptionalPassInfoMixin. None of ISPC's passes
-// defined isRequired(), so the old behaviour is the optional one.
+// from RequiredPassInfoMixin or OptionalPassInfoMixin. Preserve optional
+// behavior for optimization passes; required legalization passes opt in
+// explicitly to RequiredPassInfoMixin.
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
 namespace llvm {
 template <typename DerivedT> using PassInfoMixin = OptionalPassInfoMixin<DerivedT>;

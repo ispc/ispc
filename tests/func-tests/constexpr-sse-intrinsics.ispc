@@ -152,10 +152,42 @@ uniform bool insert_extract(uniform int offset) {
            equal_m128i(_mm_insert_epi16(data, 0x1ffff, 8), _mm_setr_epi16(-1, 1, 2, 3, 4, 5, 6, -1));
 }
 
+uniform bool packed_lanes(uniform int seed) {
+    uniform __m128i a = _mm_setr_epi16(INT16_MIN, -(uniform int16)199, -seed, 0, seed, 126, 128, 300);
+    uniform __m128i b = _mm_setr_epi16(300, -300, 0, seed, 255, 256, -1, INT16_MAX);
+    uniform __m128i signed_expected =
+        _mm_setr_epi8(INT8_MIN, INT8_MIN, -seed, 0, seed, 126, INT8_MAX, INT8_MAX, INT8_MAX, INT8_MIN, 0, seed,
+                     INT8_MAX, INT8_MAX, -1, INT8_MAX);
+    uniform __m128i unsigned_expected =
+        _mm_setr_epi8(0, 0, 0, 0, seed, 126, INT8_MIN, -1, -1, 0, 0, seed, -1, -1, 0, -1);
+    uniform __m128i dwords_a = _mm_setr_epi32(INT32_MIN, -seed, seed, INT32_MAX);
+    uniform __m128i dwords_b = _mm_setr_epi32(65536, seed + 3, -seed - 4, -65536);
+    uniform __m128i words_expected =
+        _mm_setr_epi16(INT16_MIN, -seed, seed, INT16_MAX, INT16_MAX, seed + 3, -seed - 4, INT16_MIN);
+    uniform __m128 packed_float = _mm_castsi128_ps(_mm_setr_epi32(INT32_MIN, seed, 0x7f800135, -seed));
+    uniform __m128d packed_double = _mm_castsi128_pd(_mm_set_epi64x(INT64_MIN | seed, seed));
+    return equal_m128i(_mm_packs_epi16(a, b), signed_expected) &&
+           equal_m128i(_mm_packus_epi16(a, b), unsigned_expected) &&
+           equal_m128i(_mm_packs_epi32(dwords_a, dwords_b), words_expected) &&
+           _mm_movemask_epi8(signed_expected) == 0x4207 &&
+           _mm_movemask_ps(packed_float) == 9 && _mm_movemask_pd(packed_double) == 2;
+}
+
+static noinline uniform bool compare_loaded_dwords(uniform __m128i input[]) {
+    uniform __m128i lhs = input[0];
+    uniform __m128i rhs = input[1];
+    return equal_m128i(_mm_cmpeq_epi32(lhs, rhs), _mm_setr_epi32(-1, 0, 0, 0)) &&
+           equal_m128i(_mm_cmpgt_epi32(lhs, rhs), _mm_setr_epi32(0, -1, 0, -1)) &&
+           equal_m128i(_mm_cmplt_epi32(lhs, rhs), _mm_setr_epi32(0, 0, -1, 0));
+}
+
 task void f_f(uniform float RET[], uniform float input[]) {
     uniform int seed = 1 + ((uniform int)input[0] & 3);
+    uniform __m128i compare_inputs[2] = {_mm_setr_epi32(INT32_MIN, seed, -seed, INT32_MAX),
+                                        _mm_setr_epi32(INT32_MIN, -seed, seed, seed)};
     uniform bool ok = float_shuffles(seed) && integer_shuffles(seed) && byte_shifts(seed) && bit_shifts(seed) &&
-                      shift_boundaries(seed) && vector_count_shifts(seed) && insert_extract(seed) &&
+                      shift_boundaries(seed) && vector_count_shifts(seed) && insert_extract(seed) && packed_lanes(seed) &&
+                      compare_loaded_dwords(compare_inputs) &&
                       dynamic_shuffles(0x100u | (0x49u * seed));
     RET[programIndex] = ok ? 1.f : 0.f;
 }

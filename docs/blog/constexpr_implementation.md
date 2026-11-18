@@ -143,6 +143,14 @@ operations at runtime. The frontend retains ISPC signedness, precision,
 variability, and logical element counts throughout numeric folding. These
 changes preserve the existing public interfaces; new explicit gather/scatter
 APIs are not a prerequisite for internal migration.
+The next migration adds the existing integer min/max/clamp, saturation,
+division and average overloads, plus SSE/SSE2 integer arithmetic, comparisons,
+packs, unpacks and movemasks. Four typed saturation aliases and CPU mask
+packing are now evaluable because these consumers need native runtime
+instructions as well as compile-time results. They preserve ISPC shape even
+when LLVM uses the same vector type for different frontend types. Integer
+folding uses APInt at the declared width, avoiding host overflow and promotion.
+
 The remaining “v2” candidates are:
 
 - Extend forward-definition support to array sizes, vector lengths, and
@@ -153,4 +161,7 @@ The remaining “v2” candidates are:
 
 The implementation notes record the reasons for keeping these separate, along
 with masked control flow, writes through pointers/references, and evaluation
-of further pure intrinsics for more math functions.
+of further pure intrinsics for more math functions. None is a prerequisite
+for the converted immediate-control or integer value APIs. Memory operations
+and streaming stores remain runtime operations; making their controls constant
+does not make their side effects suitable for constant evaluation.

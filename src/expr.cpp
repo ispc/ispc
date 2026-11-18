@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <utility>
 
+#include <llvm/ADT/APInt.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -1002,6 +1003,16 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                             initListVector = ctx->InsertInst(initListVector, conv, expr_map[0].pos);
                         }
                     }
+                    const int logicalCount = symVectorType->GetElementCount();
+                    if (nInits < logicalCount) {
+                        // Zero omitted elements while keeping physical padding poison.
+                        std::vector<uint32_t> laneSources(nVectorElements);
+                        std::generate(laneSources.begin(), laneSources.end(), [lane = 0u]() mutable { return lane++; });
+                        std::fill(laneSources.begin() + nInits, laneSources.begin() + logicalCount, nVectorElements);
+                        auto *zero = llvm::Constant::getNullValue(initListVector->getType());
+                        auto *mask = llvm::ConstantDataVector::get(*g->ctx, llvm::ArrayRef<uint32_t>(laneSources));
+                        initListVector = ctx->ShuffleInst(initListVector, zero, mask);
+                    }
                     ctx->StoreInst(initListVector, ptrInfo);
                     return;
                 }
@@ -1466,11 +1477,25 @@ template <typename T> static Expr *lOptimizeBitNot(ConstExpr *constExpr, const T
     return new ConstExpr(type, v, pos);
 }
 
+template <typename T> static llvm::APInt lIntegerBits(T value) {
+    // Start with all 64 bits so negative narrow operands can be truncated
+    // without violating APInt's constructor range assertion.
+    return llvm::APInt(64, static_cast<uint64_t>(value)).zextOrTrunc(sizeof(T) * CHAR_BIT);
+}
+
+template <typename T> static T lIntegerFromBits(const llvm::APInt &bits) {
+    if constexpr (std::is_signed_v<T>) {
+        return static_cast<T>(bits.getSExtValue());
+    } else {
+        return static_cast<T>(bits.getZExtValue());
+    }
+}
+
 template <typename T> static Expr *lOptimizeNegate(ConstExpr *constExpr, const Type *type, SourcePos pos) {
     T v[ISPC_MAX_NVEC];
     int count = constExpr->GetValues(v);
     for (int i = 0; i < count; ++i) {
-        v[i] = -v[i];
+        v[i] = lIntegerFromBits<T>(-lIntegerBits(v[i]));
     }
     return new ConstExpr(type, v, pos);
 }
@@ -1514,7 +1539,7 @@ Expr *UnaryExpr::Optimize() {
                    Type::EqualIgnoringConst(type, AtomicType::VaryingInt16)) {
             return lOptimizeNegate<int16_t>(constExpr, type, pos);
         } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt16) ||
-                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)) {
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt16)) {
             return lOptimizeNegate<uint16_t>(constExpr, type, pos);
         } else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt8) ||
                    Type::EqualIgnoringConst(type, AtomicType::VaryingInt8)) {
@@ -2528,76 +2553,90 @@ const Type *BinaryExpr::GetTypeImpl() const {
         }                                                                                                              \
         break
 
-#define FOLD_OP_REF(O, E, TRef)                                                                                        \
-    case O:                                                                                                            \
-        for (int i = 0; i < count; ++i) {                                                                              \
-            result[i] = (v0[i] E v1[i]);                                                                               \
-            TRef r = (TRef)v0[i] E(TRef) v1[i];                                                                        \
-            if (result[i] != r)                                                                                        \
-                Warning(pos, "Binary expression with type \"%s\" can't represent value.",                              \
-                        carg0->GetType()->GetString().c_str());                                                        \
-        }                                                                                                              \
-        break
-
-/** Constant fold the binary integer operations that aren't also applicable
-    to floating-point types.
-*/
-template <typename T, typename TRef>
+/** Fold integer operations at the ISPC operand width. */
+template <typename T>
 static ConstExpr *lConstFoldBinaryIntOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0, SourcePos pos) {
+    constexpr bool isSigned = std::is_signed_v<T>;
+    const Type *type = carg0->GetType();
+    auto warnUnrepresentable = [&] {
+        Warning(pos, "Binary expression with type \"%s\" can't represent value.", type->GetString().c_str());
+    };
     T result[ISPC_MAX_NVEC];
-    int count = carg0->Count();
 
-    switch (op) {
-        FOLD_OP_REF(BinaryExpr::Shr, >>, TRef);
-        FOLD_OP_REF(BinaryExpr::BitAnd, &, TRef);
-        FOLD_OP_REF(BinaryExpr::BitXor, ^, TRef);
-        FOLD_OP_REF(BinaryExpr::BitOr, |, TRef);
+    for (int i = 0, count = carg0->Count(); i < count; ++i) {
+        llvm::APInt lhs = lIntegerBits(v0[i]);
+        const llvm::APInt rhs = lIntegerBits(v1[i]);
+        bool overflow = false;
 
-    case BinaryExpr::Shl:
-        for (int i = 0; i < count; ++i) {
-            // Use the ISPC operand width, without host integer promotions or
-            // undefined host shifts. Unsigned results wrap at that width.
-            constexpr unsigned width = sizeof(T) * CHAR_BIT;
-            if constexpr (std::is_signed<T>::value) {
-                if (v1[i] < 0) {
-                    Warning(pos, "Negative shift amount in binary expression with type \"%s\".",
-                            carg0->GetType()->GetString().c_str());
-                    return nullptr;
-                }
-            }
-            const uint64_t amount = static_cast<uint64_t>(v1[i]);
-            if (amount >= width) {
-                Warning(pos, "Binary expression with type \"%s\" can't represent value.",
-                        carg0->GetType()->GetString().c_str());
+        switch (op) {
+        case BinaryExpr::Add:
+            lhs = isSigned ? lhs.sadd_ov(rhs, overflow) : lhs + rhs;
+            break;
+        case BinaryExpr::Sub:
+            lhs = isSigned ? lhs.ssub_ov(rhs, overflow) : lhs - rhs;
+            break;
+        case BinaryExpr::Mul:
+            lhs = isSigned ? lhs.smul_ov(rhs, overflow) : lhs * rhs;
+            break;
+        case BinaryExpr::Div:
+        case BinaryExpr::Mod: {
+            const bool isDiv = op == BinaryExpr::Div;
+            if (rhs.isZero()) {
+                Warning(pos, "%s by zero is undefined.", isDiv ? "Division" : "Remainder");
                 return nullptr;
             }
-            llvm::APInt bits = llvm::APInt(64, static_cast<uint64_t>(v0[i])).zextOrTrunc(width);
-            if constexpr (std::is_signed<T>::value) {
-                if (amount > bits.countLeadingZeros()) {
-                    Warning(pos, "Binary expression with type \"%s\" can't represent value.",
-                            carg0->GetType()->GetString().c_str());
-                }
-                result[i] = static_cast<T>(bits.shl(amount).getSExtValue());
-            } else {
-                result[i] = static_cast<T>(bits.shl(amount).getZExtValue());
-            }
-        }
-        break;
-    case BinaryExpr::Mod:
-        for (int i = 0; i < count; ++i) {
-            if (v1[i] == 0) {
-                Warning(pos, "Remainder by zero is undefined.");
+            // Both sdiv and srem are undefined for signed minimum and -1.
+            if (isSigned && lhs.isMinSignedValue() && rhs.isAllOnes()) {
+                warnUnrepresentable();
                 return nullptr;
-            } else {
-                result[i] = (v0[i] % v1[i]);
             }
+            if (isDiv) {
+                lhs = isSigned ? lhs.sdiv(rhs) : lhs.udiv(rhs);
+            } else {
+                lhs = isSigned ? lhs.srem(rhs) : lhs.urem(rhs);
+            }
+            break;
         }
-        break;
-    default:
-        return nullptr;
+        case BinaryExpr::Shl:
+        case BinaryExpr::Shr: {
+            if (isSigned && rhs.isNegative()) {
+                Warning(pos, "Negative shift amount in binary expression with type \"%s\".", type->GetString().c_str());
+                return nullptr;
+            }
+            const uint64_t amount = rhs.getZExtValue();
+            if (amount >= lhs.getBitWidth()) {
+                warnUnrepresentable();
+                return nullptr;
+            }
+            if (op == BinaryExpr::Shl) {
+                if (isSigned && amount > lhs.countLeadingZeros()) {
+                    warnUnrepresentable();
+                }
+                lhs = lhs.shl(amount);
+            } else {
+                lhs = isSigned ? lhs.ashr(amount) : lhs.lshr(amount);
+            }
+            break;
+        }
+        case BinaryExpr::BitAnd:
+            lhs &= rhs;
+            break;
+        case BinaryExpr::BitXor:
+            lhs ^= rhs;
+            break;
+        case BinaryExpr::BitOr:
+            lhs |= rhs;
+            break;
+        default:
+            return nullptr;
+        }
+        if (overflow && !g->wrapSignedInt) {
+            warnUnrepresentable();
+        }
+        result[i] = lIntegerFromBits<T>(lhs);
     }
 
-    return new ConstExpr(carg0->GetType(), result, carg0->pos);
+    return new ConstExpr(type, result, carg0->pos);
 }
 
 /** Constant fold the binary logical ops.
@@ -2688,35 +2727,6 @@ static ConstExpr *lConstFoldBinaryArithFPOp(BinaryExpr::Op op, std::vector<llvm:
     return new ConstExpr(carg0->GetType(), result, carg0->pos);
 }
 
-/** Constant fold binary arithmetic ops.
- */
-template <typename T, typename TRef>
-static ConstExpr *lConstFoldBinaryArithOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0,
-                                          SourcePos pos) {
-    T result[ISPC_MAX_NVEC];
-    int count = carg0->Count();
-
-    switch (op) {
-        FOLD_OP_REF(BinaryExpr::Add, +, TRef);
-        FOLD_OP_REF(BinaryExpr::Sub, -, TRef);
-        FOLD_OP_REF(BinaryExpr::Mul, *, TRef);
-    case BinaryExpr::Div:
-        for (int i = 0; i < count; ++i) {
-            if (v1[i] == 0) {
-                Warning(pos, "Division by zero is undefined.");
-                return nullptr;
-            } else {
-                result[i] = (v0[i] / v1[i]);
-            }
-        }
-        break;
-    default:
-        return nullptr;
-    }
-
-    return new ConstExpr(carg0->GetType(), result, carg0->pos);
-}
-
 /** Constant fold the various boolean binary ops.
  */
 static ConstExpr *lConstFoldBoolBinaryOp(BinaryExpr::Op op, const bool *v0, const bool *v1, ConstExpr *carg0) {
@@ -2757,16 +2767,14 @@ static Expr *lConstFoldBinaryFPOp(ConstExpr *constArg0, ConstExpr *constArg1, Bi
     }
 }
 
-template <typename T, typename TRef>
+template <typename T>
 static Expr *lConstFoldBinaryIntOp(ConstExpr *constArg0, ConstExpr *constArg1, BinaryExpr::Op op, BinaryExpr *origExpr,
                                    SourcePos pos) {
     T v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
     constArg0->GetValues(v0);
     constArg1->GetValues(v1);
     ConstExpr *ret = nullptr;
-    if ((ret = lConstFoldBinaryArithOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr) {
-        return ret;
-    } else if ((ret = lConstFoldBinaryIntOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr) {
+    if ((ret = lConstFoldBinaryIntOp(op, v0, v1, constArg0, pos)) != nullptr) {
         return ret;
     } else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != nullptr) {
         return ret;
@@ -2867,23 +2875,23 @@ Expr *BinaryExpr::Optimize() {
     } else if (Type::Equal(type, AtomicType::UniformDouble) || Type::Equal(type, AtomicType::VaryingDouble)) {
         return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, AtomicType::UniformDouble, pos);
     } else if (Type::Equal(type, AtomicType::UniformInt8) || Type::Equal(type, AtomicType::VaryingInt8)) {
-        return lConstFoldBinaryIntOp<int8_t, int64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<int8_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformUInt8) || Type::Equal(type, AtomicType::VaryingUInt8)) {
-        return lConstFoldBinaryIntOp<uint8_t, uint64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<uint8_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformInt16) || Type::Equal(type, AtomicType::VaryingInt16)) {
-        return lConstFoldBinaryIntOp<int16_t, int64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<int16_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformUInt16) || Type::Equal(type, AtomicType::VaryingUInt16)) {
-        return lConstFoldBinaryIntOp<uint16_t, uint64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<uint16_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformInt32) || Type::Equal(type, AtomicType::VaryingInt32)) {
-        return lConstFoldBinaryIntOp<int32_t, int64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<int32_t>(constArg0, constArg1, op, this, pos);
     } else if (CastType<EnumType>(type)) {
-        return lConstFoldBinaryIntOp<uint32_t, uint64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<uint32_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformUInt32) || Type::Equal(type, AtomicType::VaryingUInt32)) {
-        return lConstFoldBinaryIntOp<uint32_t, uint64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<uint32_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformInt64) || Type::Equal(type, AtomicType::VaryingInt64)) {
-        return lConstFoldBinaryIntOp<int64_t, int64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<int64_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformUInt64) || Type::Equal(type, AtomicType::VaryingUInt64)) {
-        return lConstFoldBinaryIntOp<uint64_t, uint64_t>(constArg0, constArg1, op, this, pos);
+        return lConstFoldBinaryIntOp<uint64_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformBool) || Type::Equal(type, AtomicType::VaryingBool)) {
         bool v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
         constArg0->GetValues(v0);
@@ -6931,7 +6939,7 @@ static inline void lConvertElement(From from, std::vector<llvm::APFloat> &to, co
     // Round the original integer directly to the declared ISPC precision.
     // An intermediate double can double-round a 64-bit integer near a tie.
     static_assert(std::is_integral_v<From>);
-    llvm::APInt bits = llvm::APInt(64, static_cast<uint64_t>(from)).zextOrTrunc(sizeof(From) * CHAR_BIT);
+    llvm::APInt bits = lIntegerBits(from);
     llvm::APFloat value = llvm::APFloat::getZero(type->GetFloatSemantics());
     value.convertFromAPInt(bits, std::is_signed_v<From>, llvm::APFloat::rmNearestTiesToEven);
     to.push_back(std::move(value));

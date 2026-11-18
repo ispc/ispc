@@ -304,6 +304,42 @@ Library validation and follow-up assessment
   reconstruction does not determine constexpr value types. Target layout is
   consulted for byte order, sizes, and address constants.
 
+- Partially initialized uniform short vectors now zero-fill omitted logical
+  elements at runtime, matching constant evaluation and the general initializer
+  path. Physical storage padding remains poison. The SSE pack implementation
+  uses a fully initialized temporary and does not depend on the previous
+  runtime omission.
+- Integer min/max/clamp, saturating add/subtract, unsigned saturating division,
+  and the existing varying average overloads now have visible constexpr
+  definitions (96 overloads). Private helpers keep clamp independent of user
+  replacements for public min/max. The public signatures and linked fallbacks
+  are preserved. Signed averages round negative odd sums in the documented
+  direction on every target; the old SSE2 builtin divided toward zero.
+- A further 69 SSE/SSE2 value helpers are constexpr: wrapping and saturating
+  integer arithmetic, comparisons, min/max, multiply, averages, SAD, packs,
+  narrow unpacks, bitwise operations, moves, and movemasks. Integer operations
+  use unsigned arithmetic where wrapping is required. Narrow-target literal
+  bounds use signed limit constants rather than unsigned negation.
+- Saturating arithmetic uses four typed ISPC aliases of native LLVM intrinsics.
+  The aliases preserve frontend signedness and uniform short-vector shape,
+  including when logical width equals gang width; existing raw LLVM intrinsic
+  mapping is unchanged. The evaluator implements their explicit signed or
+  unsigned operation using APInt at the ISPC element width. CPU mask packing
+  also has a narrow evaluator; Xe movemask uses a constexpr loop because
+  SPIR-V cannot bitcast a boolean vector to an integer.
+- A late optimization narrows integer comparison masks together with their
+  sign extension when upper lanes are proven poison. This avoids AVX-512
+  instructions on padding without changing public layout. SSE2 signed 64-bit
+  saturation retains its efficient unsigned-bit formula; the existing late
+  scalarization pass handles gang-wide 64-bit clamp pairs on SSE2. Standalone
+  min/max retain their faster vector lowering.
+- The PPC64 runtime path keeps half/integer bitcasts opaque until after
+  optimization. Otherwise LLVM can turn bit tests into unsupported half
+  floating-point operations. Required late lowering emits the original bit
+  operations, including when optional optimization passes are disabled.
+- Immediate tests use `--off-phase=pre:last` to disable optional passes.
+  `--off-phase=all` is not a supported spelling and does not provide that test.
+
 The follow-up decisions after library adoption are:
 
 | Candidate | Current decision and reason |
@@ -313,6 +349,23 @@ The follow-up decisions after library adoption are:
 | Unified aggregate constant folding | Keep deferred: architectural cleanup, not needed for literal scalar intrinsic operands. |
 | Local array/struct element mutation | Included for initialized local aggregates and short vectors, including nested assignment and compound operations. Copies remain independent; pointer/reference writes and partial-mask mutation remain unsupported. |
 | Static assertions | Included: `static_assert` validates uniform compile-time conditions at file/block scope and template instantiation, independently of runtime assertions. AMX tile ranges and generic prefetch controls use it; gather-scale tests verify values 1/2/4/8 before intrinsic narrowing. Executing runtime `assert` in constexpr functions remains separate. |
-| Constexpr evaluation of pure intrinsics | Equal-width numeric `@llvm.ispc.bitcast` is included for atoms and uniform short-vector payloads, enabling existing bit-conversion, floating classification, and SSE value helpers. Broader intrinsic evaluation remains separate and requires explicit semantics and parity tests. |
+| Constexpr evaluation of pure intrinsics | Equal-width numeric bitcasts, integer saturating add/subtract, and CPU mask packing are included. Typed ISPC aliases preserve frontend shape and native runtime instructions. Further operations remain deferred until a real library consumer establishes their semantics and validation needs; floating arithmetic, rounding and transcendental routines need separate treatment. |
 | Varying control flow and masked mutation | Keep deferred: expression folding is supported, but writes requiring a partial lane mask are rejected rather than evaluated with incorrect side effects. |
+| Constexpr `void` functions and executing runtime `assert` | Keep deferred: current builders return aggregate values and immediate contracts use `static_assert`. Neither feature is required by the migrated APIs. |
 | Public constant-scale gather/scatter API | Optional and outside this migration. Existing varying-index memory access remains the public interface; internal constexpr adoption must preserve its behavior without requiring user source changes. |
+
+The remaining library candidates are integer `saturating_mul`, population and
+leading/trailing-zero counts, horizontal reductions, and floating-point
+min/max, rounding, reciprocal, square root, and transcendental operations.
+SSE floating arithmetic/comparisons/conversions are likewise separate from the
+integer and bit-preserving value-helper migration. Each family needs explicit
+constant-evaluation semantics and runtime parity/code-generation checks;
+marking its existing bitcode declaration constexpr would not provide a body.
+Loads, stores, atomics, streaming operations, and processor-state access remain
+runtime APIs. Their immediate controls can still use the new mechanism.
+
+The average peephole pass still recognizes widened arithmetic in ordinary user
+code and uses target-specific average builtins. Integer min/max builtins also
+serve reductions. These optimizations are not obsolete because a library
+wrapper became constexpr. Unused saturation wrappers remain installed builtin
+declarations and are not removed as part of a compatibility-preserving change.

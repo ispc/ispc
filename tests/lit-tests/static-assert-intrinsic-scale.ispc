@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 // Check a library-style range contract before narrowing an intrinsic immediate.
-// RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --nowrap -O0 --off-phase=all --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --nowrap -O0 --off-phase=pre:last --emit-llvm-text -o - | FileCheck %s
 // RUN: not %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --nowrap -DBAD_SCALE=0 -o %t.o 2>&1 | FileCheck %s --check-prefix=ERROR
 // RUN: not %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --nowrap -DBAD_SCALE=3 --opt=disable-assertions -o %t.o 2>&1 | FileCheck %s --check-prefix=ERROR
 // RUN: not %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --nowrap -DBAD_SCALE=257 -o %t.o 2>&1 | FileCheck %s --check-prefix=ERROR

@@ -45,7 +45,7 @@ class DebugModulePassManager {
     enum Passes { Module, Function, Loop };
     template <typename T> void addModulePass(T &&P, int stage = -1);
     template <typename T> void addPostOrderCGSCCPass(T &&P, int stage = -1);
-    template <typename T> void addFunctionPass(T &&P, int stage = -1);
+    template <typename T> void addFunctionPass(T &&P, int stage = -1, bool required = false);
     template <typename T> void addLoopPass(T &&P, int stage = -1);
     // Start a new group of function passes
     void initFunctionPassManager();
@@ -113,11 +113,11 @@ template <typename T> void DebugModulePassManager::addPostOrderCGSCCPass(T &&P, 
     }
 }
 
-template <typename T> void DebugModulePassManager::addFunctionPass(T &&P, int stage) {
+template <typename T> void DebugModulePassManager::addFunctionPass(T &&P, int stage, bool required) {
     Assert(m_isFPMOpen && "FunctionPassManager must be initialized before adding function passes");
     // taking number of optimization
     m_passNumber = (stage == -1) ? (m_passNumber + 1) : stage;
-    if (g->off_stages.find(m_passNumber) == g->off_stages.end()) {
+    if (required || g->off_stages.find(m_passNumber) == g->off_stages.end()) {
         fpmVec.back()->addPass(std::move(P));
         addPassAndDebugPrint(T::name().str(), DebugModulePassManager::Passes::Function);
     }

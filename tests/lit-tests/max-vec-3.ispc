@@ -24,5 +24,4 @@ varying int<4> foo(varying int<4> foo_a, varying int<4> foo_b) {
 // CHECK-LABEL: define {{.*}} @max___uniCuni4___vyi_3C_4_3E_vyi_3C_4_3E_
 // CHECK-DAG: call <[[TW]] x i32> @max___vyivyi(<[[TW]] x i32> {{.*}}, <[[TW]] x i32> {{.*}}, <[[TW]] x {{.*}}> {{.*}})
 
-// CHECK-LABEL: define {{.*}} @max___vyivyi
-// CHECK-DAG: call <[[TW]] x i32> @__max_varying_int32(<[[TW]] x i32> {{.*}}, <[[TW]] x i32> {{.*}})
+// The varying overload is header-defined; its body is tested separately.

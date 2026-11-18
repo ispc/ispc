@@ -24,6 +24,16 @@ namespace ispc {
 class StructType;
 class ConstExpr;
 
+enum class ConstexprIntrinsic {
+    None,
+    Bitcast,
+    SignedSaturatingAdd,
+    SignedSaturatingSub,
+    UnsignedSaturatingAdd,
+    UnsignedSaturatingSub,
+    PackMask
+};
+
 /**
    @brief Representation of a program symbol.
 
@@ -98,8 +108,7 @@ class Symbol : public Traceable {
          variables declared inside functions, this gives the
          function they're in. */
 
-    /** Indicates a numeric bitcast intrinsic supported during constant evaluation. */
-    bool isConstexprBitcast = false;
+    ConstexprIntrinsic constexprIntrinsic = ConstexprIntrinsic::None;
 
     /** Attributes associated with the symbol. */
     AttributeList *attrs;

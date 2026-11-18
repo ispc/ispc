@@ -110,7 +110,8 @@ Allowed:
 - ``return`` with a value.
 - Calls to other ``constexpr`` functions and compiler-registered equal-width
   integer/floating-point ``@llvm.ispc.bitcast`` overloads, including uniform
-  short vectors with equal logical payload sizes.
+  short vectors with equal logical payload sizes. Integer saturating add/subtract
+  intrinsics and CPU ``@llvm.ispc.packmask`` are also supported.
 - ``sizeof``, ``alignof``, and type casts.
 - Initialized aggregate local variables, including nested element assignments
   and compound assignments. Writes require uniform in-bounds indices and
@@ -137,7 +138,12 @@ precision, variability, and short-vector element counts. APInt and APFloat
 provide arithmetic and bit manipulation without reconstructing source types
 from LLVM types. Bitcasts preserve the declared payload and exclude storage
 padding; target byte order determines how elements of different widths map.
-Target layout is also needed for ``sizeof`` and address constants.
+Integer arithmetic folds at the declared width, without host integer
+promotions or host overflow. Unsigned arithmetic wraps; signed overflow keeps
+the existing diagnostic policy, including ``--wrap-signed-int``. Invalid shift
+counts, division by zero, and signed minimum divided by minus one are diagnosed
+before attempting the operation. Target layout is also needed for ``sizeof``
+and address constants.
 
 Constant-expression contexts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -352,6 +358,8 @@ Requirements (v1):
 - The function may call other ``constexpr`` functions and supported
   integer/floating-point ``@llvm.ispc.bitcast`` overloads. Uniform short-vector
   bitcasts use equal logical payload sizes, independently of storage padding.
+  Integer saturating add/subtract intrinsics and CPU ``@llvm.ispc.packmask``
+  can also be evaluated.
 - ``constexpr`` is not allowed on function parameters.
 - Control flow conditions must be uniform.
 - Pointer dereference is not allowed; address-of is limited to

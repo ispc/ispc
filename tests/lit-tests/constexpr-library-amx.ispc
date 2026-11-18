@@ -1,12 +1,12 @@
 // Check AMX template immediates without the lowering pass and legacy calls with the pass enabled.
-// RUN: %{ispc} %s --target=avx512gnr-x4 --nowrap --werror -O0 --off-phase=all --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=avx512gnr-x4 --nowrap --werror -O0 --off-phase=pre:last --emit-llvm-text -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512gnr-x4 --nowrap --werror -DLEGACY_AMX -O2 --emit-llvm-text -o - | FileCheck %s
-// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_TILE=257 -O0 --off-phase=all --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
-// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_TILE=-1 --opt=disable-assertions -O0 --off-phase=all --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
-// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_TILE=4294967296ull --addressing=32 -O0 --off-phase=all --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
-// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_DOT_TILE=257 -O0 --off-phase=all --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
-// RUN: not %{ispc} %s --target=avx512icl-x4 --nowrap -DUNSUPPORTED_AMX -O0 --off-phase=all --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=NO-AMX
-// RUN: not %{ispc} %s --target=avx512spr-x4 --nowrap -DUNSUPPORTED_FP16 -O0 --off-phase=all --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=NO-FP16
+// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_TILE=257 -O0 --off-phase=pre:last --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
+// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_TILE=-1 --opt=disable-assertions -O0 --off-phase=pre:last --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
+// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_TILE=4294967296ull --addressing=32 -O0 --off-phase=pre:last --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
+// RUN: not %{ispc} %s --target=avx512gnr-x4 --nowrap -DBAD_DOT_TILE=257 -O0 --off-phase=pre:last --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=RANGE
+// RUN: not %{ispc} %s --target=avx512icl-x4 --nowrap -DUNSUPPORTED_AMX -O0 --off-phase=pre:last --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=NO-AMX
+// RUN: not %{ispc} %s --target=avx512spr-x4 --nowrap -DUNSUPPORTED_FP16 -O0 --off-phase=pre:last --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=NO-FP16
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
 #include <amx.isph>

@@ -3611,6 +3611,8 @@ element values:
     float x = ..., y = ..., z = ...;
     float<3> pos = { x, y, z };
 
+Omitted short-vector elements in an initializer list are initialized to zero.
+
 
 There are two mechanisms to access the individual elements of these short
 vector data types.  The first is with the array indexing operator:
@@ -4141,7 +4143,9 @@ Requirements (v1):
 - The function may call other ``constexpr`` functions and supported
   ``@llvm.ispc.bitcast`` overloads for equal-width integer/floating-point
   reinterpretation, including uniform short vectors with equal logical
-  payload sizes. Storage padding does not participate in the bitcast.
+  payload sizes. Storage padding does not participate in the bitcast. Integer
+  saturating add/subtract intrinsics and CPU ``@llvm.ispc.packmask`` can also be
+  evaluated.
 - ``constexpr`` is not allowed on function parameters.
 - Control flow conditions must be uniform.
 - Pointer dereference is not allowed; address-of is limited to globals/functions
@@ -5493,6 +5497,16 @@ including signedness and short-vector shape. A uniform short vector therefore
 stays uniform even when its element count equals the target width. This rule
 also applies during constant evaluation, which uses the ISPC source and
 destination types rather than inferring them from LLVM types.
+
+The ISPC aliases ``@llvm.ispc.sadd.sat``, ``@llvm.ispc.ssub.sat``,
+``@llvm.ispc.uadd.sat``, and ``@llvm.ispc.usub.sat`` likewise preserve the ISPC
+integer type, including uniform short-vector shape. Both arguments must have
+the same integer type, ignoring ``const``. The operation name determines
+signed or unsigned saturation; the result retains the first argument's type.
+These aliases and the corresponding raw LLVM saturation intrinsics support
+constant evaluation. Raw LLVM intrinsic spellings retain the canonical type
+mapping described above. CPU ``@llvm.ispc.packmask`` also supports constant
+evaluation, packing each logical mask lane's low bit in target byte order.
 
 Intrinsics with struct, token, metadata or scalable vector parameters or
 results (for example ``llvm.sadd.with.overflow``, the constrained

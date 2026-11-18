@@ -350,12 +350,27 @@ static llvm::Value *lLowerPackMaskIntrinsic(llvm::CallInst *CI) {
     return builder.CreateZExt(packed, llvm::Type::getInt64Ty(builder.getContext()));
 }
 
-static bool lRunOnBasicBlock(llvm::BasicBlock &BB, std::vector<llvm::AtomicRMWInst *> &vectorAtomics) {
+static bool lIsHalfBitcast(llvm::CallInst *CI) {
+    llvm::Type *src = CI->getArgOperand(0)->getType()->getScalarType();
+    llvm::Type *dst = CI->getType()->getScalarType();
+    return (src->isHalfTy() && dst->isIntegerTy(16)) || (src->isIntegerTy(16) && dst->isHalfTy());
+}
+
+static bool lRunOnBasicBlock(llvm::BasicBlock &BB, std::vector<llvm::AtomicRMWInst *> &vectorAtomics,
+                             LowerISPCIntrinsicsPass::BitcastMode mode) {
     bool modified = false;
     for (llvm::BasicBlock::iterator iter = BB.begin(), e = BB.end(); iter != e;) {
         if (llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&*(iter++))) {
             llvm::Function *Callee = CI->getCalledFunction();
             if (Callee && Callee->getName().starts_with("llvm.ispc.")) {
+                const bool isBitcast = Callee->getName().starts_with("llvm.ispc.bitcast.");
+                using BitcastMode = LowerISPCIntrinsicsPass::BitcastMode;
+                if (mode != BitcastMode::All) {
+                    const bool isHalfBitcast = isBitcast && lIsHalfBitcast(CI);
+                    if (isHalfBitcast == (mode == BitcastMode::DeferHalfBitcasts)) {
+                        continue;
+                    }
+                }
                 llvm::Value *D = nullptr;
                 if (Callee->getName().starts_with("llvm.ispc.concat.")) {
                     D = lLowerConcatIntrinsic(CI);
@@ -363,7 +378,7 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB, std::vector<llvm::AtomicRMWIn
                     D = lLowerExtractIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.insert.")) {
                     D = lLowerInsertIntrinsic(CI);
-                } else if (Callee->getName().starts_with("llvm.ispc.bitcast.")) {
+                } else if (isBitcast) {
                     D = lLowerBitcastIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.blend_store.")) {
                     D = lLowerBlendStore(CI);
@@ -402,7 +417,7 @@ llvm::PreservedAnalyses LowerISPCIntrinsicsPass::run(llvm::Function &F, llvm::Fu
     bool modified = false;
     std::vector<llvm::AtomicRMWInst *> vectorAtomics;
     for (llvm::BasicBlock &BB : F) {
-        modified |= lRunOnBasicBlock(BB, vectorAtomics);
+        modified |= lRunOnBasicBlock(BB, vectorAtomics, m_mode);
     }
     // The expansion splits basic blocks, so it's done after the loop above.
     for (llvm::AtomicRMWInst *AI : vectorAtomics) {

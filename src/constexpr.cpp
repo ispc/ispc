@@ -305,7 +305,7 @@ static ConstExpr *lConstExprFromConstant(const Type *type, llvm::Constant *const
     return nullptr;
 }
 
-static unsigned lGetBitcastElementWidth(const AtomicType *type) {
+static unsigned lGetNumericElementWidth(const AtomicType *type) {
     switch (type->basicType) {
     case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_UINT8:
@@ -327,7 +327,7 @@ static unsigned lGetBitcastElementWidth(const AtomicType *type) {
     }
 }
 
-struct BitcastShape {
+struct NumericShape {
     const AtomicType *elementType;
     unsigned elementWidth;
     unsigned elementCount;
@@ -335,7 +335,7 @@ struct BitcastShape {
     unsigned GetWidth() const { return elementWidth * elementCount; }
 };
 
-static std::optional<BitcastShape> lGetBitcastShape(const Type *type) {
+static std::optional<NumericShape> lGetNumericShape(const Type *type) {
     const Type *elementType = type;
     int elementCount = 1;
     if (const auto *vector = CastType<VectorType>(type)) {
@@ -349,15 +349,15 @@ static std::optional<BitcastShape> lGetBitcastShape(const Type *type) {
     if (atomic == nullptr || (!atomic->IsUniformType() && !atomic->IsVaryingType())) {
         return std::nullopt;
     }
-    unsigned elementWidth = lGetBitcastElementWidth(atomic);
+    unsigned elementWidth = lGetNumericElementWidth(atomic);
     if (elementWidth == 0 || elementCount <= 0 ||
         static_cast<unsigned>(elementCount) > std::numeric_limits<unsigned>::max() / elementWidth) {
         return std::nullopt;
     }
-    return BitcastShape{atomic, elementWidth, static_cast<unsigned>(elementCount)};
+    return NumericShape{atomic, elementWidth, static_cast<unsigned>(elementCount)};
 }
 
-static void lAppendBitcastBits(const ConstExpr *value, const BitcastShape &shape,
+static void lAppendNumericBits(const ConstExpr *value, const NumericShape &shape,
                                llvm::SmallVectorImpl<llvm::APInt> &bits) {
     if (shape.elementType->IsFloatType()) {
         std::vector<llvm::APFloat> floats;
@@ -375,7 +375,7 @@ static void lAppendBitcastBits(const ConstExpr *value, const BitcastShape &shape
 }
 
 template <typename T>
-static ConstExpr *lMakeBitcastInt(const AtomicType *type, llvm::ArrayRef<llvm::APInt> bits, SourcePos pos) {
+static ConstExpr *lMakeNumericInt(const AtomicType *type, llvm::ArrayRef<llvm::APInt> bits, SourcePos pos) {
     T values[ISPC_MAX_NVEC];
     for (size_t i = 0; i < bits.size(); ++i) {
         if constexpr (std::is_signed_v<T>) {
@@ -387,24 +387,24 @@ static ConstExpr *lMakeBitcastInt(const AtomicType *type, llvm::ArrayRef<llvm::A
     return new ConstExpr(type, values, pos);
 }
 
-static ConstExpr *lMakeBitcastValue(const AtomicType *type, llvm::ArrayRef<llvm::APInt> bits, SourcePos pos) {
+static ConstExpr *lMakeNumericValue(const AtomicType *type, llvm::ArrayRef<llvm::APInt> bits, SourcePos pos) {
     switch (type->basicType) {
     case AtomicType::TYPE_INT8:
-        return lMakeBitcastInt<int8_t>(type, bits, pos);
+        return lMakeNumericInt<int8_t>(type, bits, pos);
     case AtomicType::TYPE_UINT8:
-        return lMakeBitcastInt<uint8_t>(type, bits, pos);
+        return lMakeNumericInt<uint8_t>(type, bits, pos);
     case AtomicType::TYPE_INT16:
-        return lMakeBitcastInt<int16_t>(type, bits, pos);
+        return lMakeNumericInt<int16_t>(type, bits, pos);
     case AtomicType::TYPE_UINT16:
-        return lMakeBitcastInt<uint16_t>(type, bits, pos);
+        return lMakeNumericInt<uint16_t>(type, bits, pos);
     case AtomicType::TYPE_INT32:
-        return lMakeBitcastInt<int32_t>(type, bits, pos);
+        return lMakeNumericInt<int32_t>(type, bits, pos);
     case AtomicType::TYPE_UINT32:
-        return lMakeBitcastInt<uint32_t>(type, bits, pos);
+        return lMakeNumericInt<uint32_t>(type, bits, pos);
     case AtomicType::TYPE_INT64:
-        return lMakeBitcastInt<int64_t>(type, bits, pos);
+        return lMakeNumericInt<int64_t>(type, bits, pos);
     case AtomicType::TYPE_UINT64:
-        return lMakeBitcastInt<uint64_t>(type, bits, pos);
+        return lMakeNumericInt<uint64_t>(type, bits, pos);
     case AtomicType::TYPE_FLOAT16:
     case AtomicType::TYPE_FLOAT:
     case AtomicType::TYPE_DOUBLE: {
@@ -421,29 +421,29 @@ static ConstExpr *lMakeBitcastValue(const AtomicType *type, llvm::ArrayRef<llvm:
 }
 
 static ConstExpr *lEvalBitcast(const ConstExpr *value, const Type *type, SourcePos pos) {
-    const auto from = lGetBitcastShape(value->GetType());
-    const auto to = lGetBitcastShape(type);
+    const auto from = lGetNumericShape(value->GetType());
+    const auto to = lGetNumericShape(type);
     Assert(from && to && from->GetWidth() == to->GetWidth());
 
     llvm::SmallVector<llvm::APInt, 8> bits;
     if (value->IsAggregate()) {
         for (const ConstExpr *element : value->GetAggregateValues()) {
-            lAppendBitcastBits(element, *from, bits);
+            lAppendNumericBits(element, *from, bits);
         }
     } else {
-        lAppendBitcastBits(value, *from, bits);
+        lAppendNumericBits(value, *from, bits);
     }
 
     const auto *toVector = CastType<VectorType>(type);
     if (!value->IsAggregate() && toVector == nullptr) {
         // An atomic varying value reinterprets each program instance separately.
-        return lMakeBitcastValue(to->elementType, bits, pos);
+        return lMakeNumericValue(to->elementType, bits, pos);
     }
 
     // Pack the declared short-vector elements in target byte order. Padding
     // introduced when lowering a uniform vector to LLVM carries no payload.
     const bool littleEndian = g->target->getDataLayout()->isLittleEndian();
-    auto bitOffset = [littleEndian](const BitcastShape &shape, unsigned i) {
+    auto bitOffset = [littleEndian](const NumericShape &shape, unsigned i) {
         return shape.elementWidth * (littleEndian ? i : shape.elementCount - 1 - i);
     };
     Assert(bits.size() == from->elementCount);
@@ -452,15 +452,80 @@ static ConstExpr *lEvalBitcast(const ConstExpr *value, const Type *type, SourceP
         packed.insertBits(bits[i], bitOffset(*from, i));
     }
     if (toVector == nullptr) {
-        return lMakeBitcastValue(to->elementType, packed, pos);
+        return lMakeNumericValue(to->elementType, packed, pos);
     }
     std::vector<ConstExpr *> elements;
     elements.reserve(to->elementCount);
     for (unsigned i = 0; i < to->elementCount; ++i) {
         llvm::APInt element = packed.extractBits(to->elementWidth, bitOffset(*to, i));
-        elements.push_back(lMakeBitcastValue(to->elementType, element, pos));
+        elements.push_back(lMakeNumericValue(to->elementType, element, pos));
     }
     return new ConstExpr(toVector, elements, pos);
+}
+
+static ConstExpr *lEvalSaturatingArithmetic(ConstexprIntrinsic op, const ConstExpr *lhs, const ConstExpr *rhs,
+                                            const Type *type, SourcePos pos) {
+    if (const auto *vector = CastType<VectorType>(type)) {
+        const auto &lhsElements = lhs->GetAggregateValues();
+        const auto &rhsElements = rhs->GetAggregateValues();
+        Assert(lhsElements.size() == rhsElements.size());
+        std::vector<ConstExpr *> results;
+        results.reserve(lhsElements.size());
+        for (size_t i = 0; i < lhsElements.size(); ++i) {
+            results.push_back(
+                lEvalSaturatingArithmetic(op, lhsElements[i], rhsElements[i], vector->GetElementType(), pos));
+        }
+        return new ConstExpr(vector, results, pos);
+    }
+
+    const auto shape = lGetNumericShape(type);
+    Assert(shape && shape->elementType->IsIntType());
+    llvm::SmallVector<llvm::APInt, 8> lhsBits, rhsBits;
+    lAppendNumericBits(lhs, *shape, lhsBits);
+    lAppendNumericBits(rhs, *shape, rhsBits);
+    Assert(lhsBits.size() == rhsBits.size());
+    for (size_t i = 0; i < lhsBits.size(); ++i) {
+        switch (op) {
+        case ConstexprIntrinsic::SignedSaturatingAdd:
+            lhsBits[i] = lhsBits[i].sadd_sat(rhsBits[i]);
+            break;
+        case ConstexprIntrinsic::SignedSaturatingSub:
+            lhsBits[i] = lhsBits[i].ssub_sat(rhsBits[i]);
+            break;
+        case ConstexprIntrinsic::UnsignedSaturatingAdd:
+            lhsBits[i] = lhsBits[i].uadd_sat(rhsBits[i]);
+            break;
+        case ConstexprIntrinsic::UnsignedSaturatingSub:
+            lhsBits[i] = lhsBits[i].usub_sat(rhsBits[i]);
+            break;
+        default:
+            UNREACHABLE();
+        }
+    }
+    return lMakeNumericValue(shape->elementType, lhsBits, pos);
+}
+
+static ConstExpr *lEvalPackMask(const ConstExpr *value, const Type *type, SourcePos pos) {
+    uint64_t lanes[64];
+    unsigned count;
+    if (value->IsAggregate()) {
+        const auto &elements = value->GetAggregateValues();
+        Assert(elements.size() <= 64);
+        count = elements.size();
+        for (unsigned i = 0; i < count; ++i) {
+            elements[i]->GetValues(&lanes[i]);
+        }
+    } else {
+        count = value->GetValues(lanes);
+    }
+
+    // Match the runtime truncation to i1 and bitcast to an integer.
+    const bool littleEndian = g->target->getDataLayout()->isLittleEndian();
+    uint64_t packed = 0;
+    for (unsigned i = 0; i < count; ++i) {
+        packed |= (lanes[i] & 1) << (littleEndian ? i : count - 1 - i);
+    }
+    return lMakeNumericValue(CastType<AtomicType>(type), llvm::APInt(64, packed), pos);
 }
 
 static int lVectorSwizzleIndex(char id) {
@@ -1315,12 +1380,13 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
             return nullptr;
         }
         const FunctionType *calleeType = CastType<FunctionType>(calleeSym->type);
-        if (calleeType == nullptr || (!calleeType->IsConstexpr() && !calleeSym->isConstexprBitcast)) {
+        const auto intrinsic = calleeSym->constexprIntrinsic;
+        if (calleeType == nullptr || (!calleeType->IsConstexpr() && intrinsic == ConstexprIntrinsic::None)) {
             SetError();
             return nullptr;
         }
         const Function *calleeFunc = calleeSym->parentFunction;
-        if (!calleeSym->isConstexprBitcast && (calleeFunc == nullptr || calleeFunc->GetCode() == nullptr)) {
+        if (intrinsic == ConstexprIntrinsic::None && (calleeFunc == nullptr || calleeFunc->GetCode() == nullptr)) {
             if (allowDeferred) {
                 SetDeferred();
                 return nullptr;
@@ -1363,10 +1429,23 @@ ConstExpr *ConstexprEvaluator::EvalExpr(const Expr *expr) {
             argValues.push_back(val);
         }
 
-        if (calleeSym->isConstexprBitcast) {
-            // Both arguments were evaluated. Only the first contributes bits
-            // to the result, as the second supplies the destination type.
+        switch (intrinsic) {
+        case ConstexprIntrinsic::None:
+            break;
+        case ConstexprIntrinsic::Bitcast:
+            // The second argument supplies the destination type.
             return lEvalBitcast(argValues[0], calleeType->GetReturnType(), fce->pos);
+        case ConstexprIntrinsic::PackMask:
+            if (argValues[0]->GetType()->IsVaryingType()) {
+                SetTargetDependent();
+            }
+            return lEvalPackMask(argValues[0], calleeType->GetReturnType(), fce->pos);
+        case ConstexprIntrinsic::SignedSaturatingAdd:
+        case ConstexprIntrinsic::SignedSaturatingSub:
+        case ConstexprIntrinsic::UnsignedSaturatingAdd:
+        case ConstexprIntrinsic::UnsignedSaturatingSub:
+            return lEvalSaturatingArithmetic(intrinsic, argValues[0], argValues[1], calleeType->GetReturnType(),
+                                             fce->pos);
         }
 
         ConstexprEvaluator nested(depth + 1, allowDeferred);
@@ -2138,8 +2217,8 @@ ConstExpr *ConstexprEvaluator::EvalFunction(const Function *func, const std::vec
 } // namespace
 
 bool ispc::IsConstexprBitcastTypePair(const Type *from, const Type *to) {
-    const auto fromShape = lGetBitcastShape(from);
-    const auto toShape = lGetBitcastShape(to);
+    const auto fromShape = lGetNumericShape(from);
+    const auto toShape = lGetNumericShape(to);
     return fromShape && toShape && from->IsVaryingType() == to->IsVaryingType() &&
            fromShape->GetWidth() == toShape->GetWidth();
 }
@@ -2294,7 +2373,7 @@ bool ConstexprValidator::CheckExpr(const Expr *expr) {
             return false;
         }
         Symbol *callee = fse->GetBaseSymbol();
-        if (!callee->isConstexpr && !callee->isConstexprBitcast) {
+        if (!callee->isConstexpr && callee->constexprIntrinsic == ConstexprIntrinsic::None) {
             Error(expr->pos, "constexpr function \"%s\" calls non-constexpr function \"%s\".", funcName.c_str(),
                   callee->name.c_str());
             ok = false;

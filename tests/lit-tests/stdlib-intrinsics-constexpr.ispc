@@ -1,5 +1,5 @@
 // RUN: %{ispc} %s --target=sse2-i32x4 -I %S/../../stdlib/include -O2 --nowrap --emit-llvm-text -o - | FileCheck %s
-// RUN: %{ispc} %s --target=sse2-i32x4 -I %S/../../stdlib/include -O0 --off-phase=all --nowrap --emit-llvm-text -o - | FileCheck %s --check-prefix=NOOPT
+// RUN: %{ispc} %s --target=sse2-i32x4 -I %S/../../stdlib/include -O0 --off-phase=pre:last --nowrap --emit-llvm-text -o - | FileCheck %s --check-prefix=NOOPT
 // REQUIRES: X86_ENABLED
 
 #include "intrinsics/emmintrin.isph"
@@ -42,7 +42,7 @@ export void prefetch_constexpr_template(uniform int8 const *uniform p) { _mm_pre
 
 // CHECK-LABEL: define void @prefetch_constexpr_template(ptr
 // CHECK: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 2, i32 1)
-// NOOPT-LABEL: define void @prefetch_constexpr_template(ptr
+// With inlining disabled, inspect the instantiated prefetch helper itself.
 // NOOPT: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 2, i32 1)
 
 export void sse2_constexpr_template_smoke(uniform float *uniform fp, uniform double *uniform dp,

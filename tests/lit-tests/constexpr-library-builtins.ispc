@@ -1,6 +1,6 @@
 // Keep the prefetch immediates and zero-input semantics through the generic builtin wrappers.
 // RUN: %{ispc} %s %{generic_i32x4} --nowrap -O2 --emit-llvm-text -o - | FileCheck %s
-// RUN: %{ispc} %s %{generic_i32x4} --nowrap -O0 --off-phase=all --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s %{generic_i32x4} --nowrap -O0 --off-phase=pre:last --emit-llvm-text -o - | FileCheck %s --check-prefix=NOOPT
 // REQUIRES: GENERIC_I32X4
 
 void prefetch_lines(uniform int8 *uniform p) {
@@ -27,3 +27,14 @@ uniform int32 count_zeros(uniform int32 x) { return count_leading_zeros(x) + cou
 // CHECK-LABEL: define {{.*}}i32 @count_zeros___
 // CHECK-DAG: call {{.*}}i32 @llvm.ctlz.i32(i32 {{.*}}, i1 false)
 // CHECK-DAG: call {{.*}}i32 @llvm.cttz.i32(i32 {{.*}}, i1 false)
+
+// Without inlining, the linked builtin definitions carry the literal operands.
+// NOOPT-DAG: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 3, i32 1)
+// NOOPT-DAG: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 2, i32 1)
+// NOOPT-DAG: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 1, i32 1)
+// NOOPT-DAG: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 0, i32 1)
+// NOOPT-DAG: call void @llvm.prefetch.p0(ptr {{.*}}, i32 1, i32 3, i32 1)
+// NOOPT-DAG: call void @llvm.prefetch.p0(ptr {{.*}}, i32 1, i32 2, i32 1)
+// NOOPT-DAG: call void @llvm.prefetch.p0(ptr {{.*}}, i32 1, i32 1, i32 1)
+// NOOPT-DAG: call {{.*}}i32 @llvm.ctlz.i32(i32 {{.*}}, i1 false)
+// NOOPT-DAG: call {{.*}}i32 @llvm.cttz.i32(i32 {{.*}}, i1 false)

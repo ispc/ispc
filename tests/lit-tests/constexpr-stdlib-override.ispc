@@ -14,15 +14,31 @@
 // Replacing a public overload leaves the other library implementations independent.
 uniform uint32 intbits(uniform float x) { return 0x7f800000u; }
 uniform double abs(uniform double x) { return doublebits(0x7ff0000000000000ull); }
+uniform int min(uniform int a, uniform int b) { return 42; }
+uniform int max(uniform int a, uniform int b) { return 43; }
+uniform int16 min(uniform int16 a, uniform int16 b);
 
 static_assert(isfinite(1.0f) && !isinf(1.0f) && !isinf(1.0d));
 static_assert(abs(-1.0f) == 1.0f && signbits(-1.0f) == 0x80000000u);
+static_assert(clamp(5, 0, 10) == 5);
 
 // HELPERS-LABEL: define {{.*}} @library_classification___
 // HELPERS: ret i32 1
 uniform int library_classification() {
     return isfinite(1.0f) && !isinf(1.0f) && !isinf(1.0d) && abs(-1.0f) == 1.0f && signbits(-1.0f) == 0x80000000u;
 }
+
+// HELPERS-LABEL: define {{.*}} @library_integer_clamp___
+// HELPERS: ret i32 5
+uniform int library_integer_clamp() { return clamp(5, 0, 10); }
+
+// HELPERS-LABEL: define {{.*}} @replacement_integer_max___
+// HELPERS: ret i32 43
+uniform int replacement_integer_max() { return max(5, 0); }
+
+// HELPERS-LABEL: define {{.*}} @linked_integer_min___
+// HELPERS: ret i16 2
+uniform int16 linked_integer_min() { return min((uniform int16)5, (uniform int16)2); }
 
 #else
 

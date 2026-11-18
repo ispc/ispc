@@ -9,7 +9,7 @@
 // RUN: %{ispc} %s --target=neon-i32x8 --arch=aarch64 --nostdlib --nowrap -DSHORT_FIRST --emit-llvm-text -o - | FileCheck %s
 // RUN: %{ispc} %s --target=neon-i16x16 --arch=aarch64 --nostdlib --nowrap --emit-llvm-text -o - | FileCheck %s
 // RUN: %{ispc} %s --target=neon-i16x16 --arch=aarch64 --nostdlib --nowrap -DSHORT_FIRST --emit-llvm-text -o - | FileCheck %s
-// RUN: %{ispc} %s --target=neon-i32x4 --arch=aarch64 --nostdlib --nowrap -O0 --off-phase=all --emit-llvm-text -o - | FileCheck %s --check-prefix=LOGICAL
+// RUN: %{ispc} %s --target=neon-i32x4 --arch=aarch64 --nostdlib --nowrap -O0 --off-phase=pre:10,12:last --emit-llvm-text -o - | FileCheck %s --check-prefix=LOGICAL
 // REQUIRES: ARM_ENABLED
 
 static inline uniform int identify(uniform int32<TARGET_WIDTH> x) { return 1; }

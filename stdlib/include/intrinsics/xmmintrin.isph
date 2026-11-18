@@ -263,36 +263,32 @@ static inline unmasked uniform __m128 _mm_max_ps(uniform __m128 _A, uniform __m1
  * FP, logical
  */
 
-static inline unmasked uniform __m128 _mm_and_ps(uniform __m128 _A, uniform __m128 _B) {
-    uniform __m128 Result;
-    foreach (i = 0 ... 4) {
-        Result.m128_f32[i] = floatbits(intbits(_A.m128_f32[i]) & intbits(_B.m128_f32[i]));
-    }
-    return Result;
+static inline unmasked constexpr uniform __m128 _mm_and_ps(uniform __m128 _A, uniform __m128 _B) {
+    const uniform int32<4> a = @llvm.ispc.bitcast(_A.m128_f32, (uniform int32<4>)0);
+    const uniform int32<4> b = @llvm.ispc.bitcast(_B.m128_f32, (uniform int32<4>)0);
+    uniform __m128 result = {@llvm.ispc.bitcast(a & b, (uniform float<4>)0)};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_andnot_ps(uniform __m128 _A, uniform __m128 _B) {
-    uniform __m128 Result;
-    foreach (i = 0 ... 4) {
-        Result.m128_f32[i] = floatbits((~(intbits(_A.m128_f32[i]))) & intbits(_B.m128_f32[i]));
-    }
-    return Result;
+static inline unmasked constexpr uniform __m128 _mm_andnot_ps(uniform __m128 _A, uniform __m128 _B) {
+    const uniform int32<4> a = @llvm.ispc.bitcast(_A.m128_f32, (uniform int32<4>)0);
+    const uniform int32<4> b = @llvm.ispc.bitcast(_B.m128_f32, (uniform int32<4>)0);
+    uniform __m128 result = {@llvm.ispc.bitcast(~a & b, (uniform float<4>)0)};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_or_ps(uniform __m128 _A, uniform __m128 _B) {
-    uniform __m128 Result;
-    foreach (i = 0 ... 4) {
-        Result.m128_f32[i] = floatbits(intbits(_A.m128_f32[i]) | intbits(_B.m128_f32[i]));
-    }
-    return Result;
+static inline unmasked constexpr uniform __m128 _mm_or_ps(uniform __m128 _A, uniform __m128 _B) {
+    const uniform int32<4> a = @llvm.ispc.bitcast(_A.m128_f32, (uniform int32<4>)0);
+    const uniform int32<4> b = @llvm.ispc.bitcast(_B.m128_f32, (uniform int32<4>)0);
+    uniform __m128 result = {@llvm.ispc.bitcast(a | b, (uniform float<4>)0)};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_xor_ps(uniform __m128 _A, uniform __m128 _B) {
-    uniform __m128 Result;
-    foreach (i = 0 ... 4) {
-        Result.m128_f32[i] = floatbits(intbits(_A.m128_f32[i]) ^ intbits(_B.m128_f32[i]));
-    }
-    return Result;
+static inline unmasked constexpr uniform __m128 _mm_xor_ps(uniform __m128 _A, uniform __m128 _B) {
+    const uniform int32<4> a = @llvm.ispc.bitcast(_A.m128_f32, (uniform int32<4>)0);
+    const uniform int32<4> b = @llvm.ispc.bitcast(_B.m128_f32, (uniform int32<4>)0);
+    uniform __m128 result = {@llvm.ispc.bitcast(a ^ b, (uniform float<4>)0)};
+    return result;
 }
 
 /*
@@ -519,7 +515,7 @@ static inline unmasked uniform __m128 _mm_cvt_si2ss(uniform __m128 _A, uniform i
     return _A;
 }
 
-static inline unmasked uniform float _mm_cvtss_f32(uniform __m128 _A) { return _A.m128_f32[0]; }
+static inline unmasked constexpr uniform float _mm_cvtss_f32(uniform __m128 _A) { return _A.m128_f32[0]; }
 
 #if defined(_M_IX86)
 /*
@@ -545,8 +541,8 @@ NOT_IMPLEMENTED(extern __m128 _mm_cvtsi64_ss(__m128 _A, __int64 _B));
 
 static inline unmasked constexpr uniform __m128 _mm_shuffle_ps(uniform __m128 _A, uniform __m128 _B,
                                                                uniform unsigned int _Imm8) {
-    uniform __m128 result = {{_A.m128_f32[_Imm8 & 3], _A.m128_f32[(_Imm8 >> 2) & 3],
-                              _B.m128_f32[(_Imm8 >> 4) & 3], _B.m128_f32[(_Imm8 >> 6) & 3]}};
+    uniform __m128 result = {{_A.m128_f32[_Imm8 & 3], _A.m128_f32[(_Imm8 >> 2) & 3], _B.m128_f32[(_Imm8 >> 4) & 3],
+                              _B.m128_f32[(_Imm8 >> 6) & 3]}};
     return result;
 }
 
@@ -554,36 +550,47 @@ template <int Imm8> inline unmasked constexpr uniform __m128 _mm_shuffle_ps(unif
     return _mm_shuffle_ps(_A, _B, Imm8);
 }
 
-static inline unmasked uniform __m128 _mm_unpackhi_ps(uniform __m128 _A, uniform __m128 _B) {
-    const uniform float<4> _R = {_A.m128_f32[2], _B.m128_f32[2], _A.m128_f32[3], _B.m128_f32[3]};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_unpackhi_ps(uniform __m128 _A, uniform __m128 _B) {
+    uniform __m128 result = {{_A.m128_f32[2], _B.m128_f32[2], _A.m128_f32[3], _B.m128_f32[3]}};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_unpacklo_ps(uniform __m128 _A, uniform __m128 _B) {
-    const uniform float<4> _R = {_A.m128_f32[0], _B.m128_f32[0], _A.m128_f32[1], _B.m128_f32[1]};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_unpacklo_ps(uniform __m128 _A, uniform __m128 _B) {
+    uniform __m128 result = {{_A.m128_f32[0], _B.m128_f32[0], _A.m128_f32[1], _B.m128_f32[1]}};
+    return result;
 }
 
 NOT_IMPLEMENTED(extern __m128 _mm_loadh_pi(__m128, __m64 const *));
 
-static inline unmasked uniform __m128 _mm_movehl_ps(uniform __m128 _A, uniform __m128 _B) {
-    const uniform float<4> _R = {_B.m128_f32[2], _B.m128_f32[3], _A.m128_f32[2], _A.m128_f32[3]};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_movehl_ps(uniform __m128 _A, uniform __m128 _B) {
+    uniform __m128 result = {{_B.m128_f32[2], _B.m128_f32[3], _A.m128_f32[2], _A.m128_f32[3]}};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_movelh_ps(uniform __m128 _A, uniform __m128 _B) {
-    const uniform float<4> _R = {_A.m128_f32[0], _A.m128_f32[1], _B.m128_f32[0], _B.m128_f32[1]};
-    return *((uniform __m128 * uniform) & _R);
+static inline unmasked constexpr uniform __m128 _mm_movelh_ps(uniform __m128 _A, uniform __m128 _B) {
+    uniform __m128 result = {{_A.m128_f32[0], _A.m128_f32[1], _B.m128_f32[0], _B.m128_f32[1]}};
+    return result;
 }
 
 NOT_IMPLEMENTED(extern void _mm_storeh_pi(__m64 *, __m128));
 NOT_IMPLEMENTED(extern __m128 _mm_loadl_pi(__m128, __m64 const *));
 NOT_IMPLEMENTED(extern void _mm_storel_pi(__m64 *, __m128));
 
-static inline unmasked uniform int _mm_movemask_ps(uniform __m128 _A) {
-    varying float S0 = 0;
-    *((uniform float<4> *uniform) & S0) = *((uniform float<4> *uniform) & _A);
-    return packmask(signbits(S0));
+template <int N> static inline unmasked constexpr uniform int __mm_movemask_lanes(uniform bool<N> signs) {
+#ifdef ISPC_TARGET_XE
+    uniform int result = 0;
+    for (uniform int i = 0; i < N; ++i) {
+        result |= (uniform int)signs[i] << i;
+    }
+    return result;
+#else
+    return @llvm.ispc.packmask(signs);
+#endif
+}
+
+static inline unmasked constexpr uniform int _mm_movemask_ps(uniform __m128 _A) {
+    const uniform int32<4> lanes = @llvm.ispc.bitcast(_A.m128_f32, (uniform int32<4>)0);
+    return __mm_movemask_lanes<4>(lanes < 0);
 }
 
 #if defined(_M_IX86)
@@ -697,8 +704,7 @@ static inline unmasked void _mm_prefetch(uniform int8 const *uniform _A, uniform
     }
 }
 
-template <int Sel>
-inline unmasked void _mm_prefetch(uniform int8 const *uniform _A) {
+template <int Sel> inline unmasked void _mm_prefetch(uniform int8 const *uniform _A) {
     switch (Sel) {
     case _MM_HINT_NTA:
         prefetch_nt((void *uniform)_A);
@@ -733,7 +739,7 @@ static inline unmasked void _mm_stream_ps(uniform float *uniform _V, uniform __m
 #endif
 }
 
-static inline unmasked uniform __m128 _mm_move_ss(uniform __m128 _A, uniform __m128 _B) {
+static inline unmasked constexpr uniform __m128 _mm_move_ss(uniform __m128 _A, uniform __m128 _B) {
     _A.m128_f32[0] = _B.m128_f32[0];
     return _A;
 }
