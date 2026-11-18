@@ -8,6 +8,7 @@
 #include "builtins-decl.h"
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 namespace ispc {
@@ -60,10 +61,47 @@ static llvm::Value *lMatchAndScalarize(llvm::Instruction *inst) {
     return nullptr;
 }
 
+static llvm::Value *lScalarizeInt64Clamp(llvm::Instruction *inst, unsigned gangWidth) {
+    auto *minimum = llvm::dyn_cast<llvm::IntrinsicInst>(inst);
+    auto *type = llvm::dyn_cast<llvm::FixedVectorType>(inst->getType());
+    if (!minimum || !type || type->getNumElements() != gangWidth || !type->getElementType()->isIntegerTy(64)) {
+        return nullptr;
+    }
+    const auto minID = minimum->getIntrinsicID();
+    if (minID != llvm::Intrinsic::smin && minID != llvm::Intrinsic::umin) {
+        return nullptr;
+    }
+    const auto maxID = minID == llvm::Intrinsic::smin ? llvm::Intrinsic::smax : llvm::Intrinsic::umax;
+    for (unsigned i = 0; i < 2; ++i) {
+        auto *maximum = llvm::dyn_cast<llvm::IntrinsicInst>(minimum->getArgOperand(i));
+        if (!maximum || maximum->getIntrinsicID() != maxID || !maximum->hasOneUse()) {
+            continue;
+        }
+
+        // On SSE2, scalar min/max pairs cost less than two emulated packed
+        // 64-bit comparisons and their blends. Retain the min(max()) order,
+        // including when the lower bound exceeds the upper bound.
+        llvm::IRBuilder<> builder(inst);
+        llvm::Value *result = llvm::PoisonValue::get(type);
+        for (unsigned lane = 0; lane < type->getNumElements(); ++lane) {
+            llvm::Value *value = builder.CreateExtractElement(maximum->getArgOperand(0), lane);
+            llvm::Value *low = builder.CreateExtractElement(maximum->getArgOperand(1), lane);
+            llvm::Value *high = builder.CreateExtractElement(minimum->getArgOperand(1 - i), lane);
+            llvm::Value *lower = builder.CreateBinaryIntrinsic(maxID, value, low);
+            llvm::Value *clamped = builder.CreateBinaryIntrinsic(minID, lower, high);
+            result = builder.CreateInsertElement(result, clamped, lane);
+        }
+        return result;
+    }
+    return nullptr;
+}
+
 bool ScalarizePass::matchAndReplace(llvm::BasicBlock &bb) {
     DEBUG_START_BB("ScalarizePass");
 
     bool modifiedAny = false;
+    const bool isSSE2 = g->target && (g->target->getISPCTarget() == ISPCTarget::sse2_i32x4 ||
+                                      g->target->getISPCTarget() == ISPCTarget::sse2_i32x8);
 
     // Note: we do modify instruction list during the traversal, so the iterator
     // is moved forward before the instruction is processed.
@@ -71,6 +109,9 @@ bool ScalarizePass::matchAndReplace(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*(iter++);
 
         llvm::Value *newValue = lMatchAndScalarize(inst);
+        if (newValue == nullptr && isSSE2) {
+            newValue = lScalarizeInt64Clamp(inst, g->target->getVectorWidth());
+        }
         if (newValue != nullptr) {
             inst->replaceAllUsesWith(newValue);
             llvm::RecursivelyDeleteTriviallyDeadInstructions(inst);

@@ -316,10 +316,9 @@ class FunctionCallExpr : public Expr {
     bool isInvoke;
     Expr *launchCountExpr[3];
 
-    /** Name of the LLVM intrinsic being called, if its declaration is
-        deferred until template instantiation because of template-dependent
-        argument types. Empty otherwise. */
+    /** Name of the LLVM intrinsic if its declaration is deferred until type checking. */
     std::string deferredIntrinsicName;
+    bool intrinsicRequiresInstantiation = false;
 };
 
 /** @brief Expression representing indexing into something with an integer
@@ -398,6 +397,10 @@ class MemberExpr : public Expr {
 
   protected:
     mutable const Type *type, *lvalueType;
+
+  private:
+    static MemberExpr *resolve(Expr *expr, const char *identifier, SourcePos pos, SourcePos identifierPos,
+                               bool derefLvalue);
 };
 
 class StructMemberExpr : public MemberExpr {
@@ -452,10 +455,9 @@ class DependentMemberExpr : public MemberExpr {
 
 /** @brief Expression representing a compile-time constant value.
 
-    This class can currently represent compile-time constants of anything
-    that is an AtomicType or an EnumType; for anything more complex, we
-    don't currently have a representation of a compile-time constant that
-    can be further reasoned about.
+    ConstExpr can represent atomic/enum constants, null pointer constants, and
+    aggregate constants (vectors/arrays/structs) via per-element ConstExpr
+    values.
  */
 class ConstExpr : public Expr {
   public:
@@ -505,9 +507,14 @@ class ConstExpr : public Expr {
     /** Create a ConstExpr from a varying bool value */
     ConstExpr(const Type *t, bool *b, SourcePos p);
 
+    /** Create a ConstExpr from a pointer constant (uniform or varying). */
+    ConstExpr(const Type *t, llvm::Constant *ptr, SourcePos p);
+
     /** Create ConstExpr with the same type and values as the given one,
         but at the given position. */
     ConstExpr(const ConstExpr *old, SourcePos pos);
+    /** Create ConstExpr from aggregate element values. */
+    ConstExpr(const Type *t, const std::vector<ConstExpr *> &values, SourcePos p);
 
     static inline bool classof(ConstExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) {
@@ -536,7 +543,7 @@ class ConstExpr : public Expr {
     int GetValues(uint8_t *, bool forceVarying = false) const;
     int GetValues(int16_t *, bool forceVarying = false) const;
     int GetValues(uint16_t *, bool forceVarying = false) const;
-    int GetValues(std::vector<llvm::APFloat> &, llvm::Type *, bool forceVarying = false) const;
+    int GetValues(std::vector<llvm::APFloat> &, const AtomicType *, bool forceVarying = false) const;
     int GetValues(int32_t *, bool forceVarying = false) const;
     int GetValues(uint32_t *, bool forceVarying = false) const;
     int GetValues(int64_t *, bool forceVarying = false) const;
@@ -546,13 +553,18 @@ class ConstExpr : public Expr {
     /** Return the ConstExpr's values as a string. */
     std::string GetValuesAsStr(const std::string &separator) const;
 
-    /** Return the number of values in the ConstExpr; should be either 1,
-        if it has uniform type, or the target's vector width if it's
-        varying. */
+    /** Return the number of values in the ConstExpr; for aggregates this
+        is the element count, otherwise 1 for uniform or the target vector
+        width for varying. */
     int Count() const;
 
     /** Return true if the type and values of two ConstExpr are the same. */
     bool IsEqual(const ConstExpr *ce) const;
+
+    bool IsAggregate() const { return isAggregate; }
+    const std::vector<ConstExpr *> &GetAggregateValues() const { return aggregateValues; }
+    bool IsPointerConst() const { return isPointer; }
+    llvm::Constant *GetPointerConstant() const { return ptrConst; }
 
   protected:
     ConstExpr(const Symbol *s, SourcePos pos);
@@ -562,6 +574,10 @@ class ConstExpr : public Expr {
     AtomicType::BasicType getBasicType() const;
 
     const Type *type;
+    bool isAggregate = false;
+    bool isPointer = false;
+    std::vector<ConstExpr *> aggregateValues;
+    llvm::Constant *ptrConst = nullptr;
     union {
         int8_t int8Val[ISPC_MAX_NVEC];
         uint8_t uint8Val[ISPC_MAX_NVEC];
@@ -829,6 +845,7 @@ class FunctionSymbolExpr : public Expr {
 
     /** Returns the name of the function as written in the call. */
     const std::string &GetName() const { return name; }
+    bool HasPendingNonTypeTemplateArgs() const;
 
     /** Given the types of the function arguments, in the presence of
         function overloading, this method resolves which actual function
@@ -1007,9 +1024,10 @@ Expr *PossiblyResolveStructOperatorOverloads(const char *baseOpName, const std::
                                              bool isPostfix = false);
 
 /** Creates a call of the LLVM intrinsic with the given name and arguments.
-    If some of the arguments have template-dependent types, the intrinsic
-    can't be declared yet, so its declaration is deferred until the template
-    is instantiated.
+    Wait for instantiation if the argument types require substitution or if
+    a dependent call needs a different target. Check dependent immediate
+    arguments after substitution even when the signature is already known.
 */
-FunctionCallExpr *CreateLLVMIntrinsicCall(const std::string &name, ExprList *args, SourcePos namePos, SourcePos pos);
+FunctionCallExpr *CreateLLVMIntrinsicCall(const std::string &name, ExprList *args, SourcePos namePos, SourcePos pos,
+                                          bool dependsOnTemplate);
 } // namespace ispc

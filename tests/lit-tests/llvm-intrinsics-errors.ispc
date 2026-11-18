@@ -49,6 +49,12 @@ int nvvm() { return @llvm.nvvm.read.ptx.sreg.tid.x(); }
 uniform int bitcast_one(uniform float a) { return @llvm.ispc.bitcast(a); }
 // CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:54: Error: Arguments of ISPC intrinsic "llvm.ispc.bitcast" must be values of the same size in bits or pointers in the same address space, "uniform int64" and "const uniform float" provided.
 uniform float bitcast_size(uniform int64 a) { return @llvm.ispc.bitcast(a, 0.f); }
+// CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:45: Error: ISPC intrinsic "llvm.ispc.sadd.sat" expects 2 arguments, 1 provided.
+uniform int sat_one(uniform int a) { return @llvm.ispc.sadd.sat(a); }
+// CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:52: Error: Arguments of ISPC intrinsic "llvm.ispc.ssub.sat" must have the same integer type, "uniform int32<8>" and "varying int32" provided.
+void sat_shapes(uniform int<8> a, varying int b) { @llvm.ispc.ssub.sat(a, b); }
+// CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:53: Error: Arguments of ISPC intrinsic "llvm.ispc.uadd.sat" must have the same integer type, "uniform float" and "uniform float" provided.
+void sat_floats(uniform float a, uniform float b) { @llvm.ispc.uadd.sat(a, b); }
 // Pointers can't be bitcast to integers.
 // CHECK: llvm-intrinsics-errors.ispc:[[@LINE+1]]:65: Error: Arguments of ISPC intrinsic "llvm.ispc.bitcast" must be values of the same size in bits or pointers in the same address space, "uniform int8 * uniform" and "const uniform int64" provided.
 uniform int64 bitcast_ptr_int(uniform int8 *uniform p) { return @llvm.ispc.bitcast(p, 0ll); }

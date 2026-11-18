@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -17,6 +17,7 @@
 #include "sym.h"
 #include "util.h"
 
+#include <algorithm>
 #include <llvm/Support/TimeProfiler.h>
 
 using namespace ispc;
@@ -124,7 +125,17 @@ void AST::AddFunction(Symbol *sym, Stmt *code) {
     if (sym == nullptr) {
         return;
     }
-    functions.push_back(new Function(sym, code));
+    Function *fn = new Function(sym, code);
+    sym->parentFunction = fn;
+    functions.push_back(fn);
+}
+
+void AST::RemoveFunction(Symbol *sym) {
+    auto iter = std::find(functions.begin(), functions.end(), sym->parentFunction);
+    Assert(iter != functions.end());
+    delete *iter;
+    functions.erase(iter);
+    sym->parentFunction = nullptr;
 }
 
 void AST::AddFunctionTemplate(TemplateSymbol *templSym, Stmt *code) {
@@ -254,6 +265,11 @@ ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBac
             ps->values = (Expr *)WalkAST(ps->values, preFunc, postFunc, data);
         } else if (AssertStmt *as = llvm::dyn_cast<AssertStmt>(node)) {
             as->expr = (Expr *)WalkAST(as->expr, preFunc, postFunc, data);
+        } else if (StaticAssertStmt *sas = llvm::dyn_cast<StaticAssertStmt>(node)) {
+            // Once checked, a static assertion is a no-op in the function body.
+            if (!sas->IsTypeChecked()) {
+                sas->expr = (Expr *)WalkAST(sas->expr, preFunc, postFunc, data);
+            }
         } else if (DeleteStmt *dels = llvm::dyn_cast<DeleteStmt>(node)) {
             dels->expr = (Expr *)WalkAST(dels->expr, preFunc, postFunc, data);
         } else if (UnmaskedStmt *ums = llvm::dyn_cast<UnmaskedStmt>(node)) {

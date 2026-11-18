@@ -4,6 +4,7 @@
   SPDX-License-Identifier: BSD-3-Clause
 */
 
+#include "constexpr.h"
 #include "expr.h"
 #include "llvmutil.h"
 #include "module.h"
@@ -15,6 +16,7 @@
 #include <string>
 
 #include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Module.h>
@@ -305,25 +307,87 @@ static std::string lGetTypeString(const llvm::Type *Ty) {
     return RSO.str();
 }
 
+static bool lIsNumericBitcastType(const Type *type) {
+    if (const auto *vector = CastType<VectorType>(type)) {
+        return vector->IsUniformType() && CastType<AtomicType>(vector->GetElementType()) && vector->IsNumericType();
+    }
+    return CastType<AtomicType>(type) && (type->IsUniformType() || type->IsVaryingType()) && type->IsNumericType();
+}
+
+static ConstexprIntrinsic lGetConstexprSaturatingIntrinsic(llvm::Intrinsic::ID id) {
+    switch (id) {
+    case llvm::Intrinsic::sadd_sat:
+        return ConstexprIntrinsic::SignedSaturatingAdd;
+    case llvm::Intrinsic::ssub_sat:
+        return ConstexprIntrinsic::SignedSaturatingSub;
+    case llvm::Intrinsic::uadd_sat:
+        return ConstexprIntrinsic::UnsignedSaturatingAdd;
+    case llvm::Intrinsic::usub_sat:
+        return ConstexprIntrinsic::UnsignedSaturatingSub;
+    default:
+        return ConstexprIntrinsic::None;
+    }
+}
+
+// Typed aliases use the native LLVM declaration while retaining their ISPC
+// signature. The raw LLVM spellings retain their canonical ISPC mapping.
+static llvm::Intrinsic::ID lLookupTypedSaturatingIntrinsic(llvm::StringRef name) {
+    if (name == "llvm.ispc.sadd.sat") {
+        return llvm::Intrinsic::sadd_sat;
+    }
+    if (name == "llvm.ispc.ssub.sat") {
+        return llvm::Intrinsic::ssub_sat;
+    }
+    if (name == "llvm.ispc.uadd.sat") {
+        return llvm::Intrinsic::uadd_sat;
+    }
+    if (name == "llvm.ispc.usub.sat") {
+        return llvm::Intrinsic::usub_sat;
+    }
+    return llvm::Intrinsic::not_intrinsic;
+}
+
 /** Create ISPC symbol for LLVM intrinsics and add it to the given module.
 
     @param func            llvm::Function for the intrinsic to be added
     @param symbolTable     SymbolTable in which to add symbol definitions
     @param name            Name of the intrinsic as written in the source code
+    @param args            Source arguments, whose types disambiguate typed ISPC intrinsic signatures
     @param pos             Position of the call, used for error messages
     @return                Symbol created for the LLVM::Function
  */
 static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable,
-                                                 const std::string &name, SourcePos pos) {
-    Symbol *existingSym = symbolTable->LookupIntrinsics(func);
-    if (existingSym != nullptr) {
-        return existingSym;
+                                                 const std::string &name, const ExprList *args, SourcePos pos) {
+    const auto id = lLookupISPCInstrinsic(name);
+    const bool isBitcast = id == ISPCIntrinsics::bitcast;
+    const bool isPackMask = id == ISPCIntrinsics::packmask;
+    const auto saturation = lGetConstexprSaturatingIntrinsic(func->getIntrinsicID());
+    const bool isTypedSaturation = lLookupTypedSaturatingIntrinsic(name) != llvm::Intrinsic::not_intrinsic;
+    // Raw saturation calls can share a declaration with a typed alias.
+    const bool lookupBySignature = isBitcast || isPackMask || saturation != ConstexprIntrinsic::None;
+    bool typedBitcast = false;
+    if (isBitcast) {
+        Assert(args != nullptr && args->exprs.size() == 2);
+        typedBitcast =
+            lIsNumericBitcastType(args->exprs[0]->GetType()) && lIsNumericBitcastType(args->exprs[1]->GetType());
+    } else if (!lookupBySignature) {
+        if (Symbol *existing = symbolTable->LookupIntrinsics(func)) {
+            return existing;
+        }
     }
     SourcePos noPos;
     noPos.name = "LLVM Intrinsic";
     const llvm::FunctionType *ftype = func->getFunctionType();
     std::string funcName = std::string(func->getName());
-    const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
+    // The same LLVM vector can encode a uniform short vector or a varying
+    // scalar. LLVM types also omit integer signedness. Numeric bitcasts take
+    // their result type from the second argument, without those conversions.
+    const Type *returnType;
+    if (typedBitcast || isTypedSaturation) {
+        returnType = args->exprs[typedBitcast ? 1 : 0]->GetType()->GetAsNonConstType();
+    } else {
+        returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
+    }
     if (returnType == nullptr || !lIsConvertibleIntrinsicType(returnType, ftype->getReturnType())) {
         // return type not representable in ispc -> not callable from ispc
         Error(pos, "Return type \"%s\" of LLVM intrinsic \"%s\" is not representable as an ISPC type.",
@@ -333,7 +397,9 @@ static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTab
     llvm::SmallVector<const Type *, 8> argTypes;
     for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
         llvm::Type *llvmArgType = ftype->getParamType(j);
-        const Type *type = lLLVMTypeToISPCType(llvmArgType, false);
+        const Type *type = typedBitcast || isPackMask || isTypedSaturation
+                               ? args->exprs[j]->GetType()->GetAsNonConstType()
+                               : lLLVMTypeToISPCType(llvmArgType, false);
         if (type == nullptr || !lIsConvertibleIntrinsicType(type, llvmArgType)) {
             Error(pos, "Type \"%s\" of parameter %u of LLVM intrinsic \"%s\" is not representable as an ISPC type.",
                   lGetTypeString(llvmArgType).c_str(), j + 1, name.c_str());
@@ -341,10 +407,31 @@ static Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTab
         }
         argTypes.push_back(type);
     }
+    if (lookupBySignature) {
+        if (Symbol *existing = symbolTable->LookupIntrinsics(func, returnType, argTypes)) {
+            return existing;
+        }
+    }
     FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+    if (funcType != nullptr) {
+        llvm::AttributeList attrs = func->getAttributes();
+        unsigned int numParams = func->arg_size();
+        for (unsigned int j = 0; j < numParams; ++j) {
+            if (attrs.hasParamAttr(j, llvm::Attribute::ImmArg)) {
+                funcType->SetParameterImmArg(j, true);
+            }
+        }
+    }
     Debug(noPos, "Created Intrinsic symbol \"%s\" [%s]\n", funcName.c_str(), funcType->GetString().c_str());
     Symbol *sym = new Symbol(funcName, noPos, Symbol::SymbolKind::Function, funcType);
     sym->function = func;
+    if (isBitcast && IsConstexprBitcastTypePair(argTypes[0], returnType)) {
+        sym->constexprIntrinsic = ConstexprIntrinsic::Bitcast;
+    } else if (isPackMask) {
+        sym->constexprIntrinsic = ConstexprIntrinsic::PackMask;
+    } else if (returnType->IsIntType()) {
+        sym->constexprIntrinsic = saturation;
+    }
     symbolTable->AddIntrinsics(sym);
     return sym;
 }
@@ -699,7 +786,15 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, const std::st
         UNREACHABLE();
     }
     llvm::FunctionType *funcType = llvm::FunctionType::get(retType, TYs, false);
-    return llvm::cast<llvm::Function>(M->getOrInsertFunction(name, funcType).getCallee());
+    auto *function = llvm::cast<llvm::Function>(M->getOrInsertFunction(name, funcType).getCallee());
+    if (ID == ISPCIntrinsics::bitcast && g->target->getArch() == Arch::ppc64le) {
+        // PPC64 may lower half bitcasts after optimization. Let the optimizer
+        // move or discard their calls as it would the resulting instructions.
+        function->setMemoryEffects(llvm::MemoryEffects::none());
+        function->setDoesNotThrow();
+        function->addFnAttr(llvm::Attribute::WillReturn);
+    }
+    return function;
 }
 
 static bool lIsAnyArgumentKind(const IITDesc &D) {
@@ -986,8 +1081,10 @@ static llvm::Function *lGetLLVMIntrinsicDeclaration(llvm::Module *module, llvm::
 #ifdef ISPC_XE_ENABLED
 static llvm::Function *lGetGenXIntrinsicDeclaration(llvm::Module *module, const std::string &name, ExprList *args,
                                                     SourcePos pos) {
-    llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
-    if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
+    llvm::GenXIntrinsic::ID ID = llvm::StringRef(name).starts_with(llvm::GenXIntrinsic::getGenXIntrinsicPrefix())
+                                     ? llvm::GenXIntrinsic::lookupGenXIntrinsicID(name)
+                                     : llvm::GenXIntrinsic::not_genx_intrinsic;
+    if (ID == llvm::GenXIntrinsic::not_genx_intrinsic) {
         Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
         return nullptr;
     }
@@ -1014,12 +1111,29 @@ static llvm::Function *lGetGenXIntrinsicDeclaration(llvm::Module *module, const 
 
 static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std::string &name, ExprList *args,
                                                 SourcePos pos) {
+    if (const auto typedID = lLookupTypedSaturatingIntrinsic(name); typedID != llvm::Intrinsic::not_intrinsic) {
+        const size_t count = args == nullptr ? 0 : args->exprs.size();
+        if (count != 2) {
+            Error(pos, "ISPC intrinsic \"%s\" expects 2 arguments, %zu provided.", name.c_str(), count);
+            return nullptr;
+        }
+        const Type *lhs = args->exprs[0]->GetType();
+        const Type *rhs = args->exprs[1]->GetType();
+        if (!lIsNumericBitcastType(lhs) || !lhs->IsIntType() || !Type::EqualIgnoringConst(lhs, rhs)) {
+            Error(pos,
+                  "Arguments of ISPC intrinsic \"%s\" must have the same integer type, \"%s\" and \"%s\" provided.",
+                  name.c_str(), lhs->GetString().c_str(), rhs->GetString().c_str());
+            return nullptr;
+        }
+        return lGetLLVMIntrinsicDeclaration(module, typedID, name, args, pos);
+    }
+    const auto ID = llvm::Intrinsic::lookupIntrinsicID(name);
 #ifdef ISPC_XE_ENABLED
-    if (g->target->isXeTarget()) {
+    if (g->target->isXeTarget() && lLookupISPCInstrinsic(name) != ISPCIntrinsics::bitcast &&
+        lGetConstexprSaturatingIntrinsic(ID) == ConstexprIntrinsic::None) {
         return lGetGenXIntrinsicDeclaration(module, name, args, pos);
     }
 #endif // ISPC_XE_ENABLED
-    llvm::Intrinsic::ID ID = llvm::Intrinsic::lookupIntrinsicID(name);
     if (ID != llvm::Intrinsic::not_intrinsic) {
         if (!g->target->checkIntrinsticSupport(name, llvm::Intrinsic::isTargetIntrinsic(ID), pos)) {
             return nullptr;
@@ -1043,21 +1157,21 @@ static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std:
 }
 
 bool Module::CheckLLVMIntrinsicName(const std::string &name, SourcePos pos) {
+    // A template can contain instructions for a target other than the current
+    // one. Check only the name here; declaration checks the target when used.
+    if (llvm::Intrinsic::lookupIntrinsicID(name) != llvm::Intrinsic::not_intrinsic ||
+        lLookupISPCInstrinsic(name) != ISPCIntrinsics::not_intrinsic ||
+        lLookupTypedSaturatingIntrinsic(name) != llvm::Intrinsic::not_intrinsic) {
+        return true;
+    }
 #ifdef ISPC_XE_ENABLED
-    if (g->target->isXeTarget()) {
-        if (llvm::GenXIntrinsic::lookupGenXIntrinsicID(name) == llvm::GenXIntrinsic::not_any_intrinsic) {
-            Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
-            return false;
-        }
+    if (llvm::StringRef(name).starts_with(llvm::GenXIntrinsic::getGenXIntrinsicPrefix()) &&
+        llvm::GenXIntrinsic::lookupGenXIntrinsicID(name) != llvm::GenXIntrinsic::not_genx_intrinsic) {
         return true;
     }
 #endif // ISPC_XE_ENABLED
-    if (llvm::Intrinsic::lookupIntrinsicID(name) == llvm::Intrinsic::not_intrinsic &&
-        lLookupISPCInstrinsic(name) == ISPCIntrinsics::not_intrinsic) {
-        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
-        return false;
-    }
-    return true;
+    Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+    return false;
 }
 
 Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
@@ -1076,5 +1190,5 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
         return nullptr;
     }
 
-    return lCreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable, name, pos);
+    return lCreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable, name, args, pos);
 }

@@ -1,11 +1,14 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "PeepholePass.h"
 #include "builtins-decl.h"
+
+#include <llvm/Analysis/VectorUtils.h>
+#include <llvm/IR/IRBuilder.h>
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
 #define CONST_METHOD const
@@ -260,15 +263,56 @@ static llvm::Instruction *lMatchAvgDownInt16(llvm::Instruction *inst) {
     return nullptr;
 }
 
+static llvm::Value *lNarrowPaddedDwordMask(llvm::Instruction *inst) {
+    auto *extension = llvm::dyn_cast<llvm::SExtInst>(inst);
+    auto *type = llvm::dyn_cast<llvm::FixedVectorType>(inst->getType());
+    if (!extension || !type || type->getNumElements() != 16 || !type->getElementType()->isIntegerTy(32)) {
+        return nullptr;
+    }
+    auto *compare = llvm::dyn_cast<llvm::ICmpInst>(extension->getOperand(0));
+    if (!compare || !compare->hasOneUse() || compare->getOperand(0)->getType() != type) {
+        return nullptr;
+    }
+
+    // x86 short vectors padded to 16 dwords may otherwise select a 512-bit
+    // compare plus mask expansion for a comparison of four dwords. A compare
+    // lane is poison if either operand is poison in that lane.
+    llvm::Value *lhs = compare->getOperand(0);
+    llvm::Value *rhs = compare->getOperand(1);
+    for (unsigned lane = 4; lane < type->getNumElements(); ++lane) {
+        if (!llvm::isa_and_nonnull<llvm::PoisonValue>(llvm::findScalarElement(lhs, lane)) &&
+            !llvm::isa_and_nonnull<llvm::PoisonValue>(llvm::findScalarElement(rhs, lane))) {
+            return nullptr;
+        }
+    }
+
+    llvm::IRBuilder<> builder(inst);
+    llvm::Value *narrowLhs = builder.CreateShuffleVector(lhs, {0, 1, 2, 3});
+    llvm::Value *narrowRhs = builder.CreateShuffleVector(rhs, {0, 1, 2, 3});
+    llvm::Value *narrowCompare = builder.CreateICmp(compare->getPredicate(), narrowLhs, narrowRhs);
+    llvm::Value *narrowMask = builder.CreateSExt(narrowCompare, llvm::FixedVectorType::get(type->getElementType(), 4));
+    return builder.CreateShuffleVector(narrowMask, {0, 1, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+}
+
 bool PeepholePass::matchAndReplace(llvm::BasicBlock &bb) {
     DEBUG_START_BB("PeepholePass");
 
     bool modifiedAny = false;
+    const bool isX86 = g->target && (g->target->getArch() == Arch::x86 || g->target->getArch() == Arch::x86_64);
 
     // Note: we do modify instruction list during the traversal, so the iterator
     // is moved forward before the instruction is processed.
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
         llvm::Instruction *inst = &*(iter++);
+
+        if (isX86) {
+            if (llvm::Value *narrowMask = lNarrowPaddedDwordMask(inst)) {
+                inst->replaceAllUsesWith(narrowMask);
+                inst->eraseFromParent();
+                modifiedAny = true;
+                continue;
+            }
+        }
 
         llvm::Instruction *builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall) {

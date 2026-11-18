@@ -319,7 +319,14 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     optPM.initLoopPassManager();
     optPM.addLoopPass(llvm::IndVarSimplifyPass());
     optPM.commitLoopToFunctionPassManager();
-    optPM.addFunctionPass(LowerISPCIntrinsicsPass(), 11);
+    using BitcastMode = LowerISPCIntrinsicsPass::BitcastMode;
+    // Keep PPC64 half bitcasts opaque during optimization. InstCombine can
+    // otherwise turn sign masks and integer tests into half fabs and fcmp,
+    // which the PPC64 backend can fail to lower or emit as missing libcalls.
+    const bool isPPC64 = g->target->getArch() == Arch::ppc64le;
+    const bool deferHalfBitcasts = isPPC64 && optLevel != 0;
+    optPM.addFunctionPass(
+        LowerISPCIntrinsicsPass(deferHalfBitcasts ? BitcastMode::DeferHalfBitcasts : BitcastMode::All), 11);
     optPM.commitFunctionToModulePassManager();
 
     llvm::SimplifyCFGOptions simplifyCFGopt;
@@ -694,6 +701,14 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
                 llvm::GenXSPIRVWriterAdaptor(true /*RewriteTypes*/, false /*RewriteSingleElementVectors*/));
         }
 #endif
+    }
+
+    if (isPPC64) {
+        optPM.initFunctionPassManager();
+        optPM.addFunctionPass(LowerISPCIntrinsicsPass(BitcastMode::OnlyHalfBitcasts), -1, /*required=*/true);
+        optPM.addFunctionPass(llvm::InstSimplifyPass());
+        optPM.commitFunctionToModulePassManager();
+        optPM.addModulePass(llvm::StripDeadPrototypesPass());
     }
 
     // Finish up by making sure we didn't mess anything up in the IR along

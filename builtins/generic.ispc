@@ -12,21 +12,7 @@
 #include "builtins.isph"
 #undef ISPC_INTERNAL_STDLIB_COMPILATION
 
-#if TARGET_WIDTH == 2
-#define DOUBLE_WIDTH 4
-#elif TARGET_WIDTH == 4
-#define DOUBLE_WIDTH 8
-#elif TARGET_WIDTH == 8
-#define DOUBLE_WIDTH 16
-#elif TARGET_WIDTH == 16
-#define DOUBLE_WIDTH 32
-#elif TARGET_WIDTH == 32
-#define DOUBLE_WIDTH 64
-#elif TARGET_WIDTH == 64
-#define DOUBLE_WIDTH 128
-#else
-#error Unknown value of TARGET_WIDTH
-#endif
+static constexpr uniform int32 __double_width = 2 * programCount;
 
 // Macros for attributes
 #define NOESCAPE __attribute__((noescape))
@@ -94,18 +80,18 @@ unmasked float16 __select(bool mask, float16 v0, float16 v1) { return @llvm.ispc
 unmasked float __select(bool mask, float v0, float v1) { return @llvm.ispc.select(mask, v0, v1); }
 unmasked double __select(bool mask, double v0, double v1) { return @llvm.ispc.select(mask, v0, v1); }
 
-// concat: concatenate varying vectors to short vector of DOUBLE_WIDTH
-unmasked uniform int8<DOUBLE_WIDTH> __concat(int8 v0, int8 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform int16<DOUBLE_WIDTH> __concat(int16 v0, int16 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform int32<DOUBLE_WIDTH> __concat(int32 v0, int32 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform int64<DOUBLE_WIDTH> __concat(int64 v0, int64 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform uint8<DOUBLE_WIDTH> __concat(uint8 v0, uint8 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform uint16<DOUBLE_WIDTH> __concat(uint16 v0, uint16 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform uint32<DOUBLE_WIDTH> __concat(uint32 v0, uint32 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform uint64<DOUBLE_WIDTH> __concat(uint64 v0, uint64 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform float16<DOUBLE_WIDTH> __concat(float16 v0, float16 v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform float<DOUBLE_WIDTH> __concat(float v0, float v1) { return @llvm.ispc.concat(v0, v1); }
-unmasked uniform double<DOUBLE_WIDTH> __concat(double v0, double v1) { return @llvm.ispc.concat(v0, v1); }
+// concat: concatenate varying vectors to short vector of __double_width
+unmasked uniform int8<__double_width> __concat(int8 v0, int8 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform int16<__double_width> __concat(int16 v0, int16 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform int32<__double_width> __concat(int32 v0, int32 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform int64<__double_width> __concat(int64 v0, int64 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform uint8<__double_width> __concat(uint8 v0, uint8 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform uint16<__double_width> __concat(uint16 v0, uint16 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform uint32<__double_width> __concat(uint32 v0, uint32 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform uint64<__double_width> __concat(uint64 v0, uint64 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform float16<__double_width> __concat(float16 v0, float16 v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform float<__double_width> __concat(float v0, float v1) { return @llvm.ispc.concat(v0, v1); }
+unmasked uniform double<__double_width> __concat(double v0, double v1) { return @llvm.ispc.concat(v0, v1); }
 
 // bitcast
 template <typename L, typename R> unmasked L __bitcast(R x) {
@@ -916,26 +902,36 @@ EXT varying int16 __avg_up_int16(varying int16 a, varying int16 b) { return ((in
 EXT varying int8 __avg_down_int8(varying int8 a, varying int8 b) { return ((int16)a + (int16)b) >> 1; }
 EXT varying int16 __avg_down_int16(varying int16 a, varying int16 b) { return ((int32)a + (int32)b) >> 1; }
 
-// count trailing zeros
-EXT READNONE uniform int32 __count_trailing_zeros_uniform_i32(uniform int32 x) { return @llvm.cttz(x, false); }
-EXT READNONE uniform int64 __count_trailing_zeros_uniform_i64(uniform int64 x) { return @llvm.cttz(x, false); }
-EXT READNONE uniform int32 __count_leading_zeros_uniform_i32(uniform int32 x) { return @llvm.ctlz(x, false); }
-EXT READNONE uniform int64 __count_leading_zeros_uniform_i64(uniform int64 x) { return @llvm.ctlz(x, false); }
+// Count zero bits, including for zero inputs.
+static constexpr uniform bool __zero_input_is_poison = false;
+
+EXT READNONE uniform int32 __count_trailing_zeros_uniform_i32(uniform int32 x) {
+    return @llvm.cttz(x, __zero_input_is_poison);
+}
+EXT READNONE uniform int64 __count_trailing_zeros_uniform_i64(uniform int64 x) {
+    return @llvm.cttz(x, __zero_input_is_poison);
+}
+EXT READNONE uniform int32 __count_leading_zeros_uniform_i32(uniform int32 x) {
+    return @llvm.ctlz(x, __zero_input_is_poison);
+}
+EXT READNONE uniform int64 __count_leading_zeros_uniform_i64(uniform int64 x) {
+    return @llvm.ctlz(x, __zero_input_is_poison);
+}
 
 EXT READNONE varying int32 __count_trailing_zeros_varying_i32(varying int32 x) {
-    varying int32 res = @llvm.cttz(x, false);
+    varying int32 res = @llvm.cttz(x, __zero_input_is_poison);
     return res;
 }
 EXT READNONE varying int64 __count_trailing_zeros_varying_i64(varying int64 x) {
-    varying int64 res = @llvm.cttz(x, false);
+    varying int64 res = @llvm.cttz(x, __zero_input_is_poison);
     return res;
 }
 EXT READNONE varying int32 __count_leading_zeros_varying_i32(varying int32 x) {
-    varying int32 res = @llvm.ctlz(x, false);
+    varying int32 res = @llvm.ctlz(x, __zero_input_is_poison);
     return res;
 }
 EXT READNONE varying int64 __count_leading_zeros_varying_i64(varying int64 x) {
-    varying int32 res = @llvm.ctlz(x, false);
+    varying int32 res = @llvm.ctlz(x, __zero_input_is_poison);
     return res;
 }
 
@@ -1242,7 +1238,7 @@ EXT int64 __exclusive_scan_or_i64(int64 v, UIntMaskType mask) { return __exclusi
 
 // rotate
 template <typename T> unmasked varying T __rotate(varying T v, uniform int32 i) {
-    uniform T<DOUBLE_WIDTH> dbl = __concat(v, v);
+    uniform T<__double_width> dbl = __concat(v, v);
     uniform int32 start_pos = i & (TARGET_WIDTH - 1);
     varying T *uniform ptr = (varying T * uniform) & dbl[start_pos];
     return *ptr;
@@ -1271,15 +1267,42 @@ EXT READNONE varying float16 __shift_half(varying float16 v, uniform int32 i) { 
 EXT READNONE varying float __shift_float(varying float v, uniform int32 i) { return __shift<float>(v, i); }
 EXT READNONE varying double __shift_double(varying double v, uniform int32 i) { return __shift<double>(v, i); }
 
-// prefetching
-// Constants have to be with suffixes l to avoid cast as prefetch arguments are immediate values
-EXT void __prefetch_read_uniform_1(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, 0l, 3l, 1l); }
-EXT void __prefetch_read_uniform_2(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, 0l, 2l, 1l); }
-EXT void __prefetch_read_uniform_3(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, 0l, 1l, 1l); }
-EXT void __prefetch_read_uniform_nt(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, 0l, 0l, 1l); }
-EXT void __prefetch_write_uniform_1(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, 1l, 3l, 1l); }
-EXT void __prefetch_write_uniform_2(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, 1l, 2l, 1l); }
-EXT void __prefetch_write_uniform_3(uniform int8 *uniform ptr) { @llvm.prefetch(ptr, 1l, 1l, 1l); }
+// LLVM prefetch takes the access mode, temporal locality (0-3), and cache type as immediates.
+static constexpr uniform int32 __prefetch_read = 0;
+static constexpr uniform int32 __prefetch_write = 1;
+static constexpr uniform int32 __prefetch_data_cache = 1;
+static constexpr uniform int32 __prefetch_locality_l1 = 3;
+static constexpr uniform int32 __prefetch_locality_l2 = 2;
+static constexpr uniform int32 __prefetch_locality_l3 = 1;
+static constexpr uniform int32 __prefetch_locality_nt = 0;
+
+template <int Access, int Locality> static inline unmasked void __prefetch_uniform(uniform int8 *uniform ptr) {
+    static_assert(Access == 0 || Access == 1, "Prefetch access must be read (0) or write (1).");
+    static_assert(Locality >= 0 && Locality <= 3, "Prefetch locality must be between 0 and 3.");
+    @llvm.prefetch(ptr, Access, Locality, __prefetch_data_cache);
+}
+
+EXT void __prefetch_read_uniform_1(uniform int8 *uniform ptr) {
+    __prefetch_uniform<__prefetch_read, __prefetch_locality_l1>(ptr);
+}
+EXT void __prefetch_read_uniform_2(uniform int8 *uniform ptr) {
+    __prefetch_uniform<__prefetch_read, __prefetch_locality_l2>(ptr);
+}
+EXT void __prefetch_read_uniform_3(uniform int8 *uniform ptr) {
+    __prefetch_uniform<__prefetch_read, __prefetch_locality_l3>(ptr);
+}
+EXT void __prefetch_read_uniform_nt(uniform int8 *uniform ptr) {
+    __prefetch_uniform<__prefetch_read, __prefetch_locality_nt>(ptr);
+}
+EXT void __prefetch_write_uniform_1(uniform int8 *uniform ptr) {
+    __prefetch_uniform<__prefetch_write, __prefetch_locality_l1>(ptr);
+}
+EXT void __prefetch_write_uniform_2(uniform int8 *uniform ptr) {
+    __prefetch_uniform<__prefetch_write, __prefetch_locality_l2>(ptr);
+}
+EXT void __prefetch_write_uniform_3(uniform int8 *uniform ptr) {
+    __prefetch_uniform<__prefetch_write, __prefetch_locality_l3>(ptr);
+}
 UNMANGLED CDECL void __prefetch_read_varying_1(varying int64 addr) {
     foreach_active(i) {
         uniform int64 p_lane = __extract(addr, i);
@@ -1346,7 +1369,7 @@ EXT READNONE varying double __shuffle_double(varying double v, varying int32 per
 
 // shuffle2
 template <typename T> unmasked varying T __shuffle2(varying T v0, varying T v1, varying int32 perm) {
-    uniform T<DOUBLE_WIDTH> v = __concat(v0, v1);
+    uniform T<__double_width> v = __concat(v0, v1);
     varying T result = 0;
     for (uniform int32 i = 0; i < TARGET_WIDTH; i++) {
         uniform T lane_v = v[__extract(perm, i)];
@@ -1616,28 +1639,27 @@ EXT varying double __streaming_load_varying_double(NOESCAPE uniform int8 *unifor
     return @llvm.ispc.stream_load(ptr, dummy);
 }
 
+#if LLVM_VERSION_MAJOR < 22
+// These builtins can receive byte-aligned addresses. Older LLVM versions take alignment as an immediate.
+static constexpr uniform int32 __masked_memory_alignment = 1;
+#endif
+
 template <typename T> unmasked varying T __masked_load(varying T *uniform ptr, UIntMaskType mask) {
     varying T passthru;
 #if LLVM_VERSION_MAJOR >= 22
     return @llvm.masked.load((uniform int8 * uniform) ptr, mask, passthru);
 #else
-    return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
+    return @llvm.masked.load((uniform int8 * uniform) ptr, __masked_memory_alignment, mask, passthru);
 #endif
 }
 
-#if TARGET_WIDTH == 64
-#define MASK_HIGH_BIT_ON -9223372036854775808
-#elif TARGET_WIDTH == 32
-#define MASK_HIGH_BIT_ON 2147483648
-#else
-#define MASK_HIGH_BIT_ON (1ull << (TARGET_WIDTH - 1))
-#endif
+static constexpr uniform uint64 __last_lane_bit = 1ULL << (programCount - 1);
 
 template <typename T> unmasked varying T __masked_load_fast(varying T *uniform ptr, UIntMaskType mask) {
     uniform uint64 mm = __movmsk(mask);
     uniform uint64 mm_and_low = mm & 1;
-    uniform uint64 mm_and_high = mm & MASK_HIGH_BIT_ON;
-    uniform uint64 mm_and_high_shift = mm_and_high >> (TARGET_WIDTH - 1);
+    uniform uint64 mm_and_high = mm & __last_lane_bit;
+    uniform uint64 mm_and_high_shift = mm_and_high >> (programCount - 1);
     uniform bool can_vload = mm_and_low & mm_and_high_shift;
     uniform bool can_vload_maybe_fast = can_vload || (__fast_masked_vload != 0);
     if (can_vload_maybe_fast) {
@@ -1673,7 +1695,7 @@ template <typename T> unmasked void __masked_store(NOESCAPE varying T *uniform p
 #if LLVM_VERSION_MAJOR >= 22
     @llvm.masked.store(val, (uniform int8 * uniform) ptr, mask);
 #else
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.masked.store(val, (uniform int8 * uniform) ptr, __masked_memory_alignment, mask);
 #endif
 }
 
@@ -1731,7 +1753,8 @@ EXT uniform bool __wasm_cmp_msk_eq(UIntMaskType v1, UIntMaskType v2) {
 // mask operations
 EXT uniform int64 __movmsk(UIntMaskType mask) { return __cast_mask_to_i64(mask); }
 EXT uniform bool __any(UIntMaskType mask) { return __cast_mask_to_i64(mask) != 0; }
-EXT uniform bool __all(UIntMaskType mask) { return __cast_mask_to_i64(mask) == ~0ULL >> (64 - TARGET_WIDTH); }
+static constexpr uniform uint64 __all_lanes_mask = ~0ULL >> (64 - programCount);
+EXT uniform bool __all(UIntMaskType mask) { return __cast_mask_to_i64(mask) == __all_lanes_mask; }
 EXT uniform bool __none(UIntMaskType mask) { return __cast_mask_to_i64(mask) == 0; }
 
 // general gather functions
@@ -1740,8 +1763,7 @@ template <typename T> READONLY unmasked varying T __masked_gather(varying uint64
 #if LLVM_VERSION_MAJOR >= 22
     return @llvm.masked.gather(addrs, mask, passthru);
 #else
-    // 1l is needed for immarg of i32
-    return @llvm.masked.gather(addrs, 1l, mask, passthru);
+    return @llvm.masked.gather(addrs, __masked_memory_alignment, mask, passthru);
 #endif
 }
 
@@ -2030,8 +2052,7 @@ template <typename T> unmasked void __masked_scatter(varying T val, varying uint
 #if LLVM_VERSION_MAJOR >= 22
     @llvm.masked.scatter(val, addrs, mask);
 #else
-    // 1l is needed because argument is immarg of i32
-    @llvm.masked.scatter(val, addrs, 1l, mask);
+    @llvm.masked.scatter(val, addrs, __masked_memory_alignment, mask);
 #endif
 }
 

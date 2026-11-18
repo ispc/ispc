@@ -86,6 +86,42 @@ inline void amx_tile_store(uniform uint8 tile, uniform int8 *uniform data, unifo
     __amx_tile_store(tile, data, stride);
 }
 
+/// Named AMX tile IDs for constexpr/template use.
+/// `static` avoids linkage conflicts when included from multiple translation units.
+static constexpr uniform int amx_tmm0 = 0;
+static constexpr uniform int amx_tmm1 = 1;
+static constexpr uniform int amx_tmm2 = 2;
+static constexpr uniform int amx_tmm3 = 3;
+static constexpr uniform int amx_tmm4 = 4;
+static constexpr uniform int amx_tmm5 = 5;
+static constexpr uniform int amx_tmm6 = 6;
+static constexpr uniform int amx_tmm7 = 7;
+
+///////////////////////////////////////////////////////////////////////////////
+// AMX template wrappers for compile-time tile IDs
+///////////////////////////////////////////////////////////////////////////////
+
+// Check tile IDs before narrowing them to the intrinsic's i8 operands.
+template <uint64 Tile> inline void amx_tile_zero() {
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tilezero((uniform int8)Tile);
+}
+
+template <uint64 Tile> inline void amx_tile_load(const uniform int8 *uniform data, uniform int64 stride) {
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tileloadd64((uniform int8)Tile, (uniform int8 * uniform) data, stride);
+}
+
+template <uint64 Tile> inline void amx_tile_load_t1(const uniform int8 *uniform data, uniform int64 stride) {
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tileloaddt164((uniform int8)Tile, (uniform int8 * uniform) data, stride);
+}
+
+template <uint64 Tile> inline void amx_tile_store(uniform int8 *uniform data, uniform int64 stride) {
+    static_assert(Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tilestored64((uniform int8)Tile, data, stride);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // AMX INT8 Dot Products (requires amx-int8)
 ///////////////////////////////////////////////////////////////////////////////
@@ -114,6 +150,26 @@ inline void amx_dpbusd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2
 /// @param src2 Source tile 2 number (0-7).
 inline void amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpbuud(dst, src1, src2); }
 
+template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbssd() {
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbssd((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
+}
+
+template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbsud() {
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbsud((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
+}
+
+template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbusd() {
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbusd((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
+}
+
+template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbuud() {
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbuud((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // AMX FP16 Dot Product (requires amx-fp16)
 ///////////////////////////////////////////////////////////////////////////////
@@ -124,6 +180,11 @@ inline void amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2
 /// @param src2 Source tile 2 number (0-7).
 inline void amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpfp16ps(dst, src1, src2); }
 
+template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpfp16ps() {
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpfp16ps((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // AMX BF16 Dot Product (requires amx-bf16)
 ///////////////////////////////////////////////////////////////////////////////
@@ -133,5 +194,10 @@ inline void amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 sr
 /// @param src1 Source tile 1 number (0-7).
 /// @param src2 Source tile 2 number (0-7).
 inline void amx_dpbf16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __amx_dpbf16ps(dst, src1, src2); }
+
+template <uint64 DstTile, uint64 Src1Tile, uint64 Src2Tile> inline void amx_dpbf16ps() {
+    static_assert(DstTile < 8 && Src1Tile < 8 && Src2Tile < 8, "AMX tile ID must be between 0 and 7.");
+    @llvm.x86.tdpbf16ps((uniform int8)DstTile, (uniform int8)Src1Tile, (uniform int8)Src2Tile);
+}
 
 #undef EXT

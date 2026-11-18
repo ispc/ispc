@@ -19,6 +19,7 @@
 #include <cstring>
 #include <ctype.h>
 #include <fcntl.h>
+#include <map>
 #include <memory>
 #include <stdio.h>
 #include <string>
@@ -46,6 +47,7 @@
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Lex/HeaderSearchOptions.h>
 #include <clang/Lex/Lexer.h>
+#include <clang/Lex/MacroInfo.h>
 #include <clang/Lex/ModuleLoader.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/PreprocessorOptions.h>
@@ -203,8 +205,62 @@ static void lInitializePreprocessor(clang::Preprocessor &PP, clang::Preprocessor
     PP.setPredefines(std::move(PredefineBuffer));
 }
 
-// Initilialize PreprocessorOutputOptions with ISPC PreprocessorOutputType
-// Return if the output can be treated as preprocessor output
+// Dump the final active macro table without treating ISPC tokens as end of input.
+static void lPrintMacroDefinitions(clang::Preprocessor &prep, llvm::raw_ostream &out) {
+    prep.IgnorePragmas();
+    prep.EnterMainSourceFile();
+    clang::Token token;
+    do {
+        prep.Lex(token);
+        // Clang's LexTokensUntilEOF also stops at unknown tokens, including
+        // ISPC's '@'. Macro dumping must scan the entire translation unit.
+    } while (!token.isOneOf(clang::tok::eof, clang::tok::annot_repl_input_end));
+
+    std::map<std::string, const clang::MacroInfo *> definitions;
+    for (const auto &entry : prep.macros()) {
+        const auto *directive = entry.second.getLatest();
+        if (directive != nullptr && directive->isDefined()) {
+            const auto *info = directive->getMacroInfo();
+            if (!info->isBuiltinMacro()) {
+                definitions.emplace(entry.first->getName().str(), info);
+            }
+        }
+    }
+
+    for (const auto &[name, info] : definitions) {
+        out << "#define " << name;
+        if (info->isFunctionLike()) {
+            out << '(';
+            auto params = info->params();
+            for (size_t i = 0; i < params.size(); ++i) {
+                if (i != 0) {
+                    out << ',';
+                }
+                llvm::StringRef param = params[i]->getName();
+                out << (i + 1 == params.size() && param == "__VA_ARGS__" ? llvm::StringRef("...") : param);
+            }
+            if (info->isGNUVarargs()) {
+                out << "...";
+            }
+            out << ')';
+        }
+        // Preserve the macro dumper's single space before the replacement list,
+        // including empty macros, and the spacing recorded between tokens.
+        out << ' ';
+        bool first = true;
+        for (const auto &replacement : info->tokens()) {
+            if (!first && replacement.hasLeadingSpace()) {
+                out << ' ';
+            }
+            first = false;
+            out << prep.getSpelling(replacement);
+        }
+        out << '\n';
+    }
+}
+
+// Initialize PreprocessorOutputOptions with ISPC PreprocessorOutputType.
+// Return whether the output can be treated as preprocessor output.
 static bool lSetPreprocessorOutputOptions(clang::PreprocessorOutputOptions *opts,
                                           Globals::PreprocessorOutputType preprocessorOutputType) {
     switch (preprocessorOutputType) {
@@ -569,7 +625,11 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
 
     // do actual preprocessing
     diagPrinter.BeginSourceFile(langOpts, &prep);
-    clang::DoPrintPreprocessedInput(prep, ostream, preProcOutOpts);
+    if (preprocessorOutputType == Globals::PreprocessorOutputType::MacrosOnly) {
+        lPrintMacroDefinitions(prep, *ostream);
+    } else {
+        clang::DoPrintPreprocessedInput(prep, ostream, preProcOutOpts);
+    }
     diagPrinter.EndSourceFile();
 
     // Output any collected diagnostic messages to stderr

@@ -1,5 +1,5 @@
 // This test checks that uniform vectors conversion during initialization is perfomed using vector instructions.
-// RUN: %{ispc} %s --target=host -O0 --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=host --nowrap -O0 --emit-llvm-text -o - | FileCheck %s
 
 // Vector initialization
 // CHECK-LABEL: define <4 x double> @test1
@@ -24,6 +24,7 @@ uniform int64<4> test2(uniform int k) {
 // Vector initialization
 // CHECK-LABEL: define <4 x i64> @test3
 // CHECK: sext <4 x i32>
+// CHECK: shufflevector <4 x i64> {{%.*}}, <4 x i64> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
 // CHECK-NOT: sext i32
 uniform int64<4> test3(uniform int k) {
   const uniform int<4> i = {k, k*2, 3, k*3};

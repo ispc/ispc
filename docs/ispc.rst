@@ -3611,6 +3611,8 @@ element values:
     float x = ..., y = ..., z = ...;
     float<3> pos = { x, y, z };
 
+Omitted short-vector elements in an initializer list are initialized to zero.
+
 
 There are two mechanisms to access the individual elements of these short
 vector data types.  The first is with the array indexing operator:
@@ -4089,6 +4091,162 @@ them:
     ...
     const varying int x = { 1, 2, 3, 2 + 2 };
     const varying int y = x * 2;
+
+Constexpr
+^^^^^^^^^
+
+``constexpr`` declares variables and functions that can be evaluated at
+compile time. ``constexpr`` values can be used in constant-expression
+contexts such as array sizes, short vector lengths, ``switch`` case labels,
+enumerator values, non-type template arguments, and default parameter values.
+
+**Constexpr variables**
+
+- ``constexpr`` implies ``const``.
+- ``constexpr`` is not allowed on ``typedef`` declarations.
+- The initializer must be a constant expression.
+- Supported types (v1): atomic, enum, pointer, short vector, array, and struct.
+- Arrays must have fully specified sizes.
+- Struct/array elements must themselves be constexpr-supported types.
+- Pointer values are limited to null or addresses of globals/functions.
+- ``constexpr`` values may be ``uniform`` or ``varying``. Varying constexpr
+  values are lane-wise compile-time constants; contexts that require uniform
+  constants still require uniform results.
+
+Examples:
+
+::
+
+    constexpr uniform int Tile = 16;
+    uniform float buf[Tile];
+
+    struct Pair { int a; int b; };
+    constexpr uniform Pair P = { 1, 2 };
+    constexpr uniform int PB = P.b;
+
+    constexpr uniform int Arr[3] = { 10, 20, 30 };
+    constexpr uniform int A2 = Arr[2];
+
+    constexpr varying int lane = programIndex;
+    constexpr varying int off = lane * 4;
+
+**Constexpr functions**
+
+``constexpr`` functions can be evaluated at compile time when called in a
+constant-expression context. The function is still generated as normal code
+and can be called at runtime.
+
+Requirements (v1):
+
+- The function body must be constexpr-suitable at definition time.
+- The function must return a value (no ``void`` return in v1).
+- The function may call other ``constexpr`` functions and supported
+  ``@llvm.ispc.bitcast`` overloads for equal-width integer/floating-point
+  reinterpretation, including uniform short vectors with equal logical
+  payload sizes. Storage padding does not participate in the bitcast. Integer
+  saturating add/subtract intrinsics and CPU ``@llvm.ispc.packmask`` can also be
+  evaluated.
+- ``constexpr`` is not allowed on function parameters.
+- Control flow conditions must be uniform.
+- Pointer dereference is not allowed; address-of is limited to globals/functions
+  (not locals/parameters).
+- ``task``, ``export``, and ``extern "C"/"SYCL"`` are not allowed on
+  ``constexpr`` functions in v1.
+- Linkage follows C++ constexpr function behavior.
+- Non-``static`` constexpr functions are emitted with ODR linkage
+  (``linkonce_odr``).
+- ``static`` constexpr functions have internal linkage.
+
+Example:
+
+::
+
+    constexpr uniform int gcd(uniform int a, uniform int b) {
+        while (b != 0) {
+            uniform int t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
+    }
+
+    uniform int buf[gcd(48, 18)];
+
+**Templates and intrinsic immediates**
+
+A constexpr function can calculate a control value for a normal runtime
+function template. Dependent expressions such as ``operation<N + 1>()`` and
+``operation<control(N)>()`` are evaluated after template substitution. Local
+constexpr variables can also be used as non-type arguments.
+
+LLVM intrinsic immediate arguments must evaluate to uniform scalar constants.
+The compiler evaluates and emits these operands before optimization; this does
+not depend on inlining. To preserve this guarantee across library layers, pass
+the control as a non-type template argument until the direct intrinsic call.
+An ordinary ``uniform int`` function parameter is not a constant inside its
+callee, even if every caller supplies a constant.
+
+For example, the AMX template overloads use this pattern::
+
+    #include <amx.isph>
+
+    constexpr uniform int accumulator_tile(uniform int first) {
+        return first + 2;
+    }
+
+    template<int First> void clear_accumulator() {
+        amx_tile_zero<accumulator_tile(First)>();
+    }
+
+The target must support the instantiated AMX operation. Tile indices are
+checked before conversion to the intrinsic's operand type.
+
+Uniform scalar ``&&``, ``||``, and ``?:`` short-circuit during constant
+evaluation. Varying expressions that require writes under a partial lane mask
+cannot be evaluated as constexpr in v1. Initialized local arrays, structs, and
+short vectors support element assignment, including nested elements and
+compound assignments. Array and short-vector indices must be uniform and in
+bounds. Copying an aggregate preserves value semantics: changing the copy does
+not change the original. Writes through pointers or references remain
+unsupported.
+
+Existing ``float16bits``, ``floatbits``, ``doublebits``, and ``intbits`` calls
+can be used in constant expressions. These operations preserve the exact bit
+pattern, including signed zero and NaN payloads, for uniform and varying
+values. Floating-point ``abs``, ``isinf``, ``isfinite``, and ``signbits`` share
+their implementations with constant evaluation. Their call syntax and runtime
+semantics are unchanged.
+
+**Forward references**
+
+Global initializers, default parameter values, and static assertions may call ``constexpr``
+functions defined later in the same file. Other constant-expression contexts
+(array sizes, short vector lengths, template arguments) still require
+definitions to be visible before use.
+
+**Static assertions**
+
+``static_assert(condition, "message");`` checks a condition during compilation.
+The message is optional. The condition must be a uniform scalar compile-time
+constant convertible to ``bool``. Static assertions can appear at file scope
+or inside a function body and emit no runtime instructions.
+
+Use static assertions to validate immediate operands before narrowing them to
+the type required by an intrinsic::
+
+    template<uint64 Scale>
+    constexpr uniform int checked_scale() {
+        static_assert(Scale == 1 || Scale == 2 || Scale == 4 || Scale == 8,
+                      "Scale must be one of 1, 2, 4, or 8.");
+        return (uniform int)Scale;
+    }
+
+Assertions in templates are checked when the template is instantiated.
+Local constexpr variables can be used after their declarations. An ordinary
+function parameter is not a compile-time constant, including a parameter of
+a constexpr function. ``static_assert`` is a declaration check, so an assertion
+in a runtime-dead branch still applies. ``--opt=disable-assertions`` affects
+runtime assertions and does not disable static assertions.
 
 
 Attributes
@@ -5333,6 +5491,23 @@ vector with the target width (for example ``uniform float<8>`` on
 as a ``varying`` value. The result can then be converted to the needed
 type, for example to an unsigned type.
 
+Numeric ``@llvm.ispc.bitcast(value, type_value)`` is an ISPC operation with an
+explicit destination type: it preserves the ISPC type of ``type_value``,
+including signedness and short-vector shape. A uniform short vector therefore
+stays uniform even when its element count equals the target width. This rule
+also applies during constant evaluation, which uses the ISPC source and
+destination types rather than inferring them from LLVM types.
+
+The ISPC aliases ``@llvm.ispc.sadd.sat``, ``@llvm.ispc.ssub.sat``,
+``@llvm.ispc.uadd.sat``, and ``@llvm.ispc.usub.sat`` likewise preserve the ISPC
+integer type, including uniform short-vector shape. Both arguments must have
+the same integer type, ignoring ``const``. The operation name determines
+signed or unsigned saturation; the result retains the first argument's type.
+These aliases and the corresponding raw LLVM saturation intrinsics support
+constant evaluation. Raw LLVM intrinsic spellings retain the canonical type
+mapping described above. CPU ``@llvm.ispc.packmask`` also supports constant
+evaluation, packing each logical mask lane's low bit in target byte order.
+
 Intrinsics with struct, token, metadata or scalable vector parameters or
 results (for example ``llvm.sadd.with.overflow``, the constrained
 floating-point intrinsics or the AArch64 SVE intrinsics) and intrinsics with a
@@ -5556,8 +5731,8 @@ For non-type template parameters, the following rules apply:
       }
 
 * Varying types are not allowed.
-* Integral constants, enumeration constants and template parameters (in the context of the nested templates)
-  can be used as non-type template arguments. Constant expressions are not allowed.
+* Integral constants, enumeration constants, constexpr expressions, and template parameters (in the context of
+  the nested templates) can be used as non-type template arguments.
 * Partial specialization of function templates with non-type template parameters is not allowed.
 
 

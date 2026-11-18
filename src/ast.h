@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -165,6 +165,7 @@ class ASTNode : public Traceable {
         LabeledStmtID,
         PrintStmtID,
         ReturnStmtID,
+        StaticAssertStmtID,
         StmtListID,
         SwitchStmtID,
         UnmaskedStmtID
@@ -219,6 +220,9 @@ class AST {
     /** Add the AST for a function described by the given declaration
         information and source code. */
     void AddFunction(Symbol *sym, Stmt *code);
+
+    /** Remove an existing function body while preserving its symbol. */
+    void RemoveFunction(Symbol *sym);
 
     void AddFunctionTemplate(TemplateSymbol *templ, Stmt *code);
 

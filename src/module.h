@@ -43,6 +43,7 @@ class raw_string_ostream;
 namespace ispc {
 
 struct StructIdentity;
+class StaticAssertStmt;
 
 #ifdef ISPC_XE_ENABLED
 // Derived from ocloc_api.h
@@ -92,7 +93,13 @@ class Module {
     void AddTypeDef(const std::string &name, const Type *type, SourcePos pos);
 
     /** Add a new global variable corresponding to the decl. */
-    void AddGlobalVariable(Declarator *decl, bool isConst);
+    void AddGlobalVariable(Declarator *decl, bool isConst, bool isConstexpr);
+
+    /** Record a deferred constexpr default parameter for later evaluation. */
+    void AddDeferredConstexprParam(FunctionType *funcType, int index, Expr *expr, SourcePos pos,
+                                   const std::string &paramName);
+
+    void AddDeferredStaticAssert(StaticAssertStmt *stmt);
 
     /** Add a declaration of the function defined by the given function
         symbol to the module. */
@@ -443,6 +450,23 @@ class Module {
     std::unordered_set<const StructIdentity *> typedefAnonymousStructs;
 
   private:
+    struct DeferredConstexprGlobal {
+        Symbol *sym;
+        Expr *initExpr;
+        const Type *type;
+        SourcePos pos;
+        bool isConst;
+        bool isConstexpr;
+    };
+
+    struct DeferredConstexprParam {
+        FunctionType *funcType;
+        int index;
+        Expr *expr;
+        SourcePos pos;
+        std::string paramName;
+    };
+
     const char *srcFile{nullptr};
     AST *ast{nullptr};
 
@@ -488,6 +512,12 @@ class Module {
     /* This set is used to store strings that is referenced in yylloc (SourcePos)
        in lexer once and not to lost memory via just strduping them. */
     std::set<std::string> pseudoDependencies;
+
+    std::vector<DeferredConstexprGlobal> deferredConstexprGlobals;
+    std::vector<DeferredConstexprParam> deferredConstexprParams;
+    std::vector<StaticAssertStmt *> deferredStaticAsserts;
+
+    void ResolveDeferredConstexpr();
 
     /**
      * Compiles the module for a single target architecture.

@@ -11,6 +11,7 @@
 
 #include "module.h"
 #include "builtins.h"
+#include "constexpr.h"
 #include "ctx.h"
 #include "expr.h"
 #include "func.h"
@@ -33,6 +34,7 @@
 #include <utility>
 
 #include <clang/Basic/Version.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -46,6 +48,7 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/FileUtilities.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
@@ -125,6 +128,30 @@ static bool lIsStdlibPseudoFile(const std::string &name) {
     }
 #endif // ISPC_HOST_IS_WINDOWS
     return false;
+}
+
+static bool lIsImplicitStdlibHeader(const SourcePos &pos) {
+    if (g->genStdlib || pos.name == nullptr) {
+        return false;
+    }
+    llvm::StringRef fileName = llvm::sys::path::filename(pos.name);
+    if (fileName != "core.isph" && !(fileName == "stdlib.isph" && g->includeStdlib)) {
+        return false;
+    }
+    if (!g->isSlimBinary) {
+        return lIsStdlibPseudoFile(pos.name);
+    }
+    // The slim binary adds its bundled headers as the first include directory.
+    if (g->includePath.empty()) {
+        return false;
+    }
+    llvm::SmallString<128> bundledHeader(g->includePath.front());
+    llvm::sys::path::append(bundledHeader, fileName);
+    // Clang escapes file names in line markers, and the lexer preserves that spelling.
+    llvm::SmallString<128> escapedHeader;
+    llvm::raw_svector_ostream escapedHeaderStream(escapedHeader);
+    escapedHeaderStream.write_escaped(bundledHeader);
+    return escapedHeader.str() == pos.name;
 }
 
 /*! this is where the parser tells us that it has seen the given file
@@ -373,6 +400,121 @@ int Module::parse() {
     return 0;
 }
 
+void Module::ResolveDeferredConstexpr() {
+    bool progress = true;
+    while (progress) {
+        progress = false;
+
+        for (size_t i = 0; i < deferredConstexprGlobals.size();) {
+            DeferredConstexprGlobal entry = deferredConstexprGlobals[i];
+            ConstexprEvalResult evalResult = ConstexprEvaluateDetailed(entry.initExpr, entry.type, true);
+            if (evalResult.value != nullptr) {
+                Expr *initExpr = evalResult.value;
+                std::pair<llvm::Constant *, bool> initPair = initExpr->GetStorageConstant(entry.type);
+                if (initPair.first == nullptr) {
+                    Error(entry.pos, "Initializer for global variable \"%s\" must be a constant.",
+                          entry.sym ? entry.sym->name.c_str() : "<unknown>");
+                } else {
+                    if (evalResult.targetDependent) {
+                        initPair.second = true;
+                    }
+                    if (entry.sym && !entry.sym->storageClass.IsStatic() && initPair.second) {
+                        if (g->isMultiTargetCompilation) {
+                            Error(entry.pos,
+                                  "Initializer for global variable \"%s\" is not a constant for multi-target "
+                                  "compilation.",
+                                  entry.sym->name.c_str());
+                        } else {
+                            Warning(entry.pos,
+                                    "Initializer for global variable \"%s\" "
+                                    "is a constant for single-target compilation "
+                                    "but not for multi-target compilation.",
+                                    entry.sym->name.c_str());
+                        }
+                    }
+                    if (entry.sym && entry.sym->storageInfo) {
+                        llvm::GlobalVariable *gv =
+                            llvm::dyn_cast<llvm::GlobalVariable>(entry.sym->storageInfo->getPointer());
+                        if (gv) {
+                            gv->setInitializer(initPair.first);
+                        }
+                    }
+                    if (entry.sym) {
+                        entry.sym->constEvalPending = false;
+                        if (entry.sym->type && entry.sym->type->IsConstType()) {
+                            entry.sym->constValue = llvm::dyn_cast<ConstExpr>(initExpr);
+                        }
+                    }
+                }
+                if (entry.sym) {
+                    entry.sym->constEvalPending = false;
+                }
+                deferredConstexprGlobals[i] = deferredConstexprGlobals.back();
+                deferredConstexprGlobals.pop_back();
+                progress = true;
+                continue;
+            }
+            if (!evalResult.deferred) {
+                Error(entry.pos, "Initializer for global variable \"%s\" must be a constant.",
+                      entry.sym ? entry.sym->name.c_str() : "<unknown>");
+                if (entry.sym) {
+                    entry.sym->constEvalPending = false;
+                }
+                deferredConstexprGlobals[i] = deferredConstexprGlobals.back();
+                deferredConstexprGlobals.pop_back();
+                progress = true;
+                continue;
+            }
+            ++i;
+        }
+
+        for (size_t i = 0; i < deferredConstexprParams.size();) {
+            DeferredConstexprParam entry = deferredConstexprParams[i];
+            const Type *paramType = entry.funcType ? entry.funcType->GetParameterType(entry.index) : nullptr;
+            ConstexprEvalResult evalResult = ConstexprEvaluateDetailed(entry.expr, paramType, true);
+            if (evalResult.value != nullptr && entry.funcType != nullptr) {
+                entry.funcType->SetParameterDefault(entry.index, evalResult.value);
+                deferredConstexprParams[i] = deferredConstexprParams.back();
+                deferredConstexprParams.pop_back();
+                progress = true;
+                continue;
+            }
+            if (!evalResult.deferred) {
+                Error(entry.pos, "Default value for parameter \"%s\" must be a compile-time constant.",
+                      entry.paramName.c_str());
+                deferredConstexprParams[i] = deferredConstexprParams.back();
+                deferredConstexprParams.pop_back();
+                progress = true;
+                continue;
+            }
+            ++i;
+        }
+    }
+
+    if (!deferredConstexprGlobals.empty()) {
+        for (const auto &entry : deferredConstexprGlobals) {
+            Error(entry.pos, "Initializer for global variable \"%s\" must be a constant.",
+                  entry.sym ? entry.sym->name.c_str() : "<unknown>");
+            if (entry.sym) {
+                entry.sym->constEvalPending = false;
+            }
+        }
+        deferredConstexprGlobals.clear();
+    }
+    if (!deferredConstexprParams.empty()) {
+        for (const auto &entry : deferredConstexprParams) {
+            Error(entry.pos, "Default value for parameter \"%s\" must be a compile-time constant.",
+                  entry.paramName.c_str());
+        }
+        deferredConstexprParams.clear();
+    }
+
+    for (StaticAssertStmt *stmt : deferredStaticAsserts) {
+        stmt->CheckCondition(false);
+    }
+    deferredStaticAsserts.clear();
+}
+
 int Module::CompileFile() {
     llvm::TimeTraceScope CompileFileTimeScope(
         "CompileFile", llvm::StringRef(srcFile + ("_" + std::string(g->target->GetISAString()))));
@@ -399,6 +541,10 @@ int Module::CompileFile() {
     debugDumpModule(module, "Parsed", pre_stage++);
 
     ast->Print(g->astDump);
+
+    if (errorCount == 0) {
+        ResolveDeferredConstexpr();
+    }
 
     if (g->NoOmitFramePointer) {
         for (llvm::Function &f : *module) {
@@ -611,7 +757,7 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
 
         if constexpr (std::is_same_v<T, std::vector<llvm::APFloat>>) {
             std::vector<llvm::APFloat> ce_vals;
-            llvm::Type *to_type = type->GetAsUniformType()->LLVMType(g->ctx);
+            const AtomicType *to_type = CastType<AtomicType>(type);
             ce->GetValues(ce_vals, to_type);
             vals[i++] = ce_vals[0];
         } else {
@@ -673,7 +819,7 @@ Expr *lConvertExprListToConstExpr(Expr *initExpr, const Type *type, const std::s
     return nullptr;
 }
 
-void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
+void Module::AddGlobalVariable(Declarator *decl, bool isConst, bool isConstexpr) {
     const std::string &name = decl->name;
     const Type *type = decl->type;
     Expr *initExpr = decl->initExpr;
@@ -766,6 +912,12 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         return;
     }
 
+    if (isConstexpr && !IsConstexprTypeAllowed(type)) {
+        Error(pos, "constexpr variable \"%s\" must have an atomic, enum, pointer, short vector, array, or struct type",
+              name.c_str());
+        return;
+    }
+
     llvm::Type *llvmType = type->LLVMStorageType(g->ctx);
     if (llvmType == nullptr) {
         return;
@@ -775,6 +927,11 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     // make sure it's a compile-time constant!
     llvm::Constant *llvmInitializer = nullptr;
     ConstExpr *constValue = nullptr;
+    bool deferredInit = false;
+    if (isConstexpr && initExpr == nullptr) {
+        Error(pos, "Missing initializer for constexpr variable \"%s\".", name.c_str());
+        return;
+    }
     if (storageClass.IsExtern()) {
         if (initExpr != nullptr) {
             Error(pos, "Initializer can't be provided with \"extern\" global variable \"%s\".", name.c_str());
@@ -807,14 +964,30 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
                         Error(pos, "Initialization of global variable \"%s\" was unsuccessful.", name.c_str());
                         return;
                     }
+
+                    std::pair<llvm::Constant *, bool> initPair = initExpr->GetStorageConstant(type);
+                    bool initIsTargetDependent = initPair.second;
+
+                    ConstexprEvalResult evalResult = ConstexprEvaluateDetailed(initExpr, type, true);
+                    if (evalResult.value != nullptr) {
+                        initExpr = evalResult.value;
+                        if (initPair.first == nullptr) {
+                            initPair = initExpr->GetStorageConstant(type);
+                        }
+                        if (initIsTargetDependent || evalResult.targetDependent) {
+                            initPair.second = true;
+                        }
+                    } else if (evalResult.deferred) {
+                        deferredInit = true;
+                    }
+
                     // Fingers crossed, now let's see if we've got a
                     // constant value..
-                    std::pair<llvm::Constant *, bool> initPair = initExpr->GetStorageConstant(type);
                     llvmInitializer = initPair.first;
 
                     // If compiling for multitarget, skip initialization for
                     // indentified scenarios unless it's static
-                    if (llvmInitializer != nullptr) {
+                    if (!deferredInit && llvmInitializer != nullptr) {
                         if (!storageClass.IsStatic() && initPair.second) {
                             if (g->isMultiTargetCompilation == true) {
                                 Error(initExpr->pos,
@@ -838,7 +1011,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
                             // represent their values.
                             constValue = llvm::dyn_cast<ConstExpr>(initExpr);
                         }
-                    } else {
+                    } else if (!deferredInit) {
                         Error(initExpr->pos, "Initializer for global variable \"%s\" must be a constant.",
                               name.c_str());
                     }
@@ -891,6 +1064,13 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
 
         // Update the symbol's constValue
         sym->constValue = constValue;
+        if (isConstexpr) {
+            sym->isConstexpr = true;
+        }
+        if (deferredInit) {
+            sym->constEvalPending = true;
+            deferredConstexprGlobals.push_back({sym, initExpr, type, pos, isConst, isConstexpr});
+        }
 
         return;
     }
@@ -898,6 +1078,11 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     symbolTable->AddVariable(sym);
 
     sym->constValue = constValue;
+    sym->isConstexpr = isConstexpr;
+    if (deferredInit) {
+        sym->constEvalPending = true;
+        deferredConstexprGlobals.push_back({sym, initExpr, type, pos, isConst, isConstexpr});
+    }
 
     llvm::GlobalValue::LinkageTypes linkage =
         sym->storageClass.IsStatic() ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
@@ -926,6 +1111,13 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         sym_GV_storagePtr->addDebugInfo(var);
     }
 }
+
+void Module::AddDeferredConstexprParam(FunctionType *funcType, int index, Expr *expr, SourcePos pos,
+                                       const std::string &paramName) {
+    deferredConstexprParams.push_back({funcType, index, expr, pos, paramName});
+}
+
+void Module::AddDeferredStaticAssert(StaticAssertStmt *stmt) { deferredStaticAsserts.push_back(stmt); }
 
 /** Given an arbitrary type, see if it or any of the leaf types contained
     in it has a type that's illegal to have exported to C/C++
@@ -1177,6 +1369,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     std::vector<Symbol *> overloadFuncs;
     symbolTable->LookupFunction(name.c_str(), &overloadFuncs);
+    Symbol *overriddenStdlibFunction = nullptr;
     if (overloadFuncs.size() > 0) {
         for (unsigned int i = 0; i < overloadFuncs.size(); ++i) {
             Symbol *overloadFunc = overloadFuncs[i];
@@ -1191,6 +1384,23 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             // and type.  This also hits when we have previously declared
             // the function and are about to define it.
             if (Type::Equal(overloadFunc->type, functionType)) {
+                // Preserve the ability to supply a runtime replacement for library routines whose
+                // implementation is now also visible to the constexpr evaluator.
+                if (overloadFunc->isConstexpr && !functionType->IsConstexpr() && overloadFunc->parentFunction &&
+                    overloadFunc->attrs && overloadFunc->attrs->HasAttribute("__stdlib_definition") &&
+                    overloadType->IsUnmangled() == functionType->IsUnmangled() &&
+                    overloadType->IsISPCKernel() == functionType->IsISPCKernel() &&
+                    overloadType->GetCallingConv() == functionType->GetCallingConv() &&
+                    lIsImplicitStdlibHeader(overloadFunc->pos)) {
+                    overriddenStdlibFunction = overloadFunc;
+                    break;
+                }
+                if (overloadFunc->isConstexpr != functionType->IsConstexpr()) {
+                    Error(pos,
+                          "Function \"%s\" redeclared with different \"constexpr\" qualifier "
+                          "(previous declaration at %s:%d).",
+                          name.c_str(), overloadFunc->pos.name, overloadFunc->pos.first_line);
+                }
                 return;
             }
 
@@ -1444,6 +1654,22 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         }
     }
 
+    if (overriddenStdlibFunction != nullptr) {
+        // Keep the original declaration for references already bound to this function.
+        llvm::Function *original = overriddenStdlibFunction->function;
+        Assert(original->getName() == functionName && original->getFunctionType() == function->getFunctionType());
+        original->copyAttributesFrom(function);
+        function->eraseFromParent();
+        ast->RemoveFunction(overriddenStdlibFunction);
+        overriddenStdlibFunction->pos = pos;
+        overriddenStdlibFunction->type = functionType;
+        overriddenStdlibFunction->storageClass = storageClass;
+        overriddenStdlibFunction->isConstexpr = false;
+        delete overriddenStdlibFunction->attrs;
+        overriddenStdlibFunction->attrs = decl->attributeList ? new AttributeList(*decl->attributeList) : nullptr;
+        return;
+    }
+
     // If llvm gave us back a Function * with a different name than the one
     // we asked for, then there's already a function with that same
     // (mangled) name in the llvm::Module.  In that case, erase the one we
@@ -1457,6 +1683,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     // symbol table
     Symbol *funSym =
         new Symbol(name, pos, Symbol::SymbolKind::Function, functionType, storageClass, decl->attributeList);
+    funSym->isConstexpr = functionType->IsConstexpr();
     funSym->function = function;
     bool ok = symbolTable->AddFunction(funSym);
     Assert(ok);
@@ -1469,6 +1696,12 @@ void Module::AddFunctionDefinition(const std::string &name, const FunctionType *
         return;
     }
 
+    if (sym->isConstexpr != type->IsConstexpr()) {
+        Error(code->pos,
+              "Definition of function \"%s\" conflicts in \"constexpr\" qualifier with previous declaration at %s:%d.",
+              name.c_str(), sym->pos.name, sym->pos.first_line);
+        return;
+    }
     sym->pos = code->pos;
 
     // FIXME: because we encode the parameter names in the function type,

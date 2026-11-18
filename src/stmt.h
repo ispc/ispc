@@ -574,6 +574,28 @@ class AssertStmt : public Stmt {
     Expr *expr;
 };
 
+/** A declaration that checks a constant condition during type checking. */
+class StaticAssertStmt : public Stmt {
+  public:
+    StaticAssertStmt(const std::string &message, Expr *expr, SourcePos pos);
+
+    static inline bool classof(const ASTNode *node) { return node->getValueID() == StaticAssertStmtID; }
+
+    void EmitCode(FunctionEmitContext *) const override {}
+    std::string GetString() const override;
+    void Print(Indent &indent) const override;
+    Stmt *TypeCheck() override;
+    int EstimateCost() const override { return 0; }
+    StaticAssertStmt *Instantiate(TemplateInstantiation &templInst) const override;
+
+    bool CheckCondition(bool allowDeferred);
+
+    Expr *expr;
+
+  private:
+    const std::string message;
+};
+
 /** Representation of a delete statement in the program.
  */
 class DeleteStmt : public Stmt {

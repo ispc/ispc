@@ -16,12 +16,23 @@
 #include "decl.h"
 #include "ispc.h"
 
+#include <llvm/ADT/ArrayRef.h>
 #include <map>
 
 namespace ispc {
 
 class StructType;
 class ConstExpr;
+
+enum class ConstexprIntrinsic {
+    None,
+    Bitcast,
+    SignedSaturatingAdd,
+    SignedSaturatingSub,
+    UnsignedSaturatingAdd,
+    UnsignedSaturatingSub,
+    PackMask
+};
 
 /**
    @brief Representation of a program symbol.
@@ -76,12 +87,14 @@ class Symbol : public Traceable {
     ConstExpr *constValue;     /*!< For symbols with const-qualified types, this may store
                                     the symbol's compile-time constant value.  This value may
                                     validly be nullptr for a const-qualified type, however; for
-                                    example, the ConstExpr class can't currently represent
-                                    struct types.  For cases like these, ConstExpr is nullptr,
+                                    example, the ConstExpr class doesn't always represent
+                                    all complex constant values. For cases like these, ConstExpr is nullptr,
                                     though for all const symbols, the value pointed to by the
                                     storageInfo pointer member will be its constant value.  (This
                                     messiness is due to needing an ispc ConstExpr for the early
                                     constant folding optimizations). */
+    bool isConstexpr;          /*!< True if the symbol was declared with constexpr. */
+    bool constEvalPending;     /*!< True if constant evaluation of the initializer is deferred. */
     StorageClass storageClass; /*!< Records the storage class (if any) provided with the
                                     symbol's declaration. */
     int varyingCFDepth;        /*!< This member records the number of levels of nested 'varying'
@@ -94,6 +107,8 @@ class Symbol : public Traceable {
     /*!< For symbols that are parameters to functions or are
          variables declared inside functions, this gives the
          function they're in. */
+
+    ConstexprIntrinsic constexprIntrinsic = ConstexprIntrinsic::None;
 
     /** Attributes associated with the symbol. */
     AttributeList *attrs;
@@ -178,6 +193,9 @@ class SymbolTable {
         struct; see AddType() and AddEnumerator(). */
     bool IsTemplateParameterScope() const { return types.size() == templateParameterScope; }
 
+    /** Returns true when the parser is in a template parameter scope or a nested scope. */
+    bool HasTemplateParameterScope() const { return templateParameterScope != 0; }
+
     /** Adds the given variable symbol to the symbol table.
         @param symbol The symbol to be added
 
@@ -217,18 +235,15 @@ class SymbolTable {
         were found. */
     bool LookupFunction(const char *name, std::vector<Symbol *> *matches = nullptr);
 
-    /** Adds the given function symbol for LLVM intrinsic to the symbol table.
-        @param symbol The function symbol to be added.
+    /** Adds a function symbol with a distinct ISPC signature for an LLVM intrinsic. */
+    void AddIntrinsics(Symbol *symbol);
 
-        @return true if the symbol has been added.  False if another
-        function symbol with the same name and function signature is
-        already present in the symbol table. */
-    bool AddIntrinsics(Symbol *symbol);
-
-    /** Looks for a LLVM intrinsic function in the symbol table.
+    /** Looks for an LLVM intrinsic with the given ISPC signature, or any
+        matching symbol if no return type is given.
 
         @return pointer to matching Symbol; nullptr if none is found. */
-    Symbol *LookupIntrinsics(llvm::Function *func);
+    Symbol *LookupIntrinsics(llvm::Function *func, const Type *returnType = nullptr,
+                             llvm::ArrayRef<const Type *> parameterTypes = {});
 
     /** Looks for a function with the given name and type
         in the symbol table.
@@ -350,10 +365,8 @@ class SymbolTable {
     typedef std::map<std::string, std::vector<Symbol *>> FunctionMapType;
     FunctionMapType functions;
 
-    /** This maps ISPC symbols for corresponding LLVM intrinsic functions.
-     */
-    typedef std::map<llvm::Function *, Symbol *> IntrinsicMapType;
-    IntrinsicMapType intrinsics;
+    /** One LLVM declaration can represent multiple ISPC signatures. */
+    std::map<llvm::Function *, std::vector<Symbol *>> intrinsics;
 
     /** Function template declarations, as well as function declaration, are
         *not* scoped.  A STL \c vector is used to store the function templates

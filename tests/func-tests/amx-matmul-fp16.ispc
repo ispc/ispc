@@ -1,3 +1,6 @@
+// Copyright (c) 2026, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 // AMX FP16 matrix multiply test
 // This test verifies AMX FP16 dot product (tdpfp16ps) functionality.
 // FP16 is only supported on GNR and later targets.
@@ -63,19 +66,19 @@ task void f_v(uniform float RET[]) {
     for (uniform int i = 0; i < 16; i++) C[i] = 0;
 
     // Zero the destination tile
-    amx_tile_zero(0);
+    amx_tile_zero<amx_tmm0>();
 
     // Load A into tile 1 (stride = 8 bytes per row)
-    amx_tile_load(1, A, 8);
+    amx_tile_load<amx_tmm1>(A, 8);
 
     // Load B into tile 2 (stride = 8 bytes per row)
-    amx_tile_load(2, B, 8);
+    amx_tile_load<amx_tmm2>(B, 8);
 
     // Compute C = A * B using FP16 dot product
-    amx_dpfp16ps(0, 1, 2);
+    amx_dpfp16ps<amx_tmm0, amx_tmm1, amx_tmm2>();
 
     // Store result from tile 0
-    amx_tile_store(0, C, 8);
+    amx_tile_store<amx_tmm0>(C, 8);
 
     // Release tiles
     amx_tile_release();

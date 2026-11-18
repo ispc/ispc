@@ -450,6 +450,8 @@ std::unordered_map<std::string, std::string> X86IntrinsicToFeature = {
     {"tilestored64", "amxtile"},
     // amxfp16
     {"tdpfp16ps", "amxfp16"},
+    // amxbf16
+    {"tdpbf16ps", "amxbf16"},
     // amxint8
     {"tdpbssd", "amxint8"},
     {"tdpbsud", "amxint8"},
@@ -489,13 +491,13 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_SPR,
      {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512fp16", "avx_vnni", "avx512_vnni",
-      "amxtile", "amxint8"}},
+      "amxtile", "amxint8", "amxbf16"}},
     {CPU_GNR,
      {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512fp16", "avx_vnni", "avx512_vnni",
-      "amxtile", "amxint8", "amxfp16"}},
+      "amxtile", "amxint8", "amxbf16", "amxfp16"}},
     {CPU_DMR,
      {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512fp16", "avx10", "avx_vnni",
-      "avx512_vnni", "amxtile", "amxint8", "amxfp16"}},
+      "avx512_vnni", "amxtile", "amxint8", "amxbf16", "amxfp16"}},
     {CPU_ARL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_LNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
@@ -2608,7 +2610,13 @@ std::unique_ptr<Target> Target::Create(Arch arch, const char *cpu, ISPCTarget ta
     return ptr;
 }
 
-bool Target::checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos) {
+bool Target::checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic, SourcePos pos, bool diagnose) {
+    const auto unsupported = [&](const char *message, auto... args) {
+        if (diagnose) {
+            Error(pos, message, args...);
+        }
+        return false;
+    };
     // The name as written in the source, used in error messages.
     const std::string fullName = name.str();
     if (name.consume_front("llvm.") == false) {
@@ -2618,8 +2626,8 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic
     // TODO: Add relevant information to 'CPUFeatures' for non x86 targets.
     if (name.consume_front("x86.") == true) {
         if (!ISPCTargetIsX86(m_ispc_target)) {
-            Error(pos, "LLVM intrinsic \"%s\" supported only on \"x86\" target architecture.", fullName.c_str());
-            return false;
+            return unsupported("LLVM intrinsic \"%s\" supported only on \"x86\" target architecture.",
+                               fullName.c_str());
         }
         AllCPUs a;
         // Extract the first segment (prefix/namespace) from the intrinsic name
@@ -2657,48 +2665,43 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic
                 bool hasAvxVnni = cpuFeatures.count("avx_vnni") > 0;
 
                 if (!hasAvx512Vnni && !hasAvxVnni) {
-                    Error(pos,
-                          "Target specific LLVM intrinsic \"%s\" requires feature \"avx512_vnni\" or \"avx_vnni\" "
-                          "not supported on \"%s\" CPU.",
-                          fullName.c_str(), this->getCPU().c_str());
-                    return false;
+                    return unsupported(
+                        "Target specific LLVM intrinsic \"%s\" requires feature \"avx512_vnni\" or \"avx_vnni\" "
+                        "not supported on \"%s\" CPU.",
+                        fullName.c_str(), this->getCPU().c_str());
                 }
 
                 // AVX2-VNNI (avx_vnni only) supports 128/256-bit widths but not 512-bit
                 if (hasAvxVnni && !hasAvx512Vnni) {
                     size_t lastDot = name.rfind('.');
                     if (lastDot != llvm::StringRef::npos && name.substr(lastDot + 1) == "512") {
-                        Error(pos,
-                              "Target specific LLVM intrinsic \"%s\" requires 512-bit AVX-512 support not "
-                              "available on \"%s\" CPU (only AVX2-VNNI available).",
-                              fullName.c_str(), this->getCPU().c_str());
-                        return false;
+                        return unsupported("Target specific LLVM intrinsic \"%s\" requires 512-bit AVX-512 support not "
+                                           "available on \"%s\" CPU (only AVX2-VNNI available).",
+                                           fullName.c_str(), this->getCPU().c_str());
                     }
                 }
             } else if (cpuFeatures.count(requiredFeature) == 0) {
-                Error(pos,
-                      "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
-                      "CPU.",
-                      fullName.c_str(), requiredFeature.c_str(), this->getCPU().c_str());
-                return false;
+                return unsupported(
+                    "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
+                    "CPU.",
+                    fullName.c_str(), requiredFeature.c_str(), this->getCPU().c_str());
             }
         }
         // Otherwise, validate that the CPU supports the base feature (prefix)
         else if (cpuFeatures.count(intrinsicPrefix) == 0) {
-            Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", fullName.c_str(),
-                  this->getCPU().c_str());
-            return false;
+            return unsupported("Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", fullName.c_str(),
+                               this->getCPU().c_str());
         }
     } else if (name.consume_front("arm.") == true) {
         if (m_arch != Arch::arm) {
-            Error(pos, "LLVM intrinsic \"%s\" supported only on \"arm\" target architecture.", fullName.c_str());
-            return false;
+            return unsupported("LLVM intrinsic \"%s\" supported only on \"arm\" target architecture.",
+                               fullName.c_str());
         }
         // TODO: Check 'CPUFeatures'.
     } else if (name.consume_front("aarch64.") == true) {
         if (m_arch != Arch::aarch64) {
-            Error(pos, "LLVM intrinsic \"%s\" supported only on \"aarch64\" target architecture.", fullName.c_str());
-            return false;
+            return unsupported("LLVM intrinsic \"%s\" supported only on \"aarch64\" target architecture.",
+                               fullName.c_str());
         }
         // TODO: Check 'CPUFeatures'.
     } else if (isTargetIntrinsic) {
@@ -2719,9 +2722,8 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, bool isTargetIntrinsic
             break;
         }
         if (prefix == nullptr || !name.starts_with(prefix)) {
-            Error(pos, "LLVM intrinsic \"%s\" is not supported on \"%s\" target architecture.", fullName.c_str(),
-                  ArchToString(m_arch).c_str());
-            return false;
+            return unsupported("LLVM intrinsic \"%s\" is not supported on \"%s\" target architecture.",
+                               fullName.c_str(), ArchToString(m_arch).c_str());
         }
     }
     return true;

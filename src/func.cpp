@@ -10,6 +10,7 @@
 
 #include "func.h"
 #include "builtins-decl.h"
+#include "constexpr.h"
 #include "ctx.h"
 #include "expr.h"
 #include "llvmutil.h"
@@ -34,6 +35,7 @@
 #include <llvm/PassRegistry.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/SaveAndRestore.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -101,6 +103,7 @@ void Function::debugPrintHelper(DebugPrintPoint dumpPoint) {
         }
     }
 
+    llvm::SaveAndRestore<bool> restorePrintingState(g->printingInitialAST, dumpPoint == DebugPrintPoint::Initial);
     Print();
     printf("\n");
 }
@@ -240,6 +243,9 @@ void Function::typeCheckAndOptimize() {
         debugPrintHelper(DebugPrintPoint::AfterTypeChecking);
 
         if (code != nullptr) {
+            if (GetType()->IsConstexpr()) {
+                ValidateConstexprFunction(this);
+            }
             code = Optimize(code);
 
             debugPrintHelper(DebugPrintPoint::AfterOptimization);
@@ -258,6 +264,12 @@ const FunctionType *Function::GetType() const {
     Assert(type != nullptr);
     return type;
 }
+
+const std::string &Function::GetName() const { return sym->name; }
+
+const std::vector<Symbol *> &Function::GetParameterSymbols() const { return args; }
+
+const Stmt *Function::GetCode() const { return code; }
 
 /** Parameters for tasks are stored in a big structure; this utility
     function emits code to copy those values out of the task structure into
@@ -805,6 +817,9 @@ void Function::GenerateIR() const {
                     // We use stdlib as library so do not add internal attr for its functions.
                     UpdateLinkage(llvm::GlobalValue::InternalLinkage);
                 }
+            } else if (type->IsConstexpr()) {
+                // Match C++ constexpr function linkage semantics (implicitly inline/ODR).
+                UpdateLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
             }
 
             if (g->target->isXeTarget()) {
@@ -898,7 +913,8 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 // TemplateArg
 
 TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(ArgType::Type), type(t), pos(pos) {}
-TemplateArg::TemplateArg(const Expr *c, SourcePos pos) : argType(ArgType::NonType), expr(c), pos(pos) {}
+TemplateArg::TemplateArg(const Expr *c, SourcePos pos, bool requiresInstantiation)
+    : argType(ArgType::NonType), expr(c), pos(pos), requiresInstantiation(requiresInstantiation) {}
 
 const Type *TemplateArg::GetAsType() const {
     switch (argType) {
@@ -976,17 +992,23 @@ void TemplateArg::SetAsVaryingType() {
 }
 
 const ConstExpr *TemplateArg::GetAsConstExpr() const {
-    if (IsNonType()) {
-        const ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
-        if (!constExpr) {
-            const SymbolExpr *symExpr = llvm::dyn_cast<SymbolExpr>(expr);
-            if (symExpr->GetBaseSymbol()->constValue) {
-                constExpr = llvm::dyn_cast<ConstExpr>(symExpr->GetBaseSymbol()->constValue);
-            }
-        }
-        return constExpr;
+    return IsNonType() ? llvm::dyn_cast_or_null<ConstExpr>(expr) : nullptr;
+}
+
+ConstExpr *TemplateArg::EvaluateNonType(Expr *expr, SourcePos pos) {
+    if (expr == nullptr) {
+        return nullptr;
     }
-    return nullptr;
+    ConstExpr *value = ConstexprEvaluate(expr, expr->GetType());
+    const Type *type = value ? value->GetType() : nullptr;
+    if (!type || !type->IsUniformType() ||
+        !(CastType<EnumType>(type) || (CastType<AtomicType>(type) && (type->IsIntType() || type->IsBoolType())))) {
+        Error(pos,
+              "Only integral, bool, enum types and non-type template parameters are allowed as template arguments.");
+        return nullptr;
+    }
+    // A template argument carries the value, independent of the symbol it came from.
+    return llvm::isa<ConstSymbolExpr>(value) ? new ConstExpr(value, pos) : value;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1329,6 +1351,12 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
         return nullptr;
     }
 
+    // Keep the original symbol for a global with a deferred initializer.
+    // The module will set its constant value after template instantiation.
+    if (sym->constEvalPending) {
+        return sym;
+    }
+
     // A note about about global symbols.
     // In the current state of symbol table there's no clear way to differentiate between global and local symbols.
     // There's "parentFunction" field, but it's empty for some local symbols and paramters, which prevents using it
@@ -1361,6 +1389,7 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
         instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
     }
 
+    instSym->isConstexpr = sym->isConstexpr;
     instSym->varyingCFDepth = sym->varyingCFDepth;
     instSym->parentFunction = nullptr;
     instSym->storageInfo = sym->storageInfo;
@@ -1380,6 +1409,10 @@ Symbol *TemplateInstantiation::InstantiateTemplateSymbol(TemplateSymbol *sym) {
     // Create a function symbol
     Symbol *instSym =
         new Symbol(sym->name, sym->pos, Symbol::SymbolKind::TemplateInstantiation, instType, sym->storageClass);
+    const FunctionType *functionType = CastType<FunctionType>(instType);
+    if (functionType) {
+        instSym->isConstexpr = functionType->IsConstexpr();
+    }
     functionSym = instSym;
 
     // Create llvm::Function and attach to the symbol, so the symbol is complete and ready for use.
