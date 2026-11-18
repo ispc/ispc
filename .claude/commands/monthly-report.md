@@ -1,6 +1,6 @@
 ---
 description: Generate a monthly report based on all PRs merged to https://github.com/ispc/ispc during the previous month
-allowed-tools: Bash(gh pr list *), Bash(gh issue view *), Bash(gh release list *), Bash(gh release view *)
+allowed-tools: Bash(gh pr list *), Bash(gh issue view *), Bash(gh release list *), Bash(gh release view *), Bash(gh api users/*)
 ---
 
 # Monthly Report Generator
@@ -41,10 +41,21 @@ allowed-tools: Bash(gh pr list *), Bash(gh issue view *), Bash(gh release list *
    - PR body lacks clear motivation/user impact, AND
    - An issue is explicitly linked
 ```bash
-   gh issue view N --repo ispc/ispc --json title,body,labels
+   gh issue view N --repo ispc/ispc --json title,body,labels,author
 ```
 
-5. **Fetch releases published during the period**:
+5. **Identify external reporters and contributors** (best effort):
+
+   For each linked issue and each PR authored outside the ISPC core team (skip team members and bots such as `app/github-actions`, `app/dependabot`, `app/copilot-swe-agent`), try to determine which company or project the person represents:
+```bash
+   gh issue view N --repo ispc/ispc --json author
+   gh api users/LOGIN -q '[.name,.company,.email,.blog,.bio]|@tsv'
+   gh api users/LOGIN/orgs -q '.[].login'
+```
+
+   Sources, in order of reliability: the `company` field, the email domain (ignore generic domains like gmail.com), GitHub organizations, blog/bio, and context in the issue/PR body (e.g., "our engine", product names). Only attribute a company/project when there is clear evidence; if it is unknown, say nothing. Never guess.
+
+6. **Fetch releases published during the period**:
 ```bash
    gh release list --repo ispc/ispc --limit 20 \
      --json tagName,publishedAt,url
@@ -57,7 +68,7 @@ allowed-tools: Bash(gh pr list *), Bash(gh issue view *), Bash(gh release list *
 
    Extract key highlights from release notes (typically 2-3 most important items).
 
-6. **Categorize PRs** using this priority order:
+7. **Categorize PRs** using this priority order:
 
    | Category | Label matches | Content indicators |
    |----------|--------------|-------------------|
@@ -66,32 +77,35 @@ allowed-tools: Bash(gh pr list *), Bash(gh issue view *), Bash(gh release list *
    | Bug fixes | `bug`, `fix`, `bugfix` | Crash fixes, correctness issues |
    | CI/Infrastructure | `CI`, `infrastructure`, `build`, `test` | Workflows, build system, testing |
 
-7. **Generate the report**:
+8. **Generate the report**:
 ```
 ISPC Monthly Report - [Start Date] to [End Date]
 
 Highlights
-[2-3 sentences summarizing key themes, major achievements, and notable contributors]
+[2-3 sentences summarizing key themes, and major achievements]
 [If a MAJOR release (vX.Y.0) was published during the period, mention it prominently here with release URL and 2-3 key features from release notes]
 
 Features
-    • [Author] [what + why + user benefit] ([full PR URL])
+    • [What + why + user benefit] ([full PR URL])
 
 Performance
-    • [Author] [improvement + measurable impact if available] ([full PR URL])
+    • [Improvement + measurable impact if available] ([full PR URL])
 
 Bug fixes
-    • [Author] [what was broken + user impact + resolution] ([full PR URL])
+    • [What was broken + user impact + resolution] ([full PR URL])
 
 CI/Infrastructure
-    • [Author] [change + why needed] ([full PR URL])
+    • [Change + why needed] ([full PR URL])
+
+External contributions
+    • [What was contributed + user benefit, with the organization if step 5 found one] ([full PR URL])
 
 Release Activity
-    • [Author] [release-related work] ([full PR URL])
+    • [Release-related work] ([full PR URL])
     • [For MINOR/PATCH releases (vX.Y.Z where Z>0): ISPC vX.Y.Z released with brief description ([release URL])]
 
 Work in Progress
-    • [Author] [what is being developed + expected benefit] ([full PR URL])
+    • [What is being developed + expected benefit] ([full PR URL])
 ```
 
 ## Guidelines
@@ -102,7 +116,10 @@ Work in Progress
 - **Plain text only**: No markdown formatting—must paste cleanly into Outlook
 - **Full URLs always**: https://github.com/ispc/ispc/pull/XXXX
 - **Omit empty sections**: Don't include categories with no PRs
-- **Author names**: Use real first names, not GitHub usernames
+- **External contributions section**: PRs authored outside the ISPC core team (see step 5) go in "External contributions" instead of Features/Performance/Bug fixes, so their impact is visible on its own.
+- **Don't repeat the previous report**: If the user provides the previous report, drop every PR, issue and release it already covers, even when it falls inside the date range (e.g., a release published on the first days of the window that the previous report already announced). Mention it in the Highlights only if something new happened (e.g., a follow-up patch release).
+- **Faceless report**: Do not mention authors, contributors, reviewers, or GitHub usernames anywhere in the report. Describe only what was done.
+- **External attribution**: When step 5 identified the company/project behind an externally reported issue or contributed PR, mention the organization, not the person (e.g., "reported by RENDEASE", "contributed by the HardenedBSD project").
 - **Output file**: Save to `YYYY_MM_DD_report.txt` using the end date (e.g., `2024_12_04_report.txt`)
 
 ## Writing Style
@@ -119,13 +136,13 @@ Prefer high-level explanations that focus on user-facing impact over implementat
 ## Examples
 
 **Single PR:**
-    • Arina added avx512gnr* (GraniteRapids) targets, enabling support for Intel's latest server processors (https://github.com/ispc/ispc/pull/3670).
+    • Added avx512gnr* (GraniteRapids) targets, enabling support for Intel's latest server processors (https://github.com/ispc/ispc/pull/3670).
 
 **Combined PRs:**
-    • Arina optimized stdlib compilation with a width family system that reduces bitcode duplication, cutting binary size and build time by approximately 30% (https://github.com/ispc/ispc/pull/3617, https://github.com/ispc/ispc/pull/3632, https://github.com/ispc/ispc/pull/3657). The family-based approach now allows adding new targets to ISPC with minimal increase in binary size.
+    • Optimized stdlib compilation with a width family system that reduces bitcode duplication, cutting binary size and build time by approximately 30% (https://github.com/ispc/ispc/pull/3617, https://github.com/ispc/ispc/pull/3632, https://github.com/ispc/ispc/pull/3657). The family-based approach now allows adding new targets to ISPC with minimal increase in binary size.
 
 **Work in Progress:**
-    • Antoni is finalizing optimization of popcnt implementation for AVX512 resulting in up to 3.5x speedup (https://github.com/ispc/ispc/pull/3639).
+    • Finalizing optimization of popcnt implementation for AVX512 resulting in up to 3.5x speedup (https://github.com/ispc/ispc/pull/3639).
 
 **Highlights with major release:**
     ISPC v1.29.0 was released (https://github.com/ispc/ispc/releases/tag/v1.29.0), featuring sample-based profile-guided optimization, optimized dispatcher, new avx512gnr targets for Intel Granite Rapids, and numerous bug fixes and performance improvements. Based on a patched LLVM 20.1.8. Full release notes are available here: https://github.com/ispc/ispc/releases/tag/v1.29.0
