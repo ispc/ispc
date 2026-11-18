@@ -1,14 +1,21 @@
 #!/bin/bash -e
 
-# Fetch xwin to get Windows VcTools and SDK (windows cross-compile on linux or macos)
-XWIN_URL="https://github.com/Jake-Shadle/xwin/releases/download/0.6.7/xwin-0.6.7-x86_64-unknown-linux-musl.tar.gz"
-if [[ $OSTYPE == 'darwin'* ]]; then
-    XWIN_URL="https://github.com/Jake-Shadle/xwin/releases/download/0.6.6-rc.2/xwin-0.6.6-rc.2-x86_64-apple-darwin.tar.gz"
-fi
+# Fetch xwin to get Windows VcTools and SDK (windows cross-compile on linux or macos).
+# xwin older than 0.10.0 fails on the current Microsoft manifest with
+# "unable to find x86_64 headers for Win11SDK_*".
+XWIN_VERSION=0.10.0
 mkdir xwin-install
 cd xwin-install
-wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 -O xwin.tar.gz $XWIN_URL
-tar --strip-components=1 -xf xwin.tar.gz
-./xwin --accept-license splat --output ../winsdk
+if [[ $OSTYPE == 'darwin'* ]]; then
+    # xwin does not publish macOS binaries after 0.6.6-rc.2, so build it from crates.io.
+    cargo install --locked --root . --version "$XWIN_VERSION" xwin
+    XWIN=./bin/xwin
+else
+    XWIN_URL="https://github.com/Jake-Shadle/xwin/releases/download/${XWIN_VERSION}/xwin-${XWIN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+    wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 -O xwin.tar.gz "$XWIN_URL"
+    tar --strip-components=1 -xf xwin.tar.gz
+    XWIN=./xwin
+fi
+$XWIN --accept-license splat --output ../winsdk
 cd ..
 rm -rf xwin-install
