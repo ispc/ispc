@@ -249,8 +249,9 @@ Attribute::Attribute(const Attribute &a) : name(a.name), arg(a.arg) {}
 
 bool Attribute::IsKnownAttribute() const {
     // Known/supported attributes.
-    static std::unordered_set<std::string> lKnownParamAttrs = {"noescape", "address_space", "unmangled",  "memory",
-                                                               "cdecl",    "external_only", "deprecated", "aligned"};
+    static std::unordered_set<std::string> lKnownParamAttrs = {"noescape",   "address_space", "unmangled",
+                                                               "memory",     "cdecl",         "external_only",
+                                                               "deprecated", "aligned",       "__stdlib_definition"};
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
         return true;

@@ -20,13 +20,18 @@
 #include "util.h"
 
 #include <algorithm>
+#include <limits>
 #include <optional>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
+#include <llvm/ADT/APInt.h>
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/Support/SaveAndRestore.h>
 
 using namespace ispc;
@@ -300,43 +305,162 @@ static ConstExpr *lConstExprFromConstant(const Type *type, llvm::Constant *const
     return nullptr;
 }
 
-template <typename T>
-static ConstExpr *lBitcastFloatToInt(const std::vector<llvm::APFloat> &floats, const Type *type, SourcePos pos) {
-    T bits[ISPC_MAX_NVEC];
-    for (size_t i = 0; i < floats.size(); ++i) {
-        bits[i] = static_cast<T>(floats[i].bitcastToAPInt().getSExtValue());
+static unsigned lGetBitcastElementWidth(const AtomicType *type) {
+    switch (type->basicType) {
+    case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_UINT8:
+        return 8;
+    case AtomicType::TYPE_INT16:
+    case AtomicType::TYPE_UINT16:
+    case AtomicType::TYPE_FLOAT16:
+        return 16;
+    case AtomicType::TYPE_INT32:
+    case AtomicType::TYPE_UINT32:
+    case AtomicType::TYPE_FLOAT:
+        return 32;
+    case AtomicType::TYPE_INT64:
+    case AtomicType::TYPE_UINT64:
+    case AtomicType::TYPE_DOUBLE:
+        return 64;
+    default:
+        return 0;
     }
-    return type->IsVaryingType() ? new ConstExpr(type, bits, pos) : new ConstExpr(type, bits[0], pos);
 }
 
-static ConstExpr *lEvalBitcast(const ConstExpr *value, const Type *type, SourcePos pos) {
-    auto *atomicType = CastType<AtomicType>(type);
-    Assert(atomicType != nullptr);
-    if (atomicType->IsFloatType()) {
-        llvm::Type *elementType = type->LLVMType(g->ctx)->getScalarType();
-        uint64_t bits[ISPC_MAX_NVEC];
-        int count = value->GetValues(bits);
+struct BitcastShape {
+    const AtomicType *elementType;
+    unsigned elementWidth;
+    unsigned elementCount;
+
+    unsigned GetWidth() const { return elementWidth * elementCount; }
+};
+
+static std::optional<BitcastShape> lGetBitcastShape(const Type *type) {
+    const Type *elementType = type;
+    int elementCount = 1;
+    if (const auto *vector = CastType<VectorType>(type)) {
+        if (!vector->IsUniformType() || vector->IsDependent()) {
+            return std::nullopt;
+        }
+        elementType = vector->GetElementType();
+        elementCount = vector->GetElementCount();
+    }
+    const auto *atomic = CastType<AtomicType>(elementType);
+    if (atomic == nullptr || (!atomic->IsUniformType() && !atomic->IsVaryingType())) {
+        return std::nullopt;
+    }
+    unsigned elementWidth = lGetBitcastElementWidth(atomic);
+    if (elementWidth == 0 || elementCount <= 0 ||
+        static_cast<unsigned>(elementCount) > std::numeric_limits<unsigned>::max() / elementWidth) {
+        return std::nullopt;
+    }
+    return BitcastShape{atomic, elementWidth, static_cast<unsigned>(elementCount)};
+}
+
+static void lAppendBitcastBits(const ConstExpr *value, const BitcastShape &shape,
+                               llvm::SmallVectorImpl<llvm::APInt> &bits) {
+    if (shape.elementType->IsFloatType()) {
         std::vector<llvm::APFloat> floats;
-        floats.reserve(count);
+        value->GetValues(floats);
+        for (const auto &f : floats) {
+            bits.push_back(f.bitcastToAPInt());
+        }
+    } else {
+        uint64_t ints[ISPC_MAX_NVEC];
+        int count = value->GetValues(ints);
         for (int i = 0; i < count; ++i) {
-            floats.emplace_back(elementType->getFltSemantics(),
-                                llvm::APInt(elementType->getScalarSizeInBits(), bits[i]));
+            bits.push_back(llvm::APInt(64, ints[i]).zextOrTrunc(shape.elementWidth));
+        }
+    }
+}
+
+template <typename T>
+static ConstExpr *lMakeBitcastInt(const AtomicType *type, llvm::ArrayRef<llvm::APInt> bits, SourcePos pos) {
+    T values[ISPC_MAX_NVEC];
+    for (size_t i = 0; i < bits.size(); ++i) {
+        if constexpr (std::is_signed_v<T>) {
+            values[i] = static_cast<T>(bits[i].getSExtValue());
+        } else {
+            values[i] = static_cast<T>(bits[i].getZExtValue());
+        }
+    }
+    return new ConstExpr(type, values, pos);
+}
+
+static ConstExpr *lMakeBitcastValue(const AtomicType *type, llvm::ArrayRef<llvm::APInt> bits, SourcePos pos) {
+    switch (type->basicType) {
+    case AtomicType::TYPE_INT8:
+        return lMakeBitcastInt<int8_t>(type, bits, pos);
+    case AtomicType::TYPE_UINT8:
+        return lMakeBitcastInt<uint8_t>(type, bits, pos);
+    case AtomicType::TYPE_INT16:
+        return lMakeBitcastInt<int16_t>(type, bits, pos);
+    case AtomicType::TYPE_UINT16:
+        return lMakeBitcastInt<uint16_t>(type, bits, pos);
+    case AtomicType::TYPE_INT32:
+        return lMakeBitcastInt<int32_t>(type, bits, pos);
+    case AtomicType::TYPE_UINT32:
+        return lMakeBitcastInt<uint32_t>(type, bits, pos);
+    case AtomicType::TYPE_INT64:
+        return lMakeBitcastInt<int64_t>(type, bits, pos);
+    case AtomicType::TYPE_UINT64:
+        return lMakeBitcastInt<uint64_t>(type, bits, pos);
+    case AtomicType::TYPE_FLOAT16:
+    case AtomicType::TYPE_FLOAT:
+    case AtomicType::TYPE_DOUBLE: {
+        std::vector<llvm::APFloat> floats;
+        floats.reserve(bits.size());
+        for (const auto &lane : bits) {
+            floats.emplace_back(type->GetFloatSemantics(), lane);
         }
         return new ConstExpr(type, floats, pos);
     }
-
-    std::vector<llvm::APFloat> floats;
-    value->GetValues(floats);
-    switch (atomicType->basicType) {
-    case AtomicType::TYPE_INT16:
-        return lBitcastFloatToInt<int16_t>(floats, type, pos);
-    case AtomicType::TYPE_INT32:
-        return lBitcastFloatToInt<int32_t>(floats, type, pos);
-    case AtomicType::TYPE_INT64:
-        return lBitcastFloatToInt<int64_t>(floats, type, pos);
     default:
         UNREACHABLE();
     }
+}
+
+static ConstExpr *lEvalBitcast(const ConstExpr *value, const Type *type, SourcePos pos) {
+    const auto from = lGetBitcastShape(value->GetType());
+    const auto to = lGetBitcastShape(type);
+    Assert(from && to && from->GetWidth() == to->GetWidth());
+
+    llvm::SmallVector<llvm::APInt, 8> bits;
+    if (value->IsAggregate()) {
+        for (const ConstExpr *element : value->GetAggregateValues()) {
+            lAppendBitcastBits(element, *from, bits);
+        }
+    } else {
+        lAppendBitcastBits(value, *from, bits);
+    }
+
+    const auto *toVector = CastType<VectorType>(type);
+    if (!value->IsAggregate() && toVector == nullptr) {
+        // An atomic varying value reinterprets each program instance separately.
+        return lMakeBitcastValue(to->elementType, bits, pos);
+    }
+
+    // Pack the declared short-vector elements in target byte order. Padding
+    // introduced when lowering a uniform vector to LLVM carries no payload.
+    const bool littleEndian = g->target->getDataLayout()->isLittleEndian();
+    auto bitOffset = [littleEndian](const BitcastShape &shape, unsigned i) {
+        return shape.elementWidth * (littleEndian ? i : shape.elementCount - 1 - i);
+    };
+    Assert(bits.size() == from->elementCount);
+    llvm::APInt packed(from->GetWidth(), 0);
+    for (unsigned i = 0; i < from->elementCount; ++i) {
+        packed.insertBits(bits[i], bitOffset(*from, i));
+    }
+    if (toVector == nullptr) {
+        return lMakeBitcastValue(to->elementType, packed, pos);
+    }
+    std::vector<ConstExpr *> elements;
+    elements.reserve(to->elementCount);
+    for (unsigned i = 0; i < to->elementCount; ++i) {
+        llvm::APInt element = packed.extractBits(to->elementWidth, bitOffset(*to, i));
+        elements.push_back(lMakeBitcastValue(to->elementType, element, pos));
+    }
+    return new ConstExpr(toVector, elements, pos);
 }
 
 static int lVectorSwizzleIndex(char id) {
@@ -493,11 +617,7 @@ static ConstExpr *lMakeZeroConstExpr(const Type *type, SourcePos pos) {
         case AtomicType::TYPE_FLOAT16:
         case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE: {
-            llvm::Type *llvmType = type->GetAsUniformType()->LLVMType(g->ctx);
-            if (llvmType == nullptr) {
-                return nullptr;
-            }
-            llvm::APFloat zero = llvm::APFloat::getZero(llvmType->getFltSemantics());
+            llvm::APFloat zero = llvm::APFloat::getZero(at->GetFloatSemantics());
             if (type->IsVaryingType()) {
                 std::vector<llvm::APFloat> vals;
                 vals.resize(g->target->getVectorWidth(), zero);
@@ -1628,7 +1748,6 @@ ConstExpr *ConstexprEvaluator::EvalExprList(const ExprList *exprList, const Type
         case AtomicType::TYPE_DOUBLE: {
             std::vector<llvm::APFloat> vals;
             vals.reserve(width);
-            llvm::Type *llvmElementType = elementType->LLVMType(g->ctx);
             for (int i = 0; i < nInits; ++i) {
                 ConstExpr *ce = evalElement(exprList->exprs[i], elementType);
                 if (ce == nullptr) {
@@ -1636,7 +1755,7 @@ ConstExpr *ConstexprEvaluator::EvalExprList(const ExprList *exprList, const Type
                     return nullptr;
                 }
                 std::vector<llvm::APFloat> tmp;
-                ce->GetValues(tmp, llvmElementType);
+                ce->GetValues(tmp);
                 vals.push_back(tmp[0]);
             }
             if (nInits == 1) {
@@ -2017,6 +2136,13 @@ ConstExpr *ConstexprEvaluator::EvalFunction(const Function *func, const std::vec
 }
 
 } // namespace
+
+bool ispc::IsConstexprBitcastTypePair(const Type *from, const Type *to) {
+    const auto fromShape = lGetBitcastShape(from);
+    const auto toShape = lGetBitcastShape(to);
+    return fromShape && toShape && from->IsVaryingType() == to->IsVaryingType() &&
+           fromShape->GetWidth() == toShape->GetWidth();
+}
 
 bool ispc::IsConstexprTypeAllowed(const Type *type) {
     if (type == nullptr) {

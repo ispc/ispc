@@ -221,6 +221,9 @@ class AST {
         information and source code. */
     void AddFunction(Symbol *sym, Stmt *code);
 
+    /** Remove an existing function body while preserving its symbol. */
+    void RemoveFunction(Symbol *sym);
+
     void AddFunctionTemplate(TemplateSymbol *templ, Stmt *code);
 
     /** Generate LLVM IR for all of the functions into the current

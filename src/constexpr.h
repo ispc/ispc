@@ -26,6 +26,9 @@ struct ConstexprEvalResult {
 /** Returns true if the type is allowed for constexpr variables in v1. */
 bool IsConstexprTypeAllowed(const Type *type);
 
+/** Returns true if a bitcast between these frontend types can be constant-evaluated. */
+bool IsConstexprBitcastTypePair(const Type *from, const Type *to);
+
 /** Try to evaluate an expression to a ConstExpr using constexpr rules.
     Returns nullptr if the expression can't be constant-evaluated. */
 ConstExpr *ConstexprEvaluate(Expr *expr, const Type *expectedType);

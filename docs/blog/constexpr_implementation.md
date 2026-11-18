@@ -136,8 +136,11 @@ exercise the same contract for the legal scales 1, 2, 4, and 8.
 The next conversions brought in local aggregate element assignment and exact
 integer/floating-point bit reinterpretation. Rotation tables and AMX tile
 descriptors can now be built with constexpr loops. Existing bit-conversion,
-floating classification, and selected SSE construction/shuffle functions are
-usable during constant evaluation with their ordinary call syntax. These
+floating classification, and SSE constructors, integer shuffles, shifts,
+extract/insert, and representation casts are usable during constant evaluation
+with their ordinary call syntax. Typed short-vector bitcasts preserve vector
+operations at runtime. The frontend retains ISPC signedness, precision,
+variability, and logical element counts throughout numeric folding. These
 changes preserve the existing public interfaces; new explicit gather/scatter
 APIs are not a prerequisite for internal migration.
 The remaining “v2” candidates are:

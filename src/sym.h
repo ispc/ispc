@@ -16,6 +16,7 @@
 #include "decl.h"
 #include "ispc.h"
 
+#include <llvm/ADT/ArrayRef.h>
 #include <map>
 
 namespace ispc {
@@ -97,7 +98,7 @@ class Symbol : public Traceable {
          variables declared inside functions, this gives the
          function they're in. */
 
-    /** Indicates a float/integer bitcast intrinsic supported during constant evaluation. */
+    /** Indicates a numeric bitcast intrinsic supported during constant evaluation. */
     bool isConstexprBitcast = false;
 
     /** Attributes associated with the symbol. */
@@ -225,18 +226,15 @@ class SymbolTable {
         were found. */
     bool LookupFunction(const char *name, std::vector<Symbol *> *matches = nullptr);
 
-    /** Adds the given function symbol for LLVM intrinsic to the symbol table.
-        @param symbol The function symbol to be added.
+    /** Adds a function symbol with a distinct ISPC signature for an LLVM intrinsic. */
+    void AddIntrinsics(Symbol *symbol);
 
-        @return true if the symbol has been added.  False if another
-        function symbol with the same name and function signature is
-        already present in the symbol table. */
-    bool AddIntrinsics(Symbol *symbol);
-
-    /** Looks for a LLVM intrinsic function in the symbol table.
+    /** Looks for an LLVM intrinsic with the given ISPC signature, or any
+        matching symbol if no return type is given.
 
         @return pointer to matching Symbol; nullptr if none is found. */
-    Symbol *LookupIntrinsics(llvm::Function *func);
+    Symbol *LookupIntrinsics(llvm::Function *func, const Type *returnType = nullptr,
+                             llvm::ArrayRef<const Type *> parameterTypes = {});
 
     /** Looks for a function with the given name and type
         in the symbol table.
@@ -358,10 +356,8 @@ class SymbolTable {
     typedef std::map<std::string, std::vector<Symbol *>> FunctionMapType;
     FunctionMapType functions;
 
-    /** This maps ISPC symbols for corresponding LLVM intrinsic functions.
-     */
-    typedef std::map<llvm::Function *, Symbol *> IntrinsicMapType;
-    IntrinsicMapType intrinsics;
+    /** One LLVM declaration can represent multiple ISPC signatures. */
+    std::map<llvm::Function *, std::vector<Symbol *>> intrinsics;
 
     /** Function template declarations, as well as function declaration, are
         *not* scoped.  A STL \c vector is used to store the function templates

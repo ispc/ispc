@@ -205,21 +205,31 @@ Symbol *SymbolTable::LookupFunction(const char *name, const FunctionType *type) 
     return nullptr;
 }
 
-bool SymbolTable::AddIntrinsics(Symbol *symbol) {
-    if (LookupIntrinsics(symbol->function) != nullptr) {
-        // A function of the same type has already been added to
-        // the symbol table
-        return false;
-    }
-    intrinsics[symbol->function] = symbol;
-    return true;
-}
+void SymbolTable::AddIntrinsics(Symbol *symbol) { intrinsics[symbol->function].push_back(symbol); }
 
-Symbol *SymbolTable::LookupIntrinsics(llvm::Function *func) {
-    IntrinsicMapType::iterator iter = intrinsics.find(func);
-    if (iter != intrinsics.end()) {
-        Symbol *funcs = iter->second;
-        return funcs;
+Symbol *SymbolTable::LookupIntrinsics(llvm::Function *func, const Type *returnType,
+                                      llvm::ArrayRef<const Type *> parameterTypes) {
+    auto iter = intrinsics.find(func);
+    if (iter == intrinsics.end()) {
+        return nullptr;
+    }
+    if (returnType == nullptr) {
+        return iter->second.front();
+    }
+
+    for (Symbol *symbol : iter->second) {
+        const auto *type = CastType<FunctionType>(symbol->type);
+        Assert(type != nullptr);
+        if (type->GetNumParameters() != int(parameterTypes.size()) || !Type::Equal(type->GetReturnType(), returnType)) {
+            continue;
+        }
+        bool matches = true;
+        for (int i = 0; i < type->GetNumParameters() && matches; ++i) {
+            matches = Type::Equal(type->GetParameterType(i), parameterTypes[i]);
+        }
+        if (matches) {
+            return symbol;
+        }
     }
     return nullptr;
 }

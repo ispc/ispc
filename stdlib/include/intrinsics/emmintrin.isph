@@ -23,6 +23,13 @@ typedef struct {
     uniform double<2> m128d_f64;
 } __m128d;
 
+// Reinterpret only the lane payload. Short-vector storage can include padding.
+template <typename T, int N>
+static inline unmasked constexpr uniform __m128i __mm_from_short_vector(uniform T<N> lanes) {
+    uniform __m128i result = {@llvm.ispc.bitcast(lanes, (uniform int32<4>)0)};
+    return result;
+}
+
 #if DEBUG
 typedef __m128i __m128i_unaligned;
 typedef __m128d __m128d_unaligned;
@@ -1012,228 +1019,227 @@ static inline unmasked uniform __m128i _mm_xor_si128(uniform __m128i _A, uniform
  * Integer, shifts
  */
 
-static inline unmasked uniform __m128i _mm_slli_si128(uniform __m128i _A, uniform int _Imm) {
-    const uniform int shift = (uniform uint32)_Imm < 16 ? _Imm : 16;
-    uniform __m128i result = _A;
-    const uniform uint8 *uniform src = (const uniform uint8 *uniform) & _A.m128i_i32[0];
-    uniform uint8 *uniform dst = (uniform uint8 * uniform) & result.m128i_i32[0];
-#pragma unroll
-    for (uniform int i = 0; i < 16; ++i) {
-        dst[i] = i >= shift ? src[(i - shift) & 15] : 0;
+static inline unmasked constexpr uniform __m128i _mm_slli_si128(uniform __m128i _A, uniform int _Imm) {
+    const uniform uint32 count = (uniform uint32)_Imm;
+    if (count == 0) {
+        return _A;
     }
-    return result;
+    if (count >= 16) {
+        uniform __m128i zero = {{0, 0, 0, 0}};
+        return zero;
+    }
+    // SSE byte order places the least significant byte first in each 64-bit lane.
+    const uniform uint64<2> lanes = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint32 bits = (count & 7) * 8;
+    uniform uint64<2> across = {0, lanes[0]};
+    if (count >= 8) {
+        across = across << bits;
+    } else {
+        across = (lanes << bits) | (across >> (64 - bits));
+    }
+    return __mm_from_short_vector<uint64, 2>(across);
 }
 
-template <int Imm> inline unmasked uniform __m128i _mm_slli_si128(uniform __m128i _A) {
+// Keep the immediate form recognizable as a single packed byte shift.
+template <int Imm> inline unmasked constexpr uniform __m128i _mm_slli_si128(uniform __m128i _A) {
     constexpr uniform int shift = (uniform uint32)Imm < 16 ? Imm : 16;
-    uniform __m128i result = _A;
-    const uniform uint8 *uniform src = (const uniform uint8 *uniform) & _A.m128i_i32[0];
-    uniform uint8 *uniform dst = (uniform uint8 * uniform) & result.m128i_i32[0];
-#pragma unroll
-    for (uniform int i = 0; i < 16; ++i) {
-        dst[i] = i >= shift ? src[(i - shift) & 15] : 0;
-    }
-    return result;
+    const uniform uint8<16> source = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint8<16>)0);
+    const uniform uint8 zero = 0;
+    const uniform uint8<16> result = {
+        0 >= shift ? source[(0 - shift) & 15] : zero,
+        1 >= shift ? source[(1 - shift) & 15] : zero,
+        2 >= shift ? source[(2 - shift) & 15] : zero,
+        3 >= shift ? source[(3 - shift) & 15] : zero,
+        4 >= shift ? source[(4 - shift) & 15] : zero,
+        5 >= shift ? source[(5 - shift) & 15] : zero,
+        6 >= shift ? source[(6 - shift) & 15] : zero,
+        7 >= shift ? source[(7 - shift) & 15] : zero,
+        8 >= shift ? source[(8 - shift) & 15] : zero,
+        9 >= shift ? source[(9 - shift) & 15] : zero,
+        10 >= shift ? source[(10 - shift) & 15] : zero,
+        11 >= shift ? source[(11 - shift) & 15] : zero,
+        12 >= shift ? source[(12 - shift) & 15] : zero,
+        13 >= shift ? source[(13 - shift) & 15] : zero,
+        14 >= shift ? source[(14 - shift) & 15] : zero,
+        15 >= shift ? source[(15 - shift) & 15] : zero
+    };
+    return __mm_from_short_vector<uint8, 16>(result);
 }
 
 #define _mm_bslli_si128 _mm_slli_si128
 
-// Copy only the 128-bit payload because uniform short vectors can have padded storage.
 // Keep the shift as a vector operation so the backend can select a packed instruction.
 template <typename T, int LaneCount, bool Left>
-static inline unmasked uniform __m128i __mm_shift_packed_runtime(uniform __m128i value, uniform int amount) {
+static inline unmasked constexpr uniform __m128i __mm_shift_packed(uniform __m128i value, uniform int amount) {
     const uniform uint32 count = (uniform uint32)amount;
     constexpr uniform uint32 width = sizeof(uniform T) * 8;
-    const uniform uint32 shift = count < width ? count : width - 1;
     constexpr uniform bool signed_lanes = (uniform T)-1 < 0;
-    uniform T *uniform view = (uniform T * uniform) & value.m128i_i32[0];
-    uniform T<LaneCount> packed;
-#pragma unroll
-    for (uniform int i = 0; i < LaneCount; ++i) {
-        packed[i] = view[i];
-    }
-    if (Left) {
-        packed = count < width ? packed << shift : 0;
-    } else {
-        packed = (signed_lanes || count < width) ? packed >> shift : 0;
-    }
-#pragma unroll
-    for (uniform int i = 0; i < LaneCount; ++i) {
-        view[i] = packed[i];
-    }
-    return value;
-}
-
-static inline unmasked uniform __m128i _mm_slli_epi16(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<uint16, 8, true>(_A, _Count);
-}
-
-template <typename T, int Count, bool Left>
-static inline unmasked uniform __m128i __mm_shift_packed(uniform __m128i value) {
-    constexpr uniform uint32 count = (uniform uint32)Count;
-    constexpr uniform uint32 width = sizeof(uniform T) * 8;
-    constexpr uniform uint32 shift = count < width ? count : width - 1;
-    constexpr uniform bool signed_lanes = (uniform T)-1 < 0;
-    uniform T *uniform lanes = (uniform T * uniform) & value.m128i_i32[0];
-#pragma unroll
-    for (uniform int i = 0; i < 128 / width; ++i) {
-        if (Left) {
-            lanes[i] = count < width ? lanes[i] << shift : 0;
-        } else {
-            lanes[i] = (signed_lanes || count < width) ? lanes[i] >> shift : 0;
+    uniform T<LaneCount> packed = @llvm.ispc.bitcast(value.m128i_i32, (uniform T<LaneCount>)0);
+    if (Left || !signed_lanes) {
+        if (count >= width) {
+            uniform __m128i zero = {{0, 0, 0, 0}};
+            return zero;
         }
+        if (Left) {
+            packed = packed << count;
+        } else {
+            packed = packed >> count;
+        }
+    } else {
+        const uniform uint32 shift = count < width ? count : width - 1;
+        packed = packed >> shift;
     }
-    return value;
+    return __mm_from_short_vector<T, LaneCount>(packed);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_slli_epi16(uniform __m128i _A) {
-    return __mm_shift_packed<uint16, Count, true>(_A);
+static inline unmasked constexpr uniform __m128i _mm_slli_epi16(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<uint16, 8, true>(_A, _Count);
 }
 
-static inline unmasked uniform __m128i _mm_sll_epi16(uniform __m128i _A, uniform __m128i _Count) {
-    uniform int16<8> S0, Result;
-    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 15) ? 0 : S0 << _Imm;
-    return *((uniform __m128i * uniform) & S0);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_slli_epi16(uniform __m128i _A) {
+    return _mm_slli_epi16(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_slli_epi32(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<uint32, 4, true>(_A, _Count);
+static inline unmasked constexpr uniform __m128i _mm_sll_epi16(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform uint16<8> packed = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint16<8>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint16<8> result = count[0] > 15 ? 0 : packed << count[0];
+    return __mm_from_short_vector<uint16, 8>(result);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_slli_epi32(uniform __m128i _A) {
-    return __mm_shift_packed<uint32, Count, true>(_A);
+static inline unmasked constexpr uniform __m128i _mm_slli_epi32(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<uint32, 4, true>(_A, _Count);
 }
 
-static inline unmasked uniform __m128i _mm_sll_epi32(uniform __m128i _A, uniform __m128i _Count) {
-    uniform int32<4> S0, Result;
-    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 31) ? 0 : S0 << _Imm;
-    return *((uniform __m128i * uniform) & S0);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_slli_epi32(uniform __m128i _A) {
+    return _mm_slli_epi32(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_slli_epi64(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<uint64, 2, true>(_A, _Count);
+static inline unmasked constexpr uniform __m128i _mm_sll_epi32(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform uint32<4> packed = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint32<4>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint32<4> result = count[0] > 31 ? 0 : packed << count[0];
+    return __mm_from_short_vector<uint32, 4>(result);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_slli_epi64(uniform __m128i _A) {
-    return __mm_shift_packed<uint64, Count, true>(_A);
+static inline unmasked constexpr uniform __m128i _mm_slli_epi64(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<uint64, 2, true>(_A, _Count);
 }
 
-static inline unmasked uniform __m128i _mm_sll_epi64(uniform __m128i _A, uniform __m128i _Count) {
-    uniform int64<2> S0, Result;
-    *((uniform int64<2> * uniform) & S0) = *((uniform int64<2> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 63) ? 0 : S0 << _Imm;
-    return *((uniform __m128i * uniform) & S0);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_slli_epi64(uniform __m128i _A) {
+    return _mm_slli_epi64(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_srai_epi16(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<int16, 8, false>(_A, _Count);
+static inline unmasked constexpr uniform __m128i _mm_sll_epi64(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform uint64<2> packed = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint64<2> result = count[0] > 63 ? 0 : packed << count[0];
+    return __mm_from_short_vector<uint64, 2>(result);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_srai_epi16(uniform __m128i _A) {
-    return __mm_shift_packed<int16, Count, false>(_A);
+static inline unmasked constexpr uniform __m128i _mm_srai_epi16(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<int16, 8, false>(_A, _Count);
 }
 
-static inline unmasked uniform __m128i _mm_sra_epi16(uniform __m128i _A, uniform __m128i _Count) {
-    uniform int16<8> S0, Result;
-    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 15) ? (S0 ? 0xFFFF : 0) : S0 >> _Imm;
-    return *((uniform __m128i * uniform) & S0);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_srai_epi16(uniform __m128i _A) {
+    return _mm_srai_epi16(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_srai_epi32(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<int32, 4, false>(_A, _Count);
+static inline unmasked constexpr uniform __m128i _mm_sra_epi16(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform int16<8> packed = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int16<8>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    const uniform int16<8> result = count[0] > 15 ? (packed ? 0xFFFF : 0) : packed >> count[0];
+    return __mm_from_short_vector<int16, 8>(result);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_srai_epi32(uniform __m128i _A) {
-    return __mm_shift_packed<int32, Count, false>(_A);
+static inline unmasked constexpr uniform __m128i _mm_srai_epi32(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<int32, 4, false>(_A, _Count);
 }
 
-static inline unmasked uniform __m128i _mm_sra_epi32(uniform __m128i _A, uniform __m128i _Count) {
-    uniform int32<4> S0, Result;
-    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> _Imm;
-    return *((uniform __m128i * uniform) & S0);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_srai_epi32(uniform __m128i _A) {
+    return _mm_srai_epi32(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_srli_si128(uniform __m128i _A, uniform int _Imm) {
-    const uniform int shift = (uniform uint32)_Imm < 16 ? _Imm : 16;
-    uniform __m128i result = _A;
-    const uniform uint8 *uniform src = (const uniform uint8 *uniform) & _A.m128i_i32[0];
-    uniform uint8 *uniform dst = (uniform uint8 * uniform) & result.m128i_i32[0];
-#pragma unroll
-    for (uniform int i = 0; i < 16; ++i) {
-        dst[i] = i + shift < 16 ? src[(i + shift) & 15] : 0;
+static inline unmasked constexpr uniform __m128i _mm_sra_epi32(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform int32<4> packed = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int32<4>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    const uniform int32<4> result = count[0] > 31 ? (packed ? 0xFFFFFFFF : 0) : packed >> count[0];
+    return __mm_from_short_vector<int32, 4>(result);
+}
+
+static inline unmasked constexpr uniform __m128i _mm_srli_si128(uniform __m128i _A, uniform int _Imm) {
+    const uniform uint32 count = (uniform uint32)_Imm;
+    if (count == 0) {
+        return _A;
     }
-    return result;
+    if (count >= 16) {
+        uniform __m128i zero = {{0, 0, 0, 0}};
+        return zero;
+    }
+    // SSE byte order places the least significant byte first in each 64-bit lane.
+    const uniform uint64<2> lanes = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint32 bits = (count & 7) * 8;
+    uniform uint64<2> across = {lanes[1], 0};
+    if (count >= 8) {
+        across = across >> bits;
+    } else {
+        across = (lanes >> bits) | (across << (64 - bits));
+    }
+    return __mm_from_short_vector<uint64, 2>(across);
 }
 
-template <int Imm> inline unmasked uniform __m128i _mm_srli_si128(uniform __m128i _A) {
-    constexpr uniform int shift = (uniform uint32)Imm < 16 ? Imm : 16;
-    uniform __m128i result = _A;
-    const uniform uint8 *uniform src = (const uniform uint8 *uniform) & _A.m128i_i32[0];
-    uniform uint8 *uniform dst = (uniform uint8 * uniform) & result.m128i_i32[0];
-#pragma unroll
-    for (uniform int i = 0; i < 16; ++i) {
-        dst[i] = i + shift < 16 ? src[(i + shift) & 15] : 0;
-    }
-    return result;
+template <int Imm> inline unmasked constexpr uniform __m128i _mm_srli_si128(uniform __m128i _A) {
+    return _mm_srli_si128(_A, Imm);
 }
 
 #define _mm_bsrli_si128 _mm_srli_si128
 
-static inline unmasked uniform __m128i _mm_srli_epi16(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<uint16, 8, false>(_A, _Count);
+static inline unmasked constexpr uniform __m128i _mm_srli_epi16(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<uint16, 8, false>(_A, _Count);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_srli_epi16(uniform __m128i _A) {
-    return __mm_shift_packed<uint16, Count, false>(_A);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_srli_epi16(uniform __m128i _A) {
+    return _mm_srli_epi16(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_srl_epi16(uniform __m128i _A, uniform __m128i _Count) {
-    uniform uint16<8> S0, Result;
-    *((uniform uint16<8> * uniform) & S0) = *((uniform uint16<8> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 15) ? (S0 ? 0xFFFF : 0) : S0 >> _Imm;
-    return *((uniform __m128i * uniform) & S0);
+static inline unmasked constexpr uniform __m128i _mm_srl_epi16(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform uint16<8> packed = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint16<8>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint16<8> result = count[0] > 15 ? (packed ? 0xFFFF : 0) : packed >> count[0];
+    return __mm_from_short_vector<uint16, 8>(result);
 }
 
-static inline unmasked uniform __m128i _mm_srli_epi32(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<uint32, 4, false>(_A, _Count);
+static inline unmasked constexpr uniform __m128i _mm_srli_epi32(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<uint32, 4, false>(_A, _Count);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_srli_epi32(uniform __m128i _A) {
-    return __mm_shift_packed<uint32, Count, false>(_A);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_srli_epi32(uniform __m128i _A) {
+    return _mm_srli_epi32(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_srl_epi32(uniform __m128i _A, uniform __m128i _Count) {
-    uniform uint32<4> S0, Result;
-    *((uniform uint32<4> * uniform) & S0) = *((uniform uint32<4> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> _Imm;
-    return *((uniform __m128i * uniform) & S0);
+static inline unmasked constexpr uniform __m128i _mm_srl_epi32(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform uint32<4> packed = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint32<4>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint32<4> result = count[0] > 31 ? (packed ? 0xFFFFFFFF : 0) : packed >> count[0];
+    return __mm_from_short_vector<uint32, 4>(result);
 }
 
-static inline unmasked uniform __m128i _mm_srli_epi64(uniform __m128i _A, uniform int _Count) {
-    return __mm_shift_packed_runtime<uint64, 2, false>(_A, _Count);
+static inline unmasked constexpr uniform __m128i _mm_srli_epi64(uniform __m128i _A, uniform int _Count) {
+    return __mm_shift_packed<uint64, 2, false>(_A, _Count);
 }
 
-template <int Count> inline unmasked uniform __m128i _mm_srli_epi64(uniform __m128i _A) {
-    return __mm_shift_packed<uint64, Count, false>(_A);
+template <int Count> inline unmasked constexpr uniform __m128i _mm_srli_epi64(uniform __m128i _A) {
+    return _mm_srli_epi64(_A, Count);
 }
 
-static inline unmasked uniform __m128i _mm_srl_epi64(uniform __m128i _A, uniform __m128i _Count) {
-    uniform uint64<4> S0, Result;
-    *((uniform uint64<2> * uniform) & S0) = *((uniform uint64<2> * uniform) & _A);
-    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
-    S0 = (_Imm > 63) ? (S0 ? 0xFFFFFFFFFFFFFFFF : 0) : S0 >> _Imm;
-    return *((uniform __m128i * uniform) & S0);
+static inline unmasked constexpr uniform __m128i _mm_srl_epi64(uniform __m128i _A, uniform __m128i _Count) {
+    const uniform uint64<2> lanes = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint64<2>)0);
+    const uniform uint64<2> count = @llvm.ispc.bitcast(_Count.m128i_i32, (uniform uint64<2>)0);
+    // Retain the four-lane comparison for the out-of-range count path.
+    const uniform uint64<4> packed = {lanes[0], lanes[1], 0, 0};
+    const uniform uint64<4> shifted = count[0] > 63 ? (packed ? 0xFFFFFFFFFFFFFFFF : 0) : packed >> count[0];
+    const uniform uint64<2> result = {shifted[0], shifted[1]};
+    return __mm_from_short_vector<uint64, 2>(result);
 }
 
 /*
@@ -1328,18 +1334,16 @@ static inline unmasked uniform __m128i _mm_cmplt_epi32(uniform __m128i _A, unifo
  * Integer, converts
  */
 
-static inline unmasked uniform __m128i _mm_cvtsi32_si128(uniform int _A) {
-    const uniform int<4> _R = {_A, 0, 0, 0};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_cvtsi32_si128(uniform int _A) {
+    uniform __m128i result = {{_A, 0, 0, 0}};
+    return result;
 }
 
-static inline unmasked uniform int _mm_cvtsi128_si32(uniform __m128i _A) { return _A.m128i_i32[0]; }
-
-/*
- * Integer, misc
- */
-
-static inline unmasked uniform __m128i _mm_packs_epi16(uniform __m128i _A, uniform __m128i _B) {
+static inline unmasked constexpr uniform int _mm_cvtsi128_si32(uniform __m128i _A) { return _A.m128i_i32[0]; }
+                                                                                                                              /*
+                                                               * Integer, misc
+                                                               */
+                                                                                                                              static inline unmasked uniform __m128i _mm_packs_epi16(uniform __m128i _A, uniform __m128i _B) {
     uniform int8<16> R;
     uniform int16<16> S0;
     *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
@@ -1372,26 +1376,23 @@ static inline unmasked uniform __m128i _mm_packus_epi16(uniform __m128i _A, unif
     return *((uniform __m128i * uniform) & R);
 }
 
-static inline unmasked uniform int _mm_extract_epi16(uniform __m128i _A, uniform int _Imm) {
-    const uniform uint16 *uniform lanes = (const uniform uint16 *uniform) & _A.m128i_i32[0];
+static inline unmasked constexpr uniform int _mm_extract_epi16(uniform __m128i _A, uniform int _Imm) {
+    const uniform uint16<8> lanes = @llvm.ispc.bitcast(_A.m128i_i32, (uniform uint16<8>)0);
     return (uniform int)lanes[_Imm & 7];
 }
 
-template <int Imm> inline unmasked uniform int _mm_extract_epi16(uniform __m128i _A) {
-    const uniform uint16 *uniform lanes = (const uniform uint16 *uniform) & _A.m128i_i32[0];
-    return (uniform int)lanes[Imm & 7];
+template <int Imm> inline unmasked constexpr uniform int _mm_extract_epi16(uniform __m128i _A) {
+    return _mm_extract_epi16(_A, Imm);
 }
 
-static inline unmasked uniform __m128i _mm_insert_epi16(uniform __m128i _A, uniform int _B, uniform int _Imm) {
-    uniform int16 *uniform lanes = (uniform int16 * uniform) & _A.m128i_i32[0];
+static inline unmasked constexpr uniform __m128i _mm_insert_epi16(uniform __m128i _A, uniform int _B, uniform int _Imm) {
+    uniform int16<8> lanes = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int16<8>)0);
     lanes[_Imm & 7] = (uniform int16)_B;
-    return _A;
+    return __mm_from_short_vector<int16, 8>(lanes);
 }
 
-template <int Imm> inline unmasked uniform __m128i _mm_insert_epi16(uniform __m128i _A, uniform int _B) {
-    uniform int16 *uniform lanes = (uniform int16 * uniform) & _A.m128i_i32[0];
-    lanes[Imm & 7] = (uniform int16)_B;
-    return _A;
+template <int Imm> inline unmasked constexpr uniform __m128i _mm_insert_epi16(uniform __m128i _A, uniform int _B) {
+    return _mm_insert_epi16(_A, _B, Imm);
 }
 
 static inline unmasked uniform int _mm_movemask_epi8(uniform __m128i _A) {
@@ -1415,48 +1416,35 @@ template <int Imm8> inline unmasked constexpr uniform __m128i _mm_shuffle_epi32(
     return _mm_shuffle_epi32(_A, Imm8);
 }
 
-static inline unmasked uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
-    uniform __m128i result = _A;
-    const uniform int16 *uniform src = (const uniform int16 *uniform) & _A.m128i_i32[0];
-    uniform int16 *uniform dst = (uniform int16 * uniform) & result.m128i_i32[0];
-    dst[4] = src[4 + (_Imm8 & 3)];
-    dst[5] = src[4 + ((_Imm8 >> 2) & 3)];
-    dst[6] = src[4 + ((_Imm8 >> 4) & 3)];
-    dst[7] = src[4 + ((_Imm8 >> 6) & 3)];
-    return result;
+static inline unmasked constexpr uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
+    const uniform int16<8> src = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int16<8>)0);
+    uniform int16<8> result = src;
+    result[4] = src[4 + (_Imm8 & 3)];
+    result[5] = src[4 + ((_Imm8 >> 2) & 3)];
+    result[6] = src[4 + ((_Imm8 >> 4) & 3)];
+    result[7] = src[4 + ((_Imm8 >> 6) & 3)];
+    return __mm_from_short_vector<int16, 8>(result);
 }
 
-template <int Imm8> inline unmasked uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A) {
-    uniform __m128i result = _A;
-    const uniform int16 *uniform src = (const uniform int16 *uniform) & _A.m128i_i32[0];
-    uniform int16 *uniform dst = (uniform int16 * uniform) & result.m128i_i32[0];
-    dst[4] = src[4 + (Imm8 & 3)];
-    dst[5] = src[4 + ((Imm8 >> 2) & 3)];
-    dst[6] = src[4 + ((Imm8 >> 4) & 3)];
-    dst[7] = src[4 + ((Imm8 >> 6) & 3)];
-    return result;
+template <int Imm8> inline unmasked constexpr uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A) {
+    const uniform int16<8> src = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int16<8>)0);
+    const uniform int16<8> dst = {src[0], src[1], src[2], src[3],
+                                 src[4 + (Imm8 & 3)], src[4 + ((Imm8 >> 2) & 3)], src[4 + ((Imm8 >> 4) & 3)], src[4 + ((Imm8 >> 6) & 3)]};
+    return __mm_from_short_vector<int16, 8>(dst);
 }
 
-static inline unmasked uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
-    uniform __m128i result = _A;
-    const uniform int16 *uniform src = (const uniform int16 *uniform) & _A.m128i_i32[0];
-    uniform int16 *uniform dst = (uniform int16 * uniform) & result.m128i_i32[0];
-    dst[0] = src[_Imm8 & 3];
-    dst[1] = src[(_Imm8 >> 2) & 3];
-    dst[2] = src[(_Imm8 >> 4) & 3];
-    dst[3] = src[(_Imm8 >> 6) & 3];
-    return result;
+static inline unmasked constexpr uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
+    const uniform int16<8> src = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int16<8>)0);
+    uniform int16<8> result = src;
+    result[0] = src[_Imm8 & 3];
+    result[1] = src[(_Imm8 >> 2) & 3];
+    result[2] = src[(_Imm8 >> 4) & 3];
+    result[3] = src[(_Imm8 >> 6) & 3];
+    return __mm_from_short_vector<int16, 8>(result);
 }
 
-template <int Imm8> inline unmasked uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A) {
-    uniform __m128i result = _A;
-    const uniform int16 *uniform src = (const uniform int16 *uniform) & _A.m128i_i32[0];
-    uniform int16 *uniform dst = (uniform int16 * uniform) & result.m128i_i32[0];
-    dst[0] = src[Imm8 & 3];
-    dst[1] = src[(Imm8 >> 2) & 3];
-    dst[2] = src[(Imm8 >> 4) & 3];
-    dst[3] = src[(Imm8 >> 6) & 3];
-    return result;
+template <int Imm8> inline unmasked constexpr uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A) {
+    return _mm_shufflelo_epi16(_A, Imm8);
 }
 
 static inline unmasked uniform __m128i _mm_unpackhi_epi8(uniform __m128i _A, uniform __m128i _B) {
@@ -1483,16 +1471,16 @@ static inline unmasked uniform __m128i _mm_unpackhi_epi16(uniform __m128i _A, un
     return *((uniform __m128i * uniform) & R);
 }
 
-static inline unmasked uniform __m128i _mm_unpackhi_epi32(uniform __m128i _A, uniform __m128i _B) {
-    const uniform int<4> R = {_A.m128i_i32[2], _B.m128i_i32[2], _A.m128i_i32[3], _B.m128i_i32[3]};
-    return *((uniform __m128i * uniform) & R);
+static inline unmasked constexpr uniform __m128i _mm_unpackhi_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i result = {{_A.m128i_i32[2], _B.m128i_i32[2], _A.m128i_i32[3], _B.m128i_i32[3]}};
+    return result;
 }
 
-static inline unmasked uniform __m128i _mm_unpackhi_epi64(uniform __m128i _A, uniform __m128i _B) {
-    uniform int64 *uniform S0 = (uniform int64 * uniform) & _A;
-    uniform int64 *uniform S1 = (uniform int64 * uniform) & _B;
-    const uniform int64<2> R = {S0[1], S1[1]};
-    return *((uniform __m128i * uniform) & R);
+static inline unmasked constexpr uniform __m128i _mm_unpackhi_epi64(uniform __m128i _A, uniform __m128i _B) {
+    const uniform int64<2> a = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int64<2>)0);
+    const uniform int64<2> b = @llvm.ispc.bitcast(_B.m128i_i32, (uniform int64<2>)0);
+    const uniform int64<2> lanes = {a[1], b[1]};
+    return __mm_from_short_vector<int64, 2>(lanes);
 }
 
 static inline unmasked uniform __m128i _mm_unpacklo_epi8(uniform __m128i _A, uniform __m128i _B) {
@@ -1519,16 +1507,16 @@ static inline unmasked uniform __m128i _mm_unpacklo_epi16(uniform __m128i _A, un
     return *((uniform __m128i * uniform) & R);
 }
 
-static inline unmasked uniform __m128i _mm_unpacklo_epi32(uniform __m128i _A, uniform __m128i _B) {
-    const uniform int<4> R = {_A.m128i_i32[0], _B.m128i_i32[0], _A.m128i_i32[1], _B.m128i_i32[1]};
-    return *((uniform __m128i * uniform) & R);
+static inline unmasked constexpr uniform __m128i _mm_unpacklo_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i result = {{_A.m128i_i32[0], _B.m128i_i32[0], _A.m128i_i32[1], _B.m128i_i32[1]}};
+    return result;
 }
 
-static inline unmasked uniform __m128i _mm_unpacklo_epi64(uniform __m128i _A, uniform __m128i _B) {
-    uniform int64 *uniform S0 = (uniform int64 * uniform) & _A;
-    uniform int64 *uniform S1 = (uniform int64 * uniform) & _B;
-    const uniform int64<2> R = {S0[0], S1[0]};
-    return *((uniform __m128i * uniform) & R);
+static inline unmasked constexpr uniform __m128i _mm_unpacklo_epi64(uniform __m128i _A, uniform __m128i _B) {
+    const uniform int64<2> a = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int64<2>)0);
+    const uniform int64<2> b = @llvm.ispc.bitcast(_B.m128i_i32, (uniform int64<2>)0);
+    const uniform int64<2> lanes = {a[0], b[0]};
+    return __mm_from_short_vector<int64, 2>(lanes);
 }
 
 /*
@@ -1559,9 +1547,9 @@ static inline unmasked uniform __m128i _mm_loadl_epi64(uniform __m128i const *un
 NOT_IMPLEMENTED(extern __m128i _mm_set_epi64(__m64 _Q1, __m64 _Q0));
 #endif
 
-static inline unmasked uniform __m128i _mm_set_epi64x(uniform int64 _I1, uniform int64 _I0) {
-    const uniform int64<2> _R = {_I0, _I1};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set_epi64x(uniform int64 _I1, uniform int64 _I0) {
+    const uniform int64<2> lanes = {_I0, _I1};
+    return __mm_from_short_vector<int64, 2>(lanes);
 }
 
 static inline unmasked constexpr uniform __m128i _mm_set_epi32(uniform int32 _I3, uniform int32 _I2, uniform int32 _I1,
@@ -1570,30 +1558,30 @@ static inline unmasked constexpr uniform __m128i _mm_set_epi32(uniform int32 _I3
     return result;
 }
 
-static inline unmasked uniform __m128i _mm_set_epi16(uniform int16 _W7, uniform int16 _W6, uniform int16 _W5,
-                                                     uniform int16 _W4, uniform int16 _W3, uniform int16 _W2,
-                                                     uniform int16 _W1, uniform int16 _W0) {
-    const uniform int16<8> _R = {_W0, _W1, _W2, _W3, _W4, _W5, _W6, _W7};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set_epi16(uniform int16 _W7, uniform int16 _W6, uniform int16 _W5,
+                                                               uniform int16 _W4, uniform int16 _W3, uniform int16 _W2,
+                                                               uniform int16 _W1, uniform int16 _W0) {
+    const uniform int16<8> lanes = {_W0, _W1, _W2, _W3, _W4, _W5, _W6, _W7};
+    return __mm_from_short_vector<int16, 8>(lanes);
 }
 
-static inline unmasked uniform __m128i _mm_set_epi8(uniform int8 _B15, uniform int8 _B14, uniform int8 _B13,
-                                                    uniform int8 _B12, uniform int8 _B11, uniform int8 _B10,
-                                                    uniform int8 _B9, uniform int8 _B8, uniform int8 _B7,
-                                                    uniform int8 _B6, uniform int8 _B5, uniform int8 _B4,
-                                                    uniform int8 _B3, uniform int8 _B2, uniform int8 _B1,
-                                                    uniform int8 _B0) {
-    const uniform int8<16> _R = {_B0, _B1, _B2, _B3, _B4, _B5, _B6, _B7, _B8, _B9, _B10, _B11, _B12, _B13, _B14, _B15};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set_epi8(uniform int8 _B15, uniform int8 _B14, uniform int8 _B13,
+                                                              uniform int8 _B12, uniform int8 _B11, uniform int8 _B10,
+                                                              uniform int8 _B9, uniform int8 _B8, uniform int8 _B7,
+                                                              uniform int8 _B6, uniform int8 _B5, uniform int8 _B4,
+                                                              uniform int8 _B3, uniform int8 _B2, uniform int8 _B1,
+                                                              uniform int8 _B0) {
+    const uniform int8<16> lanes = {_B0, _B1, _B2, _B3, _B4, _B5, _B6, _B7, _B8, _B9, _B10, _B11, _B12, _B13, _B14, _B15};
+    return __mm_from_short_vector<int8, 16>(lanes);
 }
 
 #if defined(_M_IX86)
 NOT_IMPLEMENTED(extern __m128i _mm_set1_epi64(__m64 _Q));
 #endif
 
-static inline unmasked uniform __m128i _mm_set1_epi64x(uniform int64 i) {
-    const uniform int64<2> _R = {i, i};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set1_epi64x(uniform int64 i) {
+    const uniform int64<2> lanes = {i, i};
+    return __mm_from_short_vector<int64, 2>(lanes);
 }
 
 static inline unmasked constexpr uniform __m128i _mm_set1_epi32(uniform int32 _I) {
@@ -1601,14 +1589,14 @@ static inline unmasked constexpr uniform __m128i _mm_set1_epi32(uniform int32 _I
     return result;
 }
 
-static inline unmasked uniform __m128i _mm_set1_epi16(uniform int16 _W) {
-    const uniform int16<8> _R = {_W, _W, _W, _W, _W, _W, _W, _W};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set1_epi16(uniform int16 _W) {
+    const uniform int16<8> lanes = {_W, _W, _W, _W, _W, _W, _W, _W};
+    return __mm_from_short_vector<int16, 8>(lanes);
 }
 
-static inline unmasked uniform __m128i _mm_set1_epi8(uniform int8 _B) {
-    const uniform int8<16> _R = {_B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_set1_epi8(uniform int8 _B) {
+    const uniform int8<16> lanes = {_B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B};
+    return __mm_from_short_vector<int8, 16>(lanes);
 }
 
 NOT_IMPLEMENTED(extern __m128i _mm_setl_epi64(__m128i _Q));
@@ -1622,21 +1610,21 @@ static inline unmasked constexpr uniform __m128i _mm_setr_epi32(uniform int32 _I
     return result;
 }
 
-static inline unmasked uniform __m128i _mm_setr_epi16(uniform int16 _W0, uniform int16 _W1, uniform int16 _W2,
-                                                      uniform int16 _W3, uniform int16 _W4, uniform int16 _W5,
-                                                      uniform int16 _W6, uniform int16 _W7) {
-    const uniform int16<8> _R = {_W0, _W1, _W2, _W3, _W4, _W5, _W6, _W7};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_setr_epi16(uniform int16 _W0, uniform int16 _W1, uniform int16 _W2,
+                                                                uniform int16 _W3, uniform int16 _W4, uniform int16 _W5,
+                                                                uniform int16 _W6, uniform int16 _W7) {
+    const uniform int16<8> lanes = {_W0, _W1, _W2, _W3, _W4, _W5, _W6, _W7};
+    return __mm_from_short_vector<int16, 8>(lanes);
 }
 
-static inline unmasked uniform __m128i _mm_setr_epi8(uniform int8 _B15, uniform int8 _B14, uniform int8 _B13,
-                                                     uniform int8 _B12, uniform int8 _B11, uniform int8 _B10,
-                                                     uniform int8 _B9, uniform int8 _B8, uniform int8 _B7,
-                                                     uniform int8 _B6, uniform int8 _B5, uniform int8 _B4,
-                                                     uniform int8 _B3, uniform int8 _B2, uniform int8 _B1,
-                                                     uniform int8 _B0) {
-    const uniform int8<16> _R = {_B15, _B14, _B13, _B12, _B11, _B10, _B9, _B8, _B7, _B6, _B5, _B4, _B3, _B2, _B1, _B0};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_setr_epi8(uniform int8 _B15, uniform int8 _B14, uniform int8 _B13,
+                                                               uniform int8 _B12, uniform int8 _B11, uniform int8 _B10,
+                                                               uniform int8 _B9, uniform int8 _B8, uniform int8 _B7,
+                                                               uniform int8 _B6, uniform int8 _B5, uniform int8 _B4,
+                                                               uniform int8 _B3, uniform int8 _B2, uniform int8 _B1,
+                                                               uniform int8 _B0) {
+    const uniform int8<16> lanes = {_B15, _B14, _B13, _B12, _B11, _B10, _B9, _B8, _B7, _B6, _B5, _B4, _B3, _B2, _B1, _B0};
+    return __mm_from_short_vector<int8, 16>(lanes);
 }
 
 static inline unmasked constexpr uniform __m128i _mm_setzero_si128() {
@@ -1675,10 +1663,10 @@ static inline unmasked void _mm_maskmoveu_si128(uniform __m128i _D, uniform __m1
  * Integer, moves
  */
 
-static inline unmasked uniform __m128i _mm_move_epi64(uniform __m128i _Q) {
-    uniform int64 *uniform S0 = (uniform int64 * uniform) & _Q;
-    const uniform int64<2> _R = {S0[0], 0};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_move_epi64(uniform __m128i _Q) {
+    const uniform int64<2> source = @llvm.ispc.bitcast(_Q.m128i_i32, (uniform int64<2>)0);
+    const uniform int64<2> lanes = {source[0], 0};
+    return __mm_from_short_vector<int64, 2>(lanes);
 }
 
 #if defined(_M_IX86)
@@ -1738,24 +1726,34 @@ static inline unmasked uniform double _mm_cvtsd_f64(uniform __m128d _A) { return
  * the type.
  */
 
-static inline unmasked uniform __m128 _mm_castpd_ps(uniform __m128d _A) { return *((uniform __m128 * uniform) & _A); }
-
-static inline unmasked uniform __m128i _mm_castpd_si128(uniform __m128d _A) {
-    return *((uniform __m128i * uniform) & _A);
+static inline unmasked constexpr uniform __m128 _mm_castpd_ps(uniform __m128d _A) {
+    uniform __m128 result = {@llvm.ispc.bitcast(_A.m128d_f64, (uniform float<4>)0)};
+    return result;
 }
 
-static inline unmasked uniform __m128d _mm_castps_pd(uniform __m128 _A) { return *((uniform __m128d * uniform) & _A); }
-
-static inline unmasked uniform __m128i _mm_castps_si128(uniform __m128 _A) {
-    return *((uniform __m128i * uniform) & _A);
+static inline unmasked constexpr uniform __m128i _mm_castpd_si128(uniform __m128d _A) {
+    uniform __m128i result = {@llvm.ispc.bitcast(_A.m128d_f64, (uniform int32<4>)0)};
+    return result;
 }
 
-static inline unmasked uniform __m128 _mm_castsi128_ps(uniform __m128i _A) {
-    return *((uniform __m128 * uniform) & _A);
+static inline unmasked constexpr uniform __m128d _mm_castps_pd(uniform __m128 _A) {
+    uniform __m128d result = {@llvm.ispc.bitcast(_A.m128_f32, (uniform double<2>)0)};
+    return result;
 }
 
-static inline unmasked uniform __m128d _mm_castsi128_pd(uniform __m128i _A) {
-    return *((uniform __m128d * uniform) & _A);
+static inline unmasked constexpr uniform __m128i _mm_castps_si128(uniform __m128 _A) {
+    uniform __m128i result = {@llvm.ispc.bitcast(_A.m128_f32, (uniform int32<4>)0)};
+    return result;
+}
+
+static inline unmasked constexpr uniform __m128 _mm_castsi128_ps(uniform __m128i _A) {
+    uniform __m128 result = {@llvm.ispc.bitcast(_A.m128i_i32, (uniform float<4>)0)};
+    return result;
+}
+
+static inline unmasked constexpr uniform __m128d _mm_castsi128_pd(uniform __m128i _A) {
+    uniform __m128d result = {@llvm.ispc.bitcast(_A.m128i_i32, (uniform double<2>)0)};
+    return result;
 }
 
 /*
@@ -1773,12 +1771,15 @@ static inline unmasked uniform __m128d _mm_cvtsi64_sd(uniform __m128d _A, unifor
     return _A;
 }
 
-static inline unmasked uniform __m128i _mm_cvtsi64_si128(uniform int64 _A) {
-    const uniform int64<2> _R = {_A, 0};
-    return *((uniform __m128i * uniform) & _R);
+static inline unmasked constexpr uniform __m128i _mm_cvtsi64_si128(uniform int64 _A) {
+    const uniform int64<2> lanes = {_A, 0};
+    return __mm_from_short_vector<int64, 2>(lanes);
 }
 
-static inline unmasked uniform int64 _mm_cvtsi128_si64(uniform __m128i _A) { return *((uniform int64 * uniform) & _A); }
+static inline unmasked constexpr uniform int64 _mm_cvtsi128_si64(uniform __m128i _A) {
+    const uniform int64<2> lanes = @llvm.ispc.bitcast(_A.m128i_i32, (uniform int64<2>)0);
+    return lanes[0];
+}
 
 /* Alternate intrinsic name definitions */
 #define _mm_stream_si64 _mm_stream_si64x

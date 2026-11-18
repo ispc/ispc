@@ -54,9 +54,14 @@ uniform bool dynamic_shuffles(uniform unsigned int mask) {
     uniform __m128d d = _mm_shuffle_pd(da, db, mask);
     uniform __m128i ints = _mm_setr_epi32(-1, -2, -3, -4);
     uniform __m128i i = _mm_shuffle_epi32(ints, mask);
+    uniform __m128i words = _mm_setr_epi16(1, 2, 3, 4, 5, 6, 7, 8);
+    uniform __m128i hi = _mm_shufflehi_epi16(words, mask);
+    uniform __m128i lo = _mm_shufflelo_epi16(words, mask);
     for (uniform int lane = 0; lane < 4; ++lane) {
         uniform int index = (mask >> (lane * 2)) & 3;
-        if (i.m128i_i32[lane] != -1 - index || f.m128_f32[lane] != (lane < 2 ? 1 : 5) + index) {
+        if (i.m128i_i32[lane] != -1 - index || f.m128_f32[lane] != (lane < 2 ? 1 : 5) + index ||
+            _mm_extract_epi16(hi, lane) != 1 + lane || _mm_extract_epi16(hi, lane + 4) != 5 + index ||
+            _mm_extract_epi16(lo, lane) != 1 + index || _mm_extract_epi16(lo, lane + 4) != 5 + lane) {
             return false;
         }
     }
@@ -111,10 +116,29 @@ template <int Count> static noinline uniform bool equivalent_shifts(uniform __m1
 uniform bool shift_boundaries(uniform int seed) {
     // Include nonzero bytes at both ends and mixed signed lanes.
     uniform __m128i v = {{0x09080700 | seed, 0x7ffe8001, 0x22334455, 0x80ff00ff}};
-    return equivalent_shifts<0>(v, 0) && equivalent_shifts<1>(v, 1) && equivalent_shifts<15>(v, 15) &&
+    return equivalent_shifts<0>(v, 0) && equivalent_shifts<1>(v, 1) && equivalent_shifts<7>(v, 7) &&
+           equivalent_shifts<8>(v, 8) && equivalent_shifts<9>(v, 9) && equivalent_shifts<15>(v, 15) &&
            equivalent_shifts<16>(v, 16) && equivalent_shifts<31>(v, 31) && equivalent_shifts<32>(v, 32) &&
            equivalent_shifts<63>(v, 63) && equivalent_shifts<64>(v, 64) && equivalent_shifts<255>(v, 255) &&
            equivalent_shifts<256>(v, 256) && equivalent_shifts<-1>(v, -1);
+}
+
+uniform bool vector_count_shifts(uniform int seed) {
+    uniform __m128i words = _mm_setr_epi32(0, -seed, 1, seed);
+    uniform __m128i count = _mm_set_epi64x(-1, seed);
+    uniform __m128i too_large = _mm_set_epi64x(0, (uniform int64)seed << 32);
+    uniform __m128i nonzero_dwords = _mm_setr_epi32(0, -1, -1, -1);
+    return equal_m128i(_mm_sll_epi16(words, count), _mm_slli_epi16(words, seed)) &&
+           equal_m128i(_mm_sll_epi32(words, count), _mm_slli_epi32(words, seed)) &&
+           equal_m128i(_mm_sll_epi64(words, count), _mm_slli_epi64(words, seed)) &&
+           equal_m128i(_mm_sra_epi16(words, count), _mm_srai_epi16(words, seed)) &&
+           equal_m128i(_mm_sra_epi32(words, count), _mm_srai_epi32(words, seed)) &&
+           equal_m128i(_mm_srl_epi16(words, count), _mm_srli_epi16(words, seed)) &&
+           equal_m128i(_mm_srl_epi32(words, count), _mm_srli_epi32(words, seed)) &&
+           equal_m128i(_mm_srl_epi64(words, count), _mm_srli_epi64(words, seed)) &&
+           equal_m128i(_mm_sll_epi16(words, too_large), _mm_setzero_si128()) &&
+           equal_m128i(_mm_sra_epi32(words, too_large), nonzero_dwords) &&
+           equal_m128i(_mm_srl_epi32(words, too_large), nonzero_dwords);
 }
 
 uniform bool insert_extract(uniform int offset) {
@@ -131,7 +155,8 @@ uniform bool insert_extract(uniform int offset) {
 task void f_f(uniform float RET[], uniform float input[]) {
     uniform int seed = 1 + ((uniform int)input[0] & 3);
     uniform bool ok = float_shuffles(seed) && integer_shuffles(seed) && byte_shifts(seed) && bit_shifts(seed) &&
-                      shift_boundaries(seed) && insert_extract(seed) && dynamic_shuffles(0x100u | (0x49u * seed));
+                      shift_boundaries(seed) && vector_count_shifts(seed) && insert_extract(seed) &&
+                      dynamic_shuffles(0x100u | (0x49u * seed));
     RET[programIndex] = ok ? 1.f : 0.f;
 }
 

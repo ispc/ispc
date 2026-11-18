@@ -34,6 +34,7 @@
 #include <utility>
 
 #include <clang/Basic/Version.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -47,6 +48,7 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/FileUtilities.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
@@ -126,6 +128,30 @@ static bool lIsStdlibPseudoFile(const std::string &name) {
     }
 #endif // ISPC_HOST_IS_WINDOWS
     return false;
+}
+
+static bool lIsImplicitStdlibHeader(const SourcePos &pos) {
+    if (g->genStdlib || pos.name == nullptr) {
+        return false;
+    }
+    llvm::StringRef fileName = llvm::sys::path::filename(pos.name);
+    if (fileName != "core.isph" && !(fileName == "stdlib.isph" && g->includeStdlib)) {
+        return false;
+    }
+    if (!g->isSlimBinary) {
+        return lIsStdlibPseudoFile(pos.name);
+    }
+    // The slim binary adds its bundled headers as the first include directory.
+    if (g->includePath.empty()) {
+        return false;
+    }
+    llvm::SmallString<128> bundledHeader(g->includePath.front());
+    llvm::sys::path::append(bundledHeader, fileName);
+    // Clang escapes file names in line markers, and the lexer preserves that spelling.
+    llvm::SmallString<128> escapedHeader;
+    llvm::raw_svector_ostream escapedHeaderStream(escapedHeader);
+    escapedHeaderStream.write_escaped(bundledHeader);
+    return escapedHeader.str() == pos.name;
 }
 
 /*! this is where the parser tells us that it has seen the given file
@@ -731,7 +757,7 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
 
         if constexpr (std::is_same_v<T, std::vector<llvm::APFloat>>) {
             std::vector<llvm::APFloat> ce_vals;
-            llvm::Type *to_type = type->GetAsUniformType()->LLVMType(g->ctx);
+            const AtomicType *to_type = CastType<AtomicType>(type);
             ce->GetValues(ce_vals, to_type);
             vals[i++] = ce_vals[0];
         } else {
@@ -1343,6 +1369,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     std::vector<Symbol *> overloadFuncs;
     symbolTable->LookupFunction(name.c_str(), &overloadFuncs);
+    Symbol *overriddenStdlibFunction = nullptr;
     if (overloadFuncs.size() > 0) {
         for (unsigned int i = 0; i < overloadFuncs.size(); ++i) {
             Symbol *overloadFunc = overloadFuncs[i];
@@ -1357,6 +1384,17 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             // and type.  This also hits when we have previously declared
             // the function and are about to define it.
             if (Type::Equal(overloadFunc->type, functionType)) {
+                // Preserve the ability to supply a runtime replacement for library routines whose
+                // implementation is now also visible to the constexpr evaluator.
+                if (overloadFunc->isConstexpr && !functionType->IsConstexpr() && overloadFunc->parentFunction &&
+                    overloadFunc->attrs && overloadFunc->attrs->HasAttribute("__stdlib_definition") &&
+                    overloadType->IsUnmangled() == functionType->IsUnmangled() &&
+                    overloadType->IsISPCKernel() == functionType->IsISPCKernel() &&
+                    overloadType->GetCallingConv() == functionType->GetCallingConv() &&
+                    lIsImplicitStdlibHeader(overloadFunc->pos)) {
+                    overriddenStdlibFunction = overloadFunc;
+                    break;
+                }
                 if (overloadFunc->isConstexpr != functionType->IsConstexpr()) {
                     Error(pos,
                           "Function \"%s\" redeclared with different \"constexpr\" qualifier "
@@ -1614,6 +1652,22 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                   "must have default values as well.",
                   argName.c_str());
         }
+    }
+
+    if (overriddenStdlibFunction != nullptr) {
+        // Keep the original declaration for references already bound to this function.
+        llvm::Function *original = overriddenStdlibFunction->function;
+        Assert(original->getName() == functionName && original->getFunctionType() == function->getFunctionType());
+        original->copyAttributesFrom(function);
+        function->eraseFromParent();
+        ast->RemoveFunction(overriddenStdlibFunction);
+        overriddenStdlibFunction->pos = pos;
+        overriddenStdlibFunction->type = functionType;
+        overriddenStdlibFunction->storageClass = storageClass;
+        overriddenStdlibFunction->isConstexpr = false;
+        delete overriddenStdlibFunction->attrs;
+        overriddenStdlibFunction->attrs = decl->attributeList ? new AttributeList(*decl->attributeList) : nullptr;
+        return;
     }
 
     // If llvm gave us back a Function * with a different name than the one

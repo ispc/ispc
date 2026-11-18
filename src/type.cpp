@@ -19,6 +19,7 @@
 #include <map>
 #include <stdio.h>
 
+#include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/DIBuilder.h>
@@ -378,6 +379,19 @@ const AtomicType *AtomicType::createWithBasicType(BasicType newBasicType) const 
     AtomicType *ins = static_cast<AtomicType *>(create());
     ins->basicType = newBasicType;
     return ins;
+}
+
+const llvm::fltSemantics &AtomicType::GetFloatSemantics() const {
+    switch (basicType) {
+    case TYPE_FLOAT16:
+        return llvm::APFloat::IEEEhalf();
+    case TYPE_FLOAT:
+        return llvm::APFloat::IEEEsingle();
+    case TYPE_DOUBLE:
+        return llvm::APFloat::IEEEdouble();
+    default:
+        UNREACHABLE();
+    }
 }
 
 bool AtomicType::IsFloatType() const {

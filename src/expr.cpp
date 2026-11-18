@@ -138,9 +138,9 @@ bool Expr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const { retu
 
 ///////////////////////////////////////////////////////////////////////////
 
-static llvm::APFloat lCreateAPFloat(double value, llvm::Type *type) {
+static llvm::APFloat lCreateAPFloat(double value, const AtomicType *type) {
     llvm::APFloat f(value);
-    const llvm::fltSemantics &FS = type->getFltSemantics();
+    const llvm::fltSemantics &FS = type->GetFloatSemantics();
     bool ignored = false;
     f.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
     return f;
@@ -165,7 +165,7 @@ static bool lIsAllIntZeros(Expr *expr) {
     }
 
     ConstExpr *ce = llvm::dyn_cast<ConstExpr>(expr);
-    if (ce == nullptr) {
+    if (ce == nullptr || ce->IsAggregate()) {
         return false;
     }
 
@@ -1142,15 +1142,15 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
             return isUniform ? LLVMUInt64((uint64_t)i) : LLVMUInt64Vector((uint64_t)i);
         }
         case AtomicType::TYPE_FLOAT16: {
-            llvm::APFloat apf16 = lCreateAPFloat(value, LLVMTypes::Float16Type);
+            llvm::APFloat apf16 = lCreateAPFloat(value, AtomicType::UniformFloat16);
             return isUniform ? LLVMFloat16(std::move(apf16)) : LLVMFloat16Vector(std::move(apf16));
         }
         case AtomicType::TYPE_FLOAT: {
-            llvm::APFloat apf = lCreateAPFloat(value, LLVMTypes::FloatType);
+            llvm::APFloat apf = lCreateAPFloat(value, AtomicType::UniformFloat);
             return isUniform ? LLVMFloat(std::move(apf)) : LLVMFloatVector(std::move(apf));
         }
         case AtomicType::TYPE_DOUBLE: {
-            llvm::APFloat apd = lCreateAPFloat(value, LLVMTypes::DoubleType);
+            llvm::APFloat apd = lCreateAPFloat(value, AtomicType::UniformDouble);
             return isUniform ? LLVMDouble(std::move(apd)) : LLVMDoubleVector(std::move(apd));
         }
         default:
@@ -2539,22 +2539,6 @@ const Type *BinaryExpr::GetTypeImpl() const {
         }                                                                                                              \
         break
 
-template <typename T> static unsigned int countLeadingZeros(T val) {
-
-    unsigned int leadingZeros = 0;
-    size_t size = sizeof(T) * CHAR_BIT;
-    T msb = (T)(T(1) << (size - 1));
-
-    while (size--) {
-        if (msb & val) {
-            break;
-        }
-        msb = msb >> 1;
-        leadingZeros++;
-    }
-    return leadingZeros;
-}
-
 /** Constant fold the binary integer operations that aren't also applicable
     to floating-point types.
 */
@@ -2571,19 +2555,31 @@ static ConstExpr *lConstFoldBinaryIntOp(BinaryExpr::Op op, const T *v0, const T 
 
     case BinaryExpr::Shl:
         for (int i = 0; i < count; ++i) {
-            result[i] = (T(v0[i]) << v1[i]);
-            // Check for negative shift amounts in signed types to avoid undefined behavior
+            // Use the ISPC operand width, without host integer promotions or
+            // undefined host shifts. Unsigned results wrap at that width.
+            constexpr unsigned width = sizeof(T) * CHAR_BIT;
             if constexpr (std::is_signed<T>::value) {
                 if (v1[i] < 0) {
                     Warning(pos, "Negative shift amount in binary expression with type \"%s\".",
                             carg0->GetType()->GetString().c_str());
-                    continue;
+                    return nullptr;
                 }
             }
-            // Check for shift overflow - cast to unsigned to avoid sign comparison warnings
-            if (static_cast<unsigned int>(v1[i]) > countLeadingZeros(v0[i])) {
+            const uint64_t amount = static_cast<uint64_t>(v1[i]);
+            if (amount >= width) {
                 Warning(pos, "Binary expression with type \"%s\" can't represent value.",
                         carg0->GetType()->GetString().c_str());
+                return nullptr;
+            }
+            llvm::APInt bits = llvm::APInt(64, static_cast<uint64_t>(v0[i])).zextOrTrunc(width);
+            if constexpr (std::is_signed<T>::value) {
+                if (amount > bits.countLeadingZeros()) {
+                    Warning(pos, "Binary expression with type \"%s\" can't represent value.",
+                            carg0->GetType()->GetString().c_str());
+                }
+                result[i] = static_cast<T>(bits.shl(amount).getSExtValue());
+            } else {
+                result[i] = static_cast<T>(bits.shl(amount).getZExtValue());
             }
         }
         break;
@@ -2747,10 +2743,10 @@ static ConstExpr *lConstFoldBoolBinaryOp(BinaryExpr::Op op, const bool *v0, cons
 }
 
 static Expr *lConstFoldBinaryFPOp(ConstExpr *constArg0, ConstExpr *constArg1, BinaryExpr::Op op, BinaryExpr *origExpr,
-                                  llvm::Type *llvmType, SourcePos pos) {
+                                  const AtomicType *type, SourcePos pos) {
     std::vector<llvm::APFloat> v0, v1;
-    constArg0->GetValues(v0, llvmType);
-    constArg1->GetValues(v1, llvmType);
+    constArg0->GetValues(v0, type);
+    constArg1->GetValues(v1, type);
     ConstExpr *ret = nullptr;
     if ((ret = lConstFoldBinaryArithFPOp(op, v0, v1, constArg0, pos)) != nullptr) {
         return ret;
@@ -2804,7 +2800,7 @@ Expr *BinaryExpr::Optimize() {
                 Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat) ||
                 Type::EqualIgnoringConst(type1, AtomicType::UniformDouble) ||
                 Type::EqualIgnoringConst(type1, AtomicType::VaryingDouble)) {
-                llvm::Type *eltType = type1->GetAsUniformType()->LLVMType(g->ctx);
+                const AtomicType *eltType = CastType<AtomicType>(type1);
                 std::vector<llvm::APFloat> constVal;
                 int count = constArg1->GetValues(constVal, eltType);
                 std::vector<llvm::APFloat> inv;
@@ -2865,11 +2861,11 @@ Expr *BinaryExpr::Optimize() {
     }
     const Type *type = arg0->GetType()->GetAsNonConstType();
     if (Type::Equal(type, AtomicType::UniformFloat16) || Type::Equal(type, AtomicType::VaryingFloat16)) {
-        return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, LLVMTypes::Float16Type, pos);
+        return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, AtomicType::UniformFloat16, pos);
     } else if (Type::Equal(type, AtomicType::UniformFloat) || Type::Equal(type, AtomicType::VaryingFloat)) {
-        return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, LLVMTypes::FloatType, pos);
+        return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, AtomicType::UniformFloat, pos);
     } else if (Type::Equal(type, AtomicType::UniformDouble) || Type::Equal(type, AtomicType::VaryingDouble)) {
-        return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, LLVMTypes::DoubleType, pos);
+        return lConstFoldBinaryFPOp(constArg0, constArg1, op, this, AtomicType::UniformDouble, pos);
     } else if (Type::Equal(type, AtomicType::UniformInt8) || Type::Equal(type, AtomicType::VaryingInt8)) {
         return lConstFoldBinaryIntOp<int8_t, int64_t>(constArg0, constArg1, op, this, pos);
     } else if (Type::Equal(type, AtomicType::UniformUInt8) || Type::Equal(type, AtomicType::VaryingUInt8)) {
@@ -4064,11 +4060,11 @@ Expr *lConstFoldSelect(const bool bv[], ConstExpr *constExpr1, ConstExpr *constE
 }
 
 Expr *lConstFoldSelectFP(const bool bv[], ConstExpr *constExpr1, ConstExpr *constExpr2, const Type *exprType,
-                         llvm::Type *llvmType, SourcePos pos) {
+                         SourcePos pos) {
     std::vector<llvm::APFloat> v1, v2;
     std::vector<llvm::APFloat> result;
-    int count = constExpr1->GetValues(v1, llvmType);
-    constExpr2->GetValues(v2, llvmType);
+    int count = constExpr1->GetValues(v1, CastType<AtomicType>(exprType));
+    constExpr2->GetValues(v2, CastType<AtomicType>(exprType));
     for (int i = 0; i < count; ++i) {
         result.push_back(bv[i] ? v1[i] : v2[i]);
     }
@@ -4143,11 +4139,11 @@ Expr *SelectExpr::Optimize() {
         } else if (Type::Equal(exprType, AtomicType::VaryingUInt64)) {
             return lConstFoldSelect<uint64_t>(bv, constExpr1, constExpr2, exprType, pos);
         } else if (Type::Equal(exprType, AtomicType::VaryingFloat16)) {
-            return lConstFoldSelectFP(bv, constExpr1, constExpr2, exprType, LLVMTypes::Float16Type, pos);
+            return lConstFoldSelectFP(bv, constExpr1, constExpr2, exprType, pos);
         } else if (Type::Equal(exprType, AtomicType::VaryingFloat)) {
-            return lConstFoldSelectFP(bv, constExpr1, constExpr2, exprType, LLVMTypes::FloatType, pos);
+            return lConstFoldSelectFP(bv, constExpr1, constExpr2, exprType, pos);
         } else if (Type::Equal(exprType, AtomicType::VaryingDouble)) {
-            return lConstFoldSelectFP(bv, constExpr1, constExpr2, exprType, LLVMTypes::DoubleType, pos);
+            return lConstFoldSelectFP(bv, constExpr1, constExpr2, exprType, pos);
         } else if (Type::Equal(exprType, AtomicType::VaryingBool)) {
             return lConstFoldSelect<bool>(bv, constExpr1, constExpr2, exprType, pos);
         }
@@ -6922,7 +6918,7 @@ static inline void lConvertElement(bool from, bool *to) { *to = from; }
 
 /** When converting from floating types to numeric types, get value from APFloat. */
 template <typename To> static inline void lConvertElement(llvm::APFloat from, To *to) {
-    const llvm::fltSemantics &FS = (LLVMTypes::DoubleType)->getFltSemantics();
+    const llvm::fltSemantics &FS = llvm::APFloat::IEEEdouble();
     bool ignored = false;
     from.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
     double val = from.convertToDouble();
@@ -6931,13 +6927,19 @@ template <typename To> static inline void lConvertElement(llvm::APFloat from, To
 
 /** When converting numeric types to floating types, create new APFloat. */
 template <typename From>
-static inline void lConvertElement(From from, std::vector<llvm::APFloat> &to, llvm::Type *type) {
-    to.emplace_back(lCreateAPFloat((double)from, type));
+static inline void lConvertElement(From from, std::vector<llvm::APFloat> &to, const AtomicType *type) {
+    // Round the original integer directly to the declared ISPC precision.
+    // An intermediate double can double-round a 64-bit integer near a tie.
+    static_assert(std::is_integral_v<From>);
+    llvm::APInt bits = llvm::APInt(64, static_cast<uint64_t>(from)).zextOrTrunc(sizeof(From) * CHAR_BIT);
+    llvm::APFloat value = llvm::APFloat::getZero(type->GetFloatSemantics());
+    value.convertFromAPInt(bits, std::is_signed_v<From>, llvm::APFloat::rmNearestTiesToEven);
+    to.push_back(std::move(value));
 }
 
 /** floating types -> floating types requires conversion. */
-static inline void lConvertElement(llvm::APFloat from, std::vector<llvm::APFloat> &to, llvm::Type *type) {
-    const llvm::fltSemantics &FS = type->getFltSemantics();
+static inline void lConvertElement(llvm::APFloat from, std::vector<llvm::APFloat> &to, const AtomicType *type) {
+    const llvm::fltSemantics &FS = type->GetFloatSemantics();
     bool ignored = false;
     from.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
     to.push_back(std::move(from));
@@ -6947,7 +6949,7 @@ static inline void lConvertElement(llvm::APFloat from, std::vector<llvm::APFloat
 static inline void lConvertElement(llvm::APFloat from, bool *to) { *to = from.isNonZero(); }
 
 /** bool -> floating types is also a special case. */
-static inline void lConvertElement(bool from, std::vector<llvm::APFloat> &to, llvm::Type *type) {
+static inline void lConvertElement(bool from, std::vector<llvm::APFloat> &to, const AtomicType *type) {
     to.emplace_back(lCreateAPFloat(from ? (double)1 : (double)0, type));
 }
 
@@ -6966,7 +6968,8 @@ template <typename From, typename To> static void lConvert(const From *from, To 
 }
 
 template <typename From>
-static void lConvert(const From *from, std::vector<llvm::APFloat> &to, llvm::Type *type, int count, bool forceVarying) {
+static void lConvert(const From *from, std::vector<llvm::APFloat> &to, const AtomicType *type, int count,
+                     bool forceVarying) {
     for (int i = 0; i < count; ++i) {
         lConvertElement(from[i], to, type);
     }
@@ -6987,7 +6990,7 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt) const {
     return Count();
 }
 
-int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool forceVarying) const {
+int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, const AtomicType *type, bool forceVarying) const {
     AssertPos(pos, !isAggregate);
     switch (getBasicType()) {
     case AtomicType::TYPE_INT1:
@@ -7291,7 +7294,7 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
     } else if (Type::Equal(constType, AtomicType::UniformFloat16) ||
                Type::Equal(constType, AtomicType::VaryingFloat16)) {
         std::vector<llvm::APFloat> f16v;
-        cExpr->GetValues(f16v, LLVMTypes::Float16Type, constType->IsVaryingType());
+        cExpr->GetValues(f16v, AtomicType::UniformFloat16, constType->IsVaryingType());
         if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMFloat16(f16v[0]), isNotValidForMultiTargetGlobal);
         } else {
@@ -7299,7 +7302,7 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
         }
     } else if (Type::Equal(constType, AtomicType::UniformFloat) || Type::Equal(constType, AtomicType::VaryingFloat)) {
         std::vector<llvm::APFloat> fv;
-        cExpr->GetValues(fv, LLVMTypes::FloatType, constType->IsVaryingType());
+        cExpr->GetValues(fv, AtomicType::UniformFloat, constType->IsVaryingType());
         if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMFloat(fv[0]), isNotValidForMultiTargetGlobal);
         } else {
@@ -7307,7 +7310,7 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
         }
     } else if (Type::Equal(constType, AtomicType::UniformDouble) || Type::Equal(constType, AtomicType::VaryingDouble)) {
         std::vector<llvm::APFloat> dv;
-        cExpr->GetValues(dv, LLVMTypes::DoubleType, constType->IsVaryingType());
+        cExpr->GetValues(dv, AtomicType::UniformDouble, constType->IsVaryingType());
         if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMDouble(dv[0]), isNotValidForMultiTargetGlobal);
         } else {
@@ -8832,17 +8835,17 @@ Expr *TypeCastExpr::Optimize() {
     }
     case AtomicType::TYPE_FLOAT16: {
         std::vector<llvm::APFloat> fh;
-        constExpr->GetValues(fh, LLVMTypes::Float16Type, forceVarying);
+        constExpr->GetValues(fh, AtomicType::UniformFloat16, forceVarying);
         return new ConstExpr(toType, fh, pos);
     }
     case AtomicType::TYPE_FLOAT: {
         std::vector<llvm::APFloat> fv;
-        constExpr->GetValues(fv, LLVMTypes::FloatType, forceVarying);
+        constExpr->GetValues(fv, AtomicType::UniformFloat, forceVarying);
         return new ConstExpr(toType, fv, pos);
     }
     case AtomicType::TYPE_DOUBLE: {
         std::vector<llvm::APFloat> dv;
-        constExpr->GetValues(dv, LLVMTypes::DoubleType, forceVarying);
+        constExpr->GetValues(dv, AtomicType::UniformDouble, forceVarying);
         return new ConstExpr(toType, dv, pos);
     }
     default:

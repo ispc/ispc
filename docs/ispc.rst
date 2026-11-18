@@ -4140,7 +4140,8 @@ Requirements (v1):
 - The function must return a value (no ``void`` return in v1).
 - The function may call other ``constexpr`` functions and supported
   ``@llvm.ispc.bitcast`` overloads for equal-width integer/floating-point
-  reinterpretation.
+  reinterpretation, including uniform short vectors with equal logical
+  payload sizes. Storage padding does not participate in the bitcast.
 - ``constexpr`` is not allowed on function parameters.
 - Control flow conditions must be uniform.
 - Pointer dereference is not allowed; address-of is limited to globals/functions
@@ -5485,6 +5486,13 @@ vector with the target width (for example ``uniform float<8>`` on
 ``avx2-i32x8``) can't be passed to an intrinsic, and such a result is returned
 as a ``varying`` value. The result can then be converted to the needed
 type, for example to an unsigned type.
+
+Numeric ``@llvm.ispc.bitcast(value, type_value)`` is an ISPC operation with an
+explicit destination type: it preserves the ISPC type of ``type_value``,
+including signedness and short-vector shape. A uniform short vector therefore
+stays uniform even when its element count equals the target width. This rule
+also applies during constant evaluation, which uses the ISPC source and
+destination types rather than inferring them from LLVM types.
 
 Intrinsics with struct, token, metadata or scalable vector parameters or
 results (for example ``llvm.sadd.with.overflow``, the constrained

@@ -271,6 +271,11 @@ Library validation and follow-up assessment
   `isinf`, and `isfinite`. Signed `saturating_div` also shares its implementation
   with constant evaluation. Existing public signatures and call syntax remain
   available.
+- Migrated standard-library definitions retain their existing replacement
+  behavior: an ordinary user declaration can select the bitcode fallback or
+  provide a replacement body. Earlier runtime calls keep referring to that
+  function. This exception is marked on the library definitions; ordinary
+  user functions still require consistent constexpr declarations.
 - Derived NTTP expressions such as `callee<N + 1>()` and
   `callee<control(N)>()` are retained until substitution. Constexpr local
   values can also feed NTTPs. These are requirements of composable library
@@ -283,14 +288,21 @@ Library validation and follow-up assessment
   exercise nested aggregate writes without permitting writes through pointers.
 - SSE/SSE2 template overloads retain portable implementations. Boundary tests
   cover oversized shifts, sign fill, zero extension, and nonidentity shuffles;
-  template controls remain available while those implementations are compiled.
-  The matching ordinary overloads use correct scalar lane accesses as well,
-  preserving runtime controls without depending on padded short-vector layout.
+  template and ordinary overloads share constexpr implementations while
+  preserving runtime controls and the existing public layout.
 - SSE float/double and 32-bit integer constructors and shuffles construct
   aggregates directly and are constexpr without changes to their ordinary call
-  forms. Narrower integer implementations retain their existing code where a
-  scalar rewrite would harm runtime instruction selection. The two identical
-  sRGB coefficient tables are shared as a single internal constexpr array.
+  forms. Narrow integer and 64-bit constructors, word shuffles, extract/insert,
+  packed shifts, and representation casts use typed short-vector bitcasts.
+  Runtime operations retain their vector representation instead of scalar
+  packing arithmetic. The two identical sRGB coefficient tables are shared as
+  a single internal constexpr array.
+- Numeric folding uses frontend types for precision, signedness, variability,
+  and logical element counts. Bitcast symbols retain the source ISPC signature
+  even when LLVM represents a uniform short vector and a varying value with
+  the same type. APInt/APFloat implement exact bit operations; LLVM type
+  reconstruction does not determine constexpr value types. Target layout is
+  consulted for byte order, sizes, and address constants.
 
 The follow-up decisions after library adoption are:
 
@@ -301,6 +313,6 @@ The follow-up decisions after library adoption are:
 | Unified aggregate constant folding | Keep deferred: architectural cleanup, not needed for literal scalar intrinsic operands. |
 | Local array/struct element mutation | Included for initialized local aggregates and short vectors, including nested assignment and compound operations. Copies remain independent; pointer/reference writes and partial-mask mutation remain unsupported. |
 | Static assertions | Included: `static_assert` validates uniform compile-time conditions at file/block scope and template instantiation, independently of runtime assertions. AMX tile ranges and generic prefetch controls use it; gather-scale tests verify values 1/2/4/8 before intrinsic narrowing. Executing runtime `assert` in constexpr functions remains separate. |
-| Constexpr evaluation of pure intrinsics | Equal-width integer/floating-point `@llvm.ispc.bitcast` is included, enabling the existing bit-conversion and floating classification helpers. Broader intrinsic evaluation remains separate and requires explicit semantics and parity tests. |
+| Constexpr evaluation of pure intrinsics | Equal-width numeric `@llvm.ispc.bitcast` is included for atoms and uniform short-vector payloads, enabling existing bit-conversion, floating classification, and SSE value helpers. Broader intrinsic evaluation remains separate and requires explicit semantics and parity tests. |
 | Varying control flow and masked mutation | Keep deferred: expression folding is supported, but writes requiring a partial lane mask are rejected rather than evaluated with incorrect side effects. |
 | Public constant-scale gather/scatter API | Optional and outside this migration. Existing varying-index memory access remains the public interface; internal constexpr adoption must preserve its behavior without requiring user source changes. |

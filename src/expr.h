@@ -543,7 +543,7 @@ class ConstExpr : public Expr {
     int GetValues(uint8_t *, bool forceVarying = false) const;
     int GetValues(int16_t *, bool forceVarying = false) const;
     int GetValues(uint16_t *, bool forceVarying = false) const;
-    int GetValues(std::vector<llvm::APFloat> &, llvm::Type *, bool forceVarying = false) const;
+    int GetValues(std::vector<llvm::APFloat> &, const AtomicType *, bool forceVarying = false) const;
     int GetValues(int32_t *, bool forceVarying = false) const;
     int GetValues(uint32_t *, bool forceVarying = false) const;
     int GetValues(int64_t *, bool forceVarying = false) const;

@@ -17,6 +17,7 @@
 #include "sym.h"
 #include "util.h"
 
+#include <algorithm>
 #include <llvm/Support/TimeProfiler.h>
 
 using namespace ispc;
@@ -127,6 +128,14 @@ void AST::AddFunction(Symbol *sym, Stmt *code) {
     Function *fn = new Function(sym, code);
     sym->parentFunction = fn;
     functions.push_back(fn);
+}
+
+void AST::RemoveFunction(Symbol *sym) {
+    auto iter = std::find(functions.begin(), functions.end(), sym->parentFunction);
+    Assert(iter != functions.end());
+    delete *iter;
+    functions.erase(iter);
+    sym->parentFunction = nullptr;
 }
 
 void AST::AddFunctionTemplate(TemplateSymbol *templSym, Stmt *code) {

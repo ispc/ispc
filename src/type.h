@@ -23,6 +23,7 @@
 
 namespace llvm {
 class StructLayout;
+struct fltSemantics;
 } // namespace llvm
 
 namespace ispc {
@@ -366,6 +367,9 @@ class AtomicType : public Type {
     bool IsIntType() const override;
     bool IsUnsignedType() const override;
     bool IsSignedType() const override;
+
+    /** Floating-point precision used by frontend constant evaluation. */
+    const llvm::fltSemantics &GetFloatSemantics() const;
 
     const AtomicType *GetAsUnsignedType() const override;
     const AtomicType *GetAsSignedType() const override;

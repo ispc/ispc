@@ -553,8 +553,7 @@ primary_expression
     | TOKEN_FLOAT16_CONSTANT {
          std::string sval = *$1;
          lCleanUpString($1);
-         llvm::Type *hType = llvm::Type::getHalfTy(*g->ctx);
-         const llvm::fltSemantics &FS = hType->getFltSemantics();
+         const llvm::fltSemantics &FS = AtomicType::UniformFloat16->GetFloatSemantics();
          llvm::APFloat f16(FS, sval);
          $$ = new ConstExpr(AtomicType::UniformFloat16->GetAsConstType(),
                            f16, @1);
