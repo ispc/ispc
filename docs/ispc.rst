@@ -1502,7 +1502,7 @@ avx, avx1     AVX                       Intel Sandy Bridge (2011), AMD Bulldozer
 avx2          AVX2                      Intel Haswell (2013) [#]_, AMD Excavator (2015)
 avx2vnni      AVX2                      Intel Alder Lake (2021), AMD Zen5 (2024)
 avx512skx     AVX-512                   Intel Skylake Xeon (2017), AMD Zen4 (2022)
-avx512icl     AVX-512                   Intel Icelake (2019), AMD Zen4 (2022)
+avx512icl     AVX-512                   Intel Icelake (2019), AMD Zen4/Zen5/Zen6 (2022/2024/2026+)
 avx512spr     AVX-512 + AMX             Intel Sapphire Rapids (2023)
 avx512gnr     AVX-512 + AMX FP16        Intel Granite Rapids (2024)
 avx10.2dmr    AVX10.2 + AMX             Intel Diamond Rapids (2026+)
