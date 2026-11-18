@@ -732,7 +732,8 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
 
     llvm::Value *scaleSmear = nullptr;
     if (origVariableOffset->getType() == LLVMTypes::Int64VectorType) {
-        scaleSmear = LLVMInt64Vector((int64_t)varScale->getZExtValue());
+        // The factored scale is signed, as in the lowering (__gather_elt64_*).
+        scaleSmear = LLVMInt64Vector(varScale->getSExtValue());
     } else {
         scaleSmear = LLVMInt32Vector((int32_t)varScale->getZExtValue());
     }
@@ -969,10 +970,14 @@ static llvm::Instruction *lReverseVector(llvm::Value *v, llvm::Instruction *inse
                                        ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
-static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
+/** The scale of a gather or scatter as a vector of vecType. The factored
+    lowerings sign extend the i32 scale (__gather_elt32_* and __gather_elt64_*
+    in builtins/util.m4), so a factored scale may be negative; the base-offset
+    lowerings zero extend their hardware scale of 1, 2, 4 or 8. */
+static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType, bool isSigned) {
     llvm::ConstantInt *offsetScaleInt = llvm::dyn_cast<llvm::ConstantInt>(offsetScale);
     Assert(offsetScaleInt != nullptr);
-    uint64_t scaleValue = offsetScaleInt->getZExtValue();
+    int64_t scaleValue = isSigned ? offsetScaleInt->getSExtValue() : (int64_t)offsetScaleInt->getZExtValue();
 
     std::vector<llvm::Constant *> scales;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
@@ -1037,7 +1042,7 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
         llvm::Value *constOffsets = access.delta();
 
         // Compute the full offset vector: offsetScale * varyingOffsets + constOffsets
-        llvm::Constant *offsetScaleVec = lGetOffsetScaleVec(offsetScale, varyingOffsets->getType());
+        llvm::Constant *offsetScaleVec = lGetOffsetScaleVec(offsetScale, varyingOffsets->getType(), /*isSigned*/ true);
 
         llvm::Value *scaledVarying =
             llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, varyingOffsets, "scaled_varying",
@@ -1053,7 +1058,7 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
         if (offsetScaleInt != nullptr && offsetScaleInt->isOne()) {
             fullOffsets = offsets;
         } else {
-            llvm::Value *offsetScaleVec = lGetOffsetScaleVec(offsetScale, offsets->getType());
+            llvm::Value *offsetScaleVec = lGetOffsetScaleVec(offsetScale, offsets->getType(), /*isSigned*/ false);
             fullOffsets = llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, offsets,
                                                        "scaled_offsets", ISPC_INSERTION_POINT_INSTRUCTION(callInst));
         }

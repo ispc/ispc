@@ -725,7 +725,8 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Type *base
     llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets);
     Assert(variable != nullptr);
     if (variable->getType() == LLVMTypes::Int64Type) {
-        offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type, "scale_to64",
+        // The scale is signed, as in the lowering (__gather_elt64_*).
+        offsetScale = new llvm::SExtInst(offsetScale, LLVMTypes::Int64Type, "scale_to64",
                                          ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
     }
     llvm::Value *offset = llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, offsetScale, "offset",
