@@ -6,6 +6,7 @@
 
 #include "ImproveMemoryOps.h"
 #include "MemoryAccess.h"
+#include "MemoryPlan.h"
 
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Analysis/VectorUtils.h>
@@ -996,8 +997,8 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
     regular fashion and then change the operation to something simpler and
     more efficient.  For example, if all of the lanes in a gather are
     reading from the same location, we can instead do a scalar load and
-    broadcast.  This pass examines gathers and scatters and tries to
-    simplify them if at all possible.
+    broadcast.  This rule examines gathers and scatters and returns the plan
+    of the simpler operation if there is one.
 
     @todo Currently, this only looks for all program instances going to the
     same location and all going to a linear sequence of locations in
@@ -1006,19 +1007,15 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
     shuffle or things that could be handled with hybrids of e.g. 2 4-wide
     vector loads with AVX, etc.
 */
-static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
+static std::optional<MemoryPlan> lPlanLoadStore(const MemoryAccess &access) {
     // Only a pseudo base-offset or factored gather/scatter is a candidate;
     // its operand layout follows from the callee, not from the target.
     if (!access.isPseudo() || (access.form() != MemoryOpForm::BaseOffsets && access.form() != MemoryOpForm::Factored) ||
         (access.kind() != MemoryOpKind::Gather && access.kind() != MemoryOpKind::Scatter)) {
-        return nullptr;
+        return std::nullopt;
     }
     llvm::CallInst *callInst = access.call;
     const bool isGather = access.kind() == MemoryOpKind::Gather;
-    // Pseudo gather/scatter base pointers are i8 pointers, e.g.
-    // @__pseudo_gather_base_offsets32_i8(ptr, i32, <WIDTH x i32>, <WIDTH x MASK>)
-    llvm::Type *baseType = LLVMTypes::Int8Type;
-    llvm::Type *scalarType = access.elementType();
     // The masked load/store of the same element type that replaces the call.
     auto maskedFunc = [&](MemoryOpKind kind, MemoryOpFlavor flavor) {
         MemoryOpKey key;
@@ -1032,9 +1029,7 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
     SourcePos pos;
     access.sourcePos(&pos);
 
-    llvm::Value *base = access.base();
     llvm::Value *fullOffsets = nullptr;
-    llvm::Value *storeValue = access.value();
     llvm::Value *mask = access.mask();
     if (access.form() == MemoryOpForm::Factored) {
         llvm::Value *varyingOffsets = access.offsets();
@@ -1066,7 +1061,13 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
 
-    auto callName = callInst->getName();
+    // The plans of this rule: base plus the full offsets.
+    auto makePlan = [&](PlanShape shape) {
+        MemoryPlan plan(shape, "gs-to-load-store");
+        plan.base = access.base();
+        plan.offsets = fullOffsets;
+        return plan;
+    };
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
         // If all the offsets are equal, then compute the single
         // pointer they all represent based on the first one of them
@@ -1074,35 +1075,7 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
         if (isGather) {
             // A gather with everyone going to the same location is
             // handled as a scalar load and broadcast across the lanes.
-            Debug(pos, "Transformed gather to scalar load and broadcast!");
-            llvm::Value *ptr = lComputeCommonPointer(base, baseType, fullOffsets, callInst);
-
-            LLVMCopyMetadata(ptr, callInst);
-            Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-            llvm::Value *scalarValue =
-                new llvm::LoadInst(scalarType, ptr, callInst->getName(), ISPC_INSERTION_POINT_INSTRUCTION(callInst));
-
-            // Generate the following sequence:
-            //   %name123 = insertelement <4 x i32> poison, i32 %val, i32 0
-            //   %name124 = shufflevector <4 x i32> %name123, <4 x i32> poison,
-            //                                              <4 x i32> zeroinitializer
-            llvm::Value *undef1Value = llvm::PoisonValue::get(callInst->getType());
-            llvm::Value *undef2Value = llvm::PoisonValue::get(callInst->getType());
-            llvm::Value *insertVec = llvm::InsertElementInst::Create(undef1Value, scalarValue, LLVMInt32(0), callName,
-                                                                     ISPC_INSERTION_POINT_INSTRUCTION(callInst));
-            llvm::FixedVectorType *FVT = llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType());
-            if (!FVT) {
-                Error(pos, "Unable to cast return type of \"%s\" to FixedVectorType", callName.str().c_str());
-                return nullptr;
-            }
-            llvm::Value *zeroMask =
-                llvm::ConstantVector::getSplat(llvm::ElementCount::get(FVT->getNumElements(), false),
-                                               llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-            llvm::Instruction *shufInst = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callName);
-
-            LLVMCopyMetadata(shufInst, callInst);
-            llvm::ReplaceInstWithInst(callInst, shufInst);
-            return shufInst;
+            return makePlan(PlanShape::Broadcast);
         } else {
             // A scatter with everyone going to the same location is
             // undefined or poison (if there's more than one program instance in
@@ -1119,56 +1092,38 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
             // case.  We'll just let a bunch of the program instances
             // do redundant writes, since this isn't important to make
             // fast anyway...
-            return nullptr;
+            return std::nullopt;
         }
     } else {
         int step = access.elementBytes();
 
         // Check for positive stride (forward access pattern)
         if (step > 0 && LLVMVectorIsLinear(fullOffsets, step)) {
-            // We have a linear sequence of memory locations being accessed
-            // starting with the location given by the offset from
-            // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
-            // and 64 bit gather/scatters, respectively.
-            llvm::Instruction *newCall = nullptr;
-            // Lanes that are off may have offsets that wrapped. Then the
-            // pointer is computed from a lane that is on.
+            // The lanes access consecutive elements. The pointer is computed
+            // from lane 0, unless lanes that are off may have offsets that
+            // wrapped: then it is computed from the first lane that is on.
             llvm::SmallPtrSet<llvm::Value *, 4> visited;
             bool fromOnLane =
                 GetMaskStatusFromValue(mask) != MaskStatus::all_on && lHasWrappingZExt(fullOffsets, visited);
+            MemoryPlan plan = makePlan(isGather ? PlanShape::Load : PlanShape::Store);
+            plan.pointer = fromOnLane ? PlanPointer::FirstOnLane : PlanPointer::Lane0;
+            plan.stride = fromOnLane ? step : 0;
 
             if (isGather) {
-                llvm::Value *ptr =
-                    fromOnLane ? lComputeCommonPointerFromFirstOnLane(base, baseType, fullOffsets, mask, step, callInst)
-                               : lComputeCommonPointer(base, baseType, fullOffsets, callInst);
-                LLVMCopyMetadata(ptr, callInst);
-                Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
 #ifdef ISPC_XE_ENABLED
                 doBlendLoad = g->target->isXeTarget() && g->opt.enableXeUnsafeMaskedLoad;
 #endif
-                llvm::Function *loadFunc =
+                plan.function =
                     maskedFunc(MemoryOpKind::MaskedLoad, doBlendLoad ? MemoryOpFlavor::Blend : MemoryOpFlavor::Lowered);
-                if (loadFunc == nullptr) {
-                    // Not declared in this module (hand-written IR).
-                    return nullptr;
-                }
-                newCall = LLVMCallInst(loadFunc, ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
             } else {
-                Debug(pos, "Transformed scatter to unaligned vector store!");
-                llvm::Function *storeFunc = maskedFunc(MemoryOpKind::MaskedStore, MemoryOpFlavor::Pseudo);
-                if (storeFunc == nullptr) {
-                    // Not declared in this module (hand-written IR).
-                    return nullptr;
-                }
-                llvm::Value *ptr =
-                    fromOnLane ? lComputeCommonPointerFromFirstOnLane(base, baseType, fullOffsets, mask, step, callInst)
-                               : lComputeCommonPointer(base, baseType, fullOffsets, callInst);
-                newCall = LLVMCallInst(storeFunc, ptr, storeValue, mask, "");
+                plan.function = maskedFunc(MemoryOpKind::MaskedStore, MemoryOpFlavor::Pseudo);
             }
-            LLVMCopyMetadata(newCall, callInst);
-            llvm::ReplaceInstWithInst(callInst, newCall);
-            return newCall;
+            if (plan.function == nullptr) {
+                // Not declared in this module (hand-written IR).
+                return std::nullopt;
+            }
+            return plan;
         }
 
         // Check for negative stride (backward access pattern like dst[size-1-i])
@@ -1181,60 +1136,150 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
             // active lane dynamically.
             MaskStatus maskStatus = GetMaskStatusFromValue(mask);
             if (maskStatus != MaskStatus::all_on) {
-                return nullptr; // Fall back to scatter for non-all-on masks
+                return std::nullopt; // The gather or scatter stays for other masks
             }
 
 #ifdef ISPC_XE_ENABLED
             // Skip Xe targets until we verify shuffle support
             if (g->target->isXeTarget()) {
-                return nullptr;
+                return std::nullopt;
             }
 #endif
 
-            llvm::Instruction *newCall = nullptr;
-            llvm::Function *memFunc = isGather ? maskedFunc(MemoryOpKind::MaskedLoad, MemoryOpFlavor::Lowered)
-                                               : maskedFunc(MemoryOpKind::MaskedStore, MemoryOpFlavor::Pseudo);
-            if (memFunc == nullptr) {
-                return nullptr; // not declared in this module (hand-written IR)
+            MemoryPlan plan = makePlan(isGather ? PlanShape::ReverseLoad : PlanShape::ReverseStore);
+            plan.pointer = PlanPointer::LastLane;
+            plan.function = isGather ? maskedFunc(MemoryOpKind::MaskedLoad, MemoryOpFlavor::Lowered)
+                                     : maskedFunc(MemoryOpKind::MaskedStore, MemoryOpFlavor::Pseudo);
+            if (plan.function == nullptr) {
+                return std::nullopt; // not declared in this module (hand-written IR)
             }
-
-            if (isGather) {
-                // For backward gather: load from lowest address, then reverse
-                llvm::Value *ptr = lComputeCommonPointerForNegativeStride(base, baseType, fullOffsets, callInst);
-                LLVMCopyMetadata(ptr, callInst);
-                Debug(pos, "Transformed backward gather to load + reverse!");
-
-                newCall = LLVMCallInst(memFunc, ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
-                newCall->insertBefore(ISPC_INSERTION_POINT_INSTRUCTION(callInst));
-                LLVMCopyMetadata(newCall, callInst);
-
-                // Reverse the loaded vector to restore correct lane order.
-                // Insert after newCall, replace uses, then erase callInst.
-                llvm::Instruction *reversed = lReverseVector(newCall, callInst);
-                LLVMCopyMetadata(reversed, callInst);
-                callInst->replaceAllUsesWith(reversed);
-                callInst->eraseFromParent();
-                return reversed;
-            } else {
-                // For backward scatter: reverse data, then store to lowest address
-                Debug(pos, "Transformed backward scatter to reverse + store!");
-
-                llvm::Value *ptr = lComputeCommonPointerForNegativeStride(base, baseType, fullOffsets, callInst);
-                LLVMCopyMetadata(ptr, callInst);
-
-                // Reverse the data vector before storing
-                llvm::Value *reversedData = lReverseVector(storeValue, callInst);
-                LLVMCopyMetadata(reversedData, callInst);
-
-                newCall = LLVMCallInst(memFunc, ptr, reversedData, mask, "");
-                LLVMCopyMetadata(newCall, callInst);
-                llvm::ReplaceInstWithInst(callInst, newCall);
-                return newCall;
-            }
+            return plan;
         }
 
-        return nullptr;
+        return std::nullopt;
     }
+}
+
+/** Emits a Broadcast, Load, ReverseLoad, Store or ReverseStore plan of
+    lPlanLoadStore() in place of the access. */
+static llvm::Instruction *lEmitLoadStore(const MemoryAccess &access, const MemoryPlan &plan) {
+    llvm::CallInst *callInst = access.call;
+    // Pseudo gather/scatter base pointers are i8 pointers, e.g.
+    // @__pseudo_gather_base_offsets32_i8(ptr, i32, <WIDTH x i32>, <WIDTH x MASK>)
+    llvm::Type *baseType = LLVMTypes::Int8Type;
+    llvm::Value *base = plan.base;
+    llvm::Value *fullOffsets = plan.offsets;
+    llvm::Value *mask = access.mask();
+
+    SourcePos pos;
+    access.sourcePos(&pos);
+
+    auto pointer = [&]() {
+        switch (plan.pointer) {
+        case PlanPointer::Lane0:
+            return lComputeCommonPointer(base, baseType, fullOffsets, callInst);
+        case PlanPointer::FirstOnLane:
+            return lComputeCommonPointerFromFirstOnLane(base, baseType, fullOffsets, mask, plan.stride, callInst);
+        case PlanPointer::LastLane:
+            return lComputeCommonPointerForNegativeStride(base, baseType, fullOffsets, callInst);
+        }
+        FATAL("Unexpected plan pointer");
+        return static_cast<llvm::Value *>(nullptr);
+    };
+
+    auto callName = callInst->getName();
+    switch (plan.shape) {
+    case PlanShape::Broadcast: {
+        Debug(pos, "Transformed gather to scalar load and broadcast!");
+        llvm::Value *ptr = pointer();
+
+        LLVMCopyMetadata(ptr, callInst);
+        Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
+        llvm::Value *scalarValue = new llvm::LoadInst(access.elementType(), ptr, callInst->getName(),
+                                                      ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+
+        // Generate the following sequence:
+        //   %name123 = insertelement <4 x i32> poison, i32 %val, i32 0
+        //   %name124 = shufflevector <4 x i32> %name123, <4 x i32> poison,
+        //                                              <4 x i32> zeroinitializer
+        llvm::Value *undef1Value = llvm::PoisonValue::get(callInst->getType());
+        llvm::Value *undef2Value = llvm::PoisonValue::get(callInst->getType());
+        llvm::Value *insertVec = llvm::InsertElementInst::Create(undef1Value, scalarValue, LLVMInt32(0), callName,
+                                                                 ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        llvm::FixedVectorType *FVT = llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType());
+        if (!FVT) {
+            Error(pos, "Unable to cast return type of \"%s\" to FixedVectorType", callName.str().c_str());
+            return nullptr;
+        }
+        llvm::Value *zeroMask =
+            llvm::ConstantVector::getSplat(llvm::ElementCount::get(FVT->getNumElements(), false),
+                                           llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+        llvm::Instruction *shufInst = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callName);
+
+        LLVMCopyMetadata(shufInst, callInst);
+        llvm::ReplaceInstWithInst(callInst, shufInst);
+        return shufInst;
+    }
+    case PlanShape::Load: {
+        llvm::Value *ptr = pointer();
+        LLVMCopyMetadata(ptr, callInst);
+        Debug(pos, "Transformed gather to unaligned vector load!");
+        llvm::Instruction *newCall =
+            LLVMCallInst(plan.function, ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
+        LLVMCopyMetadata(newCall, callInst);
+        llvm::ReplaceInstWithInst(callInst, newCall);
+        return newCall;
+    }
+    case PlanShape::Store: {
+        Debug(pos, "Transformed scatter to unaligned vector store!");
+        llvm::Value *ptr = pointer();
+        llvm::Instruction *newCall = LLVMCallInst(plan.function, ptr, access.value(), mask, "");
+        LLVMCopyMetadata(newCall, callInst);
+        llvm::ReplaceInstWithInst(callInst, newCall);
+        return newCall;
+    }
+    case PlanShape::ReverseLoad: {
+        // For backward gather: load from lowest address, then reverse
+        llvm::Value *ptr = pointer();
+        LLVMCopyMetadata(ptr, callInst);
+        Debug(pos, "Transformed backward gather to load + reverse!");
+
+        llvm::Instruction *newCall =
+            LLVMCallInst(plan.function, ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
+        newCall->insertBefore(ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        LLVMCopyMetadata(newCall, callInst);
+
+        // Reverse the loaded vector to restore correct lane order.
+        // Insert after newCall, replace uses, then erase callInst.
+        llvm::Instruction *reversed = lReverseVector(newCall, callInst);
+        LLVMCopyMetadata(reversed, callInst);
+        callInst->replaceAllUsesWith(reversed);
+        callInst->eraseFromParent();
+        return reversed;
+    }
+    case PlanShape::ReverseStore: {
+        // For backward scatter: reverse data, then store to lowest address
+        Debug(pos, "Transformed backward scatter to reverse + store!");
+
+        llvm::Value *ptr = pointer();
+        LLVMCopyMetadata(ptr, callInst);
+
+        // Reverse the data vector before storing
+        llvm::Value *reversedData = lReverseVector(access.value(), callInst);
+        LLVMCopyMetadata(reversedData, callInst);
+
+        llvm::Instruction *newCall = LLVMCallInst(plan.function, ptr, reversedData, mask, "");
+        LLVMCopyMetadata(newCall, callInst);
+        llvm::ReplaceInstWithInst(callInst, newCall);
+        return newCall;
+    }
+    case PlanShape::BasedForm:
+    case PlanShape::Unmasked:
+    case PlanShape::Removed:
+        break;
+    }
+    FATAL("Unexpected plan shape in lEmitLoadStore()");
+    return nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1242,100 +1287,131 @@ static llvm::Instruction *lGSToLoadStore(const MemoryAccess &access) {
 
 /** Masked stores are generally more complex than regular stores; for
     example, they require multiple instructions to simulate under SSE.
-    This optimization detects cases where masked stores can be replaced
+    This rule detects cases where masked stores can be replaced
     with regular stores or removed entirely, for the cases of an 'all on'
     mask and an 'all off' mask, respectively.
 */
-static llvm::Value *lImproveMaskedStore(const MemoryAccess &access) {
+static std::optional<MemoryPlan> lPlanMaskedStore(const MemoryAccess &access) {
     // A masked store of any flavor; it is assumed aligned to its element.
     if (access.kind() != MemoryOpKind::MaskedStore) {
-        return nullptr;
+        return std::nullopt;
     }
-    llvm::CallInst *callInst = access.call;
-
-    // Got one; grab the operands
-    llvm::Value *lvalue = access.base();
-    llvm::Value *rvalue = access.value();
-    llvm::Value *mask = access.mask();
-    int align = access.naturalAlignment();
-
     // The legacy mask status chooses values for undef lanes; it is kept here
     // to preserve the existing codegen (MemoryAccess::maskStatus() reports
     // only proven statuses).
-    MaskStatus maskStatus = GetMaskStatusFromValue(mask);
+    MaskStatus maskStatus = GetMaskStatusFromValue(access.mask());
     if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so remove the store completely.  (This
         // may in turn lead to being able to optimize out instructions
         // that compute the rvalue...)
-        callInst->eraseFromParent();
-        // Return some fake poison value to signal that we did transformation.
-        return llvm::PoisonValue::get(LLVMTypes::Int32Type);
+        return MemoryPlan(PlanShape::Removed, "masked-store");
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular store
-        llvm::Instruction *store = nullptr;
-
-        lvalue = new llvm::BitCastInst(lvalue, LLVMTypes::PtrType, "lvalue_to_ptr_type",
-                                       ISPC_INSERTION_POINT_INSTRUCTION(callInst));
-        LLVMCopyMetadata(lvalue, callInst);
-        store = new llvm::StoreInst(
-            rvalue, lvalue, false /* not volatile */,
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : align).valueOrOne());
-
-        if (store != nullptr) {
-            LLVMCopyMetadata(store, callInst);
-            llvm::ReplaceInstWithInst(callInst, store);
-            return store;
-        }
-
+        MemoryPlan plan(PlanShape::Unmasked, "masked-store");
+        plan.base = access.base();
+        plan.align = g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : access.naturalAlignment();
+        return plan;
 #ifdef ISPC_XE_ENABLED
     } else {
-        if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
+        if (g->target->isXeTarget() && GetAddressSpace(access.base()) == AddressSpace::ispc_global) {
             // In this case we use masked_store which on Xe target causes scatter usage.
             // Get the source position from the metadata attached to the call
             // instruction so that we can issue PerformanceWarning()s below.
             SourcePos pos;
-            bool gotPosition = LLVMGetSourcePosFromMetadata(callInst, &pos);
+            bool gotPosition = LLVMGetSourcePosFromMetadata(access.call, &pos);
             if (gotPosition) {
                 PerformanceWarning(pos, "Scatter required to store value.");
             }
         }
 #endif
     }
-    return nullptr;
+    return std::nullopt;
 }
 
-static llvm::Value *lImproveMaskedLoad(const MemoryAccess &access, llvm::BasicBlock::iterator iter) {
+/** A masked load with the mask all on is a regular load, and with the mask
+    all off it has no result. */
+static std::optional<MemoryPlan> lPlanMaskedLoad(const MemoryAccess &access) {
     // A masked load of any flavor; it is assumed aligned to its element.
     if (access.kind() != MemoryOpKind::MaskedLoad) {
-        return nullptr;
+        return std::nullopt;
     }
-    llvm::CallInst *callInst = access.call;
-    int align = access.naturalAlignment();
-
-    // Got one; grab the operands
-    llvm::Value *ptr = access.base();
-    llvm::Value *mask = access.mask();
-
-    MaskStatus maskStatus = GetMaskStatusFromValue(mask);
+    MaskStatus maskStatus = GetMaskStatusFromValue(access.mask());
     if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so replace the load with a poison value
+        return MemoryPlan(PlanShape::Removed, "masked-load");
+    } else if (maskStatus == MaskStatus::all_on) {
+        // The mask is all on, so turn this into a regular load
+        MemoryPlan plan(PlanShape::Unmasked, "masked-load");
+        plan.base = access.base();
+        plan.align = g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : access.naturalAlignment();
+        return plan;
+    }
+    return std::nullopt;
+}
+
+/** Emits an Unmasked or Removed plan of a masked load or store. iter points
+    to the call. */
+static llvm::Value *lEmitUnmasked(const MemoryAccess &access, const MemoryPlan &plan, llvm::BasicBlock::iterator iter) {
+    llvm::CallInst *callInst = access.call;
+    Assert(access.kind() == MemoryOpKind::MaskedLoad || access.kind() == MemoryOpKind::MaskedStore);
+    const bool isStore = access.kind() == MemoryOpKind::MaskedStore;
+    if (plan.shape == PlanShape::Removed) {
+        if (isStore) {
+            callInst->eraseFromParent();
+            // Return some fake poison value to signal that we did transformation.
+            return llvm::PoisonValue::get(LLVMTypes::Int32Type);
+        }
         llvm::Value *undef = llvm::PoisonValue::get(callInst->getType());
         ReplaceInstWithValueWrapper(iter, undef);
         return undef;
-    } else if (maskStatus == MaskStatus::all_on) {
-        // The mask is all on, so turn this into a regular load
-        llvm::Instruction *load = nullptr;
-        Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-        load = new llvm::LoadInst(
-            callInst->getType(), ptr, callInst->getName(), false /* not volatile */,
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : align).valueOrOne());
-
-        if (load != nullptr) {
-            LLVMCopyMetadata(load, callInst);
-            llvm::ReplaceInstWithInst(callInst, load);
-            return load;
-        }
     }
+    Assert(plan.shape == PlanShape::Unmasked);
+    if (isStore) {
+        llvm::Value *lvalue = new llvm::BitCastInst(plan.base, LLVMTypes::PtrType, "lvalue_to_ptr_type",
+                                                    ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        LLVMCopyMetadata(lvalue, callInst);
+        llvm::Instruction *store = new llvm::StoreInst(access.value(), lvalue, false /* not volatile */,
+                                                       llvm::MaybeAlign(plan.align).valueOrOne());
+        LLVMCopyMetadata(store, callInst);
+        llvm::ReplaceInstWithInst(callInst, store);
+        return store;
+    }
+    Assert(llvm::isa<llvm::PointerType>(plan.base->getType()));
+    llvm::Instruction *load = new llvm::LoadInst(callInst->getType(), plan.base, callInst->getName(),
+                                                 false /* not volatile */, llvm::MaybeAlign(plan.align).valueOrOne());
+    LLVMCopyMetadata(load, callInst);
+    llvm::ReplaceInstWithInst(callInst, load);
+    return load;
+}
+
+/** The plan of the first of the rules below that has one for the access. */
+static std::optional<MemoryPlan> lPlanAccess(const MemoryAccess &access) {
+    if (std::optional<MemoryPlan> plan = lPlanLoadStore(access)) {
+        return plan;
+    }
+    if (std::optional<MemoryPlan> plan = lPlanMaskedStore(access)) {
+        return plan;
+    }
+    return lPlanMaskedLoad(access);
+}
+
+/** Rewrites the access as the plan says. iter points to the call. Returns
+    the replacement, or nullptr if the plan couldn't be emitted. */
+static llvm::Value *lEmitPlan(const MemoryAccess &access, const MemoryPlan &plan, llvm::BasicBlock::iterator iter) {
+    switch (plan.shape) {
+    case PlanShape::Broadcast:
+    case PlanShape::Load:
+    case PlanShape::ReverseLoad:
+    case PlanShape::Store:
+    case PlanShape::ReverseStore:
+        return lEmitLoadStore(access, plan);
+    case PlanShape::Unmasked:
+    case PlanShape::Removed:
+        return lEmitUnmasked(access, plan, iter);
+    case PlanShape::BasedForm:
+        break;
+    }
+    FATAL("Unexpected plan shape in lEmitPlan()");
     return nullptr;
 }
 
@@ -1365,12 +1441,10 @@ bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
                 modifiedAny = true;
             } else if ((newValue = lGSBaseOffsetsGetMoreConst(*access))) {
                 modifiedAny = true;
-            } else if ((newValue = lGSToLoadStore(*access))) {
-                modifiedAny = true;
-            } else if ((newValue = lImproveMaskedStore(*access))) {
-                modifiedAny = true;
-            } else if ((newValue = lImproveMaskedLoad(*access, curIter))) {
-                modifiedAny = true;
+            } else if (std::optional<MemoryPlan> plan = lPlanAccess(*access)) {
+                if ((newValue = lEmitPlan(*access, *plan, curIter))) {
+                    modifiedAny = true;
+                }
             }
 
             // More than one of optimizations above may be applied subsequently

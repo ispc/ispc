@@ -515,6 +515,7 @@ list(APPEND OPT_SOURCES
     src/opt/MemoryAccess.h
     src/opt/MemoryOpRegistry.cpp
     src/opt/MemoryOpRegistry.h
+    src/opt/MemoryPlan.h
     src/opt/PeepholePass.cpp
     src/opt/PeepholePass.h
     src/opt/RemovePersistentFuncs.cpp
