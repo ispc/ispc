@@ -534,18 +534,22 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
     }
 }
 
-static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
+/** The based form of a general pseudo gather or scatter: a uniform base and
+    offsets recovered from the addresses, with a scale of 2, 4 or 8 divided
+    out of the offsets and, for the factored form, the constant part of the
+    offsets moved to the delta. */
+static std::optional<MemoryPlan> lPlanBasedForm(const MemoryAccess &access) {
     // Only the general pseudo gathers and scatters are converted. A prefetch
     // is left alone: no target has a vector prefetch instruction.
     if (!access.isPseudo() || access.form() != MemoryOpForm::General ||
         (access.kind() != MemoryOpKind::Gather && access.kind() != MemoryOpKind::Scatter)) {
-        return nullptr;
+        return std::nullopt;
     }
-    // The emission below builds vectors of the target width. A call with
+    // The plan's values are vectors of the target width. A call with
     // another lane count, which only hand-written IR has, is left alone;
     // RecoverBaseOffsets() itself accepts any lane count.
     if (access.laneCount() != static_cast<unsigned>(g->target->getVectorWidth())) {
-        return nullptr;
+        return std::nullopt;
     }
     llvm::CallInst *callInst = access.call;
     const bool isGather = access.kind() == MemoryOpKind::Gather;
@@ -565,7 +569,7 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
         // hand-written IR lacks them). Which of the two widths is used is
         // only known after the recipe is materialized, so both must be
         // present rather than mutating the IR and then giving up.
-        return nullptr;
+        return std::nullopt;
     }
 
     // Try to describe the array of pointers as a single base pointer and
@@ -575,11 +579,11 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
     // is left as is.
     std::optional<BaseOffsetsRecipe> recipe = RecoverBaseOffsets(access);
     if (!recipe) {
-        return nullptr;
+        return std::nullopt;
     }
     // The recovered base is a numeric decomposition of the addresses, not a
-    // proof of pointer provenance (#3983); the existing emission below treats
-    // it as the legacy matcher's result.
+    // proof of pointer provenance (#3983); this rule treats it as the legacy
+    // matcher's result.
     BaseOffsetsValues recovered = MaterializeBaseOffsets(*recipe, callInst);
     llvm::Value *basePtr = recovered.base;
     llvm::Value *offsetVector = recovered.offsets;
@@ -589,7 +593,8 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
     basePtr = new llvm::IntToPtrInst(basePtr, LLVMTypes::VoidPointerType, llvm::Twine(basePtr->getName()) + "_2void",
                                      ISPC_INSERTION_POINT_INSTRUCTION(callInst));
     LLVMCopyMetadata(basePtr, callInst);
-    llvm::CallInst *newCall = nullptr;
+    MemoryPlan plan(PlanShape::BasedForm, "gs-to-based");
+    plan.base = basePtr;
 
     if (native) {
 
@@ -605,30 +610,10 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
             gatherScatterFunc = GetMemoryOpFunction(M, narrowed);
         }
 
-        if (isGather) {
-            llvm::Value *mask = access.mask();
-
-            // Generate a new function call to the next pseudo gather
-            // base+offsets instruction.  Note that we're passing a nullptr
-            // llvm::Instruction to llvm::CallInst::Create; this means that
-            // the instruction isn't inserted into a basic block and that
-            // way we can then call ReplaceInstWithInst().
-            newCall = LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, mask,
-                                   callInst->getName().str().c_str(), nullptr);
-            LLVMCopyMetadata(newCall, callInst);
-            llvm::ReplaceInstWithInst(callInst, newCall);
-        } else {
-            llvm::Value *storeValue = access.value();
-            llvm::Value *mask = access.mask();
-
-            // Generate a new function call to the next pseudo scatter
-            // base+offsets instruction.  See above for why passing nullptr
-            // for the Instruction * is intended.
-            newCall =
-                LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, storeValue, mask, "", nullptr);
-            LLVMCopyMetadata(newCall, callInst);
-            llvm::ReplaceInstWithInst(callInst, newCall);
-        }
+        plan.op = LookupMemoryOp(gatherScatterFunc->getName());
+        plan.function = gatherScatterFunc;
+        plan.scale = offsetScale;
+        plan.offsets = offsetVector;
     } else {
         // Try to decompose the offset vector into a compile time constant
         // component and a varying component.  The constant component is
@@ -658,32 +643,13 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
             gatherScatterFunc = GetMemoryOpFunction(M, narrowed);
         }
 
-        if (isGather) {
-            llvm::Value *mask = access.mask();
-
-            // Generate a new function call to the next pseudo gather
-            // base+offsets instruction.  Note that we're passing a nullptr
-            // llvm::Instruction to llvm::CallInst::Create; this means that
-            // the instruction isn't inserted into a basic block and that
-            // way we can then call ReplaceInstWithInst().
-            newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale, constOffset, mask,
-                                   callInst->getName().str().c_str(), nullptr);
-            LLVMCopyMetadata(newCall, callInst);
-            llvm::ReplaceInstWithInst(callInst, newCall);
-        } else {
-            llvm::Value *storeValue = access.value();
-            llvm::Value *mask = access.mask();
-
-            // Generate a new function call to the next pseudo scatter
-            // base+offsets instruction.  See above for why passing nullptr
-            // for the Instruction * is intended.
-            newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale, constOffset, storeValue,
-                                   mask, "", nullptr);
-            LLVMCopyMetadata(newCall, callInst);
-            llvm::ReplaceInstWithInst(callInst, newCall);
-        }
+        plan.op = LookupMemoryOp(gatherScatterFunc->getName());
+        plan.function = gatherScatterFunc;
+        plan.scale = offsetScale;
+        plan.offsets = variableOffset;
+        plan.delta = constOffset;
     }
-    return newCall;
+    return plan;
 }
 
 /** Try to improve the decomposition between compile-time constant and
@@ -692,13 +658,13 @@ static llvm::CallInst *lGSToGSBaseOffsets(const MemoryAccess &access) {
     able to pull more terms out of the unknown part and add them into the
     compile-time-known part.
  */
-static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
+static std::optional<MemoryPlan> lPlanMoreConst(const MemoryAccess &access) {
     // Only the factored pseudo forms carry a separate constant offset. (The
     // legacy table also listed the non-factored base-offset forms, whose
     // uniform scale in that operand position never decomposed.)
     if (!access.isPseudo() || access.form() != MemoryOpForm::Factored ||
         (access.kind() != MemoryOpKind::Gather && access.kind() != MemoryOpKind::Scatter)) {
-        return nullptr;
+        return std::nullopt;
     }
     llvm::CallInst *callInst = access.call;
 
@@ -708,7 +674,7 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
     // If it's zero, we're done.  Don't go and think that we're clever by
     // adding these zeros to the constant offsets.
     if (llvm::isa<llvm::ConstantAggregateZero>(origVariableOffset)) {
-        return nullptr;
+        return std::nullopt;
     }
 
     // Try to decompose the old variable offset
@@ -718,7 +684,7 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
 
     // No luck
     if (constOffset == nullptr) {
-        return nullptr;
+        return std::nullopt;
     }
 
     // Total luck: everything could be moved to the constant offset
@@ -746,12 +712,56 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(const MemoryAccess &access) {
     constOffset = llvm::BinaryOperator::Create(llvm::Instruction::Add, constOffset, access.delta(),
                                                access.delta()->getName(), ISPC_INSERTION_POINT_INSTRUCTION(callInst));
 
-    // Finally, update the values of the operands to the gather/scatter
-    // function.
-    callInst->setArgOperand(access.op->layout.offsets, variableOffset);
-    callInst->setArgOperand(access.op->layout.delta, constOffset);
+    // The same builtin, with the new offsets and delta.
+    MemoryPlan plan(PlanShape::BasedForm, "more-const");
+    plan.op = access.op;
+    plan.function = callInst->getCalledFunction();
+    plan.base = access.base();
+    plan.scale = access.scale();
+    plan.offsets = variableOffset;
+    plan.delta = constOffset;
+    return plan;
+}
 
-    return callInst;
+/** Emits a BasedForm plan. A plan that calls the access's own builtin
+    changes the operands that differ in place; otherwise a call to the
+    plan's builtin replaces the access. */
+static llvm::CallInst *lEmitBasedForm(const MemoryAccess &access, const MemoryPlan &plan) {
+    llvm::CallInst *callInst = access.call;
+    const MemoryOp *op = plan.op;
+    Assert(op != nullptr && (op->form() == MemoryOpForm::BaseOffsets || op->form() == MemoryOpForm::Factored));
+    const MemoryOpLayout &layout = op->layout;
+    if (plan.function == callInst->getCalledFunction()) {
+        auto update = [callInst](int index, llvm::Value *v) {
+            if (index >= 0 && callInst->getArgOperand(index) != v) {
+                callInst->setArgOperand(index, v);
+            }
+        };
+        update(layout.base, plan.base);
+        update(layout.offsets, plan.offsets);
+        update(layout.scale, plan.scale);
+        update(layout.delta, plan.delta);
+        return callInst;
+    }
+
+    llvm::SmallVector<llvm::Value *, 6> args(layout.numArgs, nullptr);
+    args[layout.base] = plan.base;
+    args[layout.scale] = plan.scale;
+    args[layout.offsets] = plan.offsets;
+    if (layout.delta >= 0) {
+        args[layout.delta] = plan.delta;
+    }
+    if (layout.value >= 0) {
+        args[layout.value] = access.value();
+    }
+    args[layout.mask] = access.mask();
+    // Passing no insertion point leaves the call outside of any basic block,
+    // as ReplaceInstWithInst() wants it.
+    llvm::CallInst *newCall =
+        llvm::CallInst::Create(plan.function, args, callInst->getName(), static_cast<llvm::InsertPosition>(nullptr));
+    LLVMCopyMetadata(newCall, callInst);
+    llvm::ReplaceInstWithInst(callInst, newCall);
+    return newCall;
 }
 
 static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Type *baseType, llvm::Value *offsets,
@@ -1386,6 +1396,12 @@ static llvm::Value *lEmitUnmasked(const MemoryAccess &access, const MemoryPlan &
 
 /** The plan of the first of the rules below that has one for the access. */
 static std::optional<MemoryPlan> lPlanAccess(const MemoryAccess &access) {
+    if (std::optional<MemoryPlan> plan = lPlanBasedForm(access)) {
+        return plan;
+    }
+    if (std::optional<MemoryPlan> plan = lPlanMoreConst(access)) {
+        return plan;
+    }
     if (std::optional<MemoryPlan> plan = lPlanLoadStore(access)) {
         return plan;
     }
@@ -1399,6 +1415,8 @@ static std::optional<MemoryPlan> lPlanAccess(const MemoryAccess &access) {
     the replacement, or nullptr if the plan couldn't be emitted. */
 static llvm::Value *lEmitPlan(const MemoryAccess &access, const MemoryPlan &plan, llvm::BasicBlock::iterator iter) {
     switch (plan.shape) {
+    case PlanShape::BasedForm:
+        return lEmitBasedForm(access, plan);
     case PlanShape::Broadcast:
     case PlanShape::Load:
     case PlanShape::ReverseLoad:
@@ -1408,8 +1426,6 @@ static llvm::Value *lEmitPlan(const MemoryAccess &access, const MemoryPlan &plan
     case PlanShape::Unmasked:
     case PlanShape::Removed:
         return lEmitUnmasked(access, plan, iter);
-    case PlanShape::BasedForm:
-        break;
     }
     FATAL("Unexpected plan shape in lEmitPlan()");
     return nullptr;
@@ -1437,11 +1453,7 @@ bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
             }
             llvm::Value *newValue = nullptr;
 
-            if ((newValue = lGSToGSBaseOffsets(*access))) {
-                modifiedAny = true;
-            } else if ((newValue = lGSBaseOffsetsGetMoreConst(*access))) {
-                modifiedAny = true;
-            } else if (std::optional<MemoryPlan> plan = lPlanAccess(*access)) {
+            if (std::optional<MemoryPlan> plan = lPlanAccess(*access)) {
                 if ((newValue = lEmitPlan(*access, *plan, curIter))) {
                     modifiedAny = true;
                 }
