@@ -1707,8 +1707,17 @@ void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &nam
 
 void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types) {
     for (int i = 0; i < (int)types.size(); ++i) {
-        if (CastType<StructType>(types[i].first) == nullptr && CastType<VectorType>(types[i].first) == nullptr &&
-            CastType<EnumType>(types[i].first) == nullptr) {
+        const StructType *st = CastType<StructType>(types[i].first);
+        const EnumType *et = CastType<EnumType>(types[i].first);
+        if (const UndefinedStructType *ust = CastType<UndefinedStructType>(types[i].first)) {
+            Error(types[i].second, "Struct \"%s\" can't be exported before it is defined.",
+                  ust->GetStructName().c_str());
+        } else if ((st != nullptr && st->IsAnonymousType()) || (et != nullptr && et->GetEnumName().empty())) {
+            // The header names the type and its include guard after the type's tag name.
+            const char *kind = st != nullptr ? "struct" : "enum";
+            Error(types[i].second, "Anonymous %s types can't be exported; declare the type as \"%s Name { ... }\".",
+                  kind, kind);
+        } else if (st == nullptr && et == nullptr && CastType<VectorType>(types[i].first) == nullptr) {
             Error(types[i].second, "Only struct, vector, and enum types, not \"%s\", are allowed in type export lists.",
                   types[i].first->GetString().c_str());
         } else {

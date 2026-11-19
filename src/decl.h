@@ -175,8 +175,10 @@ class DeclSpecs : public Traceable {
     */
     const Type *baseType;
 
-    /** The number of type specifiers given in the declaration. More than one
-        is only accepted without an error for "typedef struct foo { } foo;". */
+    /** The number of type specifiers written in the declaration, including
+        ones that failed to resolve to a type. The parser reports an error for
+        more than one unless the type that follows is a struct type (to
+        support "typedef struct foo { } foo;"). */
     int numTypeSpecifiers;
 
     /** Applies the type specifier of the declaration: sets the base type to
@@ -191,6 +193,10 @@ class DeclSpecs : public Traceable {
         width.  For non-vector types, this is zero.
      */
     std::variant<std::monostate, int, Symbol *> vectorSize;
+
+    /** True if a "<n>" vector size is written in the declaration, even if
+        it failed to resolve. */
+    bool hasVectorSize;
 
     /** If this is a declaration with an "soa<n>" qualifier, this gives the
         SOA width specified.  Otherwise this is zero.
@@ -297,8 +303,19 @@ class Declaration : public Traceable {
         declaration to the module. */
     void DeclareFunctions();
 
+    /** True for a declaration written without declarators, like "struct Foo;"
+        or "export Foo;". It is false if declarators were written, even if all
+        of them failed to parse and were dropped from declarators. */
+    bool IsWithoutDeclarators() const { return withoutDeclarators; }
+
+    /** True for "export Foo;", a shorthand for "export { Foo };". */
+    bool IsTypeExport() const;
+
     DeclSpecs *declSpecs;
     std::vector<Declarator *> declarators;
+
+  private:
+    bool withoutDeclarators;
 };
 
 /** The parser creates instances of StructDeclaration for the members of

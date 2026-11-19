@@ -367,6 +367,7 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) 
     soaWidth = 0;
     hasSoaWidth = false;
     vectorSize = std::monostate{};
+    hasVectorSize = false;
     attributeList = nullptr;
     numTypeSpecifiers = 0;
     SetTypeSpecifier(t);
@@ -376,8 +377,6 @@ void DeclSpecs::SetTypeSpecifier(const Type *t) {
     // A typedef of a forward declared struct refers to the struct's definition
     // once it has been provided.
     baseType = ResolveForwardDeclaredStruct(t);
-    if (t != nullptr)
-        ++numTypeSpecifiers;
     if (t != nullptr && m->symbolTable->ContainsType(t)) {
         // Typedefs might have uniform/varying qualifiers inside.
         if (t->IsVaryingType()) {
@@ -1126,7 +1125,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 ///////////////////////////////////////////////////////////////////////////
 // Declaration
 
-Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
+Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) : withoutDeclarators(dlist == nullptr) {
     declSpecs = ds;
     if (dlist != nullptr) {
         declarators = *dlist;
@@ -1138,12 +1137,16 @@ Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
     }
 }
 
-Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
+Declaration::Declaration(DeclSpecs *ds, Declarator *d) : withoutDeclarators(false) {
     declSpecs = ds;
     if (d != nullptr) {
         d->InitFromDeclSpecs(ds);
         declarators.push_back(d);
     }
+}
+
+bool Declaration::IsTypeExport() const {
+    return withoutDeclarators && declSpecs != nullptr && (declSpecs->typeQualifiers & TYPEQUAL_EXPORT);
 }
 
 std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
