@@ -273,6 +273,7 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
     StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), launchGroupHandleAddressInfo);
 
     disableGSWarningCount = 0;
+    memoryAccessCount = 0;
 
     const Type *returnType = function->GetReturnType();
     if (!returnType || returnType->IsVoidType()) {
@@ -2952,6 +2953,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 #endif
 
     llvm::Value *gatherCall = CallInst(gatherFunc, nullptr, ptr, mask, name);
+    addMemoryAccessId(gatherCall);
 
     // Add metadata about the source file location so that the
     // optimization passes can print useful performance warnings if we
@@ -2996,6 +2998,15 @@ void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     llvm::Metadata *last_column = llvm::ConstantAsMetadata::get(LLVMInt32(pos.last_column));
     md = llvm::MDNode::get(*g->ctx, last_column);
     inst->setMetadata("last_column", md);
+}
+
+void FunctionEmitContext::addMemoryAccessId(llvm::Value *v) {
+    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
+    if (!g->dumpMemoryPlans || inst == nullptr) {
+        return;
+    }
+    std::string id = llvmFunction->getName().str() + ":" + std::to_string(++memoryAccessCount);
+    inst->setMetadata(MemoryAccessIdMetadata, llvm::MDNode::get(*g->ctx, llvm::MDString::get(*g->ctx, id)));
 }
 
 llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpace as, bool atEntryBlock) {
@@ -3231,7 +3242,7 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
     args.push_back(value);
     args.push_back(mask);
 
-    CallInst(maskedStoreFunc, nullptr, args);
+    addMemoryAccessId(CallInst(maskedStoreFunc, nullptr, args));
 }
 
 /** Scatter the given varying value to the locations given by the varying
@@ -3348,6 +3359,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     args.push_back(value);
     args.push_back(mask);
     llvm::Value *inst = CallInst(scatterFunc, nullptr, args);
+    addMemoryAccessId(inst);
 
     if (disableGSWarningCount == 0) {
         addGSMetadata(inst, currentPos);

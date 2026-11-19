@@ -254,6 +254,8 @@ static ArgsParseResult devUsage() {
     printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR\n");
     printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
            "current directory, or to <path> if specified\n");
+    printf("    [--dump-memory-plans]\t\tPrint the plan of every gather, scatter and masked load/store "
+           "to stderr\n");
     printf("    [--gen-stdlib]\t\tEnable special compilation mode to generate LLVM IR for stdlib.ispc.\n");
     printf("    [--check-bitcode-libs]\t\tCheck the presence of bitcode libraries for ISPC slim binary.\n");
     printf("    [--mock-host-os-apx=on|off]\t\tFor testing: assume the OS has APX state enabled or disabled when "
@@ -1146,6 +1148,8 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
                                     "handles the phases and it may possibly make some bugs go"
                                     "away or introduce the new ones.");
             g->debug_stages = lParsingPhases(argv[i] + strlen("--debug-phase="), errorHandler);
+        } else if (!strcmp(argv[i], "--dump-memory-plans")) {
+            g->dumpMemoryPlans = true;
         } else if (strncmp(argv[i], "--dump-file=", 12) == 0) {
             g->dumpFile = true;
             g->dumpFilePath = lParsePath(argv[i] + strlen("--dump-file="), errorHandler);

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -833,12 +833,19 @@ class FunctionEmitContext {
         not yet reenabled) gather/scatter performance warnings. */
     int disableGSWarningCount;
 
+    /** Number of gathers, scatters and masked stores emitted so far in this
+        function, for the ids of addMemoryAccessId(). */
+    int memoryAccessCount;
+
     std::map<std::string, llvm::BasicBlock *> labelMap;
 
     static bool initLabelBBlocks(ASTNode *node, void *data);
 
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
     static void addGSMetadata(llvm::Value *inst, SourcePos pos);
+    /** With --dump-memory-plans, gives the memory access call v the next id
+        of this function (MemoryAccessIdMetadata in llvmutil.h). */
+    void addMemoryAccessId(llvm::Value *v);
     bool ifsInCFAllUniform(int cfType) const;
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);

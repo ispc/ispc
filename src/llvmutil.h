@@ -345,6 +345,14 @@ extern void LLVMCopyMetadata(llvm::Value *vto, const llvm::Instruction *from);
                   has been set.  False otherwise.*/
 extern bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos);
 
+/** The name of the metadata that the frontend attaches, with
+    --dump-memory-plans, to every gather, scatter and masked store it emits:
+    !{!"<function>:<n>"} for the n-th memory access emitted in that function.
+    The memory passes copy it with the other metadata to the calls that
+    replace an access, so the dump can follow an access from one pass run to
+    the next and compare it between two builds of the same target. */
+inline constexpr const char *MemoryAccessIdMetadata = "ispc_memory_access";
+
 /** Given an llvm::Value, return true if we can determine that it's an
     undefined value.  This only makes a weak attempt at chasing this down,
     only detecting flat-out undef values, and bitcasts of undef values.

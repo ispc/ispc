@@ -827,6 +827,11 @@ struct Globals {
      */
     bool debugPMTimeTrace;
 
+    /** When \c true, print the plan of every gather, scatter and masked
+        load/store that ImproveMemoryOps and GatherCoalescePass decide on.
+        (Default is false.) */
+    bool dumpMemoryPlans;
+
     /** When \c true, dump AST.
         None - don't dump AST
         All - dump AST for all the code

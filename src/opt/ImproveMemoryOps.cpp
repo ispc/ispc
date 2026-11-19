@@ -1431,7 +1431,7 @@ static llvm::Value *lEmitPlan(const MemoryAccess &access, const MemoryPlan &plan
     return nullptr;
 }
 
-bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
+bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb, MemoryPlanDump *dump) {
     DEBUG_START_BB("ImproveMemoryOps");
 
     bool modifiedAny = false;
@@ -1442,6 +1442,8 @@ bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
         llvm::BasicBlock::iterator curIter = iter++;
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*curIter);
+        // The access's step in the dump.
+        unsigned step = 0;
 
         while (callInst != nullptr) {
             // Decode the call once; every optimization below reads its
@@ -1453,7 +1455,17 @@ bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
             }
             llvm::Value *newValue = nullptr;
 
-            if (std::optional<MemoryPlan> plan = lPlanAccess(*access)) {
+            std::optional<MemoryPlan> plan = lPlanAccess(*access);
+            // In the bodies of the memory builtins, which are not code of the
+            // program, only the rewrites are printed.
+            if (dump != nullptr &&
+                (plan || step > 0 || LookupMemoryOp(callInst->getFunction()->getName()) == nullptr)) {
+                if (step == 0) {
+                    dump->identify(callInst);
+                }
+                dump->print(llvm::errs(), *access, step++, plan);
+            }
+            if (plan) {
                 if ((newValue = lEmitPlan(*access, *plan, curIter))) {
                     modifiedAny = true;
                 }
@@ -1480,8 +1492,9 @@ llvm::PreservedAnalyses ImproveMemoryOpsPass::run(llvm::Function &F, llvm::Funct
     llvm::TimeTraceScope FuncScope("ImproveMemoryOpsPass::run", F.getName());
     bool modifiedAny = false;
 
+    std::optional<MemoryPlanDump> dump = StartMemoryPlanDump("ImproveMemoryOps", memoryPlanStage, memoryPlanIds);
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= improveMemoryOps(BB);
+        modifiedAny |= improveMemoryOps(BB, dump ? &*dump : nullptr);
     }
     if (!modifiedAny) {
         // No changes, all analyses are preserved.

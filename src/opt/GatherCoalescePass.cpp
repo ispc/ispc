@@ -6,6 +6,7 @@
 
 #include "GatherCoalescePass.h"
 #include "MemoryOpRegistry.h"
+#include "MemoryPlan.h"
 
 namespace ispc {
 
@@ -811,6 +812,32 @@ static CoalescePlan lPlanCoalesce(const std::vector<llvm::CallInst *> &coalesceG
     return plan;
 }
 
+/** Prints the line of --dump-memory-plans for a group: every other gather as
+    <id>@<position>, the element size, the constant offset of every
+    lane of every gather in elements (gathers separated by "|"), and every
+    load as start:count, in elements from the shared base. */
+static void lPrintCoalescePlan(llvm::raw_ostream &os, MemoryPlanDump &dump, const CoalescePlan &plan) {
+    for (llvm::CallInst *gather : plan.group) {
+        dump.identify(gather);
+    }
+    dump.printPrefix(os, plan.group[0], 0);
+    os << "coalesce: gathers=" << plan.group.size();
+    for (size_t i = 1; i < plan.group.size(); ++i) {
+        os << (i == 1 ? " others=" : ",") << MemoryPlanAccessId(plan.group[i]) << "@"
+           << MemoryPlanPosition(plan.group[i]);
+    }
+    os << " element=" << plan.elementSize << " lanes=";
+    size_t width = plan.constOffsets.size() / plan.group.size();
+    for (size_t i = 0; i < plan.constOffsets.size(); ++i) {
+        os << (i == 0 ? "" : (i % width == 0 ? "|" : ",")) << plan.constOffsets[i];
+    }
+    os << " loads=";
+    for (size_t i = 0; i < plan.loads.size(); ++i) {
+        os << (i == 0 ? "" : ",") << plan.loads[i].start << ":" << plan.loads[i].count;
+    }
+    os << "\n";
+}
+
 /** Actually do the coalescing: emits the loads of the plan and replaces
     each gather with the vector assembled from them. */
 static bool lEmitCoalesce(const CoalescePlan &plan, llvm::Type *baseType) {
@@ -895,7 +922,7 @@ static bool lInstructionMayWriteToMemory(llvm::Instruction *inst) {
     return false;
 }
 
-bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
+bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb, MemoryPlanDump *dump) {
     DEBUG_START_BB("GatherCoalescePass");
 
     llvm::Module *M = bb.getModule();
@@ -943,6 +970,13 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
         }
         if (i == nGatherFuncs) {
             // Doesn't match any of the types of gathers we care about
+            if (dump != nullptr) {
+                const MemoryOp *op = LookupMemoryOp(calledFunc->getName());
+                if (op != nullptr && op->kind() == MemoryOpKind::Gather && op->flavor() == MemoryOpFlavor::Pseudo) {
+                    dump->printKeep(llvm::errs(), callInst,
+                                    op->form() == MemoryOpForm::Factored ? "element type" : "not a factored gather");
+                }
+            }
             continue;
         }
 
@@ -968,10 +1002,16 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
         // offsets from that constants (in which case we can potentially
         // coalesce).
         if (GetMaskStatusFromValue(mask) != MaskStatus::all_on) {
+            if (dump != nullptr) {
+                dump->printKeep(llvm::errs(), callInst, "mask");
+            }
             continue;
         }
 
         if (!LLVMVectorValuesAllEqual(variableOffsets)) {
+            if (dump != nullptr) {
+                dump->printKeep(llvm::errs(), callInst, "varying offsets");
+            }
             continue;
         }
 
@@ -1055,7 +1095,11 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
 
         // Now that we have a group of gathers, see if we can coalesce them
         // into something more efficient than the original set of gathers.
-        if (lEmitCoalesce(lPlanCoalesce(coalesceGroup), baseType)) {
+        CoalescePlan plan = lPlanCoalesce(coalesceGroup);
+        if (dump != nullptr) {
+            lPrintCoalescePlan(llvm::errs(), *dump, plan);
+        }
+        if (lEmitCoalesce(plan, baseType)) {
             modifiedAny = true;
         }
     }
@@ -1068,8 +1112,9 @@ llvm::PreservedAnalyses GatherCoalescePass::run(llvm::Function &F, llvm::Functio
     llvm::TimeTraceScope FuncScope("GatherCoalescePass::run", F.getName());
 
     bool modifiedAny = false;
+    std::optional<MemoryPlanDump> dump = StartMemoryPlanDump("GatherCoalesce", memoryPlanStage, memoryPlanIds);
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= coalesceGathersFactored(BB);
+        modifiedAny |= coalesceGathersFactored(BB, dump ? &*dump : nullptr);
     }
 
     if (!modifiedAny) {
