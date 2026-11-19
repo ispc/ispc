@@ -11,9 +11,10 @@
     The pass is split into rules that look at an access and return a plan,
     and an emitter that rewrites the call as the plan says. A rule doesn't
     replace the call or change its operands. Like the rules it was moved
-    from, it may create the values a plan refers to (such as the full
-    offsets of a based form) in front of the call; a rule that finds no
-    plan can leave such values unused.
+    from, it may create the values a plan refers to (a materialized base,
+    offsets with the scale divided out, the full offsets of a based form)
+    in front of the call; a rule that finds no plan can leave such values
+    unused.
 */
 
 #pragma once
@@ -49,6 +50,9 @@ struct MemoryPlan {
     PlanShape shape;
     /** The rule of ImproveMemoryOps that made the plan. */
     const char *rule;
+    /** BasedForm: the registered builtin of function, whose layout places
+        the operands. Otherwise nullptr. */
+    const MemoryOp *op = nullptr;
     /** BasedForm: the based builtin to call. Load, ReverseLoad, Store,
         ReverseStore: the masked load or store builtin. Otherwise nullptr. */
     llvm::Function *function = nullptr;
