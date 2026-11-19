@@ -23,6 +23,15 @@
 // CHECK-DAG: struct Fwd {
 // CHECK-DAG: struct TA {
 
+// Each anonymous enum gets its own include guard, made of its enumerator
+// names, each prefixed with its length, which named enums can't clash with.
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3AE0_3AE1__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3AE2_3AE3__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3TE0_3TE1__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3P_Q__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_1P_1Q__
+// CHECK-DAG: #ifndef __ISPC_ENUM_ANON_ENUM_3AE0_3AE1__
+
 #ifdef ERR
 typedef int I;
 
@@ -89,18 +98,11 @@ struct Later {
     int l;
 };
 
-// Anonymous types can't be exported, in both forms.
+// Anonymous struct types can't be exported, in both forms.
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Anonymous struct types can't be exported; declare the type as "struct Name { ... }".
 export struct { int c; };
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Anonymous enum types can't be exported; declare the type as "enum Name { ... }".
-export enum { AE0, AE1 };
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Anonymous struct types can't be exported; declare the type as "struct Name { ... }".
 export { struct { int d; } };
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Anonymous enum types can't be exported; declare the type as "enum Name { ... }".
-export { enum { AE2, AE3 } };
-typedef enum { TE0, TE1 } TE;
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: Error: Anonymous enum types can't be exported; declare the type as "enum Name { ... }".
-export TE;
 
 // Type exports are only allowed at global scope.
 void f() {
@@ -176,9 +178,20 @@ typedef struct {
     int a;
 } TA;
 export TA;
+
+// Anonymous enums export their enumerators, in both forms.
+export enum { AE0, AE1 };
+export { enum { AE2, AE3 } };
+typedef enum { TE0, TE1 } TE;
+export TE;
+export enum { P_Q };
+export enum { P, Q };
+enum ANON_ENUM_3AE0_3AE1 { NAE };
+export ANON_ENUM_3AE0_3AE1;
 #else
 int g(ispc::Foo *f, ispc::Bar *b, ispc::Baz *z, ispc::float3 *v, ispc::double2 *d, ispc::Qux *q, ispc::Quux *qq,
       ispc::Tr *t, ispc::Fwd *w, ispc::TA *a) {
-    return f->x + b->y + z->z + v->v[0] + d->v[0] + q->q + qq->q + t->t + w->w + a->a + ispc::B;
+    return f->x + b->y + z->z + v->v[0] + d->v[0] + q->q + qq->q + t->t + w->w + a->a + ispc::B + ispc::AE1 +
+           ispc::AE3 + ispc::TE1 + ispc::P_Q + ispc::P + ispc::Q + ispc::NAE;
 }
 #endif

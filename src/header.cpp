@@ -233,8 +233,27 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
     fprintf(file, "///////////////////////////////////////////////////////////////////////////\n\n");
 
     for (unsigned int i = 0; i < enumTypes.size(); ++i) {
-        fprintf(file, "#ifndef __ISPC_ENUM_%s__\n", enumTypes[i]->GetEnumName().c_str());
-        fprintf(file, "#define __ISPC_ENUM_%s__\n", enumTypes[i]->GetEnumName().c_str());
+        // An anonymous enum has no name for its include guard, so the guard is
+        // made of all its enumerator names, each prefixed with its length so
+        // that "{ A_B }" and "{ A, B }" differ, under a prefix that no named
+        // enum gets. Headers that declare the same enumerators then declare
+        // them once, and different anonymous enums never hide each other. An
+        // anonymous enum without enumerators declares nothing.
+        std::string guard;
+        if (!enumTypes[i]->GetEnumName().empty()) {
+            guard = "__ISPC_ENUM_" + enumTypes[i]->GetEnumName() + "__";
+        } else if (enumTypes[i]->GetEnumeratorCount() == 0) {
+            continue;
+        } else {
+            guard = "__ISPC_ANON_ENUM";
+            for (int j = 0; j < enumTypes[i]->GetEnumeratorCount(); ++j) {
+                const std::string &name = enumTypes[i]->GetEnumerator(j)->name;
+                guard += "_" + std::to_string(name.size()) + name;
+            }
+            guard += "__";
+        }
+        fprintf(file, "#ifndef %s\n", guard.c_str());
+        fprintf(file, "#define %s\n", guard.c_str());
         std::string declaration = enumTypes[i]->GetDeclaration("", DeclarationSyntax::CPP);
         fprintf(file, "%s {\n", declaration.c_str());
 
