@@ -760,8 +760,8 @@ static void lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGr
     }
 }
 
-/** Actually do the coalescing.  We have a set of gathers all accessing
-    addresses of the form:
+/** The loads that replace a group of gathers, as a value. The gathers all
+    access addresses of the form:
 
     (ptr + {1,2,4,8} * varyingOffset) + constOffset, a.k.a.
     basePtr + constOffset
@@ -770,39 +770,61 @@ static void lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGr
     lanes and where the part in parenthesis has the same value for all of
     the gathers in the group.
  */
-static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup, llvm::Type *baseType) {
-    llvm::Instruction *insertBefore = coalesceGroup[0];
-
-    // First, compute the shared base pointer for all of the gathers
-    llvm::Value *basePtr = lComputeBasePtr(coalesceGroup[0], baseType, insertBefore);
-
+struct CoalescePlan {
+    /** The gathers; the loads are emitted in front of the first one. */
+    std::vector<llvm::CallInst *> group;
+    /** The size of an element in bytes: 4 or 8. */
     int elementSize = 0;
+    /** The constant offset of every lane of every gather from basePtr, in
+        elements: the first vectorWidth are those of the first gather, the
+        next vectorWidth those of the next one, and so forth. */
+    std::vector<int64_t> constOffsets;
+    /** The loads, by start and count. Their value fields are null: the
+        emitter fills them in its own copy. */
+    std::vector<CoalescedLoadOp> loads;
+};
+
+/** Plans the coalescing of a group of gathers. */
+static CoalescePlan lPlanCoalesce(const std::vector<llvm::CallInst *> &coalesceGroup) {
+    CoalescePlan plan;
+    plan.group = coalesceGroup;
+
     if (coalesceGroup[0]->getType() == LLVMTypes::Int32VectorType ||
         coalesceGroup[0]->getType() == LLVMTypes::FloatVectorType) {
-        elementSize = 4;
+        plan.elementSize = 4;
     } else if (coalesceGroup[0]->getType() == LLVMTypes::Int64VectorType ||
                coalesceGroup[0]->getType() == LLVMTypes::DoubleVectorType) {
-        elementSize = 8;
+        plan.elementSize = 8;
     } else {
-        FATAL("Unexpected gather type in lCoalesceGathers");
+        FATAL("Unexpected gather type in lPlanCoalesce");
     }
 
     // Extract the constant offsets from the gathers into the constOffsets
     // vector: the first vectorWidth elements will be those for the first
     // gather, the next vectorWidth those for the next gather, and so
     // forth.
-    std::vector<int64_t> constOffsets;
-    lExtractConstOffsets(coalesceGroup, elementSize, &constOffsets);
+    lExtractConstOffsets(coalesceGroup, plan.elementSize, &plan.constOffsets);
 
     // Determine a set of loads to perform to get all of the values we need
     // loaded.
-    std::vector<CoalescedLoadOp> loadOps;
-    lSelectLoads(constOffsets, &loadOps);
+    lSelectLoads(plan.constOffsets, &plan.loads);
+    return plan;
+}
 
+/** Actually do the coalescing: emits the loads of the plan and replaces
+    each gather with the vector assembled from them. */
+static bool lEmitCoalesce(const CoalescePlan &plan, llvm::Type *baseType) {
+    const std::vector<llvm::CallInst *> &coalesceGroup = plan.group;
+    llvm::Instruction *insertBefore = coalesceGroup[0];
+
+    // First, compute the shared base pointer for all of the gathers
+    llvm::Value *basePtr = lComputeBasePtr(coalesceGroup[0], baseType, insertBefore);
+
+    std::vector<CoalescedLoadOp> loadOps = plan.loads;
     lCoalescePerfInfo(coalesceGroup, loadOps);
 
     // Actually emit load instructions for them
-    lEmitLoads(basePtr, baseType, loadOps, elementSize, insertBefore);
+    lEmitLoads(basePtr, baseType, loadOps, plan.elementSize, insertBefore);
 
     // Now, for any loads that give us <8 x i32> vectors, split their
     // values into two <4 x i32> vectors; it turns out that LLVM gives us
@@ -813,7 +835,7 @@ static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup,
     // gives us each result value; the i'th element of results[] gives the
     // result for the i'th gather in coalesceGroup.
     std::vector<llvm::Value *> results;
-    lAssembleResultVectors(loadOps, constOffsets, results, insertBefore);
+    lAssembleResultVectors(loadOps, plan.constOffsets, results, insertBefore);
 
     // Finally, replace each of the original gathers with the instruction
     // that gives the value from the coalescing process.
@@ -1033,7 +1055,7 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
 
         // Now that we have a group of gathers, see if we can coalesce them
         // into something more efficient than the original set of gathers.
-        if (lCoalesceGathers(coalesceGroup, baseType)) {
+        if (lEmitCoalesce(lPlanCoalesce(coalesceGroup), baseType)) {
             modifiedAny = true;
         }
     }
