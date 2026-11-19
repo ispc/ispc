@@ -3507,6 +3507,7 @@ Globals::Globals() {
     debugPrint = false;
     debugPM = false;
     debugPMTimeTrace = false;
+    dumpMemoryPlans = false;
     astDump = Globals::ASTDumpKind::None;
     dumpFile = false;
     genStdlib = false;

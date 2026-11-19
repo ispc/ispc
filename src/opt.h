@@ -12,6 +12,9 @@
 
 #include "util.h"
 
+#include <type_traits>
+#include <utility>
+
 #include <llvm/Analysis/BasicAliasAnalysis.h>
 #include <llvm/Analysis/ScopedNoAliasAA.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
@@ -113,11 +116,19 @@ template <typename T> void DebugModulePassManager::addPostOrderCGSCCPass(T &&P, 
     }
 }
 
+/** True for a pass that prints its stage in the lines of --dump-memory-plans. */
+template <typename T, typename = void> struct HasMemoryPlanStage : std::false_type {};
+template <typename T>
+struct HasMemoryPlanStage<T, std::void_t<decltype(std::declval<T &>().memoryPlanStage)>> : std::true_type {};
+
 template <typename T> void DebugModulePassManager::addFunctionPass(T &&P, int stage) {
     Assert(m_isFPMOpen && "FunctionPassManager must be initialized before adding function passes");
     // taking number of optimization
     m_passNumber = (stage == -1) ? (m_passNumber + 1) : stage;
     if (g->off_stages.find(m_passNumber) == g->off_stages.end()) {
+        if constexpr (HasMemoryPlanStage<std::decay_t<T>>::value) {
+            P.memoryPlanStage = m_passNumber;
+        }
         fpmVec.back()->addPass(std::move(P));
         addPassAndDebugPrint(T::name().str(), DebugModulePassManager::Passes::Function);
     }

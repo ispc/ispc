@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -8,7 +8,12 @@
 
 #include "ISPCPass.h"
 
+#include <memory>
+
 namespace ispc {
+
+class MemoryPlanDump;
+struct MemoryPlanIds;
 
 /** When the front-end emits gathers and scatters, it generates an array of
     vector-width pointers to represent the set of addresses to read from or
@@ -21,11 +26,16 @@ namespace ispc {
     in builtins.cpp for more information about this.
  */
 struct ImproveMemoryOpsPass : public llvm::PassInfoMixin<ImproveMemoryOpsPass> {
+    /** The pass's number in the optimization pipeline, for the lines of
+        --dump-memory-plans; set by DebugModulePassManager, 0 elsewhere. */
+    int memoryPlanStage = 0;
+    /** The ids this pass has seen in the module, for --dump-memory-plans. */
+    std::shared_ptr<MemoryPlanIds> memoryPlanIds;
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
-    bool improveMemoryOps(llvm::BasicBlock &BB);
+    bool improveMemoryOps(llvm::BasicBlock &BB, MemoryPlanDump *dump);
 };
 
 } // namespace ispc
