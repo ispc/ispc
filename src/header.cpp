@@ -221,6 +221,15 @@ static void lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE 
     }
 }
 
+/** Returns the value of the given enumerator, as it is printed in the header. */
+static int lGetEnumeratorValue(const Symbol *e) {
+    Assert(e->constValue != nullptr);
+    unsigned int enumValue[1];
+    int count = e->constValue->GetValues(enumValue);
+    Assert(count == 1);
+    return (int)enumValue[0];
+}
+
 /** Emit C declarations of enumerator types to the generated header file.
  */
 static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE *file) {
@@ -234,10 +243,11 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
 
     for (unsigned int i = 0; i < enumTypes.size(); ++i) {
         // An anonymous enum has no name for its include guard, so the guard is
-        // made of all its enumerator names, each prefixed with its length so
-        // that "{ A_B }" and "{ A, B }" differ, under a prefix that no named
-        // enum gets. Headers that declare the same enumerators then declare
-        // them once, and different anonymous enums never hide each other. An
+        // made of all its enumerators, under a prefix that no named enum gets:
+        // each name, prefixed with its length so that "{ A_B }" and "{ A, B }"
+        // differ, and its value, with "m" for a minus sign. Headers that
+        // declare the same enumerators with the same values then declare them
+        // once, and different anonymous enums never hide each other. An
         // anonymous enum without enumerators declares nothing.
         std::string guard;
         if (!enumTypes[i]->GetEnumName().empty()) {
@@ -247,8 +257,10 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
         } else {
             guard = "__ISPC_ANON_ENUM";
             for (int j = 0; j < enumTypes[i]->GetEnumeratorCount(); ++j) {
-                const std::string &name = enumTypes[i]->GetEnumerator(j)->name;
-                guard += "_" + std::to_string(name.size()) + name;
+                const Symbol *e = enumTypes[i]->GetEnumerator(j);
+                int64_t value = lGetEnumeratorValue(e);
+                guard += "_" + std::to_string(e->name.size()) + e->name + "_" +
+                         (value < 0 ? "m" + std::to_string(-value) : std::to_string(value));
             }
             guard += "__";
         }
@@ -260,17 +272,13 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
         // Print the individual enumerators
         for (int j = 0; j < enumTypes[i]->GetEnumeratorCount(); ++j) {
             const Symbol *e = enumTypes[i]->GetEnumerator(j);
-            Assert(e->constValue != nullptr);
-            unsigned int enumValue[1];
-            int count = e->constValue->GetValues(enumValue);
-            Assert(count == 1);
 
             // Always print an initializer to set the value.  We could be
             // 'clever' here and detect whether the implicit value given by
             // one plus the previous enumerator value (or zero, for the
             // first enumerator) is the same as the value stored with the
             // enumerator, though that doesn't seem worth the trouble...
-            fprintf(file, "    %s = %d%c\n", e->name.c_str(), enumValue[0],
+            fprintf(file, "    %s = %d%c\n", e->name.c_str(), lGetEnumeratorValue(e),
                     (j < enumTypes[i]->GetEnumeratorCount() - 1) ? ',' : ' ');
         }
         fprintf(file, "};\n");

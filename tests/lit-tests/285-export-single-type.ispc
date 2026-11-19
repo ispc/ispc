@@ -24,13 +24,15 @@
 // CHECK-DAG: struct TA {
 
 // Each anonymous enum gets its own include guard, made of its enumerator
-// names, each prefixed with its length, which named enums can't clash with.
-// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3AE0_3AE1__
-// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3AE2_3AE3__
-// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3TE0_3TE1__
-// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3P_Q__
-// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_1P_1Q__
-// CHECK-DAG: #ifndef __ISPC_ENUM_ANON_ENUM_3AE0_3AE1__
+// names, each prefixed with its length, and their values, which named enums
+// can't clash with.
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3AE0_0_3AE1_1__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3AE2_0_3AE3_1__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3TE0_0_3TE1_1__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3P_Q_0__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_1P_0_1Q_1__
+// CHECK-DAG: #ifndef __ISPC_ANON_ENUM_3NEG_m5_3POS_7__
+// CHECK-DAG: #ifndef __ISPC_ENUM_ANON_ENUM_3AE0_0_3AE1_1__
 
 #ifdef ERR
 typedef int I;
@@ -186,12 +188,13 @@ typedef enum { TE0, TE1 } TE;
 export TE;
 export enum { P_Q };
 export enum { P, Q };
-enum ANON_ENUM_3AE0_3AE1 { NAE };
-export ANON_ENUM_3AE0_3AE1;
+export enum { NEG = -5, POS = 7 };
+enum ANON_ENUM_3AE0_0_3AE1_1 { NAE };
+export ANON_ENUM_3AE0_0_3AE1_1;
 #else
 int g(ispc::Foo *f, ispc::Bar *b, ispc::Baz *z, ispc::float3 *v, ispc::double2 *d, ispc::Qux *q, ispc::Quux *qq,
       ispc::Tr *t, ispc::Fwd *w, ispc::TA *a) {
     return f->x + b->y + z->z + v->v[0] + d->v[0] + q->q + qq->q + t->t + w->w + a->a + ispc::B + ispc::AE1 +
-           ispc::AE3 + ispc::TE1 + ispc::P_Q + ispc::P + ispc::Q + ispc::NAE;
+           ispc::AE3 + ispc::TE1 + ispc::P_Q + ispc::P + ispc::Q + ispc::NEG + ispc::POS + ispc::NAE;
 }
 #endif
