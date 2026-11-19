@@ -163,12 +163,23 @@ class DeclSpecs : public Traceable {
     /** Zero or more of the TYPEQUAL_* values, ANDed together. */
     int typeQualifiers;
 
+    /** The TYPEQUAL_* values written in the declaration. Unlike
+        typeQualifiers, it doesn't include the uniform/varying qualifier
+        inherited from a typedef. */
+    int explicitTypeQualifiers;
+
     /** The basic type provided in the declaration; this should be an
         AtomicType, EnumType, StructType, or VectorType; other types (like
         ArrayTypes) will end up being created if a particular declaration
         has an array size, etc.
     */
     const Type *baseType;
+
+    /** The number of type specifiers written in the declaration, including
+        ones that failed to resolve to a type. The parser reports an error for
+        more than one unless the type that follows is a struct type (to
+        support "typedef struct foo { } foo;"). */
+    int numTypeSpecifiers;
 
     /** Applies the type specifier of the declaration: sets the base type to
         it (a forward declared struct is replaced by its definition, if it has
@@ -183,10 +194,18 @@ class DeclSpecs : public Traceable {
      */
     std::variant<std::monostate, int, Symbol *> vectorSize;
 
+    /** True if a "<n>" vector size is written in the declaration, even if
+        it failed to resolve. */
+    bool hasVectorSize;
+
     /** If this is a declaration with an "soa<n>" qualifier, this gives the
         SOA width specified.  Otherwise this is zero.
      */
     int soaWidth;
+
+    /** True if an "soa<n>" qualifier is written in the declaration, even if
+        n is zero. */
+    bool hasSoaWidth;
 
     std::vector<std::pair<std::string, SourcePos>> declSpecList;
 
@@ -284,8 +303,19 @@ class Declaration : public Traceable {
         declaration to the module. */
     void DeclareFunctions();
 
+    /** True for a declaration written without declarators, like "struct Foo;"
+        or "export Foo;". It is false if declarators were written, even if all
+        of them failed to parse and were dropped from declarators. */
+    bool IsWithoutDeclarators() const { return withoutDeclarators; }
+
+    /** True for "export Foo;", a shorthand for "export { Foo };". */
+    bool IsTypeExport() const;
+
     DeclSpecs *declSpecs;
     std::vector<Declarator *> declarators;
+
+  private:
+    bool withoutDeclarators;
 };
 
 /** The parser creates instances of StructDeclaration for the members of

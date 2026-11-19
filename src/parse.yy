@@ -1097,6 +1097,10 @@ declaration_statement
             AssertPos(@1, m->errorCount > 0);
             $$ = nullptr;
         }
+        else if ($1->IsTypeExport()) {
+            Error(@1, "Type export declarations are only allowed at global scope.");
+            $$ = nullptr;
+        }
         else if ($1->declSpecs->storageClass.IsTypedef()) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == nullptr)
@@ -1252,6 +1256,7 @@ declaration_specifiers
       {
           DeclSpecs *ds = new DeclSpecs;
           ds->soaWidth = (int32_t)$1;
+          ds->hasSoaWidth = true;
           $$ = ds;
       }
     | soa_width_specifier declaration_specifiers
@@ -1262,22 +1267,29 @@ declaration_specifiers
                   Error(@1, "soa<> qualifier supplied multiple times in declaration.");
               else
                   ds->soaWidth = (int32_t)$1;
+              ds->hasSoaWidth = true;
           }
           $$ = ds;
       }
     | type_specifier
       {
-          $$ = new DeclSpecs($1);
+          DeclSpecs *ds = new DeclSpecs($1);
+          ds->numTypeSpecifiers = 1;
+          $$ = ds;
       }
     | type_specifier '<' int_constant '>'
     {
           DeclSpecs *ds = new DeclSpecs($1);
+          ds->numTypeSpecifiers = 1;
           ds->vectorSize = (int32_t)$3;
+          ds->hasVectorSize = true;
           $$ = ds;
     }
     | type_specifier '<' TOKEN_IDENTIFIER '>'
     {
           DeclSpecs *ds = new DeclSpecs($1);
+          ds->numTypeSpecifiers = 1;
+          ds->hasVectorSize = true;
           const char *name = $3->c_str();
           Symbol *s = m->symbolTable->LookupVariable(name);
           if (s) {
@@ -1306,6 +1318,7 @@ declaration_specifiers
                       Error(@1, "Multiple types provided for declaration.");
               }
               ds->SetTypeSpecifier($1);
+              ++ds->numTypeSpecifiers;
           }
           $$ = ds;
       }
@@ -1316,8 +1329,10 @@ declaration_specifiers
     | type_qualifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
-          if (ds != nullptr)
+          if (ds != nullptr) {
               ds->typeQualifiers |= $1;
+              ds->explicitTypeQualifiers |= $1;
+          }
           $$ = ds;
       }
     | attribute_specifier
@@ -2923,9 +2938,29 @@ external_declaration
     }
     | declaration
     {
-        if ($1 != nullptr)
+        if ($1 != nullptr) {
+            DeclSpecs *ds = $1->declSpecs;
+            if ($1->IsTypeExport()) {
+                // "export Foo;" is a shorthand for "export { Foo };". A typedef
+                // name may carry a uniform/varying qualifier in its type, which is
+                // ignored like in the export list. Anything else written in the
+                // declaration besides the type name is an error.
+                int otherQualifiers = ds->explicitTypeQualifiers & ~TYPEQUAL_EXPORT;
+                if (ds->numTypeSpecifiers == 0)
+                    Error(@1, "Expected a type name after \"export\".");
+                else if (ds->baseType == nullptr)
+                    // The type specifier has already been reported as invalid.
+                    AssertPos(@1, m->errorCount > 0);
+                else if (!ds->storageClass.IsNone() || otherQualifiers != 0 || ds->hasSoaWidth ||
+                         ds->hasVectorSize || !ds->declSpecList.empty() || ds->attributeList != nullptr ||
+                         ds->numTypeSpecifiers > 1)
+                    Error(@1, "Only a type name is allowed after \"export\" in a type export declaration.");
+                else
+                    m->AddExportedTypes({std::make_pair(ds->baseType, @1)});
+            }
             for (unsigned int i = 0; i < $1->declarators.size(); ++i)
                 lAddDeclaration($1->declSpecs, $1->declarators[i]);
+        }
     }
     | ';'
     ;

@@ -363,9 +363,13 @@ void AttributeList::Print() const {
 
 DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) {
     typeQualifiers = tq;
+    explicitTypeQualifiers = tq;
     soaWidth = 0;
+    hasSoaWidth = false;
     vectorSize = std::monostate{};
+    hasVectorSize = false;
     attributeList = nullptr;
+    numTypeSpecifiers = 0;
     SetTypeSpecifier(t);
 }
 
@@ -1121,7 +1125,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 ///////////////////////////////////////////////////////////////////////////
 // Declaration
 
-Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
+Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) : withoutDeclarators(dlist == nullptr) {
     declSpecs = ds;
     if (dlist != nullptr) {
         declarators = *dlist;
@@ -1133,12 +1137,16 @@ Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
     }
 }
 
-Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
+Declaration::Declaration(DeclSpecs *ds, Declarator *d) : withoutDeclarators(false) {
     declSpecs = ds;
     if (d != nullptr) {
         d->InitFromDeclSpecs(ds);
         declarators.push_back(d);
     }
+}
+
+bool Declaration::IsTypeExport() const {
+    return withoutDeclarators && declSpecs != nullptr && (declSpecs->typeQualifiers & TYPEQUAL_EXPORT);
 }
 
 std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
