@@ -3112,7 +3112,9 @@ std::unique_ptr<llvm::Module> Module::CompileToLLVMModule(const char *srcFile, A
     if (!g->target) {
         // Create a default target for JIT compilation
         Module::OutputFlags defaultFlags;
-        ISPCTarget target = targets.empty() ? ISPCTarget::host : targets[0];
+        // As on the command line, --cpu without --target selects the target
+        // from the CPU, so only use the host target if neither is given.
+        ISPCTarget target = !targets.empty() ? targets[0] : (cpu ? ISPCTarget::none : ISPCTarget::host);
         auto targetPtr =
             Target::Create(arch, cpu, target, defaultFlags.getPICLevel(), defaultFlags.getMCModel(), false);
         if (!targetPtr) {
