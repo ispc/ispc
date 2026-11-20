@@ -22,7 +22,7 @@ RUN uname -a
 # Ubuntu 18.04's default GCC 7.5 is too old to build recent LLVM (>=21) trunk
 # (e.g. CTAD failures in clang's LifetimeSafety), so install GCC 11 from the
 # ubuntu-toolchain-r PPA and make it the default compiler.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates ninja-build gnupg software-properties-common && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates unzip gnupg software-properties-common && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     apt-get -y update && apt-get --no-install-recommends install -y gcc-11 g++-11 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 \
@@ -48,6 +48,16 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
     sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
+
+# Download and install Ninja 1.13.2. The distribution ships Ninja 1.8.2, which cannot
+# run the build files CMake 3.31 generates for LLVM (needs 1.10 or newer).
+RUN if [[ $(uname -m) =~ "x86" ]]; then \
+        export NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux.zip"; \
+    else \
+        export NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux-aarch64.zip"; \
+    fi && \
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $NINJA_URL && \
+    unzip -o ninja-linux*.zip -d /usr/local/bin && rm -f ninja-linux*.zip
 
 # Install TBB from source (required for ISPCRT).
 # Build from source to avoid certificate issues with Intel apt repo on Ubuntu 18.04
