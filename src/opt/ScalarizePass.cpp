@@ -60,6 +60,63 @@ static llvm::Value *lMatchAndScalarize(llvm::Instruction *inst) {
     return nullptr;
 }
 
+// Recover a scalar byte offset from a splat OR a constant lane offset.
+static llvm::Value *lScalarizeComputedByteOffset(llvm::Value *indices, uint64_t lane, llvm::IRBuilder<> &builder) {
+    auto *op = llvm::dyn_cast<llvm::BinaryOperator>(indices);
+    if (!op || op->getOpcode() != llvm::Instruction::Or) {
+        return nullptr;
+    }
+    auto *offsets = llvm::dyn_cast<llvm::Constant>(op->getOperand(1));
+    auto *splat = llvm::dyn_cast<llvm::ShuffleVectorInst>(op->getOperand(0));
+    if (!offsets || !splat || !llvm::isa<llvm::PoisonValue>(splat->getOperand(1))) {
+        return nullptr;
+    }
+    for (int element : splat->getShuffleMask()) {
+        if (element != 0) {
+            return nullptr;
+        }
+    }
+    auto *insert = llvm::dyn_cast<llvm::InsertElementInst>(splat->getOperand(0));
+    auto *index = insert ? llvm::dyn_cast<llvm::ConstantInt>(insert->getOperand(2)) : nullptr;
+    auto *offset = llvm::dyn_cast_or_null<llvm::ConstantInt>(offsets->getAggregateElement(unsigned(lane)));
+    if (!index || !index->isZero() || !llvm::isa<llvm::PoisonValue>(insert->getOperand(0)) || !offset ||
+        offset->isNegative()) {
+        return nullptr;
+    }
+    return builder.CreateOr(insert->getOperand(1), offset);
+}
+
+// Recover a scalar address for an ordinary byte load from computed offsets.
+static llvm::Value *lScalarizeByteGatherIndex(llvm::Instruction *inst, unsigned width) {
+    auto *extract = llvm::dyn_cast<llvm::ExtractElementInst>(inst);
+    if (!extract || !extract->hasOneUse() || !llvm::isa<llvm::ConstantInt>(extract->getIndexOperand())) {
+        return nullptr;
+    }
+    auto *extend = llvm::dyn_cast<llvm::ZExtInst>(extract->getVectorOperand());
+    auto *address = llvm::dyn_cast<llvm::GetElementPtrInst>(*extract->user_begin());
+    if (!extend || !address || !address->getSourceElementType()->isIntegerTy(8) || !address->hasOneUse() ||
+        !extract->getType()->isIntegerTy(64)) {
+        return nullptr;
+    }
+    auto *indices = extend->getOperand(0);
+    auto *byte = llvm::dyn_cast<llvm::LoadInst>(*address->user_begin());
+    if (!byte || !byte->isSimple() || byte->getPointerOperand() != address || !byte->getType()->isIntegerTy(8) ||
+        indices->getType() != llvm::FixedVectorType::get(llvm::Type::getInt32Ty(inst->getContext()), width)) {
+        return nullptr;
+    }
+
+    auto *lane = llvm::cast<llvm::ConstantInt>(extract->getIndexOperand());
+    if (lane->getValue().uge(width)) {
+        return nullptr;
+    }
+    llvm::IRBuilder<> builder(extract);
+    auto *index = lScalarizeComputedByteOffset(indices, lane->getZExtValue(), builder);
+    if (!index) {
+        return nullptr;
+    }
+    return builder.CreateZExt(index, extract->getType(), "", extend->hasNonNeg());
+}
+
 bool ScalarizePass::matchAndReplace(llvm::BasicBlock &bb) {
     DEBUG_START_BB("ScalarizePass");
 
@@ -71,6 +128,10 @@ bool ScalarizePass::matchAndReplace(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*(iter++);
 
         llvm::Value *newValue = lMatchAndScalarize(inst);
+        if (!newValue && g && g->target && g->target->getISA() == Target::NVL_AVX10_2 &&
+            (g->target->getVectorWidth() == 8 || g->target->getVectorWidth() == 16)) {
+            newValue = lScalarizeByteGatherIndex(inst, g->target->getVectorWidth());
+        }
         if (newValue != nullptr) {
             inst->replaceAllUsesWith(newValue);
             llvm::RecursivelyDeleteTriviallyDeadInstructions(inst);
