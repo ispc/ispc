@@ -3,7 +3,7 @@
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.31)
 
 set(BENCHMARKS_PROJECT_NAME ispc_benchmarks)
 project(${BENCHMARKS_PROJECT_NAME}

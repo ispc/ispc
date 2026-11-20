@@ -1,14 +1,14 @@
 {
   "vendor": {
     "ispc.github.io" : {
-      "license_comment1": "Copyright (c) 2023, Intel Corporation",
+      "license_comment1": "Copyright (c) 2023-2026, Intel Corporation",
       "license_comment2": "SPDX-License-Identifier: BSD-3-Clause"
     }
   },
   "version": 4,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 23
+    "minor": 31
   },
   "include": [
     "osPresets.json"
