@@ -257,6 +257,7 @@ Contents:
 
   + `Interoperability Overview`_
   + `Data Layout`_
+  + `Exporting Types to the Header File`_
   + `Data Alignment and Aliasing`_
   + `Restructuring Existing Programs to Use ISPC`_
 
@@ -8241,6 +8242,91 @@ using Intel® SSE, and so forth.)  This implies that these types will have
 different layout on different compilation targets.  As such, applications
 should in general avoid accessing ``uniform`` short vector types from C/C++
 application code if possible.
+
+Exporting Types to the Header File
+----------------------------------
+
+The header file generated with the ``-h`` option only includes the types
+that are used by ``export`` and ``extern "C"`` functions.  Other types that
+are shared with the application can be added to it with a type export
+declaration at global scope, which lists the names of the types to export:
+
+::
+
+  // ispc code
+  struct Point {
+      float x, y;
+  };
+
+  enum Color { RED, GREEN, BLUE };
+
+  typedef float<3> float3;
+
+  export { Point, Color, float3 };
+
+The generated header file then has declarations of these types, even if no
+exported function uses them.  In C++ they are declared in the ``ispc``
+namespace; in C they are declared at global scope, without the namespace.
+For the ``avx2-i32x8`` target, a C++ program sees:
+
+::
+
+  // C++ code
+  namespace ispc {
+  struct float3 { float v[3]; } __attribute__ ((aligned(16)));
+
+  enum Color {
+      RED = 0,
+      GREEN = 1,
+      BLUE = 2
+  };
+
+  struct Point {
+      float x;
+      float y;
+  };
+  }
+
+A single type can also be exported without the braces, and a ``struct`` or
+``enum`` type can be defined and exported in one declaration:
+
+::
+
+  export Point;
+  export enum Color;
+  export struct Pair {
+      int a, b;
+  };
+
+Only ``struct``, ``enum`` and short vector types may be exported.  A
+``struct`` type must be defined before it is exported, and anonymous
+``struct`` types can't be exported, though a ``typedef`` name for one can.
+An exported type itself is always declared in the header with ``uniform``
+variability: a ``uniform`` or ``varying`` qualifier carried by a ``typedef``
+name is ignored.  Members that are declared ``varying`` stay varying,
+though.  A short vector type is declared under a name made of the C type of
+its elements and its size, such as ``float3`` for ``float<3>`` or
+``int32_t4`` for ``int<4>``, rather than under its ``typedef`` name.  Its
+alignment depends on the compilation target, as described in `Data Layout`_.
+
+As for the types used by exported functions, the header also declares the
+types that an exported type uses, such as the ``struct``, ``enum`` and short
+vector types of its members and the types that its members point to, so
+they don't need to be exported separately:
+
+::
+
+  // ispc code
+  typedef float<3> float3;
+
+  enum Kind { A, B };
+
+  struct Node {
+      Kind kind;
+      float3 pos;
+  };
+
+  export Node;    // also declares Kind and float3 in the header
 
 Data Alignment and Aliasing
 ---------------------------
