@@ -429,26 +429,31 @@ static void lGetExportedTypes(const Type *type, std::vector<const StructType *> 
     }
 }
 
-/** Given a set of functions, return the set of structure and vector types
-    present in the parameters to them.
+/** Collects the struct, enum, and vector types that the header declares: the
+    types in the signatures of the given functions and the types named in type
+    export declarations ("export { T1, T2 };" or "export T;"), along with the
+    types that they contain.  Both sources are walked the same way, so a type
+    gets the same declarations whichever way it is exported.  Exported types
+    are declared as uniform.
  */
-static void lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
-                                   std::vector<const StructType *> *exportedStructTypes,
-                                   std::vector<const EnumType *> *exportedEnumTypes,
-                                   std::vector<const VectorType *> *exportedVectorTypes) {
+static void lGetHeaderTypes(const std::vector<Symbol *> &funcs,
+                            const std::vector<std::pair<const Type *, SourcePos>> &exportedTypes,
+                            std::vector<const StructType *> *exportedStructTypes,
+                            std::vector<const EnumType *> *exportedEnumTypes,
+                            std::vector<const VectorType *> *exportedVectorTypes) {
     std::set<const StructType *> walked;
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         Assert(ftype != nullptr);
+        lGetExportedTypes(ftype, exportedStructTypes, exportedEnumTypes, exportedVectorTypes, walked);
+    }
 
-        // Handle the return type
-        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes, walked);
-
-        // And now the parameter types...
-        for (int j = 0; j < ftype->GetNumParameters(); ++j) {
-            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes,
-                              walked);
-        }
+    for (const auto &exported : exportedTypes) {
+        const Type *type = exported.first;
+        Assert(CastType<StructType>(type) != nullptr || CastType<EnumType>(type) != nullptr ||
+               CastType<VectorType>(type) != nullptr);
+        lGetExportedTypes(type->GetAsUniformType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes,
+                          walked);
     }
 }
 
@@ -719,7 +724,7 @@ bool Module::writeDevStub() {
     std::vector<const StructType *> exportedStructTypes;
     std::vector<const EnumType *> exportedEnumTypes;
     std::vector<const VectorType *> exportedVectorTypes;
-    lGetExportedParamTypes(exportedFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
+    lGetHeaderTypes(exportedFuncs, {}, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
 
     // And print them
     lEmitVectorTypedefs(exportedVectorTypes, file);
@@ -860,7 +865,7 @@ bool Module::writeHostStub() {
     std::vector<const StructType *> exportedStructTypes;
     std::vector<const EnumType *> exportedEnumTypes;
     std::vector<const VectorType *> exportedVectorTypes;
-    lGetExportedParamTypes(exportedFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
+    lGetHeaderTypes(exportedFuncs, {}, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
 
     // And print them
     lEmitVectorTypedefs(exportedVectorTypes, file);
@@ -1003,26 +1008,14 @@ void Module::writeHeader(FILE *f) {
     m->symbolTable->GetMatchingFunctions(lIsExported, &exportedFuncs);
     m->symbolTable->GetMatchingFunctions(lIsExternC, &externCFuncs);
 
-    // Get all of the struct, vector, and enumerant types used as function
-    // parameters.  These vectors may have repeats.
+    // Get all of the struct, vector, and enumerant types used by these
+    // functions or exported explicitly.
+    std::vector<Symbol *> headerFuncs = exportedFuncs;
+    headerFuncs.insert(headerFuncs.end(), externCFuncs.begin(), externCFuncs.end());
     std::vector<const StructType *> exportedStructTypes;
     std::vector<const EnumType *> exportedEnumTypes;
     std::vector<const VectorType *> exportedVectorTypes;
-    lGetExportedParamTypes(exportedFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
-    lGetExportedParamTypes(externCFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
-
-    // Go through the explicitly exported types
-    for (int i = 0; i < (int)exportedTypes.size(); ++i) {
-        if (const StructType *st = CastType<StructType>(exportedTypes[i].first)) {
-            exportedStructTypes.push_back(CastType<StructType>(st->GetAsUniformType()));
-        } else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first)) {
-            exportedEnumTypes.push_back(CastType<EnumType>(et->GetAsUniformType()));
-        } else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first)) {
-            exportedVectorTypes.push_back(CastType<VectorType>(vt->GetAsUniformType()));
-        } else {
-            FATAL("Unexpected type in export list");
-        }
-    }
+    lGetHeaderTypes(headerFuncs, exportedTypes, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
 
     // And print them
     lEmitVectorTypedefs(exportedVectorTypes, f);
@@ -1152,27 +1145,14 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
 
     if ((DHI->Emit4 && (programCount == 4)) || (DHI->Emit8 && (programCount == 8)) ||
         (DHI->Emit16 && (programCount == 16))) {
-        // Get all of the struct, vector, and enumerant types used as function
-        // parameters.  These vectors may have repeats.
+        // Get all of the struct, vector, and enumerant types used by these
+        // functions or exported explicitly.
+        std::vector<Symbol *> headerFuncs = exportedFuncs;
+        headerFuncs.insert(headerFuncs.end(), externCFuncs.begin(), externCFuncs.end());
         std::vector<const StructType *> exportedStructTypes;
         std::vector<const EnumType *> exportedEnumTypes;
         std::vector<const VectorType *> exportedVectorTypes;
-        lGetExportedParamTypes(exportedFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
-        lGetExportedParamTypes(externCFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
-
-        // TODO!: Why there are two almost identical piece of code like this?
-        // Go through the explicitly exported types
-        for (int i = 0; i < (int)exportedTypes.size(); ++i) {
-            if (const StructType *st = CastType<StructType>(exportedTypes[i].first)) {
-                exportedStructTypes.push_back(CastType<StructType>(st->GetAsUniformType()));
-            } else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first)) {
-                exportedEnumTypes.push_back(CastType<EnumType>(et->GetAsUniformType()));
-            } else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first)) {
-                exportedVectorTypes.push_back(CastType<VectorType>(vt->GetAsUniformType()));
-            } else {
-                FATAL("Unexpected type in export list");
-            }
-        }
+        lGetHeaderTypes(headerFuncs, exportedTypes, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
 
         // And print them
         if (DHI->EmitUnifs) {
@@ -1546,7 +1526,7 @@ bool Module::writeNanobindWrapper() {
     std::vector<const StructType *> exportedStructTypes;
     std::vector<const EnumType *> exportedEnumTypes;
     std::vector<const VectorType *> exportedVectorTypes;
-    lGetExportedParamTypes(exportedFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
+    lGetHeaderTypes(exportedFuncs, {}, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
 
     if (lStructsWithArrays(exportedStructTypes)) {
         lEmitArrayGettersSetters(f);
