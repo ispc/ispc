@@ -32,8 +32,16 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 python3-dev libtbb-dev \
+        sudo apt-get install -y git curl xz-utils m4 flex bison python3 python3-dev python3-venv libtbb-dev \
           llvm-20-dev clang-20 lld-20 libclang-20-dev
+
+    # Ubuntu 24.04 ships CMake 3.28 and Kitware publishes no ppc64le binaries,
+    # so install CMake 3.31 from PyPI.
+    - name: Install CMake
+      run: |
+        python3 -m venv "$RUNNER_TEMP/cmake-venv"
+        "$RUNNER_TEMP/cmake-venv/bin/pip" install cmake==3.31.10
+        echo "$RUNNER_TEMP/cmake-venv/bin" >> "$GITHUB_PATH"
 
     - name: Check tools
       run: |

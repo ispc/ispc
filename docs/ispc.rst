@@ -2304,7 +2304,7 @@ CMake Example
 
 Here's a complete ``CMakeLists.txt`` for a project using ISPC as a library::
 
-    cmake_minimum_required(VERSION 3.15)
+    cmake_minimum_required(VERSION 3.31)
     project(MyISPCApp)
 
     set(CMAKE_CXX_STANDARD 17)

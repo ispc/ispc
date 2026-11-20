@@ -6,7 +6,7 @@
 # Compile intentionally invalid C and m4 sources using the production custom commands.
 # Piping into llvm-as hides compiler and m4 failures and can create empty bitcode.
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.31)
 
 set(test_root "@CMAKE_CURRENT_BINARY_DIR@/builtins-compile-error")
 file(REMOVE_RECURSE "${test_root}")
@@ -19,7 +19,7 @@ endforeach()
 file(WRITE "${test_root}/src/src/builtins-info.h" "")
 
 file(WRITE "${test_root}/src/CMakeLists.txt" [=[
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.31)
 project(builtins_compile_error NONE)
 set(BITCODE_FOLDER "${CMAKE_BINARY_DIR}")
 set(CLANGPP_EXECUTABLE [==[@CLANGPP_EXECUTABLE@]==])
