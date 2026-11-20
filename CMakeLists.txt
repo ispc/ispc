@@ -6,7 +6,7 @@
 #
 # ispc CMakeLists.txt
 #
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.31)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -213,17 +213,6 @@ if (ISPC_LINUX_TARGET OR ISPC_ANDROID_TARGET OR ISPC_PS_TARGET
     set(ISPC_UNIX_TARGET ON)
 else()
     set(ISPC_UNIX_TARGET OFF)
-endif()
-
-if (APPLE)
-    # Workaround CMake/CPack issue https://gitlab.kitware.com/cmake/cmake/-/issues/24601
-    # When llvm toolchain is presented in PATH, llvm-strip is preferred over
-    # macOS strip. However, CPack fails to correctly call llvm-strip because it
-    # adds flags like `-u` that are macOS strip specific.
-    # It may be removed later when CMake fixes ambiguity.
-    if (${CMAKE_VERSION} VERSION_LESS "3.27.0")
-        set(CMAKE_STRIP strip)
-    endif()
 endif()
 
 # If Xe target is enabled, generate build targets for Xe examples and ISPCRT on Linux

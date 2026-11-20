@@ -38,8 +38,7 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     apt-get -y update && apt-get --no-install-recommends install -y "$CROSS_LIBS" && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.31.12 for both x86 and aarch64). Superbuild preset jsons
-# require at least 3.23 and LLVM trunk (since llvm/llvm-project#223854) requires at least 3.31.
+# Download and install required version of cmake (3.31.12 for both x86 and aarch64) as required by ispc, superbuild and LLVM.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
         export CMAKE_URL="https://cmake.org/files/v3.31/cmake-3.31.12-linux-x86_64.sh"; \
     else \

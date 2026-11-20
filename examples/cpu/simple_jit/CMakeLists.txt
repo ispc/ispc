@@ -1,9 +1,9 @@
 #
-#  Copyright (c) 2025, Intel Corporation
+#  Copyright (c) 2025-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.31)
 project(simple_jit VERSION 1.0.0 LANGUAGES CXX)
 
 # Set C++ standard

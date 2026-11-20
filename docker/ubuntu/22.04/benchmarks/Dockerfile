@@ -23,9 +23,9 @@ RUN apt-get -y update && \
         m4 bison flex libc6-dev-i386-cross libc6-dev-arm64-cross libc6-dev-armhf-cross && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.23.5).
+# Download and install required version of cmake (3.31.12) as required by ispc.
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 \
-        https://cmake.org/files/v3.23/cmake-3.23.5-linux-x86_64.sh && \
+        https://cmake.org/files/v3.31/cmake-3.31.12-linux-x86_64.sh && \
     sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
 
 # Prebuilt LLVM

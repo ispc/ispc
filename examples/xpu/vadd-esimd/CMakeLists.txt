@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2021-2023, Intel Corporation
+#  Copyright (c) 2021-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -7,7 +7,7 @@
 # ispc examples: simple-dpcpp
 #
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.31)
 project(vadd-esimd)
 
 set(TARGET_NAME "vadd-esimd")
