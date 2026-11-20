@@ -1,12 +1,12 @@
 #
-#  Copyright (c) 2018-2025, Intel Corporation
+#  Copyright (c) 2018-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
 #
 # ispc examples CMakeLists.txt
 #
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.31)
 
 set (PROJECT_NAME ispc_examples)
 project(${PROJECT_NAME} C CXX)

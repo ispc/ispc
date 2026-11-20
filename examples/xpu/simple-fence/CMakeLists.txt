@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2023-2025, Intel Corporation
+#  Copyright (c) 2023-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -7,7 +7,7 @@
 # ispc examples: simple-fence
 #
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.31)
 
 set(TEST_NAME "simple-fence")
 set(ISPC_SRC_NAME "simple-fence.ispc")

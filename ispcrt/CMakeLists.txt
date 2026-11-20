@@ -1,7 +1,7 @@
-## Copyright 2020-2023 Intel Corporation
+## Copyright 2020-2026 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.31)
 
 ## Global setup ##
 

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2022-2025, Intel Corporation
+#  Copyright (c) 2022-2026, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -7,7 +7,7 @@
 # ispc examples: simple-usm
 #
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.31)
 
 set(TEST_NAME "usm-mem")
 set(ISPC_SRC_NAME "usm-mem.ispc")

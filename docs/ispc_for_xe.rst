@@ -471,7 +471,7 @@ ISPC build system is the following:
 
 .. code-block:: cmake
 
-  cmake_minimum_required(VERSION 3.14)
+  cmake_minimum_required(VERSION 3.31)
 
   project(simple)
   find_package(ispcrt REQUIRED)

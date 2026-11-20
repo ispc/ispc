@@ -23,11 +23,11 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-rec
     m4 bison flex libc6-dev-i386 cpio lsb-core wget netcat-openbsd libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates ninja-build libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
+# Download and install required version of cmake (3.31.12 for both x86 and aarch64) as required by ispc, superbuild and LLVM.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
-        export CMAKE_URL="https://cmake.org/files/v3.23/cmake-3.23.5-linux-x86_64.sh"; \
+        export CMAKE_URL="https://cmake.org/files/v3.31/cmake-3.31.12-linux-x86_64.sh"; \
     else \
-        export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-linux-aarch64.sh"; \
+        export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.31.12/cmake-3.31.12-linux-aarch64.sh"; \
     fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
     sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh

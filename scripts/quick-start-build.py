@@ -396,7 +396,7 @@ def main():
         - Supports custom LLVM archive URLs via environment variable
 
     Dependencies:
-        - CMake: For building ISPC
+        - CMake 3.31+: For building ISPC
         - Python 3.6+: For script execution
         - C++ Compiler: Compatible with chosen LLVM version
         - m4: Required for ISPC build
