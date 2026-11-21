@@ -6,6 +6,7 @@
 
 #include "ScalarizePass.h"
 #include "builtins-decl.h"
+#include "ispc.h"
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -60,6 +61,31 @@ static llvm::Value *lMatchAndScalarize(llvm::Instruction *inst) {
     return nullptr;
 }
 
+// Let X86 select scalar index loads for scalarized NVL byte gathers.
+static llvm::Value *lScalarizeByteGatherIndex(llvm::Instruction *inst) {
+    auto *extract = llvm::dyn_cast<llvm::ExtractElementInst>(inst);
+    if (!extract || !extract->hasOneUse() || !llvm::isa<llvm::ConstantInt>(extract->getIndexOperand())) {
+        return nullptr;
+    }
+    auto *extend = llvm::dyn_cast<llvm::ZExtInst>(extract->getVectorOperand());
+    auto *address = llvm::dyn_cast<llvm::GetElementPtrInst>(*extract->user_begin());
+    if (!extend || !address || !address->getSourceElementType()->isIntegerTy(8) || !address->hasOneUse() ||
+        !extract->getType()->isIntegerTy(64)) {
+        return nullptr;
+    }
+    auto *indices = llvm::dyn_cast<llvm::LoadInst>(extend->getOperand(0));
+    auto *byte = llvm::dyn_cast<llvm::LoadInst>(*address->user_begin());
+    if (!indices || !indices->isSimple() || !byte || byte->getPointerOperand() != address ||
+        !byte->getType()->isIntegerTy(8) ||
+        indices->getType() != llvm::FixedVectorType::get(llvm::Type::getInt32Ty(inst->getContext()), 16)) {
+        return nullptr;
+    }
+
+    llvm::IRBuilder<> builder(extract);
+    auto *index = builder.CreateExtractElement(indices, extract->getIndexOperand());
+    return builder.CreateZExt(index, extract->getType(), "", extend->hasNonNeg());
+}
+
 bool ScalarizePass::matchAndReplace(llvm::BasicBlock &bb) {
     DEBUG_START_BB("ScalarizePass");
 
@@ -71,6 +97,10 @@ bool ScalarizePass::matchAndReplace(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*(iter++);
 
         llvm::Value *newValue = lMatchAndScalarize(inst);
+        if (!newValue && g && g->target && g->target->getISA() == Target::NVL_AVX10_2 &&
+            g->target->getVectorWidth() == 16) {
+            newValue = lScalarizeByteGatherIndex(inst);
+        }
         if (newValue != nullptr) {
             inst->replaceAllUsesWith(newValue);
             llvm::RecursivelyDeleteTriviallyDeadInstructions(inst);
