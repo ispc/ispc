@@ -3295,7 +3295,37 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->CurrentLanesReturned(expr, true);
 }
 
-Stmt *ReturnStmt::TypeCheck() { return this; }
+Stmt *ReturnStmt::TypeCheck() {
+    // Warn when a function returns the address of a local variable or
+    // parameter: the memory it points to is invalid after the function
+    // returns. This covers explicit "&x", array-to-pointer decay of a
+    // local array ("return a;"), and returning a local lvalue from a
+    // function with a reference return type ("return x;").
+    if (expr != nullptr) {
+        Expr *e = expr;
+        // Strip any type casts, e.g. "return (int *)&x;".
+        while (llvm::dyn_cast<TypeCastExpr>(e) != nullptr) {
+            e = static_cast<TypeCastExpr *>(e)->expr;
+        }
+        Symbol *sym = e->GetBaseSymbol();
+        // Reference-typed symbols (e.g. reference parameters) alias memory
+        // owned by the caller, so returning them is safe.
+        if (sym != nullptr && sym->parentFunction != nullptr && sym->storageClass != StorageClass::STATIC &&
+            !IsReferenceType(sym->type)) {
+            const Type *returnType = sym->parentFunction->GetReturnType();
+            const Type *exprType = e->GetType();
+            bool returnsAddress = llvm::isa<AddressOfExpr>(e) || (exprType != nullptr && exprType->IsArrayType()) ||
+                                  (IsReferenceType(returnType) && e->GetLValueType() != nullptr);
+            if (returnsAddress) {
+                Warning(pos,
+                        "Returning address of local variable or parameter \"%s\"; "
+                        "the memory it points to is invalid after the function returns.",
+                        sym->name.c_str());
+            }
+        }
+    }
+    return this;
+}
 
 int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
