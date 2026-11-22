@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794708314281,
+  "lastUpdate": 1795313123399,
   "repoUrl": "https://github.com/ispc/ispc",
   "entries": {
     "dispatch (sse4-i32x4,avx2-i32x8,avx512gnr-x8)": [
@@ -306,6 +306,40 @@ window.BENCHMARK_DATA = {
             "value": 1430503939.045593,
             "unit": "ns/iter",
             "extra": "iterations: 5\ncpu: 212538850.00000006 ns\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Arina Neshlyaeva",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "committer": {
+            "name": "aneshlya",
+            "username": "aneshlya",
+            "email": "arina.neshlyaeva@intel.com"
+          },
+          "id": "03a7daa8055b4cddd614002810a3c6bdb2a61bd6",
+          "message": "Add --dump-memory-plans to print the decisions of the memory passes\n\nWith the new developer option, ImproveMemoryOps prints one line for every\ngather, scatter or masked load/store it looks at, the rule and the plan it\nreturned or keep; in the bodies of the memory builtins only the rewrites\nare printed. GatherCoalescePass prints the loads it chose for each group of\ngathers and the lane offsets they serve, or why a gather was kept. Each\nline names the pipeline stage of the pass, the function, the source\nposition, the id of the access, the step in the chain of plans of one\naccess, and the builtin called. The frontend gives every gather, scatter\nand masked store an id in metadata, which the replacements of an access\ninherit; a call that lost its id when LLVM merged two calls, or that is a\ncopy of another access, gets an id of its own from the first pass that\nprints it.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-11-19T23:06:59Z",
+          "url": "https://github.com/ispc/ispc/commit/03a7daa8055b4cddd614002810a3c6bdb2a61bd6"
+        },
+        "date": 1795313122082,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test/4096",
+            "value": 223960879.95730343,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 221917493.99999994 ns\nthreads: 1"
+          },
+          {
+            "name": "16_dispatcher_overhead/dispatcher_overhead_test_multithread/10000",
+            "value": 1429691728.9029806,
+            "unit": "ns/iter",
+            "extra": "iterations: 5\ncpu: 214317374.00000018 ns\nthreads: 1"
           }
         ]
       }
