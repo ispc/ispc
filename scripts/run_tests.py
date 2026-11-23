@@ -328,6 +328,12 @@ def kill_process_tree(proc):
     if os.name == "nt":
         subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        # The child was started as the leader of its own process group.
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
     proc.kill()
 
 def run_command(cmd, timeout=600, cwd="."):
@@ -348,7 +354,10 @@ def run_command(cmd, timeout=600, cwd="."):
 
     # prepare for OSError exceptions raised in the child process (re-raised in the parent)
     try:
-        proc = subprocess.Popen(arg_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
+        # On POSIX, start a new session so that a timeout can kill the whole
+        # process group, including the descendants of a wrapper such as SDE.
+        proc = subprocess.Popen(arg_list, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd,
+                                start_new_session=(os.name != "nt"))
     except:
         print_debug("ERROR: The child (%s) raised an exception: %s\n" % (arg_list, sys.exc_info()[1]), s, run_tests_log)
         raise
