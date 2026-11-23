@@ -3444,9 +3444,9 @@ static Expr *lNegate(Expr *expr, SourcePos pos) {
         if (type == AtomicType::UniformUInt8 || type == AtomicType::UniformUInt16) {
             int32_t magnitude;
             literal->GetValues(&magnitude);
-            if (type == AtomicType::UniformUInt8 && magnitude == 128)
+            if (type == AtomicType::UniformUInt8 && magnitude == -INT8_MIN)
                 return new ConstExpr(AtomicType::UniformInt8, (int8_t)-magnitude, pos);
-            if (type == AtomicType::UniformUInt16 && magnitude == 32768)
+            if (type == AtomicType::UniformUInt16 && magnitude == -INT16_MIN)
                 return new ConstExpr(AtomicType::UniformInt16, (int16_t)-magnitude, pos);
             return new ConstExpr(AtomicType::UniformInt32, -magnitude, pos);
         }
