@@ -198,10 +198,16 @@ jobs:
           git checkout -- tests/fail_db.txt
           $env:ISPC_HOME = "$pwd"
           .github/workflows/scripts/load-vs-env.ps1 "$env:INPUTS_ARCHITECTURE"
+          # SDE 10.13 intermittently hangs launching 32-bit tests under load,
+          # so run x86 avx10 tests with fewer parallel jobs.
+          $jobs = [Environment]::ProcessorCount
+          if ("$env:INPUTS_ARCHITECTURE" -eq "x86" -and "$env:MATRIX_TARGET" -like "*avx10*") {
+            $jobs = 2
+          }
           if ("${{ inputs.enable_debug }}" -eq "true") {
-            python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current debug $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
+            python .\scripts\alloy.py -r -j $jobs --only="stability $env:INPUTS_ARCHITECTURE current debug $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
           } else {
-            python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
+            python .\scripts\alloy.py -r -j $jobs --only="stability $env:INPUTS_ARCHITECTURE current $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
           }
           Write-Host "Finished executing alloy.py"
           # Check for test failures - retry if flaky
