@@ -322,6 +322,14 @@ def build_ispc_extension(module_name, ispc_object, nb_wrapper, header, test_sig,
 
         return so_filename
 
+def kill_process_tree(proc):
+    # A wrapper such as SDE runs the test in child processes that inherit the
+    # output pipes, so killing only the wrapper leaves the pipes open.
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc.kill()
+
 def run_command(cmd, timeout=600, cwd="."):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
@@ -350,8 +358,13 @@ def run_command(cmd, timeout=600, cwd="."):
     try:
         out = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
-        proc.kill()
-        out = proc.communicate()
+        kill_process_tree(proc)
+        try:
+            out = proc.communicate(timeout=60)
+        except subprocess.TimeoutExpired:
+            # A descendant that survived the kill still holds the pipes open.
+            # Give up on its output rather than blocking the worker forever.
+            out = (b"", b"")
         is_timeout = True
     except:
         print_debug("ERROR: The child (%s) raised an exception: %s\n" % (arg_list, sys.exc_info()[1]), s, run_tests_log)
@@ -658,7 +671,9 @@ def run_test(testname, host, target, jit_lib_path=None):
                 if target.arch == "wasm32" or target.arch == "wasm64":
                     exe_name = "%s.js" % os.path.realpath(filename)
                 else:
-                    exe_name = "%s.exe" % os.path.basename(filename)
+                    # Use an explicit relative path: SDE 10.13 does not search
+                    # the current directory for a bare executable name.
+                    exe_name = ".\\%s.exe" % os.path.basename(filename)
 
                 test_file = "tests\\test_static_jit.cpp" if options.jit_mode else "tests\\test_static.cpp"
                 if options.jit_mode:

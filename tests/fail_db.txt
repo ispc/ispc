@@ -145,9 +145,5 @@
 ./tests/func-tests/erfc-float16-varying.ispc compfail    xe64      xehpg-x16 dg2   Linux LLVM 23.1 clang++23.1 O2 ze *
 ./tests/func-tests/popcnt-1.ispc compfail    xe64      xehpg-x16 dg2   Linux LLVM 23.1 clang++23.1 O2 ze *
 ./tests/func-tests/vector-gather-helper.ispc compfail    xe64      xehpg-x16 dg2   Linux LLVM 23.1 clang++23.1 O2 ze *
-.\tests\func-tests\pmulus-vi64.ispc compfail  x86-64 avx10.2dmr-x64 unspec Windows LLVM 23.1         cl O0 obj *
-.\tests\func-tests\pmulus-vi64.ispc compfail  x86-64 avx10.2nvl-x64 unspec Windows LLVM 23.1         cl O0 obj *
-.\tests\func-tests\ref-overloads3.ispc compfail  x86-64 avx10.2dmr-x64 unspec Windows LLVM 23.1         cl O0 obj *
-.\tests\func-tests\ref-overloads3.ispc compfail  x86-64 avx10.2nvl-x64 unspec Windows LLVM 23.1         cl O0 obj *
 .\tests\func-tests\pdep-pext-const.ispc compfail  x86-64 avx10.2dmr-x64 unspec Windows LLVM 23.1         cl O0 obj *
 .\tests\func-tests\pdep-pext-const.ispc compfail  x86-64 avx10.2nvl-x64 unspec Windows LLVM 23.1         cl O0 obj *
