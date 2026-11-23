@@ -341,6 +341,19 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; round
+
+define <8 x float> @__round_varying_float(<8 x float>) nounwind readonly alwaysinline {
+  %res = call <8 x float> @llvm.roundeven(<8 x float> %0)
+  ret <8 x float> %res
+}
+
+define <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
+  %res = call <8 x double> @llvm.roundeven(<8 x double> %0)
+  ret <8 x double> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt
 
 declare <8 x float> @llvm.x86.avx512.mask.sqrt.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
