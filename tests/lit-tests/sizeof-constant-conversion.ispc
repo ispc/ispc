@@ -63,6 +63,13 @@ struct H {
 uniform float g_round_sizeof = sizeof(uniform H);
 #endif
 
+// The elements that a partial initializer list leaves out are 0 in the type
+// of the given ones: a bool in memory is a byte, also for true.
+// CHECK-DAG: @g_partial_bool = {{.*}}global [3 x i8] c"{{\\FF|\\01}}\00\00"
+// CHECK-DAG: @g_partial_bool_sizeof = {{.*}}global [3 x i8] c"{{\\FF|\\01}}\00\00"
+uniform bool g_partial_bool[3] = {true};
+uniform bool g_partial_bool_sizeof[3] = {(uniform int)sizeof(uniform int8)};
+
 // CHECK-LABEL: define {{.*}}@local_bool
 // CHECK: ret i32 1
 uniform int local_bool() {
@@ -91,4 +98,12 @@ uniform float local_float() {
 uniform int local_unsized() {
     const uniform float x[] = {1, 2, 3};
     return sizeof(x) / sizeof(x[0]);
+}
+
+// CHECK-LABEL: define {{.*}}@local_partial_bool
+// CHECK: ret i32 1
+uniform int local_partial_bool() {
+    uniform bool a[2] = {(uniform int)sizeof(uniform int8)};
+    uniform bool<3> b = {true};
+    return a[0] && !a[1] && b[0] && !b[1];
 }

@@ -4957,7 +4957,9 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
                 AssertPos(pos, m->errorCount > 0);
                 return std::pair<llvm::Constant *, bool>(nullptr, false);
             }
-            llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+            // The missing elements are in the type of the given ones: a bool
+            // in memory is a byte.
+            llvm::Type *llvmType = isStorageType ? elementType->LLVMStorageType(g->ctx) : elementType->LLVMType(g->ctx);
             if (llvmType == nullptr) {
                 AssertPos(pos, m->errorCount > 0);
                 return std::pair<llvm::Constant *, bool>(nullptr, false);
@@ -4974,7 +4976,7 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
         return std::pair<llvm::Constant *, bool>(llvm::ConstantStruct::get(llvmStructType, cv),
                                                  isNotValidForMultiTargetGlobal);
     } else {
-        llvm::Type *lt = type->LLVMType(g->ctx);
+        llvm::Type *lt = isStorageType ? type->LLVMStorageType(g->ctx) : type->LLVMType(g->ctx);
         llvm::ArrayType *lat = llvm::dyn_cast<llvm::ArrayType>(lt);
         if (lat != nullptr) {
             return std::pair<llvm::Constant *, bool>(llvm::ConstantArray::get(lat, cv), isNotValidForMultiTargetGlobal);
