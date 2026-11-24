@@ -44,6 +44,7 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/SourceMgr.h>
@@ -243,6 +244,21 @@ Module::Module(const char *fn) : srcFile(fn) {
     if (g->target_os == TargetOS::windows && g->target->getArch() == Arch::x86_64 &&
         (g->target->getEnabledAPXFeatures() & Opt::APX_egpr)) {
         module->addModuleFlag(llvm::Module::Warning, "winx64-eh-unwind", 3);
+
+        // Workaround for an LLVM 23 regression (llvm-project#229204, from
+        // #208458). The unwind v3 pass splits large functions into chained
+        // unwind info at points estimated by assuming 7 bytes per instruction.
+        // APX/AVX10.2 code is often longer (EVEX spills with 32-bit stack
+        // offsets), so a split is missed and the object emission fails with
+        // "Epilog offset ... out of signed 16-bit range for V3 encoding".
+        // Assume the maximum x86 instruction length (15 bytes) so the estimate
+        // never falls short. Remove once fixed upstream.
+        constexpr const char *avgSizeOpt = "x86-wineh-unwindv3-instr-avg-size";
+        auto &optMap = llvm::cl::getRegisteredOptions();
+        auto it = optMap.find(avgSizeOpt);
+        if (it != optMap.end()) {
+            it->second->addOccurrence(0, avgSizeOpt, "15");
+        }
     }
 #endif
 
