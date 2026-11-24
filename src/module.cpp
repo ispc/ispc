@@ -2561,6 +2561,92 @@ static void lCopyGlobalVariableAttributes(llvm::GlobalVariable *dst, const llvm:
  * @param mdst Destination module to either create or validate global variables
  * @param check Flag to determine whether to extract (false) or validate (true)
  */
+/** Write the bytes in memory of the constant c at the given offset into
+    bytes, with undefined bytes and padding as 0. Returns false if c holds an
+    address, whose value isn't known, or elements that aren't whole bytes. */
+static bool lConstantBytes(const llvm::Constant *c, const llvm::DataLayout &dl, uint64_t offset,
+                           std::vector<uint8_t> &bytes) {
+    llvm::Type *type = c->getType();
+    if (llvm::isa<llvm::ScalableVectorType>(type)) {
+        return false;
+    }
+    uint64_t size = dl.getTypeStoreSize(type);
+    if (bytes.size() < offset + size) {
+        bytes.resize(offset + size, 0);
+    }
+    if (llvm::isa<llvm::UndefValue>(c) || c->isNullValue()) {
+        return true;
+    }
+    if (type->isVectorTy() || type->isStructTy() || type->isArrayTy()) {
+        // Also a splat of a vector type, which is a ConstantInt or ConstantFP.
+        llvm::StructType *st = llvm::dyn_cast<llvm::StructType>(type);
+        const llvm::StructLayout *sl = st != nullptr ? dl.getStructLayout(st) : nullptr;
+        unsigned count = type->isVectorTy() ? llvm::cast<llvm::FixedVectorType>(type)->getNumElements()
+                         : st != nullptr    ? st->getNumElements()
+                                            : (unsigned)type->getArrayNumElements();
+        for (unsigned i = 0; i < count; ++i) {
+            const llvm::Constant *element = c->getAggregateElement(i);
+            if (element == nullptr) {
+                return false;
+            }
+            uint64_t elementOffset = 0;
+            if (sl != nullptr) {
+                elementOffset = sl->getElementOffset(i);
+            } else if (type->isVectorTy()) {
+                uint64_t bits = element->getType()->getPrimitiveSizeInBits();
+                if (bits == 0 || bits % 8 != 0) {
+                    return false;
+                }
+                elementOffset = i * (bits / 8);
+            } else {
+                elementOffset = i * dl.getTypeAllocSize(element->getType());
+            }
+            if (!lConstantBytes(element, dl, offset + elementOffset, bytes)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    llvm::APInt value;
+    if (const llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(c)) {
+        value = ci->getValue();
+    } else if (const llvm::ConstantFP *cf = llvm::dyn_cast<llvm::ConstantFP>(c)) {
+        value = cf->getValueAPF().bitcastToAPInt();
+    } else {
+        return false;
+    }
+    if (!dl.isLittleEndian() || value.getBitWidth() % 8 != 0) {
+        return false;
+    }
+    for (unsigned i = 0; i < value.getBitWidth() / 8; ++i) {
+        bytes[offset + i] = (uint8_t)value.extractBitsAsZExtValue(8, i * 8);
+    }
+    return true;
+}
+
+/** Whether the initializers of a global in the modules of two targets give
+    other bytes in memory. Initializers that hold addresses aren't compared. */
+static bool lInitializersDiffer(const llvm::GlobalVariable *a, const llvm::GlobalVariable *b) {
+    if (!a->hasInitializer() || !b->hasInitializer()) {
+        return false;
+    }
+    const llvm::Constant *ca = a->getInitializer(), *cb = b->getInitializer();
+    const llvm::DataLayout &dla = a->getParent()->getDataLayout(), &dlb = b->getParent()->getDataLayout();
+    // A global whose size differs gets a warning about its layout instead.
+    // Very large globals aren't compared, to keep the memory for the bytes
+    // small.
+    uint64_t size = dla.getTypeStoreSize(ca->getType());
+    if (size != dlb.getTypeStoreSize(cb->getType()) || size > ((uint64_t)1 << 26) || ca == cb ||
+        (ca->isNullValue() && cb->isNullValue())) {
+        return false;
+    }
+    std::vector<uint8_t> bytesA, bytesB;
+    if (!lConstantBytes(ca, dla, 0, bytesA) || !lConstantBytes(cb, dlb, 0, bytesB)) {
+        return false;
+    }
+    return bytesA != bytesB;
+}
+
 static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool check) {
     llvm::Module::global_iterator iter;
     llvm::ValueToValueMapTy VMap;
@@ -2589,6 +2675,20 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
                             "with size based on programCount when compiling to "
                             "targets with differing vector widths.",
                             gv->getName().str().c_str());
+                }
+                if (lInitializersDiffer(exist, gv)) {
+                    // The global is defined once, with the initializer of the
+                    // first target, so the other targets read another value
+                    // than they computed: for example, the size of a short
+                    // vector, which is padded per target. The code of each
+                    // target may still use its own value of a constant.
+                    Warning(sym->pos,
+                            "Initializer for global variable \"%s\" differs between the targets of the multi-target "
+                            "compilation. The variable holds the value of the first target%s.",
+                            gv->getName().str().c_str(),
+                            sym->type->IsConstType()
+                                ? ", but the code of each target may use its own value of the constant"
+                                : "");
                 }
 
                 // Upgrade alignment if the source global requires stronger alignment.
@@ -2909,17 +3009,31 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> &targe
     // Set the module that corresponds to the common target ISA
     lResetTargetAndModule(modules, targetsPtrs, commonTargetIndex);
 
-    // Handle creating a "generic" header file for multiple targets
-    // that use exported varyings
-    DispatchHeaderInfo DHI;
-    if (!DHI.initialize(output.header)) {
-        return 1;
-    }
-
     // Create the dispatch module,
     llvm::Module *dispatchModule = lInitDispatchModule();
     if (!dispatchModule) {
         Error(SourcePos(), "Failed to create dispatch module.\n");
+        return 1;
+    }
+
+    // Extract the globals of the first target and check those of the others
+    // against them, before the header is written: with --werror, a warning
+    // of the check is an error, which leaves the header as it was.
+    for (unsigned int i = 0; i < targets.size(); ++i) {
+        lResetTargetAndModule(modules, targetsPtrs, i);
+        lExtractOrCheckGlobals(m->module, dispatchModule, i != 0);
+        bool failed = m->errorCount > 0;
+        lResetTargetAndModule();
+        if (failed) {
+            return 1;
+        }
+    }
+    lResetTargetAndModule(modules, targetsPtrs, commonTargetIndex);
+
+    // Handle creating a "generic" header file for multiple targets
+    // that use exported varyings
+    DispatchHeaderInfo DHI;
+    if (!DHI.initialize(output.header)) {
         return 1;
     }
 
@@ -2932,10 +3046,6 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> &targe
             // writing deps file with targets' suffixes.
             m->output.flags.setDepsToStdout(true);
         }
-
-        // Extract globals unless already created; in the latter case, just
-        // do the checking
-        lExtractOrCheckGlobals(m->module, dispatchModule, i != 0);
 
         // Grab pointers to the exported functions from the module we
         // just compiled, for use in generating the dispatch function
