@@ -21,6 +21,7 @@
 
 #include <map>
 
+#include <llvm/Analysis/ValueTracking.h>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
@@ -2311,6 +2312,37 @@ static llvm::Value *lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth, l
     llvm::Type *indexType = indexValue->getType();
     llvm::Value *shift = LLVMIntAsType(logWidth, indexType);
     llvm::Value *mask = LLVMIntAsType(soaWidth - 1, indexType);
+    bool isUnsigned = indexValueType != nullptr && indexValueType->IsUnsignedType();
+    llvm::Instruction::BinaryOps shiftOp = isUnsigned ? llvm::Instruction::LShr : llvm::Instruction::AShr;
+
+    // index + offset can carry out of a 32-bit index (an unsigned index of
+    // UINT32_MAX plus 1), which with 64-bit addressing is a valid element:
+    // there the sum is split as (index >> log) * width + ((index & mask) +
+    // offset), whose second part is below 2 * width. With an offset of 0,
+    // which the slice pointer usually has, this folds to the plain sum. With
+    // 32-bit addressing a carry would make the byte offset overflow.
+    // The offset is below the width, so an index whose top bit (unsigned)
+    // or top two bits (signed) are known to be clear or copies of the sign,
+    // such as an extended int8, doesn't carry either.
+    llvm::Constant *constOffset = llvm::dyn_cast<llvm::Constant>(ptrSliceOffset);
+    auto mayCarry = [&]() {
+        const llvm::DataLayout &DL = *g->target->getDataLayout();
+        return isUnsigned ? llvm::computeKnownBits(indexValue, DL).countMaxActiveBits() > 31
+                          : llvm::ComputeNumSignBits(indexValue, DL) < 2;
+    };
+    if (!g->target->is32Bit() && !g->opt.force32BitAddressing && indexType->getScalarType() == LLVMTypes::Int32Type &&
+        (constOffset == nullptr || !constOffset->isNullValue()) && mayCarry()) {
+        llvm::Value *minor = ctx->BinaryAndOperator(indexValue, mask, "index_minor");
+        llvm::Value *sum = ctx->BinaryOperator(llvm::Instruction::Add, minor, ptrSliceOffset, nullptr,
+                                               WrapSemantics::None, "slice_sum");
+        *newSliceOffset = ctx->BinaryAndOperator(sum, mask, "slice_index_minor");
+        llvm::Value *major =
+            ctx->BinaryOperator(shiftOp, indexValue, shift, nullptr, WrapSemantics::None, "index_major");
+        llvm::Value *carry =
+            ctx->BinaryOperator(llvm::Instruction::LShr, sum, shift, nullptr, WrapSemantics::None, "slice_carry");
+        return ctx->BinaryOperator(llvm::Instruction::Add, major, carry, nullptr, WrapSemantics::None,
+                                   "slice_index_major");
+    }
 
     llvm::Value *indexSum = ctx->BinaryOperator(llvm::Instruction::Add, indexValue, ptrSliceOffset, nullptr,
                                                 WrapSemantics::None, "index_sum");
@@ -2325,9 +2357,7 @@ static llvm::Value *lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth, l
     }
 
     // major index = (index >> logWidth)
-    bool isUnsigned = indexValueType != nullptr && indexValueType->IsUnsignedType();
-    return ctx->BinaryOperator(isUnsigned ? llvm::Instruction::LShr : llvm::Instruction::AShr, indexSum, shift, nullptr,
-                               WrapSemantics::None, "slice_index_major");
+    return ctx->BinaryOperator(shiftOp, indexSum, shift, nullptr, WrapSemantics::None, "slice_index_major");
 }
 
 llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
