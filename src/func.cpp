@@ -300,9 +300,11 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
     llvm::Value *ptr = ctx->AddElementOffset(structArgPtrInfo, i, sym->name.c_str());
 
     // and copy the value from the struct and into the local alloca'ed
-    // memory
-    llvm::Value *ptrval =
-        ctx->LoadInst(new AddressInfo(ptr, sym->storageInfo->getElementType()), sym->type, sym->name.c_str());
+    // memory. The launch stores the value with its register type (a varying
+    // bool is the mask), so it is loaded as is and converted to the storage
+    // type of the local by the store.
+    llvm::Type *slotType = llvm::cast<llvm::StructType>(structArgPtrInfo->getElementType())->getElementType(i);
+    llvm::Value *ptrval = ctx->LoadInst(new AddressInfo(ptr, slotType), nullptr, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storageInfo, sym->type);
     ctx->EmitFunctionParameterDebugInfo(sym, i);
 }
