@@ -600,12 +600,32 @@ ISPCTarget GetParentTarget(ISPCTarget target) {
 }
 
 // Check if the module has used but unresolved symbols from the given set of symbols.
+// The functions of a persistent group with a used member count as used: the
+// optimizer may call them after the link (a pseudo masked store becomes a call
+// to __masked_store_blend_*), so they must be defined then, even if a parent
+// target defines them.
 bool lHasUnresolvedSymbols(llvm::Module *module, const llvm::StringSet<> &symbols, std::string &unresolvedSymbol) {
     for (llvm::Function &F : module->functions()) {
         auto name = F.getName().str();
         if (F.isDeclaration() && !F.use_empty() && symbols.count(name)) {
             unresolvedSymbol = name;
             return true;
+        }
+    }
+    for (auto const &[group, functions] : persistentGroups) {
+        bool isGroupUsed = llvm::any_of(functions, [&](const char *name) {
+            llvm::Function *F = module->getFunction(name);
+            return F != nullptr && !F->use_empty();
+        });
+        if (!isGroupUsed) {
+            continue;
+        }
+        for (auto const &name : functions) {
+            llvm::Function *F = module->getFunction(name);
+            if (F != nullptr && F->isDeclaration() && symbols.count(name)) {
+                unresolvedSymbol = name;
+                return true;
+            }
         }
     }
     return false;
