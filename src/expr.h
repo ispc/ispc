@@ -622,6 +622,7 @@ class TypeCastExpr : public Expr {
     TypeCastExpr *Instantiate(TemplateInstantiation &templInst) const;
     Symbol *GetBaseSymbol() const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
     void PrintAmbiguousVariability() const;
 
@@ -750,6 +751,7 @@ class SizeOfExpr : public Expr {
     int EstimateCost() const;
     SizeOfExpr *Instantiate(TemplateInstantiation &templInst) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
 
     /* One of expr or type should be non-nullptr (but not both of them).  The
        SizeOfExpr returns the size of whichever one of them isn't nullptr. */
