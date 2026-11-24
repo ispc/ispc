@@ -1827,9 +1827,9 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
             llvm::Value *delta =
                 ctx->BinaryOperator(llvm::Instruction::Sub, value0, value1, type0, WrapSemantics::None, "ptr_diff");
 
-            // Now divide by the size of the type that the pointer
+            // Now divide by the size in memory of the type that the pointer
             // points to in order to return the difference in elements.
-            llvm::Type *llvmElementType = ptrType->GetBaseType()->LLVMType(g->ctx);
+            llvm::Type *llvmElementType = ptrType->GetBaseType()->LLVMStorageType(g->ctx);
             llvm::Value *size = g->target->SizeOf(llvmElementType, ctx->GetCurrentBasicBlock());
             if (ptrType->IsVaryingType()) {
                 size = ctx->SmearUniform(size);
@@ -9143,7 +9143,9 @@ llvm::Value *SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
         t = t->GetReferenceTarget();
     }
 
-    llvm::Type *llvmType = t->LLVMType(g->ctx);
+    // The size in memory, which is the distance between two elements of an
+    // array (a varying bool is a mask in a register and bytes in memory).
+    llvm::Type *llvmType = t->LLVMStorageType(g->ctx);
     if (llvmType == nullptr) {
         return nullptr;
     }
@@ -9238,7 +9240,7 @@ std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) con
         isNotValidForMultiTargetGlobal = true;
     }
 
-    llvm::Type *llvmType = t->LLVMType(g->ctx);
+    llvm::Type *llvmType = t->LLVMStorageType(g->ctx);
     if (llvmType == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
     }
@@ -10498,7 +10500,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     // Compute the total amount of memory to allocate, allocSize, as the
     // product of the number of elements to allocate and the size of a
     // single element.
-    llvm::Type *llvmAllocType = allocType->LLVMType(g->ctx);
+    llvm::Type *llvmAllocType = allocType->LLVMStorageType(g->ctx);
     Assert(llvmAllocType);
     llvm::Value *eltSize = g->target->SizeOf(llvmAllocType, ctx->GetCurrentBasicBlock());
     if (isVarying) {

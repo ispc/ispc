@@ -2164,10 +2164,11 @@ static WrapSemantics lOffsetWrapSemantics(const Type *indexType, bool zeroExtend
  */
 llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType,
                                                   const Type *indexType) {
-    // Find the scale factor for the index (i.e. the size of the object
-    // that the pointer(s) point(s) to.
+    // Find the scale factor for the index (i.e. the size in memory of the
+    // object that the pointer(s) point(s) to; a varying bool is stored as one
+    // byte per lane, but its register type is the mask type).
     const Type *scaleType = ptrType->GetBaseType();
-    llvm::Type *llvmScaleType = scaleType->LLVMType(g->ctx);
+    llvm::Type *llvmScaleType = scaleType->LLVMStorageType(g->ctx);
     Assert(llvmScaleType != nullptr);
     llvm::Value *scale = g->target->SizeOf(llvmScaleType, bblock);
 
@@ -2524,11 +2525,11 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBasePtrInfo,
             offset = g->target->StructOffset(st->LLVMType(g->ctx), elementNum, bblock);
         } else {
             // Otherwise we should have a vector or array here and the offset
-            // is given by the element number times the size of the element
-            // type of the vector.
+            // is given by the element number times the size in memory of the
+            // element type of the vector.
             const SequentialType *st = CastType<SequentialType>(ptrType->GetBaseType());
             AssertPos(currentPos, st != nullptr);
-            llvm::Type *elemLLVMType = st->GetElementType()->LLVMType(g->ctx);
+            llvm::Type *elemLLVMType = st->GetElementType()->LLVMStorageType(g->ctx);
             Assert(elemLLVMType);
             llvm::Value *size = g->target->SizeOf(elemLLVMType, bblock);
             llvm::Value *scale =
