@@ -82,6 +82,18 @@ ATTRS uniform int32 ssub_sat_u32(uniform int32 x, uniform int32 y) { return @llv
 // CHECK-DAG:   %calltmp = tail call <[[WIDTH]] x i32> @llvm.ssub.sat.v[[WIDTH]]i32(<[[WIDTH]] x i32> %x, <[[WIDTH]] x i32> %y)
 ATTRS int32 ssub_sat_v32(int32 x, int32 y) { return @llvm.ssub.sat(x, y); }
 
+// CHECK-LABEL: @ldexp_u32
+// CHECK-DAG:   %calltmp = tail call float @llvm.ldexp.f32.i32(float %x, i32 %e)
+ATTRS uniform float ldexp_u32(uniform float x, uniform int32 e) { return @llvm.ldexp(x, e); }
+
+// CHECK-LABEL: @ldexp_v32
+// CHECK-DAG:   %calltmp = tail call <[[WIDTH]] x float> @llvm.ldexp.v[[WIDTH]]f32.v[[WIDTH]]i32(<[[WIDTH]] x float> %x, <[[WIDTH]] x i32> %e)
+ATTRS float ldexp_v32(float x, int32 e) { return @llvm.ldexp(x, e); }
+
+// CHECK-LABEL: @ptrmask
+// CHECK-DAG:   %calltmp = tail call [[PTR]] @llvm.ptrmask.[[P0]].i64([[PTR]] %ptr, i64 %mask)
+ATTRS uniform int8 *uniform ptrmask(uniform int8 *uniform ptr, uniform int64 mask) { return @llvm.ptrmask(ptr, mask); }
+
 // CHECK-LABEL: @memset
 // CHECK-DAG:   tail call void @llvm.memset.[[P0]].i32([[PTR]] align 1 %dst, i8 %val, i32 %len, i1 false)
 ATTRS void memset(uniform int8 *uniform dst, uniform int8 val, uniform int32 len) {
