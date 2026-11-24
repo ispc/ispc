@@ -8582,6 +8582,12 @@ std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constTyp
     if ((CastType<PointerType>(constType) == nullptr) && (llvm::dyn_cast<SizeOfExpr>(expr) == nullptr)) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
     }
+    // A sizeof gives its size in the type of this cast; a constant of another
+    // type would skip the conversion of the cast.
+    if (llvm::dyn_cast<SizeOfExpr>(expr) != nullptr && CastType<PointerType>(constType) == nullptr &&
+        !Type::EqualIgnoringConst(type->GetAsUniformType(), constType->GetAsUniformType())) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     llvm::Value *ptr = nullptr;
     if (GetBaseSymbol()) {
@@ -8604,6 +8610,18 @@ std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constTyp
     std::pair<llvm::Constant *, bool> cPair = expr->GetConstant(constType->GetAsUniformType());
     llvm::Constant *c = cPair.first;
     return std::pair<llvm::Constant *, bool>(lConvertPointerConstant(c, constType), cPair.second);
+}
+
+std::pair<llvm::Constant *, bool> TypeCastExpr::GetStorageConstant(const Type *constType) const {
+    // A sizeof gives a bool as stored in memory, for example in a global.
+    if (CastType<PointerType>(constType) == nullptr && llvm::dyn_cast<SizeOfExpr>(expr) != nullptr) {
+        if (!Type::EqualIgnoringConst(type->GetAsUniformType(), constType->GetAsUniformType())) {
+            return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
+        std::pair<llvm::Constant *, bool> cPair = expr->GetStorageConstant(constType->GetAsUniformType());
+        return std::pair<llvm::Constant *, bool>(lConvertPointerConstant(cPair.first, constType), cPair.second);
+    }
+    return GetConstant(constType);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -9143,7 +9161,9 @@ llvm::Value *SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
         t = t->GetReferenceTarget();
     }
 
-    llvm::Type *llvmType = t->LLVMType(g->ctx);
+    // The size in memory, which is the distance between two elements of an
+    // array (a varying bool is a mask in a register and bytes in memory).
+    llvm::Type *llvmType = t->LLVMStorageType(g->ctx);
     if (llvmType == nullptr) {
         return nullptr;
     }
@@ -9223,8 +9243,14 @@ SizeOfExpr *SizeOfExpr::Instantiate(TemplateInstantiation &templInst) const {
     return new SizeOfExpr(type->ResolveDependence(templInst), pos);
 }
 
-std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) const {
-    const Type *t = expr ? expr->GetType() : type;
+/** The constant of type rtype for the size that the given sizeof gives. The
+    size is a constant of the type of sizeof, converted like any other
+    constant: a bool is whether it is not zero, a narrower integer takes its
+    low bits. A uniform short vector gets the converted size in every
+    element. */
+static std::pair<llvm::Constant *, bool> lGetSizeOfConstant(const SizeOfExpr *sizeOf, const Type *rtype,
+                                                            bool isStorageType) {
+    const Type *t = sizeOf->expr ? sizeOf->expr->GetType() : sizeOf->type;
     if (t == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
     }
@@ -9238,14 +9264,41 @@ std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) con
         isNotValidForMultiTargetGlobal = true;
     }
 
-    llvm::Type *llvmType = t->LLVMType(g->ctx);
+    llvm::Type *llvmType = t->LLVMStorageType(g->ctx);
     if (llvmType == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
     }
 
+    const VectorType *vt = CastType<VectorType>(rtype);
+    const Type *scalarType = (vt != nullptr && vt->IsUniformType()) ? vt->GetElementType() : rtype;
+    if (CastType<AtomicType>(scalarType) == nullptr && CastType<EnumType>(scalarType) == nullptr) {
+        return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
+
     uint64_t byteSize = g->target->getDataLayout()->getTypeStoreSize(llvmType);
-    return std::pair<llvm::Constant *, bool>(llvm::ConstantInt::get(rtype->LLVMType(g->ctx), byteSize),
-                                             isNotValidForMultiTargetGlobal);
+    const Type *sizeType = sizeOf->GetType();
+    ConstExpr size = Type::Equal(sizeType, AtomicType::UniformUInt32)
+                         ? ConstExpr(sizeType, (uint32_t)byteSize, sizeOf->pos)
+                         : ConstExpr(sizeType, byteSize, sizeOf->pos);
+    std::pair<llvm::Constant *, bool> c =
+        isStorageType ? size.GetStorageConstant(scalarType) : size.GetConstant(scalarType);
+    if (c.first != nullptr && scalarType != rtype) {
+        llvm::Type *vectorType = isStorageType ? rtype->LLVMStorageType(g->ctx) : rtype->LLVMType(g->ctx);
+        llvm::FixedVectorType *fvt = llvm::dyn_cast_or_null<llvm::FixedVectorType>(vectorType);
+        if (fvt == nullptr) {
+            return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
+        c.first = llvm::ConstantVector::getSplat(fvt->getElementCount(), c.first);
+    }
+    return std::pair<llvm::Constant *, bool>(c.first, c.second || isNotValidForMultiTargetGlobal);
+}
+
+std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) const {
+    return lGetSizeOfConstant(this, rtype, false);
+}
+
+std::pair<llvm::Constant *, bool> SizeOfExpr::GetStorageConstant(const Type *rtype) const {
+    return lGetSizeOfConstant(this, rtype, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////
