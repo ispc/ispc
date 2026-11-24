@@ -240,6 +240,7 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
 
     funcStartPos = funSym->pos;
 
+    fullMaskStorageAddressInfo = nullptr;
     internalMaskAddressInfo = AllocaInst(LLVMTypes::MaskType, "internal_mask_memory");
     StoreInst(LLVMMaskAllOn, internalMaskAddressInfo);
 
@@ -442,12 +443,27 @@ AddressInfo *FunctionEmitContext::GetFullMaskAddressInfo() {
     return fullMaskAddressInfo ? fullMaskAddressInfo : internalMaskAddressInfo;
 }
 
+AddressInfo *FunctionEmitContext::GetFullMaskStorageAddressInfo() {
+    if (fullMaskStorageAddressInfo == nullptr) {
+        fullMaskStorageAddressInfo = AllocaInst(AtomicType::VaryingBool, "full_mask_storage");
+        updateFullMaskStorage();
+    }
+    return fullMaskStorageAddressInfo;
+}
+
+void FunctionEmitContext::updateFullMaskStorage() {
+    if (fullMaskStorageAddressInfo != nullptr && bblock != nullptr) {
+        StoreInst(GetFullMask(), fullMaskStorageAddressInfo, AtomicType::VaryingBool);
+    }
+}
+
 void FunctionEmitContext::SetFunctionMask(llvm::Value *value) {
     if (fullMaskAddressInfo != nullptr) {
         functionMaskValue = value;
         if (bblock != nullptr) {
             StoreInst(GetFullMask(), fullMaskAddressInfo);
         }
+        updateFullMaskStorage();
     }
 }
 
@@ -459,6 +475,7 @@ void FunctionEmitContext::SetInternalMask(llvm::Value *value) {
     if (fullMaskAddressInfo) {
         StoreInst(GetFullMask(), fullMaskAddressInfo);
     }
+    updateFullMaskStorage();
 }
 
 void FunctionEmitContext::SetInternalMaskAnd(llvm::Value *oldMask, llvm::Value *test) {

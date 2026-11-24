@@ -109,6 +109,11 @@ class FunctionEmitContext {
         mask. */
     AddressInfo *GetFullMaskAddressInfo();
 
+    /** Returns an AddressInfo with a pointer to a copy of the current full
+        mask stored as a varying bool. The first call creates it, and each
+        later change of the mask updates it. */
+    AddressInfo *GetFullMaskStorageAddressInfo();
+
     /** Provides the value of the mask at function entry */
     void SetFunctionMask(llvm::Value *val);
 
@@ -705,6 +710,14 @@ class FunctionEmitContext {
         the program mask representing varying control flow within the
         function. */
     AddressInfo *internalMaskAddressInfo;
+
+    /** AddressInfo with pointer to stack-allocated memory that stores the
+        current full mask as a varying bool, or nullptr if
+        GetFullMaskStorageAddressInfo() wasn't called. */
+    AddressInfo *fullMaskStorageAddressInfo;
+
+    /** Store the current full mask to fullMaskStorageAddressInfo, if any. */
+    void updateFullMaskStorage();
 
     /** Value of the program mask when the function starts execution.  */
     llvm::Value *functionMaskValue;

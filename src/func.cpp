@@ -264,6 +264,16 @@ const FunctionType *Function::GetType() const {
     local stack-allocated variables.  (Which we expect that LLVM's
     'mem2reg' pass will in turn promote to SSA registers..
  */
+/** Pre-callback of WalkAST() that finds whether the symbol in data is used. */
+static bool lFindSymbol(ASTNode *node, void *data) {
+    std::pair<const Symbol *, bool> *search = static_cast<std::pair<const Symbol *, bool> *>(data);
+    SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(node);
+    if (se != nullptr && se->GetBaseSymbol() == search->first) {
+        search->second = true;
+    }
+    return !search->second;
+}
+
 static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std::vector<Symbol *> &args,
                                  FunctionEmitContext *ctx) {
     // We expect the argument structure to come in as a poitner to a
@@ -313,6 +323,18 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     // Connect the __mask builtin to the location in memory that stores its
     // value
     maskSymbol->storageInfo = ctx->GetFullMaskAddressInfo();
+    // A varying bool is stored as one byte per program instance. If the mask
+    // has another layout, e.g. one bit per program instance, __mask is a copy
+    // of the mask stored as a varying bool, which every change of the mask
+    // updates, so that its address and its debug info describe it.
+    if (maskSymbol->type->IsBoolType() && LLVMTypes::MaskType != maskSymbol->type->LLVMStorageType(g->ctx) &&
+        !ctx->emitXeHardwareMask()) {
+        std::pair<const Symbol *, bool> search(maskSymbol, false);
+        WalkAST(code, lFindSymbol, nullptr, &search);
+        if (search.second) {
+            maskSymbol->storageInfo = ctx->GetFullMaskStorageAddressInfo();
+        }
+    }
 
     // add debugging info for __mask
     maskSymbol->pos = firstStmtPos;
