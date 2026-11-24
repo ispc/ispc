@@ -50,6 +50,7 @@
 #include <clang/Lex/PPCallbacks.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/PreprocessorOptions.h>
+#include <llvm/ADT/DenseSet.h>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
@@ -450,6 +451,8 @@ class DotDotDotSpacingPPCallbacks : public clang::PPCallbacks {
     clang::FileManager &fileMgr;
     clang::SourceManager &srcMgr;
 
+    llvm::DenseSet<const clang::FileEntry *> processedFiles;
+
   public:
     DotDotDotSpacingPPCallbacks(clang::FileManager &fileMgr, clang::SourceManager &srcMgr)
         : fileMgr(fileMgr), srcMgr(srcMgr) {}
@@ -457,7 +460,13 @@ class DotDotDotSpacingPPCallbacks : public clang::PPCallbacks {
     void InclusionDirective(clang::SourceLocation, const clang::Token &, llvm::StringRef, bool, clang::CharSourceRange,
                             clang::OptionalFileEntryRef File, llvm::StringRef, llvm::StringRef, const clang::Module *,
                             bool, clang::SrcMgr::CharacteristicKind) override {
-        if (!File || srcMgr.isFileOverridden(&File->getFileEntry())) {
+        if (!File) {
+            return;
+        }
+
+        const clang::FileEntry *fileEntry = &File->getFileEntry();
+
+        if (!processedFiles.insert(fileEntry).second || srcMgr.isFileOverridden(fileEntry)) {
             return;
         }
 
