@@ -719,7 +719,13 @@ static bool lIsAnyArgumentKind(const IITDesc &D) {
 // Returns the overload index of the overloaded type that D introduces, or -1
 // if D doesn't introduce an overloaded type.
 static int lGetDefinedOverloadIndex(const IITDesc &D) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+    // LLVMAnyScalarOrSameVectorWidth (e.g. llvm_anyptr_same_width_ty) replaced
+    // LLVMVectorOfAnyPointersToElt.
+    if (lIsAnyArgumentKind(D) || D.Kind == IITDesc::AnySameVecWidth) {
+        return D.getOverloadIndex();
+    }
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_23_0
     if (lIsAnyArgumentKind(D) || D.Kind == IITDesc::VecOfAnyPtrsToElt) {
         return D.getOverloadIndex();
     }
@@ -933,7 +939,12 @@ static llvm::Function *lGetLLVMIntrinsicDeclaration(llvm::Module *module, llvm::
             continue;
         }
         const Type *argType = args->exprs[i]->GetType();
-        if (D.Kind == IITDesc::VecOfAnyPtrsToElt) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_24_0
+        bool isPtrVector = D.Kind == IITDesc::AnySameVecWidth && D.getElementConstraint() == IITDesc::EC_Pointer;
+#else
+        bool isPtrVector = D.Kind == IITDesc::VecOfAnyPtrsToElt;
+#endif
+        if (isPtrVector) {
             // The addresses (e.g. of llvm.masked.gather or llvm.vp.scatter) are
             // passed as varying integers and converted to <TARGET_WIDTH x ptr>
             // in FunctionCallExpr::GetValue().
