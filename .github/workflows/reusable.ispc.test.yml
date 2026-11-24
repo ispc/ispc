@@ -109,6 +109,15 @@ jobs:
         fi
       env:
         INPUTS_PLATFORM: ${{ inputs.platform }}
+        # The newer SDE (set as the default in init-env) is needed by avx10.2
+        # targets (the -nvl knob) but hangs on basic/avx512 runs. So non-avx10
+        # jobs override SDE_TAR_NAME back to the older 9.58.0 SDE; avx10 jobs
+        # pass an empty override and fall back to the newer default.
+        # install-test-deps honors a pre-set SDE_TAR_NAME.
+        # Note: keep the literal on the truthy side of the ternary. An empty
+        # string is falsy in GitHub Actions expressions, so `cond && '' || X`
+        # would always yield X. Inverting the condition avoids that trap.
+        SDE_TAR_NAME: ${{ !contains(matrix.target, 'avx10') && 'sde-external-9.58.0-2025-06-16' || '' }}
 
     - name: Check environment
       run: |
