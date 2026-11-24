@@ -97,7 +97,8 @@ define <4 x float> @broadcast_constant(ptr %base, <4 x i64> %offsets, <4 x i32> 
 }
 
 ; Lane 0 of another operation is splat by a shuffle inserted after it; all
-; lanes then share one address and the gather becomes a scalar load.
+; lanes then share one address and the gather becomes a scalar load, made only
+; if a lane is on.
 ; CHECK-LABEL: define <4 x float> @broadcast_part(
 ; CHECK:      %part = shl <4 x i64> %vec, <i64 2, i64 poison, i64 poison, i64 poison>
 ; CHECK-NEXT: [[SPLAT:%.*]] = shufflevector <4 x i64> %part, <4 x i64> poison, <4 x i32> zeroinitializer
@@ -106,7 +107,8 @@ define <4 x float> @broadcast_constant(ptr %base, <4 x i64> %offsets, <4 x i32> 
 ; CHECK-NEXT: {{%.*}} = add <4 x i64> zeroinitializer, [[SPLAT]]
 ; CHECK-NEXT: [[BASE:%.*]] = inttoptr i64 %b to ptr
 ; CHECK:      [[PTR:%.*]] = getelementptr i8, ptr [[BASE]], i64 {{%.*}}
-; CHECK-NEXT: [[ELT:%.*]] = load float, ptr [[PTR]], align 4
+; CHECK:      [[ONE:%.*]] = call <1 x float> @llvm.masked.load.v1f32.p0(ptr {{.*}}[[PTR]], {{(i32 4, )?}}<1 x i1> {{%.*}}, <1 x float> poison)
+; CHECK-NEXT: [[ELT:%.*]] = extractelement <1 x float> [[ONE]], i64 0
 ; CHECK-NEXT: [[INS:%.*]] = insertelement <4 x float> poison, float [[ELT]], i32 0
 ; CHECK-NEXT: [[V:%.*]] = shufflevector <4 x float> [[INS]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT: ret <4 x float> [[V]]
