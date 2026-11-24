@@ -1522,6 +1522,13 @@ Expr *UnaryExpr::Optimize() {
     }
 }
 
+/** Whether type is a pointer to a function, whose arithmetic has no element
+    size. */
+static bool lIsFunctionPointer(const Type *type) {
+    const PointerType *pt = CastType<PointerType>(type);
+    return pt != nullptr && CastType<FunctionType>(pt->GetBaseType()) != nullptr;
+}
+
 Expr *UnaryExpr::TypeCheck() {
     const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetTypeUnsafe()) == nullptr) {
@@ -1568,7 +1575,7 @@ Expr *UnaryExpr::TypeCheck() {
             return nullptr;
         }
 
-        if (PointerType::IsVoidPointer(type)) {
+        if (PointerType::IsVoidPointer(type) || lIsFunctionPointer(type)) {
             Error(expr->pos, "Illegal to pre/post increment \"%s\" type.", type->GetString().c_str());
             return nullptr;
         }
@@ -2904,6 +2911,11 @@ Expr *BinaryExpr::TypeCheck() {
     const PointerType *pt1 = CastType<PointerType>(type1);
     if (pt0 != nullptr && pt1 != nullptr && op == Sub) {
         // Pointer subtraction
+        if (lIsFunctionPointer(type0) || lIsFunctionPointer(type1)) {
+            Error(pos, "Illegal to perform pointer arithmetic on function pointer type \"%s\".",
+                  (lIsFunctionPointer(type0) ? type0 : type1)->GetString().c_str());
+            return nullptr;
+        }
         if (PointerType::IsVoidPointer(type0)) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
@@ -2961,6 +2973,11 @@ Expr *BinaryExpr::TypeCheck() {
 
         AssertPos(pos, pt0 != nullptr);
 
+        if (lIsFunctionPointer(pt0)) {
+            Error(pos, "Illegal to perform pointer arithmetic on function pointer type \"%s\".",
+                  pt0->GetString().c_str());
+            return nullptr;
+        }
         if (PointerType::IsVoidPointer(pt0)) {
             Error(pos,
                   "Illegal to perform pointer arithmetic "
@@ -3624,6 +3641,11 @@ Expr *AssignExpr::TypeCheck() {
 
     if (CastType<PointerType>(lhsType) != nullptr) {
         if (op == AddAssign || op == SubAssign) {
+            if (lIsFunctionPointer(lhsType)) {
+                Error(pos, "Illegal to perform pointer arithmetic on function pointer type \"%s\".",
+                      lhsType->GetString().c_str());
+                return nullptr;
+            }
             if (PointerType::IsVoidPointer(lhsType)) {
                 Error(pos,
                       "Illegal to perform pointer arithmetic on \"%s\" "
@@ -5515,6 +5537,10 @@ Expr *IndexExpr::TypeCheck() {
         if (const PointerType *pt = CastType<PointerType>(baseExprType)) {
             if (pt->GetBaseType()->IsVoidType()) {
                 Error(pos, "Illegal to dereference void pointer type \"%s\".", baseExprType->GetString().c_str());
+                return nullptr;
+            }
+            if (lIsFunctionPointer(pt)) {
+                Error(pos, "Illegal to index into function pointer type \"%s\".", baseExprType->GetString().c_str());
                 return nullptr;
             }
             // Indexing needs the size of the struct, which may only be
