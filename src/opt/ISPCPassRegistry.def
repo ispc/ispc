@@ -2,6 +2,7 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("remove-persistent-funcs", RemovePersistentFuncsPass())
+MODULE_PASS("restore-inline-attr", RestoreInlineAttrPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS

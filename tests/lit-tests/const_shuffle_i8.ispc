@@ -4,12 +4,10 @@
 
 // REQUIRES: X86_ENABLED
 
-// XFAIL: *
-// __shuffle2_i8 for icl-x64 has const path as other width, but optimization
-// pipeline fails to inline shuf2 call before the IsCompileTimeConstant pass
-// substitutes call to __is_compile_time_constant_varying_int32 to constant (it
-// should be true in this case), so this test is expected to fail for icl-x64
-// unless the inlining for this case is fixed.
+// Previously XFAIL'd: __shuffle2_i8 for icl-x64 used to have its shuf2 call
+// inlined too late for IsCompileTimeConstant to fold __is_compile_time_constant
+// to true. The deferred-inlining + post-inline cleanup added for #3804 now
+// folds the constant path correctly.
 
 template <typename T>
 unmasked void shuf2(uniform T a[], uniform T ret[], int perm) {
