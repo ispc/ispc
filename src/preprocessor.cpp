@@ -70,10 +70,7 @@
 
 using namespace ispc;
 
-extern int yyparse();
-typedef struct yy_buffer_state *YY_BUFFER_STATE;
-extern YY_BUFFER_STATE yy_scan_string(const char *);
-extern void yy_delete_buffer(YY_BUFFER_STATE);
+extern void ParseString(const char *str);
 
 static void lInitializeSourceManager(clang::FrontendInputFile &input, clang::DiagnosticsEngine &diag,
                                      clang::FileManager &fileMgr, clang::SourceManager &srcMgr) {
@@ -633,11 +630,7 @@ static void lInitCPPBuffer(std::unique_ptr<CPPBuffer> &bufferCPP) {
 }
 
 /** Helper function to parse internal CPP buffer. **/
-static void lParseCPPBuffer(std::unique_ptr<CPPBuffer> &bufferCPP) {
-    YY_BUFFER_STATE strbuf = yy_scan_string(bufferCPP->str.c_str());
-    yyparse();
-    yy_delete_buffer(strbuf);
-}
+static void lParseCPPBuffer(std::unique_ptr<CPPBuffer> &bufferCPP) { ParseString(bufferCPP->str.c_str()); }
 
 /** Helper function to clean internal CPP buffer. **/
 static void lClearCPPBuffer(std::unique_ptr<CPPBuffer> &bufferCPP) {
