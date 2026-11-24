@@ -173,6 +173,8 @@ function (generate_stdlibs ispc_name)
 
     add_custom_target(stdlib-headers-cpp DEPENDS ${STDLIB_HEADERS_CPP})
     set_target_properties(stdlib-headers-cpp PROPERTIES SOURCE "${STDLIB_HEADERS_CPP}")
+    # The .cpp files are generated from the headers that stdlib-headers copies
+    add_dependencies(stdlib-headers-cpp stdlib-headers)
 
     generate_stdlibs_1(${ispc_name})
 
