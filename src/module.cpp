@@ -345,12 +345,7 @@ Module::~Module() {
     }
 }
 
-extern FILE *yyin;
-extern int yyparse();
-typedef struct yy_buffer_state *YY_BUFFER_STATE;
-extern void yy_switch_to_buffer(YY_BUFFER_STATE);
-extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
-extern void yy_delete_buffer(YY_BUFFER_STATE);
+extern void ParseFile(FILE *f);
 extern void ParserInit();
 
 int Module::parse() {
@@ -365,9 +360,7 @@ int Module::parse() {
             return 1;
         }
     }
-    yyin = f;
-    yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
-    yyparse();
+    ParseFile(f);
     fclose(f);
 
     return 0;

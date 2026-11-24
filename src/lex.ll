@@ -579,6 +579,24 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 
 %%
 
+/* Flex's buffer types are internal to this file: their names differ between
+   flex versions, so other files call these wrappers instead. */
+
+/** Parse the whole file f. */
+void ParseFile(FILE *f) {
+    YY_BUFFER_STATE buf = yy_create_buffer(f, YY_BUF_SIZE);
+    yy_switch_to_buffer(buf);
+    yyparse();
+    yy_delete_buffer(buf);
+}
+
+/** Parse the null-terminated string str. */
+void ParseString(const char *str) {
+    YY_BUFFER_STATE buf = yy_scan_string(str);
+    yyparse();
+    yy_delete_buffer(buf);
+}
+
 /*short { return TOKEN_SHORT; }*/
 /*long { return TOKEN_LONG; }*/
 /*signed { return TOKEN_SIGNED; }*/
