@@ -1,8 +1,8 @@
 // Runs the cases of address-gaps.inc that pass today, in the configurations
 // where they pass: they must keep passing. The cases that fail today are in
-// address-gap-lane0.ispc, address-gap-minus-const.ispc and
-// address-gap-struct-2gb.ispc (XFAIL); address-gap-wrap.ispc has no case that
-// passes today.
+// address-gap-lane0.ispc and address-gap-minus-const.ispc (XFAIL);
+// address-gap-wrap.ispc has no case that passes today. The 2 GiB member
+// offset case is in address-gap-struct-2gb.ispc.
 
 // RUN: %{ispc} --pic --target=sse4-i32x4 -O2 --woff -h %t-sse4.h %S/address-gaps.inc -o %t-sse4.o
 // RUN: %{cc} -O2 -x c -c %S/address-gaps.inc -o %t-sse4.c.o --include %t-sse4.h

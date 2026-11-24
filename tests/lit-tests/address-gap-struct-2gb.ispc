@@ -1,10 +1,9 @@
-// Known address gap: with 32-bit addressing, the byte offset 2^31 of a struct
-// member read through a varying pointer is sign extended, so the gather reads
-// p - 2 GB instead of p + 2 GB. Through a uniform pointer, and with 64-bit
-// addressing, it is right (address-gaps-ok.ispc).
-//
-// XFAIL until member offsets of 2 GB or more are zero extended. See
-// address-gaps.inc for the kernels.
+// With 32-bit addressing, the byte offset 2^31 of a struct member read
+// through a varying pointer used to be sign extended, so the gather read
+// p - 2 GB instead of p + 2 GB. A member offset that doesn't fit in an int32
+// is now added at 64 bits. Through a uniform pointer, and with 64-bit
+// addressing, it was right (address-gaps-ok.ispc). See address-gaps.inc for
+// the kernels.
 
 // RUN: %{ispc} --pic --target=sse4-i32x4 -O2 --woff -h %t-sse4.h %S/address-gaps.inc -o %t-sse4.o
 // RUN: %{cc} -O2 -x c -c %S/address-gaps.inc -o %t-sse4.c.o --include %t-sse4.h
@@ -18,4 +17,3 @@
 
 // Like 3985-1.ispc, this assumes that x86-64 hosts support AVX2.
 // REQUIRES: LINUX_HOST && X86_ENABLED && X86_64_HOST
-// XFAIL: *

@@ -1838,6 +1838,24 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
             // points to in order to return the difference in elements.
             llvm::Type *llvmElementType = ptrType->GetBaseType()->LLVMStorageType(g->ctx);
             llvm::Value *size = g->target->SizeOf(llvmElementType, ctx->GetCurrentBasicBlock());
+            uint64_t sizeBytes = g->target->getDataLayout()->getTypeStoreSize(llvmElementType);
+            // On a 32-bit target, one element of 2^31 bytes or more forward
+            // or back is the same 32-bit difference in bytes, so it can't be
+            // divided right either way; it is left as it was.
+            if (!g->target->is32Bit() && g->opt.force32BitAddressing && sizeBytes > (uint64_t)INT32_MAX) {
+                // An element of 2^31 bytes or more doesn't fit the 32-bit
+                // size: divide at 64 bits; the difference in elements fits
+                // in 32 bits.
+                size = LLVMInt64((int64_t)sizeBytes);
+                if (ptrType->IsVaryingType()) {
+                    size = ctx->SmearUniform(size);
+                }
+                llvm::Value *diff = ctx->BinaryOperator(llvm::Instruction::SDiv, delta, size, type0,
+                                                        WrapSemantics::None, "element_diff");
+                return ctx->TruncInst(diff,
+                                      ptrType->IsUniformType() ? LLVMTypes::Int32Type : LLVMTypes::Int32VectorType,
+                                      "trunc_element_diff");
+            }
             if (ptrType->IsVaryingType()) {
                 size = ctx->SmearUniform(size);
             }

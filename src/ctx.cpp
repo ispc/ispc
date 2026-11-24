@@ -2188,54 +2188,62 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
     llvm::Type *llvmScaleType = scaleType->LLVMStorageType(g->ctx);
     Assert(llvmScaleType != nullptr);
     llvm::Value *scale = g->target->SizeOf(llvmScaleType, bblock);
+    uint64_t scaleBytes = g->target->getDataLayout()->getTypeStoreSize(llvmScaleType);
 
     // Whether the offset or the index is extended to 64 bits, zero-extended if
     // it is unsigned, see lOffsetWrapSemantics().
     bool zeroExtended = g->target->is32Bit() == false && g->opt.force32BitAddressing == true;
+    // Whether the index is extended to 64 bits before the multiplication.
+    bool wideProduct = false;
 
     bool indexIsVarying = llvm::isa<llvm::VectorType>(index->getType());
+    llvm::Type *int32Type = indexIsVarying ? LLVMTypes::Int32VectorType : LLVMTypes::Int32Type;
+    llvm::Type *int64Type = indexIsVarying ? LLVMTypes::Int64VectorType : LLVMTypes::Int64Type;
+    // Truncate or extend the index as appropriate to a 32 or 64-bit type.
+    if ((g->target->is32Bit() || g->opt.force32BitAddressing) && index->getType() == int64Type) {
+        index = TruncInst(index, int32Type);
+    }
+    if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) && index->getType() == int32Type) {
+        index = lExtendIntTo64(this, index, indexType);
+        zeroExtended = true;
+        wideProduct = true;
+    } else if (zeroExtended && scaleBytes > (uint64_t)INT32_MAX && !g->wrapSignedInt) {
+        // With 32-bit addressing on a 64-bit target, an element of 2^31
+        // bytes or more doesn't fit the 32-bit scale: multiply at 64 bits.
+        // With --wrap-signed-int the 32-bit offset wraps, like it does for
+        // smaller elements, so the size is truncated to an int32 there.
+        index = lExtendIntTo64(this, index, indexType);
+        scale = LLVMInt64((int64_t)scaleBytes);
+        wideProduct = true;
+    }
+
+    // On a 32-bit target the size of an element of 2^31 bytes or more is
+    // truncated to an int32; the product, like the address, then wraps at
+    // 2^32 and must not be nsw.
+    const bool truncatedScale = g->target->is32Bit() && scaleBytes > (uint64_t)INT32_MAX;
+    const WrapSemantics productWrap =
+        truncatedScale ? WrapSemantics::None : lOffsetWrapSemantics(indexType, zeroExtended);
+
     llvm::Value *offset = nullptr;
     if (indexIsVarying == false) {
-        // Truncate or sign extend the index as appropriate to a 32 or
-        // 64-bit type.
-        if ((g->target->is32Bit() || g->opt.force32BitAddressing) && index->getType() == LLVMTypes::Int64Type) {
-            index = TruncInst(index, LLVMTypes::Int32Type);
-        } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
-                   index->getType() == LLVMTypes::Int32Type) {
-            index = lExtendIntTo64(this, index, indexType);
-            zeroExtended = true;
-        }
-
         // do a scalar multiply to get the offset as index * scale and then
         // smear the result out to be a vector; this is more efficient than
         // first promoting both the scale and the index to vectors and then
         // multiplying.
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType,
-                                lOffsetWrapSemantics(indexType, zeroExtended));
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, productWrap);
         offset = SmearUniform(offset);
     } else {
-        // Similarly, truncate or sign extend the index to be a 32 or 64
-        // bit vector type
-        if ((g->target->is32Bit() || g->opt.force32BitAddressing) && index->getType() == LLVMTypes::Int64VectorType) {
-            index = TruncInst(index, LLVMTypes::Int32VectorType);
-        } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
-                   index->getType() == LLVMTypes::Int32VectorType) {
-            index = lExtendIntTo64(this, index, indexType);
-            zeroExtended = true;
-        }
-
         scale = SmearUniform(scale);
         Assert(index != nullptr);
         // offset = index * scale
-        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType,
-                                lOffsetWrapSemantics(indexType, zeroExtended),
+        offset = BinaryOperator(llvm::Instruction::Mul, scale, index, scaleType, productWrap,
                                 ((llvm::Twine("mul_") + scale->getName()) + "_") + index->getName());
     }
 
     // For 64-bit targets, if we've been doing our offset calculations in
     // 32 bits, we still have to convert to a 64-bit value before we
     // actually add the offset to the pointer.
-    if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true) {
+    if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true && !wideProduct) {
         offset = lExtendIntTo64(this, offset, indexType, llvm::Twine(offset->getName()) + "_to_64");
     }
 
@@ -2532,14 +2540,18 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBasePtrInfo,
         resultPtr = llvm::GetElementPtrInst::Create(fullBasePtrInfo->getElementType(), basePtr, arrayRef,
                                                     name.isTriviallyEmpty() ? "struct_offset" : name, bblock);
     } else {
-        // Otherwise do the math to find the offset and add it to the given
-        // varying pointers
+        // Otherwise add the offset in bytes of the member or element, which
+        // is a constant, to the varying pointers.
         const StructType *st = CastType<StructType>(ptrType->GetBaseType());
-        llvm::Value *offset = nullptr;
+        const llvm::DataLayout *DL = g->target->getDataLayout();
+        uint64_t offsetBytes = 0;
         if (st != nullptr) {
-            // If the pointer is to a structure, Target::StructOffset() gives
-            // us the offset in bytes to the given element of the structure
-            offset = g->target->StructOffset(st->LLVMType(g->ctx), elementNum, bblock);
+            llvm::StructType *llvmStructType = llvm::dyn_cast_or_null<llvm::StructType>(st->LLVMType(g->ctx));
+            if (llvmStructType == nullptr || !llvmStructType->isSized()) {
+                AssertPos(currentPos, m->errorCount > 0);
+                return nullptr;
+            }
+            offsetBytes = DL->getStructLayout(llvmStructType)->getElementOffset(elementNum).getFixedValue();
         } else {
             // Otherwise we should have a vector or array here and the offset
             // is given by the element number times the size in memory of the
@@ -2548,20 +2560,21 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBasePtrInfo,
             AssertPos(currentPos, st != nullptr);
             llvm::Type *elemLLVMType = st->GetElementType()->LLVMStorageType(g->ctx);
             Assert(elemLLVMType);
-            llvm::Value *size = g->target->SizeOf(elemLLVMType, bblock);
-            llvm::Value *scale =
-                (g->target->is32Bit() || g->opt.force32BitAddressing) ? LLVMInt32(elementNum) : LLVMInt64(elementNum);
-            offset = BinaryOperator(llvm::Instruction::Mul, size, scale, nullptr, WrapSemantics::NSW);
+            offsetBytes = DL->getTypeStoreSize(elemLLVMType) * (uint64_t)elementNum;
+            // With --wrap-signed-int and 32-bit addressing on a 64-bit
+            // target, the 32-bit offset of an index wraps (see
+            // applyVaryingGEP()); a constant element number, as in v.y,
+            // gets the same offset as that index, as in v[1].
+            if (!g->target->is32Bit() && g->opt.force32BitAddressing && g->wrapSignedInt) {
+                offsetBytes = (uint64_t)(int64_t)(int32_t)(uint32_t)offsetBytes;
+            }
         }
 
-        offset = SmearUniform(offset, "offset_smear");
-
-        if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true) {
-            // If we're doing 32 bit addressing with a 64 bit target, although
-            // we did the math above in 32 bit, we need to go to 64 bit before
-            // we add the offset to the varying pointers.
-            offset = SExtInst(offset, LLVMTypes::Int64VectorType, "offset_to_64");
-        }
+        // The varying pointers are 64-bit on a 64-bit target, also with
+        // 32-bit addressing, so the offset is added at 64 bits there; on a
+        // 32-bit target the address wraps at 2^32.
+        llvm::Value *offset = SmearUniform(
+            g->target->is32Bit() ? LLVMInt32((int32_t)offsetBytes) : LLVMInt64((int64_t)offsetBytes), "offset_smear");
 
         resultPtr =
             BinaryOperator(llvm::Instruction::Add, basePtr, offset, nullptr, WrapSemantics::None, "struct_ptr_offset");
