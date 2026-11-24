@@ -147,3 +147,9 @@
 ./tests/func-tests/vector-gather-helper.ispc compfail    xe64      xehpg-x16 dg2   Linux LLVM 23.1 clang++23.1 O2 ze *
 .\tests\func-tests\pdep-pext-const.ispc compfail  x86-64 avx10.2dmr-x64 unspec Windows LLVM 23.1         cl O0 obj *
 .\tests\func-tests\pdep-pext-const.ispc compfail  x86-64 avx10.2nvl-x64 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\ref-overloads3.ispc compfail  x86-64 avx10.2dmr-x32 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\ref-overloads3.ispc compfail  x86-64 avx10.2nvl-x32 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\rsqrt-special-cases.ispc compfail  x86-64 avx10.2dmr-x16 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\rsqrt-special-cases.ispc compfail  x86-64  avx10.2dmr-x4 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\rsqrt-special-cases.ispc compfail  x86-64 avx10.2nvl-x16 unspec Windows LLVM 23.1         cl O0 obj *
+.\tests\func-tests\rsqrt-special-cases.ispc compfail  x86-64  avx10.2nvl-x4 unspec Windows LLVM 23.1         cl O0 obj *
