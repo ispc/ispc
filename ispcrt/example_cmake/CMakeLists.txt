@@ -1,7 +1,7 @@
-## Copyright 2020 Intel Corporation
+## Copyright 2020-2026 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.31)
 
 project(test_ispcrt LANGUAGES CXX)
 

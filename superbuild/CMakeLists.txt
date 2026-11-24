@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.31)
 
 project(SUPERBUILD NONE)
 
@@ -71,10 +71,11 @@ option(XE_DEPS "Enable build of all XE dependencies (L0 loader, vc-intrinsics, S
 option(MACOS_UNIVERSAL_BIN "Enable build of universal binaries for macOS" ON)
 option(FETCH_CONTENT_QUIET "Enable quiet mode for FetchContent" ON)
 
-if(FETCH_CONTENT_QUIET)
-    set(FETCH_CONTENT_QUIET_OPTION "QUIET")
-else()
-    set(FETCH_CONTENT_QUIET_OPTION "")
+# With policy CMP0168 (CMake 3.30) FetchContent ignores QUIET and prints the
+# output of its steps only at the VERBOSE log level. An explicit --log-level or
+# CMAKE_MESSAGE_LOG_LEVEL takes precedence.
+if(NOT FETCH_CONTENT_QUIET AND NOT CMAKE_MESSAGE_LOG_LEVEL)
+    set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 endif()
 
 # Force LTO when PGO enabled to the sake of simplicity and less number of
@@ -465,7 +466,6 @@ hash_dir = false
     if (NOT CCACHE_EXE)
         # Download and unpack ccache executable when no ccache in system.
         FetchContent_Populate(ccache
-            ${FETCH_CONTENT_QUIET_OPTION}
             URL ${CCACHE_URL}
             SOURCE_DIR ccache
             )
@@ -1140,36 +1140,68 @@ endif()
 ]] @ONLY)
 
 
-# Fetch source code of dependencies. They fetched during cmake configuration run.
-# Patch command applies LLVM version specific patches.
-if (PGO OR NOT SKIP_STAGE2)
-    if (LLVM_PATCHES_VER)
-        FetchContent_Populate(llvm-source
-            ${FETCH_CONTENT_QUIET_OPTION}
-            GIT_REPOSITORY ${LLVM_URL}
-            GIT_TAG ${LLVM_TAG}
-            GIT_SHALLOW ${LLVM_GIT_SHALLOW}
-            GIT_PROGRESS ON
-            UPDATE_COMMAND git checkout .
-            PATCH_COMMAND git apply ${LLVM_PATCHES_VER}
-            SOURCE_DIR llvm-source
-            )
-    else()
-        FetchContent_Populate(llvm-source
-            ${FETCH_CONTENT_QUIET_OPTION}
-            GIT_REPOSITORY ${LLVM_URL}
-            GIT_TAG ${LLVM_TAG}
-            GIT_SHALLOW ${LLVM_GIT_SHALLOW}
-            GIT_PROGRESS ON
-            UPDATE_COMMAND git checkout .
-            SOURCE_DIR llvm-source
-            )
+# Fetch a git repository at GIT_TAG and apply PATCHES on top of it.
+# FetchContent (CMP0168) does not track patch contents, and it cannot switch the
+# revision of a patched tree. So a stamp in the checkout's .git directory holds a
+# hash of the revision and of the patch paths and contents. When it differs, the
+# tree is reset before FetchContent switches the revision, and all patches are
+# applied again. A fresh clone has no stamp, so it is always patched.
+function(fetch_patched_git name)
+    cmake_parse_arguments(PARSE_ARGV 1 ARG "" "GIT_TAG;SOURCE_DIR" "PATCHES")
+    cmake_path(ABSOLUTE_PATH ARG_SOURCE_DIR BASE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+               OUTPUT_VARIABLE src_dir)
+    set(state "${ARG_GIT_TAG}\n")
+    foreach(patch IN LISTS ARG_PATCHES)
+        file(SHA256 "${patch}" patch_hash)
+        string(APPEND state "${patch} ${patch_hash}\n")
+    endforeach()
+    string(SHA256 state_hash "${state}")
+    set(stamp "${src_dir}/.git/ispc-patches.stamp")
+    set(applied_hash "")
+    if (EXISTS "${stamp}")
+        file(READ "${stamp}" applied_hash)
     endif()
+    if (NOT applied_hash STREQUAL state_hash AND EXISTS "${src_dir}/.git")
+        # Drop the stamp first, so a failed attempt is retried on the next run.
+        file(REMOVE "${stamp}")
+        execute_process(COMMAND git reset -q --hard
+                        WORKING_DIRECTORY "${src_dir}" COMMAND_ERROR_IS_FATAL ANY)
+        execute_process(COMMAND git clean -f -d -q
+                        WORKING_DIRECTORY "${src_dir}" COMMAND_ERROR_IS_FATAL ANY)
+    endif()
+
+    FetchContent_Populate(${name}
+        ${ARG_UNPARSED_ARGUMENTS}
+        GIT_TAG ${ARG_GIT_TAG}
+        UPDATE_COMMAND ""
+        SOURCE_DIR "${src_dir}"
+        )
+
+    if (NOT applied_hash STREQUAL state_hash)
+        if (ARG_PATCHES)
+            message(STATUS "Applying patches to ${src_dir}")
+            execute_process(COMMAND git apply ${ARG_PATCHES}
+                            WORKING_DIRECTORY "${src_dir}" COMMAND_ERROR_IS_FATAL ANY)
+        endif()
+        file(WRITE "${stamp}" "${state_hash}")
+    endif()
+endfunction()
+
+# Fetch source code of dependencies. They fetched during cmake configuration run.
+# LLVM version specific patches are applied after fetching.
+if (PGO OR NOT SKIP_STAGE2)
+    fetch_patched_git(llvm-source
+        GIT_REPOSITORY ${LLVM_URL}
+        GIT_TAG ${LLVM_TAG}
+        GIT_SHALLOW ${LLVM_GIT_SHALLOW}
+        GIT_PROGRESS ON
+        SOURCE_DIR llvm-source
+        PATCHES ${LLVM_PATCHES_VER}
+        )
 
     if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY AND PGO AND NOT ${ISPC_CORPUS_URL} STREQUAL "null")
         # May be profiles from examples or less set of programs just enough?
         FetchContent_Populate(ispc-corpus
-            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${ISPC_CORPUS_URL}
             GIT_TAG main
             GIT_SHALLOW ON
@@ -1184,7 +1216,6 @@ if (NOT SKIP_FETCHING_XE_DEPS)
     if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_SPIRV_TRANSLATOR_ONLY))
         # Checkout LLVM-SPIRV-Translator needed for XE
         FetchContent_Populate(spirv-translator
-            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${SPIRV_TRANSLATOR_URL}
             GIT_TAG ${SPIRV_TRANSLATOR_SHA}
             GIT_SHALLOW OFF
@@ -1195,22 +1226,19 @@ if (NOT SKIP_FETCHING_XE_DEPS)
 
     if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_VC_INTRINSICS_ONLY))
         # Checkout vc-intrinsics needed for XE
-        FetchContent_Populate(vc-intrinsics
-            ${FETCH_CONTENT_QUIET_OPTION}
+        fetch_patched_git(vc-intrinsics
             GIT_REPOSITORY ${VC_INTRINSICS_URL}
             GIT_TAG ${VC_INTRINSICS_SHA}
             GIT_SHALLOW OFF
             GIT_PROGRESS ON
             SOURCE_DIR vc-intrinsics
-            UPDATE_COMMAND git checkout .
-            PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/vc_intrinsics.patch
+            PATCHES ${PROJECT_SOURCE_DIR}/vc_intrinsics.patch
             )
     endif()
 
     if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_L0_LOADER_ONLY))
         # Checkout level-zero needed for XE
         FetchContent_Populate(l0-source
-            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${L0_URL}
             GIT_TAG ${L0_TAG}
             GIT_SHALLOW ON

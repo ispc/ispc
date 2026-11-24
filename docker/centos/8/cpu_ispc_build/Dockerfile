@@ -28,22 +28,31 @@ RUN rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW
 ENV TBB_ROOT=/opt/intel/oneapi/tbb/latest
 
 # These packages are required if you need to link ISPC with -static.
-# Ninja is required for superbuild
-RUN dnf -y --enablerepo=powertools install ninja-build libstdc++-static && \
+RUN dnf -y --enablerepo=powertools install unzip libstdc++-static && \
     dnf clean -y all
 
 RUN if [[ $(uname -m) =~ "x86" ]]; then dnf -y update && dnf install -y glibc-devel.i686 && dnf clean -y all; fi
 
 WORKDIR /usr/local/src
 
-# Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
+# Download and install required version of cmake (3.31.12 for both x86 and aarch64) as required by ispc, superbuild and LLVM.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
-        export CMAKE_URL="https://cmake.org/files/v3.23/cmake-3.23.5-linux-x86_64.sh"; \
+        export CMAKE_URL="https://cmake.org/files/v3.31/cmake-3.31.12-linux-x86_64.sh"; \
     else \
-        export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-linux-aarch64.sh"; \
+        export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.31.12/cmake-3.31.12-linux-aarch64.sh"; \
     fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
     sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
+
+# Download and install Ninja 1.13.2. The distribution ships Ninja 1.8.2, which cannot
+# run the build files CMake 3.31 generates for LLVM (needs 1.10 or newer).
+RUN if [[ $(uname -m) =~ "x86" ]]; then \
+        export NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux.zip"; \
+    else \
+        export NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-linux-aarch64.zip"; \
+    fi && \
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $NINJA_URL && \
+    unzip -o ninja-linux*.zip -d /usr/local/bin && rm -f ninja-linux*.zip
 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi

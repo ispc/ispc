@@ -147,6 +147,7 @@ static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
+static Expr *lNegate(Expr *expr, SourcePos pos);
 static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
 static StructType *lCreateStructType(const std::string &name, const Type *declType,
                                      const std::vector<StructDeclaration *> *decl, AttributeList *attrs,
@@ -894,7 +895,7 @@ unary_expression
     | '+' cast_expression
       { $$ = $2; }
     | '-' cast_expression
-      { $$ = new UnaryExpr(UnaryExpr::Negate, $2, Union(@1, @2)); }
+      { $$ = lNegate($2, Union(@1, @2)); }
     | '~' cast_expression
       { $$ = new UnaryExpr(UnaryExpr::BitNot, $2, Union(@1, @2)); }
     | '!' cast_expression
@@ -3434,6 +3435,24 @@ template_function_specialization
 
 %%
 
+
+static Expr *lNegate(Expr *expr, SourcePos pos) {
+    // At parse time only unsuffixed integer literals can be narrow unsigned
+    // ConstExprs. Variables and explicit casts still have their own AST nodes.
+    if (auto *literal = llvm::dyn_cast_or_null<ConstExpr>(expr)) {
+        const Type *type = literal->GetType()->GetAsNonConstType();
+        if (type == AtomicType::UniformUInt8 || type == AtomicType::UniformUInt16) {
+            int32_t magnitude;
+            literal->GetValues(&magnitude);
+            if (type == AtomicType::UniformUInt8 && magnitude == -INT8_MIN)
+                return new ConstExpr(AtomicType::UniformInt8, (int8_t)-magnitude, pos);
+            if (type == AtomicType::UniformUInt16 && magnitude == -INT16_MIN)
+                return new ConstExpr(AtomicType::UniformInt16, (int16_t)-magnitude, pos);
+            return new ConstExpr(AtomicType::UniformInt32, -magnitude, pos);
+        }
+    }
+    return new UnaryExpr(UnaryExpr::Negate, expr, pos);
+}
 
 void yyerror(const char *s) {
     if (strlen(yytext) == 0)

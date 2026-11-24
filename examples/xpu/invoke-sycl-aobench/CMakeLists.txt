@@ -1,7 +1,7 @@
-# Copyright 2023 Intel Corporation
+# Copyright 2023-2026 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.31)
 project(invoke_sycl_aobench LANGUAGES CXX)
 
 include(${ISPCRT_DIR}/interop.cmake)

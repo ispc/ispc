@@ -1,7 +1,7 @@
-## Copyright 2020-2022 Intel Corporation
+## Copyright 2020-2026 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.31)
 
 set(ISPCRT_TESTS_PROJECT_NAME ispcrt_tests)
 project(${ISPCRT_TESTS_PROJECT_NAME}
