@@ -47,6 +47,7 @@
 #include <clang/Lex/HeaderSearchOptions.h>
 #include <clang/Lex/Lexer.h>
 #include <clang/Lex/ModuleLoader.h>
+#include <clang/Lex/PPCallbacks.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/PreprocessorOptions.h>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
@@ -440,6 +441,41 @@ static std::string lFixDotDotDotSpacing(const std::string &source) {
     return result;
 }
 
+// Normalize range expressions in included files before Clang lexes them.
+// Clang treats expressions like "0...MAXI" as a single preprocessing-number
+// token, preventing MAXI from being expanded as a macro. Reuse
+// lFixDotDotDotSpacing() to insert the required space while preserving the
+// original file identity through SourceManager::overrideFileContents().
+class DotDotDotSpacingPPCallbacks : public clang::PPCallbacks {
+    clang::FileManager &fileMgr;
+    clang::SourceManager &srcMgr;
+
+  public:
+    DotDotDotSpacingPPCallbacks(clang::FileManager &fileMgr, clang::SourceManager &srcMgr)
+        : fileMgr(fileMgr), srcMgr(srcMgr) {}
+
+    void InclusionDirective(clang::SourceLocation, const clang::Token &, llvm::StringRef, bool, clang::CharSourceRange,
+                            clang::OptionalFileEntryRef File, llvm::StringRef, llvm::StringRef, const clang::Module *,
+                            bool, clang::SrcMgr::CharacteristicKind) override {
+        if (!File || srcMgr.isFileOverridden(&File->getFileEntry())) {
+            return;
+        }
+
+        auto buffer = fileMgr.getBufferForFile(*File);
+        if (!buffer) {
+            return;
+        }
+
+        std::string source((*buffer)->getBuffer());
+        std::string fixed = lFixDotDotDotSpacing(source);
+
+        if (fixed != source) {
+            srcMgr.overrideFileContents(*File,
+                                        llvm::MemoryBuffer::getMemBufferCopy(fixed, (*buffer)->getBufferIdentifier()));
+        }
+    }
+};
+
 /** Run the preprocessor on the given file, writing to the output stream.
     Returns the number of diagnostic errors encountered. */
 static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm::raw_string_ostream *ostream,
@@ -561,6 +597,9 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
 #else
     clang::Preprocessor prep(preProcOpts, diagEng, langOpts, srcMgr, hdrSearch, modLoader);
 #endif
+
+    // register the callback
+    prep.addPPCallbacks(std::make_unique<DotDotDotSpacingPPCallbacks>(fileMgr, srcMgr));
 
     // Initialize preprocessor
     prep.Initialize(*tgtInfo);
