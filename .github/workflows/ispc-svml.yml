@@ -103,6 +103,11 @@ jobs:
     - name: Install dependencies and unpack artifacts
       run: |
         .github/workflows/scripts/install-svml-test-deps.sh
+      env:
+        # SVML only tests basic/avx512 targets, on which the newer default SDE
+        # hangs. Pin the older, stable 9.58.0 SDE here. install-test-deps honors
+        # a pre-set SDE_TAR_NAME.
+        SDE_TAR_NAME: sde-external-9.58.0-2025-06-16
 
     - name: Check environment
       run: |
