@@ -46,11 +46,13 @@
 // OFF-NEXT: Target Feature String: -egpr,-ndd,-push2pop2,-ppx,-ccmp,-cf,-nf,-zu,-jmpabs{{$}}
 // OFF-NEXT: Target APX Features: none
 
+// LLVM 24 (llvm/llvm-project#242389) added CF to the DMR and NVL defaults, so
+// cf is optional in the backend default lists.
 // DEFAULT-NEXT: Target Feature String: {{$}}
-// DEFAULT-NEXT: Target APX Features: egpr,ndd,push2pop2,ppx,ccmp,nf,zu,jmpabs{{$}}
+// DEFAULT-NEXT: Target APX Features: egpr,ndd,push2pop2,ppx,ccmp,{{(cf,)?}}nf,zu,jmpabs{{$}}
 
 // NO-EGPR-NEXT: Target Feature String: -egpr{{$}}
-// NO-EGPR-NEXT: Target APX Features: ndd,push2pop2,ppx,ccmp,nf,zu,jmpabs{{$}}
+// NO-EGPR-NEXT: Target APX Features: ndd,push2pop2,ppx,ccmp,{{(cf,)?}}nf,zu,jmpabs{{$}}
 
 // BAD-TARGET: Error: Unknown or non-x86 target "bogus" in --mock-host-target.
 // NON-X86-TARGET: Error: Unknown or non-x86 target "neon-i32x4" in --mock-host-target.
