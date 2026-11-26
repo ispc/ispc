@@ -26,6 +26,7 @@
 #include <sstream>
 #include <stdio.h>
 
+#include <llvm/Analysis/ValueTracking.h>
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -3251,6 +3252,128 @@ UnmaskedStmt *UnmaskedStmt::Instantiate(TemplateInstantiation &templInst) const 
 // ReturnStmt
 
 ReturnStmt::ReturnStmt(Expr *e, SourcePos p) : Stmt(p, ReturnStmtID), expr(e), hasExpr(e != nullptr) {}
+
+static void lGetPointeeSymbols(Expr *expr, std::vector<Symbol *> &syms);
+
+/** Given an lvalue expression, collects the variables whose storage it is
+    part of.  Element and member accesses are looked through; when they go
+    through a pointer, the variables are the ones the pointer points into.
+    Anything reached through a reference lives somewhere else and is not
+    collected. */
+static void lGetLValueSymbols(Expr *expr, std::vector<Symbol *> &syms) {
+    if (expr == nullptr) {
+        return;
+    }
+    const Type *type = expr->GetType();
+    if (type == nullptr || IsReferenceType(type)) {
+        // This includes reference members of a struct: the storage they
+        // refer to doesn't belong to the struct.
+        return;
+    }
+
+    if (llvm::isa<SymbolExpr>(expr) || llvm::isa<ConstSymbolExpr>(expr)) {
+        syms.push_back(expr->GetBaseSymbol());
+    } else if (IndexExpr *ie = llvm::dyn_cast<IndexExpr>(expr)) {
+        if (ie->baseExpr == nullptr) {
+            return;
+        }
+        const Type *baseType = ie->baseExpr->GetType();
+        if (CastType<SequentialType>(baseType) != nullptr) {
+            lGetLValueSymbols(ie->baseExpr, syms);
+        } else if (CastType<PointerType>(baseType) != nullptr) {
+            lGetPointeeSymbols(ie->baseExpr, syms);
+        }
+    } else if (MemberExpr *me = llvm::dyn_cast<MemberExpr>(expr)) {
+        if (me->expr == nullptr) {
+            return;
+        }
+        if (CastType<PointerType>(me->expr->GetType()) != nullptr) {
+            lGetPointeeSymbols(me->expr, syms);
+        } else {
+            lGetLValueSymbols(me->expr, syms);
+        }
+    }
+}
+
+/** Given an expression that evaluates to a pointer or to a reference,
+    collects the variables whose storage the result may point into.  Type
+    casts, pointer arithmetic, plain assignment, the comma operator and
+    both values of a conditional are looked through.  Loads, such as the
+    one that turns a reference into a value, are not. */
+static void lGetPointeeSymbols(Expr *expr, std::vector<Symbol *> &syms) {
+    if (expr == nullptr) {
+        return;
+    }
+
+    if (TypeCastExpr *tce = llvm::dyn_cast<TypeCastExpr>(expr)) {
+        lGetPointeeSymbols(tce->expr, syms);
+    } else if (AddressOfExpr *aoe = llvm::dyn_cast<AddressOfExpr>(expr)) {
+        lGetLValueSymbols(aoe->expr, syms);
+    } else if (ReferenceExpr *re = llvm::dyn_cast<ReferenceExpr>(expr)) {
+        // A reference that is formed here refers to the given lvalue;
+        // references that come from elsewhere are not looked through.
+        lGetLValueSymbols(re->expr, syms);
+    } else if (SelectExpr *se = llvm::dyn_cast<SelectExpr>(expr)) {
+        lGetPointeeSymbols(se->expr1, syms);
+        lGetPointeeSymbols(se->expr2, syms);
+    } else if (AssignExpr *ae = llvm::dyn_cast<AssignExpr>(expr)) {
+        // A plain assignment evaluates to the assigned value.
+        if (ae->op == AssignExpr::Assign) {
+            lGetPointeeSymbols(ae->rvalue, syms);
+        }
+    } else if (BinaryExpr *be = llvm::dyn_cast<BinaryExpr>(expr)) {
+        if (be->op == BinaryExpr::Comma) {
+            lGetPointeeSymbols(be->arg1, syms);
+        } else if ((be->op == BinaryExpr::Add || be->op == BinaryExpr::Sub) && be->arg0 != nullptr &&
+                   be->arg1 != nullptr && CastType<PointerType>(be->GetType()) != nullptr) {
+            // Only one of the operands of pointer arithmetic is a pointer.
+            lGetPointeeSymbols((CastType<PointerType>(be->arg0->GetType()) != nullptr) ? be->arg0 : be->arg1, syms);
+        }
+    } else if (CastType<ArrayType>(expr->GetType()) != nullptr) {
+        // The array is implicitly converted to a pointer to its first element.
+        lGetLValueSymbols(expr, syms);
+    }
+}
+
+/** Returns true if the variable's storage is allocated on the stack of the
+    function that is being emitted: this tells apart locals and parameters
+    from globals and static locals.  Symbol::parentFunction can't be used
+    for this, as it is also set for the copies of global symbols that are
+    made when a function template is instantiated. */
+static bool lIsOnStack(const Symbol *sym) {
+    return sym != nullptr && IsReferenceType(sym->type) == false && sym->storageInfo != nullptr &&
+           llvm::isa<llvm::AllocaInst>(sym->storageInfo->getPointer());
+}
+
+void ispc::CheckReturnOfStackAddress(Expr *expr, llvm::Value *value, const Function *func) {
+    const Type *returnType = func->GetReturnType();
+    const bool returnsReference = IsReferenceType(returnType);
+    if (returnsReference == false && CastType<PointerType>(returnType) == nullptr) {
+        return;
+    }
+    const char *what = returnsReference ? "Reference to" : "Address of";
+
+    // Look for a variable in the expression first, so that the warning can
+    // name it.
+    std::vector<Symbol *> syms;
+    lGetPointeeSymbols(expr, syms);
+    auto it = std::find_if(syms.begin(), syms.end(), lIsOnStack);
+    if (it != syms.end()) {
+        const Symbol *sym = *it;
+        Warning(expr->pos, "%s stack memory associated with %s \"%s\" returned.", what,
+                func->IsParameter(sym) ? "parameter" : "local variable", sym->name.c_str());
+        return;
+    }
+
+    // Stack memory that isn't a variable, such as a temporary that a
+    // reference is bound to or memory from alloca(), is found in the
+    // generated code instead: any returned pointer that is based on an
+    // alloca of the function no longer points to valid memory.
+    if (value != nullptr && value->getType()->isPointerTy() &&
+        llvm::isa<llvm::AllocaInst>(llvm::getUnderlyingObject(value))) {
+        Warning(expr->pos, "%s stack memory returned.", what);
+    }
+}
 
 void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) {

@@ -1307,6 +1307,7 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         if (expr != nullptr) {
             llvm::Value *retVal = expr->GetValue(this);
             if (retVal != nullptr) {
+                CheckReturnOfStackAddress(expr, retVal, function);
                 if (returnType->IsUniformType() || CastType<ReferenceType>(returnType) != nullptr) {
                     StoreInst(retVal, returnValueAddressInfo, returnType);
                 } else {
