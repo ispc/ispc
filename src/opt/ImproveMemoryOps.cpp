@@ -1170,6 +1170,34 @@ static std::optional<MemoryPlan> lPlanLoadStore(const MemoryAccess &access) {
     }
 }
 
+/** The scalar load of a Broadcast plan from ptr. Unless the mask is known to
+    be all on, the load is made only if a lane is on: a gather with no lane
+    on reads nothing, and ptr may then be the address of memory that the
+    program never reads (a case label that no lane reaches, or a function
+    called there). The load becomes a masked load of one element whose mask
+    is any lane on. Xe keeps the plain load. */
+static llvm::Value *lEmitBroadcastLoad(const MemoryAccess &access, llvm::Value *ptr) {
+    llvm::CallInst *callInst = access.call;
+    llvm::Type *elementType = access.elementType();
+    llvm::Value *mask = access.mask();
+    if (GetMaskStatusFromValue(mask) == MaskStatus::all_on || g->target->isXeTarget()) {
+        return new llvm::LoadInst(elementType, ptr, callInst->getName(), ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+    }
+    llvm::IRBuilder<> builder(callInst);
+    // A lane is on if its sign bit is set, as for __movmsk.
+    llvm::Value *on = mask;
+    if (!mask->getType()->getScalarType()->isIntegerTy(1)) {
+        on = builder.CreateICmpSLT(mask, llvm::Constant::getNullValue(mask->getType()), "on");
+    }
+    llvm::Value *anyOn = builder.CreateOrReduce(on);
+    llvm::Type *oneLaneType = llvm::FixedVectorType::get(elementType, 1);
+    llvm::Value *oneLaneMask = builder.CreateBitCast(anyOn, llvm::FixedVectorType::get(builder.getInt1Ty(), 1));
+    llvm::Align align = callInst->getModule()->getDataLayout().getABITypeAlign(elementType);
+    llvm::Value *loaded = builder.CreateMaskedLoad(oneLaneType, ptr, align, oneLaneMask,
+                                                   llvm::PoisonValue::get(oneLaneType), callInst->getName());
+    return builder.CreateExtractElement(loaded, (uint64_t)0, callInst->getName());
+}
+
 /** Emits a Broadcast, Load, ReverseLoad, Store or ReverseStore plan of
     lPlanLoadStore() in place of the access. */
 static llvm::Instruction *lEmitLoadStore(const MemoryAccess &access, const MemoryPlan &plan) {
@@ -1205,8 +1233,7 @@ static llvm::Instruction *lEmitLoadStore(const MemoryAccess &access, const Memor
 
         LLVMCopyMetadata(ptr, callInst);
         Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-        llvm::Value *scalarValue = new llvm::LoadInst(access.elementType(), ptr, callInst->getName(),
-                                                      ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        llvm::Value *scalarValue = lEmitBroadcastLoad(access, ptr);
 
         // Generate the following sequence:
         //   %name123 = insertelement <4 x i32> poison, i32 %val, i32 0

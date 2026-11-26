@@ -5,6 +5,7 @@
 */
 
 #include "MemoryAccess.h"
+#include "AddressDecoder.h"
 
 #include <llvm/Analysis/ValueTracking.h>
 
@@ -706,6 +707,14 @@ void MemoryAccess::print(llvm::raw_ostream &os) const {
             lPrintRecipe(os, *recipe);
         } else {
             os << "  common base: unknown\n";
+        }
+        const llvm::DataLayout &DL = call->getModule()->getDataLayout();
+        if (llvm::Value *ptrs = GetPointerAddresses(addresses(), DL)) {
+            if (std::optional<AddressDecode> decode = DecodeVaryingAddress(ptrs, DL)) {
+                decode->print(os);
+            } else {
+                os << "  address: unknown\n";
+            }
         }
     }
     if (std::optional<AddressCandidate> candidate = QueryAddressCandidate(*this)) {

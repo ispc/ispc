@@ -1987,12 +1987,16 @@ llvm::Value *FunctionEmitContext::PtrToIntInst(llvm::Value *value, const llvm::T
         return nullptr;
     }
 
-    if (llvm::isa<llvm::VectorType>(value->getType())) {
-        // no-op for varying pointers; they're already vectors of ints
-        return value;
+    llvm::Type *type = LLVMTypes::PointerIntType;
+    if (llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(value->getType())) {
+        if (!vt->getElementType()->isPointerTy()) {
+            // A vector of integers is already an integer.
+            return value;
+        }
+        // A vector of pointers converts to a vector of pointer-sized integers.
+        type = llvm::VectorType::get(type, vt->getElementCount());
     }
 
-    llvm::Type *type = LLVMTypes::PointerIntType;
     llvm::Instruction *inst = new llvm::PtrToIntInst(
         value, type, name.isTriviallyEmpty() ? llvm::Twine(value->getName()) + "_ptr2int" : name, bblock);
     AddDebugPos(inst);
@@ -2006,6 +2010,15 @@ llvm::Value *FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *t
     }
 
     llvm::Type *fromType = value->getType();
+    if (fromType->isVectorTy() && fromType->getScalarType()->isPointerTy()) {
+        // A vector of pointers: convert to pointer-sized integers first, then
+        // truncate or extend those to the requested width.
+        value = PtrToIntInst(value, name);
+        fromType = value->getType();
+        if (fromType == toType) {
+            return value;
+        }
+    }
     if (llvm::isa<llvm::VectorType>(fromType)) {
         // varying pointer
         if (fromType == toType) {
@@ -2034,6 +2047,14 @@ llvm::Value *FunctionEmitContext::IntToPtrInst(llvm::Value *value, llvm::Type *t
 
     llvm::Type *fromType = value->getType();
     bool toTypePtrVector = toType->isVectorTy() && toType->getScalarType()->isPointerTy();
+
+    if (fromType == toType) {
+        return value;
+    }
+    if (toTypePtrVector && fromType->isVectorTy() && fromType->getScalarType()->isPointerTy()) {
+        // Between vectors of pointers of different address spaces.
+        return CastInst(llvm::Instruction::AddrSpaceCast, value, toType, name);
+    }
 
     if (llvm::isa<llvm::VectorType>(fromType) && !toTypePtrVector) {
         // varying pointer

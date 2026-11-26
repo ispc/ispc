@@ -7342,6 +7342,8 @@ define <WIDTH x $1> @__gather64_generic_$1(<WIDTH x i64> %ptrs,
 
 ; vec width, type
 define(`gen_gather_factored_generic', `
+declare_count_zeros()
+
 ;; Define the utility function to do the gather operation for a single element
 ;; of the type
 define <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_scale,
@@ -7392,22 +7394,30 @@ define <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %offsets, i32 %o
 define <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_scale,
                                              <WIDTH x i32> %offset_delta,
                                              <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  ; We can be clever and avoid the per-lane stuff for gathers if we are willing
-  ; to require that the 0th element of the array being gathered from is always
-  ; legal to read from (and we do indeed require that, given the benefits!)
-  ;
-  ; Set the offset to zero for lanes that are off
-  %offsetsPtr = alloca <WIDTH x i32>
-  store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %offsetsPtr
-  call void @__masked_store_blend_i32(<WIDTH x i32> * %offsetsPtr, <WIDTH x i32> %offsets,
-                                      <WIDTH x MASK> %vecmask)
-  %newOffsets = load PTR_OP_ARGS(`<WIDTH x i32> ')  %offsetsPtr
+  ; Every lane reads, without a branch per lane. The lanes that are off read
+  ; the element of the first lane that is on, which the program reads anyway;
+  ; if no lane is on, nothing is read.
+  %mm = call i64 @__movmsk(<WIDTH x MASK> %vecmask)
+  %anyon = icmp ne i64 %mm, 0
+  br i1 %anyon, label %some_on, label %none_on
 
-  %deltaPtr = alloca <WIDTH x i32>
-  store <WIDTH x i32> zeroinitializer, <WIDTH x i32> * %deltaPtr
-  call void @__masked_store_blend_i32(<WIDTH x i32> * %deltaPtr, <WIDTH x i32> %offset_delta,
-                                      <WIDTH x MASK> %vecmask)
-  %newDelta = load PTR_OP_ARGS(`<WIDTH x i32> ')  %deltaPtr
+none_on:
+  ret <WIDTH x $1> poison
+
+some_on:
+  %first = call i64 @llvm.cttz.i64(i64 %mm, i1 true)
+  %first32 = trunc i64 %first to i32
+  %on = icmp slt <WIDTH x MASK> %vecmask, zeroinitializer
+  %firstOffset = extractelement <WIDTH x i32> %offsets, i32 %first32
+  %firstOffset1 = insertelement <WIDTH x i32> poison, i32 %firstOffset, i32 0
+  %firstOffsets = shufflevector <WIDTH x i32> %firstOffset1, <WIDTH x i32> poison,
+                                <WIDTH x i32> zeroinitializer
+  %newOffsets = select <WIDTH x i1> %on, <WIDTH x i32> %offsets, <WIDTH x i32> %firstOffsets
+  %firstDelta = extractelement <WIDTH x i32> %offset_delta, i32 %first32
+  %firstDelta1 = insertelement <WIDTH x i32> poison, i32 %firstDelta, i32 0
+  %firstDeltas = shufflevector <WIDTH x i32> %firstDelta1, <WIDTH x i32> poison,
+                               <WIDTH x i32> zeroinitializer
+  %newDelta = select <WIDTH x i1> %on, <WIDTH x i32> %offset_delta, <WIDTH x i32> %firstDeltas
 
   %ret0 = call <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i32> %newDelta,
@@ -7423,22 +7433,30 @@ define <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32
 define <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64> %offsets, i32 %offset_scale,
                                              <WIDTH x i64> %offset_delta,
                                              <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-  ; We can be clever and avoid the per-lane stuff for gathers if we are willing
-  ; to require that the 0th element of the array being gathered from is always
-  ; legal to read from (and we do indeed require that, given the benefits!)
-  ;
-  ; Set the offset to zero for lanes that are off
-  %offsetsPtr = alloca <WIDTH x i64>
-  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %offsetsPtr
-  call void @__masked_store_blend_i64(<WIDTH x i64> * %offsetsPtr, <WIDTH x i64> %offsets,
-                                      <WIDTH x MASK> %vecmask)
-  %newOffsets = load PTR_OP_ARGS(`<WIDTH x i64> ')  %offsetsPtr
+  ; Every lane reads, without a branch per lane. The lanes that are off read
+  ; the element of the first lane that is on, which the program reads anyway;
+  ; if no lane is on, nothing is read.
+  %mm = call i64 @__movmsk(<WIDTH x MASK> %vecmask)
+  %anyon = icmp ne i64 %mm, 0
+  br i1 %anyon, label %some_on, label %none_on
 
-  %deltaPtr = alloca <WIDTH x i64>
-  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %deltaPtr
-  call void @__masked_store_blend_i64(<WIDTH x i64> * %deltaPtr, <WIDTH x i64> %offset_delta,
-                                      <WIDTH x MASK> %vecmask)
-  %newDelta = load PTR_OP_ARGS(`<WIDTH x i64> ')  %deltaPtr
+none_on:
+  ret <WIDTH x $1> poison
+
+some_on:
+  %first = call i64 @llvm.cttz.i64(i64 %mm, i1 true)
+  %first32 = trunc i64 %first to i32
+  %on = icmp slt <WIDTH x MASK> %vecmask, zeroinitializer
+  %firstOffset = extractelement <WIDTH x i64> %offsets, i32 %first32
+  %firstOffset1 = insertelement <WIDTH x i64> poison, i64 %firstOffset, i32 0
+  %firstOffsets = shufflevector <WIDTH x i64> %firstOffset1, <WIDTH x i64> poison,
+                                <WIDTH x i32> zeroinitializer
+  %newOffsets = select <WIDTH x i1> %on, <WIDTH x i64> %offsets, <WIDTH x i64> %firstOffsets
+  %firstDelta = extractelement <WIDTH x i64> %offset_delta, i32 %first32
+  %firstDelta1 = insertelement <WIDTH x i64> poison, i64 %firstDelta, i32 0
+  %firstDeltas = shufflevector <WIDTH x i64> %firstDelta1, <WIDTH x i64> poison,
+                               <WIDTH x i32> zeroinitializer
+  %newDelta = select <WIDTH x i1> %on, <WIDTH x i64> %offset_delta, <WIDTH x i64> %firstDeltas
 
   %ret0 = call <WIDTH x $1> @__gather_elt64_$1(i8 * %ptr, <WIDTH x i64> %newOffsets,
                                             i32 %offset_scale, <WIDTH x i64> %newDelta,

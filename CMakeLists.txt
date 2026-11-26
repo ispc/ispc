@@ -482,6 +482,8 @@ list(APPEND FRONTEND_SOURCES
 list(APPEND OPT_SOURCES
     src/opt.cpp
     src/opt.h
+    src/opt/AddressDecoder.cpp
+    src/opt/AddressDecoder.h
     src/opt/CheckIRForXeTarget.cpp
     src/opt/CheckIRForXeTarget.h
     src/opt/GatherCoalescePass.cpp

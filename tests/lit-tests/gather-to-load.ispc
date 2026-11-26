@@ -32,13 +32,14 @@ uniform float garr[100];
 void global_load(uniform float r[]) { r[programIndex] = garr[programIndex + 3]; }
 
 // Every lane reads the same element through a varying index: one scalar load
-// and a broadcast.
+// and a broadcast. Unless the mask is known to be all on, the load is a
+// one-lane masked load whose mask is any lane on.
 // CHECK-LABEL: @same_element___
 // CHECK-NOT: call {{.*}}gather
-// CHECK: load float
+// CHECK: {{load float|call <1 x float> @llvm.masked.load.v1f32}}
 // CHECK-NOT: call {{.*}}gather
 // SSE4-NOT: load float
-// CHECK: shufflevector <[[W:[0-9]+]] x float> {{%.*}}, <[[W]] x float> poison, <[[W]] x i32> zeroinitializer
+// CHECK: shufflevector <{{[0-9]+}} x float> {{%.*}}, <{{[0-9]+}} x float> poison, <{{[0-9]+}} x i32> zeroinitializer
 // CHECK-NOT: call {{.*}}gather
 // SSE4-NOT: load float
 void same_element(uniform float p[], uniform float b, uniform float r[]) {
