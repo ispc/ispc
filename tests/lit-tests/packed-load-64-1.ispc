@@ -10,11 +10,14 @@
 // The code generation has been changed in LLVM 21.0 slightly. 
 // It makes stack usage less and use of general-purpose registers better.
 
-// RUN: %{ispc} %s --emit-asm --nowrap --target=avx512skx-x8 -o - | FileCheck %s
+// RUN: %{ispc} %s --emit-asm --nowrap --target=avx512skx-x8 --opt=disable-zmm -o - | FileCheck %s
+// With zmm registers enabled (the default) the int64 vector is kept in one zmm register.
+// RUN: %{ispc} %s --emit-asm --nowrap --target=avx512skx-x8 -o - | FileCheck %s --check-prefix=CHECK_ZMM
 
 // REQUIRES: X86_ENABLED
 // UNSUPPORTED: !LLVM_21_0+
 
+// CHECK_ZMM: vpexpandq {{.*}}%zmm{{[0-9]+}} {%k{{[0-9]}}} {z}
 // CHECK: kmovd
 // CHECK: shrb
 // CHECk: kmovd

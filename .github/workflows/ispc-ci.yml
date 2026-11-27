@@ -239,7 +239,7 @@ jobs:
           - llvm: 23
             arch: x86-64
             extra_flags: "--opt=disable-zmm"
-            targets: '["avx512skx-x16"]'
+            targets: '["avx512skx-x8", "avx512skx-x16"]'
           - llvm: 23
             arch: x86-64
             extra_flags: "--addressing=64"
@@ -653,7 +653,7 @@ jobs:
           - llvm: 23
             arch: x86-64
             extra_flags: "--opt=disable-zmm"
-            targets: '["avx512skx-x16"]'
+            targets: '["avx512skx-x8", "avx512skx-x16"]'
           - llvm: 23
             arch: x86-64
             extra_flags: "--addressing=64"

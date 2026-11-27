@@ -183,7 +183,8 @@ class ISPCTarget:
         'avx512gnr-x8': 'avx512spr-x8',
         'avx512spr-x8': 'avx512icl-x8',
         'avx512icl-x8': 'avx512skx-x8',
-        'avx512skx-x8': 'generic-i1x8',
+        'avx512skx-x8': 'avx512skx-x8-nozmm',
+        'avx512skx-x8-nozmm': 'generic-i1x8',
 
         'avx512gnr-x16': 'avx512spr-x16',
         'avx512spr-x16': 'avx512icl-x16',

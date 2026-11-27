@@ -1565,6 +1565,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
     case ISPCTarget::avx512skx_x8:
+    case ISPCTarget::avx512skx_x8_nozmm:
     case ISPCTarget::avx512icl_x8:
         this->m_isa = (m_ispc_target == ISPCTarget::avx512icl_x8) ? Target::ICL_AVX512 : Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
@@ -1578,8 +1579,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::Rcpd, TargetCapability::ConflictDetection});
         setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x8));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x8) ? CPU_ICL : CPU_SKX;
-        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
-        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        // Use zmm registers unless disabled, so 8-wide vectors of 64-bit types (double, int64) fit in one register
+        // instead of being split across two ymm registers.
+        if (g->opt.disableZMM || m_ispc_target == ISPCTarget::avx512skx_x8_nozmm) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
         break;
     case ISPCTarget::avx512skx_x16:
     case ISPCTarget::avx512skx_x16_nozmm:
@@ -1682,8 +1690,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::AmxInt8, TargetCapability::AmxBf16});
         setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx512gnr_x8));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x8) ? CPU_GNR : CPU_SPR;
-        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
-        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        // Use zmm registers unless disabled, so 8-wide vectors of 64-bit types (double, int64) fit in one register
+        // instead of being split across two ymm registers.
+        if (g->opt.disableZMM) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
         break;
     case ISPCTarget::avx512spr_x16:
     case ISPCTarget::avx512gnr_x16:
@@ -1793,8 +1808,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #else
         CPUfromISA = CPU_DMR;
 #endif
-        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
-        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        // Use zmm registers unless disabled, so 8-wide vectors of 64-bit types (double, int64) fit in one register
+        // instead of being split across two ymm registers.
+        if (g->opt.disableZMM) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
         break;
     case ISPCTarget::avx10_2dmr_x16:
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
@@ -3108,6 +3130,7 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
         return Target::ISA::AVX2VNNI;
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512skx_x8:
+    case ISPCTarget::avx512skx_x8_nozmm:
     case ISPCTarget::avx512skx_x16:
     case ISPCTarget::avx512skx_x16_nozmm:
     case ISPCTarget::avx512skx_x32:

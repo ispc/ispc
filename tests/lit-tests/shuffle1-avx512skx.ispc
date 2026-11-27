@@ -35,7 +35,8 @@
 // 3. Large widths (x64): Use memory gather instructions (vpgather*) when vector becomes too wide for efficient register-based shuffling
 
 // RUN: %{ispc} %s --target=avx512skx-x4 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X4
-// RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X8
+// RUN: %{ispc} %s --target=avx512skx-x8 --opt=disable-zmm --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-YMM
+// RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-ZMM
 // RUN: %{ispc} %s --target=avx512skx-x16 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X16
 // RUN: %{ispc} %s --target=avx512skx-x32 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X32
 // RUN: %{ispc} %s --target=avx512skx-x64 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X64
@@ -107,7 +108,8 @@ int32 shuffle_i32(int32 x, int32 perm) {
 // CHECK-X4-LABEL: shuffle_i64___vyIvyi:
 // CHECK-X4-DAG: vpermq
 // CHECK-X8-LABEL: shuffle_i64___vyIvyi:
-// CHECK-X8-DAG: vpermi2q
+// CHECK-X8-YMM-DAG: vpermi2q
+// CHECK-X8-ZMM-DAG: vpermq {{.*}}zmm
 // CHECK-X8-NOT: vpextrd
 // CHECK-X16-LABEL: shuffle_i64___vyIvyi:
 // CHECK-X16-DAG: vpermi2q
@@ -163,7 +165,8 @@ float shuffle_float(float x, int32 perm) {
 // CHECK-X4-LABEL: shuffle_double___vydvyi:
 // CHECK-X4-DAG: vpermq
 // CHECK-X8-LABEL: shuffle_double___vydvyi:
-// CHECK-X8-DAG: vpermi2pd
+// CHECK-X8-YMM-DAG: vpermi2pd
+// CHECK-X8-ZMM-DAG: vpermq {{.*}}zmm
 // CHECK-X16-LABEL: shuffle_double___vydvyi:
 // CHECK-X16-DAG: vpermi2pd
 // CHECK-X32-LABEL: shuffle_double___vydvyi:

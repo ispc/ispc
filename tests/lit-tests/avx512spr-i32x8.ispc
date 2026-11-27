@@ -2,20 +2,25 @@
 //; RUN: %{ispc} %s --target=avx512spr-x16 --emit-asm -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ZMM_32x16
 // Case 2a: Checks avx512spr-x4 assembly output to ensure there are no zmm registers.
 //; RUN: %{ispc} %s --target=avx512spr-x4 --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
-// Case 2b: Checks avx512spr-x8 assembly output to ensure there are no zmm registers.
-//; RUN: %{ispc} %s --target=avx512spr-x8 --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
+// Case 2b: Checks avx512spr-x8 with --opt=disable-zmm assembly output to ensure there are no zmm registers.
+//; RUN: %{ispc} %s --target=avx512spr-x8 --opt=disable-zmm --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
 // Case 3: Checks avx512spr-x16 LLVM IR to ensure avx512spr-x8 func attributes are not present.
-//; RUN: %{ispc} %s --target=avx512spr-x16 --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not ""min-legal-vector-width"="256"" --implicit-check-not ""prefer-vector-width"="256""
+//; RUN: %{ispc} %s --target=avx512spr-x16 --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not '"min-legal-vector-width"="256"' --implicit-check-not '"prefer-vector-width"="256"'
 // Case 4a: Checks avx512spr-x4 LLVM IR to ensure avx512spr-x4 func attributes are present (same as for x8).
 //; RUN: %{ispc} %s --target=avx512spr-x4 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
-// Case 4b: Checks avx512spr-x8 LLVM IR to ensure avx512spr-x8 func attributes are present.
-//; RUN: %{ispc} %s --target=avx512spr-x8 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
+// Case 4b: Checks avx512spr-x8 with --opt=disable-zmm LLVM IR to ensure avx512spr-x8 func attributes are present.
+//; RUN: %{ispc} %s --target=avx512spr-x8 --opt=disable-zmm --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
+// Case 5: Checks avx512spr-x8 assembly output for zmm registers (used for 64-bit types by default).
+//; RUN: %{ispc} %s --target=avx512spr-x8 --emit-asm -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ZMM_64x8
+// Case 6: Checks avx512spr-x8 LLVM IR to ensure 256-bit vector width func attributes are not present by default.
+//; RUN: %{ispc} %s --target=avx512spr-x8 --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not '"min-legal-vector-width"="256"' --implicit-check-not '"prefer-vector-width"="256"'
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 
 double ret_round(double val)
 {
 //; CHECK_ZMM_32x16: zmm
+//; CHECK_ZMM_64x8: zmm
     return round(val+.49999);
 }
 

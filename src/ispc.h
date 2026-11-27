@@ -686,7 +686,8 @@ struct Opt {
     bool disableCoalescing;
 
     /** Disable using zmm registers for avx512 target in favour of ymm.
-        Affects only >= 512 bit wide targets and only if avx512vl is available */
+        Affects the 8-wide avx512 targets and the >= 512 bit wide targets, and only
+        if avx512vl is available */
     bool disableZMM;
 
     /** Bitmask of x86 APX (Advanced Performance Extensions) sub-features to

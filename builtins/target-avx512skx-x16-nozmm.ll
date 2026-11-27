@@ -1021,7 +1021,7 @@ define_avgs()
 ;; svml
 
 include(`svml.m4')
-svml(ISA)
+svml(`AVX512SKX_YMM')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt

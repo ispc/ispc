@@ -20,6 +20,7 @@
 // RUN: %{ispc} %s --target=avx512icl-x16 --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512icl-x32 --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512icl-x64 --nowrap --emit-asm -o - | FileCheck %s
+// RUN: %{ispc} %s --target=avx512skx-x8-nozmm --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512skx-x16-nozmm --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx512icl-x16-nozmm --nowrap --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2-i32x8 -O0 --nowrap --emit-asm -o - | FileCheck %s
