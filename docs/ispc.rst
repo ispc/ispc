@@ -356,6 +356,23 @@ LLVM Intrinsics:
   compatibility but has no effect, and ``ISPC_LLVM_INTRINSICS_ENABLED`` is
   always defined. See `LLVM Intrinsic Functions`_ for details.
 
+Target Changes:
+
+* The 8-wide AVX-512 targets (``avx512skx-x8``, ``avx512icl-x8``,
+  ``avx512spr-x8``, ``avx512gnr-x8``, ``avx10.2dmr-x8`` and ``avx10.2nvl-x8``)
+  now use ZMM registers by default, like the 16-wide targets. An 8-wide vector
+  of 64-bit values (``double``, ``int64``, ``uint64``) is now kept in one ZMM
+  register instead of two YMM registers. Use ``--opt=disable-zmm`` to get the
+  previous YMM-only code generation, for example on CPUs where ZMM instructions
+  lower the clock frequency.
+
+* This changes the ABI of non-exported functions that take or return varying
+  64-bit values on these targets: such a value is now passed in one ZMM
+  register. Object files compiled for these targets by earlier ``ispc``
+  versions, or with ``--opt=disable-zmm``, must not call such functions in
+  object files compiled with the new default, and vice versa. Exported
+  functions are not affected.
+
 Updating ISPC Programs For Changes In ISPC 1.32.0
 -------------------------------------------------
 
@@ -1906,8 +1923,17 @@ Available options:
   Disable the use of ZMM registers for AVX-512 targets in favor of YMM registers.
   This also affects the ABI. ZMM registers are 512-bit wide, while YMM registers
   are 256-bit wide. This option is only supported for the ``avx512skx-x16`` and
-  ``avx512icl-x16`` targets, and the following generic targets: ``generic-i32x16``,
+  ``avx512icl-x16`` targets, the 8-wide AVX-512 targets (``avx512skx-x8``,
+  ``avx512icl-x8``, ``avx512spr-x8``, ``avx512gnr-x8``, ``avx10.2dmr-x8`` and
+  ``avx10.2nvl-x8``), and the following generic targets: ``generic-i32x16``,
   ``generic-i1x16``, ``generic-i1x32``, ``generic-i1x64``.
+
+  On the 8-wide AVX-512 targets, varying values of 32-bit and smaller types fit
+  in YMM registers, so the option mainly affects vectors of 64-bit types
+  (``double``, ``int64``, ``uint64``, and pointers with ``--addressing=64``),
+  which otherwise would be split across two YMM registers. Other code, such as
+  copies of large uniform data, may use ZMM registers as well unless this option
+  is passed.
 
 - ``fast-masked-vload``
 

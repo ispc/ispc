@@ -9,7 +9,8 @@
 // - Ensures no old inefficient vpextrd/vpinsrb/vpinsrw instructions are generated
 
 // RUN: %{ispc} %s --target=avx512skx-x4 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X4
-// RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X8
+// RUN: %{ispc} %s --target=avx512skx-x8 --opt=disable-zmm --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-YMM
+// RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-ZMM
 // RUN: %{ispc} %s --target=avx512skx-x16 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X16
 // RUN: %{ispc} %s --target=avx512skx-x32 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X32
 // RUN: %{ispc} %s --target=avx512skx-x64 --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X64
@@ -103,7 +104,8 @@ void shuffle_i32(uniform int32 a[], uniform int32 ret[], int perm, uniform int c
 // CHECK-X4-DAG: vpermq
 // CHECK-X4-NOT: vpextrd
 // CHECK-X8-LABEL: shuffle_i64___un_3C_unI_3E_un_3C_unI_3E_vyiuni:
-// CHECK-X8-DAG: vpermt2q
+// CHECK-X8-YMM-DAG: vpermt2q
+// CHECK-X8-ZMM-DAG: vpermq {{.*}}zmm
 // CHECK-X8-NOT: vpextrd
 // CHECK-X16-LABEL: shuffle_i64___un_3C_unI_3E_un_3C_unI_3E_vyiuni:
 // CHECK-X16-DAG: vpermt2q
@@ -174,7 +176,8 @@ void shuffle_float(uniform float a[], uniform float ret[], int perm, uniform int
 // CHECK-X4-DAG: vpermq
 // CHECK-X4-NOT: vpextrd
 // CHECK-X8-LABEL: shuffle_double___un_3C_und_3E_un_3C_und_3E_vyiuni:
-// CHECK-X8-DAG: vpermt2pd
+// CHECK-X8-YMM-DAG: vpermt2pd
+// CHECK-X8-ZMM-DAG: vpermq {{.*}}zmm
 // CHECK-X8-NOT: vpextrd
 // CHECK-X16-LABEL: shuffle_double___un_3C_und_3E_un_3C_und_3E_vyiuni:
 // CHECK-X16-DAG: vpermt2pd

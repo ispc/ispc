@@ -6,12 +6,14 @@
 // generated.
 
 // RUN: %{ispc} %s --target=avx512skx-x4  --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X4
-// RUN: %{ispc} %s --target=avx512skx-x8  --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X8
+// RUN: %{ispc} %s --target=avx512skx-x8 --opt=disable-zmm --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-YMM
+// RUN: %{ispc} %s --target=avx512skx-x8  --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-ZMM
 // RUN: %{ispc} %s --target=avx512skx-x16 --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X16
 // RUN: %{ispc} %s --target=avx512skx-x32 --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X32
 // RUN: %{ispc} %s --target=avx512skx-x64 --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X64
 // RUN: %{ispc} %s --target=avx512icl-x4  --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X4
-// RUN: %{ispc} %s --target=avx512icl-x8  --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X8
+// RUN: %{ispc} %s --target=avx512icl-x8 --opt=disable-zmm --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-YMM
+// RUN: %{ispc} %s --target=avx512icl-x8  --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefixes=CHECK-X8,CHECK-X8-ZMM
 // RUN: %{ispc} %s --target=avx512icl-x16 --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X16
 // RUN: %{ispc} %s --target=avx512icl-x32 --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X32
 // RUN: %{ispc} %s --target=avx512icl-x64 --x86-asm-syntax=intel --emit-asm -O2 -o - | FileCheck %s --check-prefix=CHECK-X64
@@ -83,8 +85,9 @@ int32 rotate_i32(int32 x, uniform int32 r) {
 // CHECK-X4-DAG: vpermq
 // CHECK-X4-NOT: vmov{{.*}} {{.*}}word ptr [rsp{{.*}}], ymm{{[0-9]+}}
 // CHECK-X8-LABEL: rotate_i64___vyIuni:
-// CHECK-X8-DAG: vpermi2q
-// CHECK-X8-DAG: vpermi2q
+// CHECK-X8-YMM-DAG: vpermi2q
+// CHECK-X8-YMM-DAG: vpermi2q
+// CHECK-X8-ZMM-DAG: vpermq {{.*}}zmm
 // CHECK-X8-NOT: vmov{{.*}} {{.*}}word ptr [rsp{{.*}}], ymm{{[0-9]+}}
 // CHECK-X16-LABEL: rotate_i64___vyIuni:
 // CHECK-X16-DAG: vpermi2q
@@ -144,8 +147,9 @@ float rotate_float(float x, uniform int32 r) {
 // CHECK-X4-DAG: vpermq
 // CHECK-X4-NOT: vmov{{.*}} {{.*}}word ptr [rsp{{.*}}], ymm{{[0-9]+}}
 // CHECK-X8-LABEL: rotate_double___vyduni:
-// CHECK-X8-DAG: vpermi2pd
-// CHECK-X8-DAG: vpermi2pd
+// CHECK-X8-YMM-DAG: vpermi2pd
+// CHECK-X8-YMM-DAG: vpermi2pd
+// CHECK-X8-ZMM-DAG: vpermq {{.*}}zmm
 // CHECK-X8-NOT: vmov{{.*}} {{.*}}word ptr [rsp{{.*}}], ymm{{[0-9]+}}
 // CHECK-X16-LABEL: rotate_double___vyduni:
 // CHECK-X16-DAG: vpermi2pd

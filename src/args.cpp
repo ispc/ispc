@@ -153,8 +153,8 @@ static ArgsParseResult usage() {
     printf("        disable-gathers\t\t\tDisable gathers generation on targets that support them\n");
     printf("        disable-scatters\t\tDisable scatters generation on targets that support them\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling\n");
-    printf("        disable-zmm\t\t\tDisable using zmm registers for avx512skx-x16, avx512icl-x16 targets in favor of "
-           "ymm. This also affects ABI\n");
+    printf("        disable-zmm\t\t\tDisable using zmm registers for avx512skx-x16, avx512icl-x16 and 8-wide "
+           "avx512*-x8, avx10.2*-x8 targets in favor of ymm. This also affects ABI\n");
     printf("        disable-apx[=<list>]\t\tDisable x86 APX sub-features (enabled by default on avx10.2dmr, "
            "avx10.2nvl targets). With no list, disables all; otherwise a comma-separated subset of: %s\n",
            lAPXFeatureList().c_str());
@@ -1346,10 +1346,14 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
     if (g->opt.disableZMM) {
         for (auto target : targets) {
             if (target != ISPCTarget::avx512skx_x16 && target != ISPCTarget::avx512icl_x16 &&
+                target != ISPCTarget::avx512skx_x8 && target != ISPCTarget::avx512icl_x8 &&
+                target != ISPCTarget::avx512spr_x8 && target != ISPCTarget::avx512gnr_x8 &&
+                target != ISPCTarget::avx10_2dmr_x8 && target != ISPCTarget::avx10_2nvl_x8 &&
                 target != ISPCTarget::generic_i32x16 && target != ISPCTarget::generic_i1x16 &&
                 target != ISPCTarget::generic_i1x32 && target != ISPCTarget::generic_i1x64) {
                 Warning(SourcePos(),
-                        "--opt=disable-zmm can only be used with avx512skx-x16, avx512icl-x16 or generic-i32x16, "
+                        "--opt=disable-zmm can only be used with avx512skx-x16, avx512icl-x16, avx512skx-x8, "
+                        "avx512icl-x8, avx512spr-x8, avx512gnr-x8, avx10.2dmr-x8, avx10.2nvl-x8 or generic-i32x16, "
                         "generic-i1x16, generic-i1x32, generic-i1x64 targets.");
             }
         }
