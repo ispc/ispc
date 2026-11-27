@@ -336,7 +336,7 @@ define(`svml_set_suffix', `
 
 ;; svml() - define SVML implementation for float and double types.
 ;; The function requires WIDTH macro to be defined in the calling context.
-;; $1 - ISA, either SSE2, SSE4, AVX1, AVX2, or AVX512SKX.
+;; $1 - ISA, either SSE2, SSE4, AVX1, AVX2, AVX512SKX, or AVX512SKX_YMM (AVX-512 without zmm registers).
 ;;
 ;; A handy command to verify SVML implementation across all targets that support it:
 ;; alloy.py -r --only="current stability -O2 -O1 -O0" --only-targets="sse avx" --ispc-flags="--math-lib=svml" --compiler=icpx --time
@@ -441,6 +441,19 @@ define(`svml', `
     WIDTH, `64', `
       svml_define_x(float,f16`'SVML_SUFFIX,16,f,64)
       svml_define_x(double,8`'SVML_SUFFIX,8,d,64)
+    ', `
+      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
+      m4exit(`1')
+    ')
+  ',
+  $1, `AVX512SKX_YMM', `
+    ;; AVX-512 with ymm registers only (--opt=disable-zmm): the vector width is limited to
+    ;; 256 bits, so 512-bit vectors would be passed in two ymm registers and must not be passed
+    ;; to the zmm SVML entry points. Use the ymm (8 x float, 4 x double) entry points instead.
+    svml_set_suffix(`x0',`z0')
+    ifelse(WIDTH, `16', `
+      svml_define_x(float,f8`'SVML_SUFFIX,8,f,16)
+      svml_define_x(double,4`'SVML_SUFFIX,4,d,16)
     ', `
       errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
       m4exit(`1')
