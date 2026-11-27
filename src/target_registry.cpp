@@ -191,6 +191,12 @@ static ISPCTarget lCanonicalizeTarget(ISPCTarget target, TargetOS os, bool apply
 
     // Apply nozmm transformation when ZMM is disabled
     // nozmm target is not explicitly visible for user but should be used when ZMM is disabled.
+    // avx512skx-x8 only overrides the 64-bit builtins of avx512skx-x8-nozmm with zmm versions. There is no
+    // avx512icl-x8-nozmm (or spr/gnr/avx10.2) target: their own x8 builtins don't use zmm registers, and they
+    // inherit the zmm builtins from avx512skx-x8, which is replaced here.
+    if (target == ISPCTarget::avx512skx_x8 && g->opt.disableZMM) {
+        target = ISPCTarget::avx512skx_x8_nozmm;
+    }
     if (target == ISPCTarget::avx512skx_x16 && g->opt.disableZMM) {
         target = ISPCTarget::avx512skx_x16_nozmm;
     }
